@@ -1,0 +1,115 @@
+---
+name: setup
+description: Bring the substrate up on this machine and wire it - tools, clones, the service stack (kernel, Bifrost, Backstage, Prometheus), the gateway's providers (Claude, OpenRouter, local), Claude Code through the gateway, and the MCP connections. Use when the owner asks to set up, start, restart or repair the stack, or when scripts/check.sh fails.
+---
+
+# Set up the substrate
+
+Work through the steps in order. Each ends with a check; do not start the next until it passes or the owner
+has decided to skip it. Tell the owner, in a line, what each step did. Use the container engine set in
+`.env` (`CONTAINER_ENGINE`, podman by default).
+
+## 1. Tools and clones
+
+Run `scripts/bootstrap.sh`. It lists every tool with its path or MISSING, clones kernel and Morphogen into
+`repos/`, and installs `kk` (editable) and Morphogen's environment.
+
+- A missing tool: tell the owner which and how to install it for their OS; look up the current install
+  instructions rather than recalling them. Optional ones (gitleaks, node, claude when already running) can
+  wait; git, python3 3.12+, uv, the engine and compose cannot.
+- With Podman, `podman compose` needs a provider: `docker-compose` (preferred: it supports everything the
+  compose files use) or `podman-compose`. On macOS, `podman machine` must be running.
+
+**Check:** bootstrap ends with "Done"; `git -C repos/kernel status` and `git -C repos/morphogen status` work.
+
+## 2. Settings
+
+If `.env` does not exist, `scripts/up.sh` creates it from `.env.example` and generates the secrets. Before
+the first run, ask the owner for what only they can give, one question, all at once:
+
+- `CONTAINER_ENGINE`: podman (their default) or docker;
+- `ANTHROPIC_API_KEY`: leave empty to use their Claude subscription through the gateway (recommended for
+  Claude Code), or a key for API billing;
+- `OPENROUTER_API_KEY`: for OpenRouter models;
+- a local model server: Ollama at `http://host.docker.internal:11434` by default; `OLLAMA_ENABLED=false` if
+  there is none; another URL if it runs elsewhere;
+- ports, if 5432, 8080, 8090, 7007 or 9090 are taken.
+
+Write their answers into `.env` (copy `.env.example` first if needed). Never echo a key back.
+
+**Check:** `.env` exists with mode 600.
+
+## 3. The stack
+
+Run `scripts/up.sh`. It renders the gateway config, builds the kernel image and (first time, several
+minutes) the Backstage image, starts every service, waits for each, then connects this repository to
+kernel with `kk up --no-stack` (owner and agent logins in `~/.config/knowledge-kernel`, `.mcp.json`,
+kernel's skill and hooks).
+
+If a service does not come up, read its logs (`<engine> compose -f repos/kernel/deploy/compose.yaml
+-f deploy/compose.yaml --env-file .env logs <service>`), find the cause, fix it in this repository, and run
+`scripts/up.sh` again. Known places to look:
+
+- **bifrost** refuses its config: read the error; the format is in Bifrost's docs for v2.3.2
+  (`quickstart/gateway/provider-configuration.mdx`). If an `anthropic` provider with no keys is the
+  problem, change `scripts/render_bifrost.py`, not the rendered file.
+- **backstage** build fails: Node must be 22 or 24 (`services/backstage/package.json` engines). After the
+  first successful `yarn install`, commit `services/backstage/yarn.lock`.
+- **kernel** with Podman: kernel's own `kk up` calls `docker`; substrate avoids it by starting the stack
+  itself. The fix upstream is `upstream/kernel/0001-*.patch` (the `upstream` skill).
+
+**Check:** `scripts/check.sh` shows ok for kernel, gateway, map and prometheus. Tell the owner the kernel
+UI sign-in that `kk up` printed (name `owner`, the password it shows) and where the UIs are.
+
+## 4. The gateway's providers
+
+Open http://127.0.0.1:8090/ (BIFROST_PORT) with the owner. The rendered config seeded: Anthropic (key or
+subscription pass-through), OpenRouter if a key was given, Ollama if enabled, and one virtual key
+`substrate` allowed on all of them, with auth enforced on inference.
+
+Prove each provider with one small request through the gateway, using the virtual key from `.env` (read it
+into a shell variable; do not print it):
+
+- Anthropic, API-key mode: `POST /anthropic/v1/messages` with `x-bf-vk` or `Authorization: Bearer <vk>`.
+  Subscription mode is proven in step 5 by Claude Code itself.
+- OpenRouter: an OpenAI-compatible chat completion with model `openrouter/<model>`; for tests use a `:free`
+  model under 10B parameters (kernel's rule for evals; Oct 2026: `liquid/lfm-2.5-2.6b:free`).
+- Ollama: `ollama/<a model the owner has pulled>` (`ollama list` on the host).
+
+Look up the exact routes in Bifrost's docs before calling them. If the owner wants the dashboard
+password-protected, follow Bifrost's `setting-up.mdx` (setup token), then add `basic_auth` to
+`deploy/prometheus.yml` so scraping keeps working.
+
+**Check:** each configured provider answered once; `scripts/check.sh` shows the gateway's metrics.
+
+## 5. Claude Code through the gateway
+
+Only after step 4. Run `scripts/gateway.py on` (subscription mode; `--mode api-key` if `ANTHROPIC_API_KEY`
+is set and the owner prefers API billing). It writes `ANTHROPIC_BASE_URL` and the virtual-key header into
+`.claude/settings.local.json`, keeping kernel's entries. It applies to the next session: ask the owner to
+restart Claude Code in this folder, send one prompt, and confirm a new request appears in Bifrost's logs.
+If the session cannot reach a model, they run `scripts/gateway.py off` from a terminal and restart.
+
+Unset any `CLAUDE_CODE_USE_*` variable in their environment first: each sends Claude Code to a cloud
+provider instead of the gateway.
+
+**Check:** `scripts/gateway.py status` says routed; Bifrost logs show the session's requests;
+`bifrost_cost_total` or token counters move.
+
+## 6. MCP connections
+
+- **kernel:** `kk up` wrote it into `.mcp.json`; the owner approves the `kernel` server when Claude Code asks.
+  Check with one `recall` about this repository.
+- **Backstage:** add it at local scope, reading the token from `.env` without printing it:
+  `claude mcp add --transport http --scope local backstage http://127.0.0.1:7007/api/mcp-actions/v1 --header "Authorization: Bearer $BACKSTAGE_MCP_TOKEN"`.
+  Confirm the flags with `claude mcp add --help` first. Check: list the catalog's components through it.
+- **Morphogen:** the plugin, from GitHub so the judge is never the code being judged:
+  `/plugin marketplace add OpenReplicant/Morphogen`, then `/plugin install morphogen@morphogen`. Check:
+  its `status` tool on this repository (`morphogen.yaml` reads `catalog-info.yaml`).
+
+**Check:** `scripts/check.sh` passes; the owner has seen each of the three answer.
+
+## Afterwards
+
+Record anything that differed from these steps (a flag that changed, a provider quirk) as a fix: in this
+skill or the scripts when it is substrate's, upstream when it is kernel's or Morphogen's.

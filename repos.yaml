@@ -1,0 +1,11 @@
+# The projects substrate assembles, cloned into repos/ as full clones you branch, fix and push from (S-11).
+# scripts/bootstrap.sh clones each on its default branch. `checked` is the commit substrate was last
+# checked against; scripts/check.sh says when a clone has moved past it.
+kernel:
+  url: https://github.com/OpenReplicant/kernel
+  branch: main
+  checked: c23a9827660638aea0a503e7b323604ff4a19f11   # 2026-10-19
+morphogen:
+  url: https://github.com/OpenReplicant/Morphogen
+  branch: main
+  checked: 4f366870b5595d5a4b088dcb6ad7787c17ccc500   # 2026-11-05

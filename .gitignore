@@ -1,4 +1,13 @@
+# secrets and machine state
 .env
+.state/
 *.local.yaml
-__pycache__/
+# the upstream clones (repos.yaml); each is its own git repository
+repos/
+# Python
 .venv/
+__pycache__/
+# written by kk up for this machine (kernel logins live in ~/.config/knowledge-kernel)
+.mcp.json
+.claude/settings.local.json
+.claude/skills/knowledge-kernel/

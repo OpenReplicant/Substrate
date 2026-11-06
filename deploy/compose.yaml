@@ -1,51 +1,75 @@
-# Substrate: an overlay on kernel's compose project (S-06), the way kernel's devops demo is one.
-# Kernel's stack (db, init, kernel, caddy) comes from vendor/kernel/deploy/compose.yaml, started by
-# `kk up`; this file adds the model gateway and the Prometheus that watches it.
+# Substrate's services, as an overlay on kernel's compose project (S-06), started by scripts/up.sh:
 #
-#   scripts/up.sh ~/code/my-project          # kk up, then the services below
-# or by hand, from the repository root:
-#   docker compose -f vendor/kernel/deploy/compose.yaml -f deploy/compose.yaml \
-#     --env-file vendor/kernel/deploy/.env up -d bifrost prometheus
+#   $CONTAINER_ENGINE compose -f repos/kernel/deploy/compose.yaml -f deploy/compose.yaml --env-file .env up -d
 #
-# Paths below are relative to vendor/kernel/deploy/ (the first compose file's directory), hence ../../../.
-# Ports are published on localhost only. Bifrost's UI and API: http://127.0.0.1:${BIFROST_PORT:-8090}/
-# Claude Code reaches it at http://127.0.0.1:${BIFROST_PORT:-8090}/anthropic (harness/README.md).
+# Kernel's file comes first, so relative paths here resolve from repos/kernel/deploy/ (hence ../../../).
+# Everything is published on 127.0.0.1 only:
+#   kernel UI and MCP   http://127.0.0.1:8080/ui/            (kernel's caddy)
+#   model gateway       http://127.0.0.1:${BIFROST_PORT}/    (Claude Code: .../anthropic)
+#   map                 http://127.0.0.1:${BACKSTAGE_PORT}/  (MCP: .../api/mcp-actions/v1)
+#   Prometheus          http://127.0.0.1:${PROMETHEUS_PORT}/
+# Works with Docker or Podman (CONTAINER_ENGINE in .env, S-13).
 
 name: knowledge-kernel          # the same project as kernel's stack
 
+x-locked: &locked
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  restart: unless-stopped
+
 services:
 
-  # The model gateway (S-04). Its configuration (providers, virtual keys, budgets) and request logs live
-  # in its own volume; set them up in its UI on first start. Kernel modules that call a model
-  # (memory-extractor: KK_EXTRACT_URL) can point at its OpenAI-compatible routes too.
+  # The model gateway (S-04, S-14). config.json is rendered by scripts/render_bifrost.py from .env (only the
+  # providers you have keys for) and seeds Bifrost's own config store in its volume; later edits in its UI
+  # persist there. Provider keys stay in the environment, referenced as env.NAME.
   bifrost:
+    <<: *locked
     image: ${BIFROST_IMAGE:-maximhq/bifrost:v2.3.2}
     environment:
       APP_HOST: 0.0.0.0
       APP_PORT: "8080"
+      BIFROST_VIRTUAL_KEY: ${BIFROST_VIRTUAL_KEY:?set in .env}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
     volumes:
       - bifrost-data:/app/data
+      - ../../../.state/bifrost/config.json:/app/data/config.json:ro
     ports:
       - "127.0.0.1:${BIFROST_PORT:-8090}:8080"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"     # a model server on this machine (Ollama)
     networks: [default, gateway-metrics]
-    restart: unless-stopped
 
-  # Scrapes Bifrost's /metrics (S-05). Kernel's observer-prometheus reaches it on kk-reach-prometheus
-  # once installed with the queries in deploy/observer/queries.yaml (deploy/observer/README.md).
+  # Scrapes the gateway's /metrics (S-05); kernel's observer reads it on kk-reach-prometheus.
   prometheus:
+    <<: *locked
     image: ${PROMETHEUS_IMAGE:-quay.io/prometheus/prometheus:v3.15.0@sha256:efd719c99d83b060d9daefdcf00360461adf279f45ef5391f8d111892118753e}
     read_only: true
-    cap_drop: [ALL]
-    security_opt: [no-new-privileges:true]
     user: nobody
     command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.path=/prometheus",
               "--storage.tsdb.retention.time=7d"]
     volumes:
       - ../../../deploy/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus-data:/prometheus
-    networks: [gateway-metrics, kk-reach-prometheus]
+    ports:
+      - "127.0.0.1:${PROMETHEUS_PORT:-9090}:9090"
+    networks: [default, gateway-metrics, kk-reach-prometheus]
     depends_on: [bifrost]
-    restart: unless-stopped
+
+  # The map (S-12): Backstage built from services/backstage (scripts/backstage-build.sh), reading
+  # catalog-info.yaml. Its MCP endpoint lets Claude Code query the catalog.
+  backstage:
+    <<: *locked
+    image: ${BACKSTAGE_IMAGE:-localhost/substrate-backstage:local}
+    command: ["node", "packages/backend", "--config", "app-config.yaml", "--config", "app-config.production.yaml",
+              "--config", "app-config.substrate.yaml"]
+    environment:
+      BACKSTAGE_PORT: ${BACKSTAGE_PORT:-7007}
+      BACKSTAGE_MCP_TOKEN: ${BACKSTAGE_MCP_TOKEN:?set in .env}
+    volumes:
+      - ../../../catalog-info.yaml:/substrate/catalog-info.yaml:ro
+    ports:
+      - "127.0.0.1:${BACKSTAGE_PORT:-7007}:7007"
 
 volumes:
   bifrost-data:

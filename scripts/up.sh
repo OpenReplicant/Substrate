@@ -1,37 +1,69 @@
 #!/bin/sh
-# Bring up the substrate for one project: kernel's stack and harness wiring (kk up), then the gateway and
-# its Prometheus (deploy/compose.yaml). Needs Docker or Podman with compose, Python 3.12+, git.
+# Bring up the whole stack and connect a project to kernel (default: this repository, S-10).
 #
-#   scripts/up.sh ~/code/my-project
+#   scripts/up.sh [PROJECT_DIR]
 #
-# Afterwards: harness/README.md (Claude Code through the gateway, Morphogen's plugin).
+# Steps: .env (secrets generated once) -> the gateway's config -> images (kernel, Backstage if missing) ->
+# every service -> wait until each answers -> kk up --no-stack (logins, MCP, skill, hooks, reading the project).
 set -eu
+. "$(dirname "$0")/lib.sh"
 
-project=${1:?usage: scripts/up.sh PROJECT_DIR}
-root=$(cd "$(dirname "$0")/.." && pwd)
-kernel="$root/vendor/kernel"
+project=$(cd "${1:-$ROOT}" && pwd)
+[ -d "$KERNEL/.git" ] || { echo "repos/kernel is missing: run scripts/bootstrap.sh" >&2; exit 1; }
 
-if [ ! -f "$kernel/pyproject.toml" ]; then
-  git -C "$root" submodule update --init
+say "Settings (.env)"
+if [ ! -f "$ENV_FILE" ]; then cp "$ROOT/.env.example" "$ENV_FILE"; chmod 600 "$ENV_FILE"; echo "  created .env"; fi
+python3 - "$ENV_FILE" <<'EOF'
+import secrets, sys
+path = sys.argv[1]
+gen = {"POSTGRES_PASSWORD": lambda: secrets.token_urlsafe(24),
+       "KK_AUTHENTICATOR_PASSWORD": lambda: secrets.token_urlsafe(24),
+       "KK_JWT_SECRET": lambda: secrets.token_urlsafe(48),
+       "BIFROST_VIRTUAL_KEY": lambda: "sk-bf-" + secrets.token_hex(24),
+       "BACKSTAGE_MCP_TOKEN": lambda: secrets.token_urlsafe(32)}
+lines, filled = open(path).read().splitlines(), []
+for i, line in enumerate(lines):
+    k, sep, v = line.partition("=")
+    if sep and k in gen and not v.strip():
+        lines[i] = f"{k}={gen[k]()}"; filled.append(k)
+open(path, "w").write("\n".join(lines) + "\n")
+print("  generated " + ", ".join(filled) if filled else "  secrets already set")
+EOF
+echo "  engine: $ENGINE"
+
+say "Gateway config"
+python3 "$ROOT/scripts/render_bifrost.py"
+
+say "Images"
+"$ENGINE" build -q -t knowledge-kernel:local "$KERNEL" >/dev/null && echo "  knowledge-kernel:local built"
+bs_image=$(env_value BACKSTAGE_IMAGE); bs_image=${bs_image:-localhost/substrate-backstage:local}
+if "$ENGINE" image inspect "$bs_image" >/dev/null 2>&1; then
+  echo "  $bs_image present (rebuild with scripts/backstage-build.sh)"
+else
+  "$ROOT/scripts/backstage-build.sh"
 fi
 
-# kernel's own command; installs into whatever Python environment is active
-command -v kk >/dev/null 2>&1 || pip install -e "$kernel"
+say "Services"
+compose up -d
 
-# kernel's stack, the owner's and the agent's logins, MCP + skill + hooks merged into the project (kernel D-57)
-kk up "$project"
+say "Waiting for each service"
+wait_for() {   # name url
+  i=0
+  until curl -fsS -o /dev/null "$2" 2>/dev/null; do
+    i=$((i + 1)); [ $i -gt 90 ] && { echo "  $1 did not answer at $2: $ENGINE compose ... logs" >&2; return 1; }
+    sleep 2
+  done
+  echo "  $1 ok"
+}
+wait_for kernel "http://127.0.0.1:8080/ui/views.json"
+wait_for gateway "http://127.0.0.1:$(env_value BIFROST_PORT)/health"
+wait_for map "http://127.0.0.1:$(env_value BACKSTAGE_PORT)/.backstage/health/v1/readiness"
 
-# the gateway and Prometheus, in the same compose project as kernel's stack (S-06)
-docker compose -f "$kernel/deploy/compose.yaml" -f "$root/deploy/compose.yaml" \
-  --env-file "$kernel/deploy/.env" up -d bifrost prometheus
+say "Kernel: logins and the project ($project)"
+scan=""; command -v gitleaks >/dev/null 2>&1 || { scan="--no-scan"; echo "  gitleaks missing: connecting without reading the project"; }
+KK_ADMIN_URL="postgresql://postgres:$(env_value POSTGRES_PASSWORD)@127.0.0.1:$(env_value KK_DB_PORT)/kk" \
+KK_JWT_SECRET="$(env_value KK_JWT_SECRET)" \
+  "$ROOT/.venv/bin/kk" up --no-stack $scan "$project"
 
-port=${BIFROST_PORT:-8090}
-cat <<EOF
-
-Substrate is up.
-  Kernel UI:        http://127.0.0.1:8080/ui/   (sign-in printed by kk up above)
-  Model gateway:    http://127.0.0.1:$port/     (add a provider and a virtual key on first start)
-  Claude Code:      ANTHROPIC_BASE_URL=http://127.0.0.1:$port/anthropic   (harness/README.md)
-  Judge:            in Claude Code, /plugin marketplace add OpenReplicant/Morphogen
-                    then /plugin install morphogen@morphogen
-EOF
+say "Up"
+"$ROOT/scripts/check.sh" || true

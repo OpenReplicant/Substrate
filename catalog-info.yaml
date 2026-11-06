@@ -1,10 +1,11 @@
 # The substrate's map, as a Backstage catalog. Each part states the intent it serves
 # (substrate.dev/intent) and how that intent is filled (substrate.dev/fill):
-#   existing  built, in kernel (vendor/kernel), Morphogen (vendor/morphogen) or Claude Code
+#   existing  built, in kernel (repos/kernel), Morphogen (repos/morphogen) or Claude Code
 #   adopt     open-source software taken as is (version and licence in substrate.dev/candidates)
 #   build     to be written: a kernel module, a skill, or glue in this repository
 # substrate.dev/basis names where an existing part lives. substrate.dev/phase: later marks deferred parts.
-# Morphogen reads this file directly (morphogen.yaml); encoder-backstage will read it into kernel (S-09).
+# Morphogen reads this file directly (morphogen.yaml), Backstage serves it (S-12), and encoder-backstage will
+# read it into kernel (S-09).
 
 apiVersion: backstage.io/v1alpha1
 kind: Group
@@ -209,7 +210,7 @@ metadata:
   annotations:
     substrate.dev/intent: Accept a change only on evidence the changer cannot reach.
     substrate.dev/fill: existing
-    substrate.dev/basis: vendor/morphogen (PLAN.md phases 0-5 done, 6 started)
+    substrate.dev/basis: repos/morphogen (PLAN.md phases 0-5 done, 6 started)
 spec:
   type: service
   lifecycle: production
@@ -362,7 +363,7 @@ spec:
   lifecycle: production
   owner: group:operator
   system: mind
-  consumesApis: [kernel-mcp-api, judge-api, model-api]
+  consumesApis: [kernel-mcp-api, judge-api, model-api, backstage-mcp-api]
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Component
@@ -531,17 +532,17 @@ apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
   name: map-view
-  description: A Backstage server over the same catalog files.
+  description: Backstage over the same catalog files, with its MCP endpoint for agents.
   annotations:
-    substrate.dev/intent: Browse the map in the tool platform teams already use.
+    substrate.dev/intent: Browse the map in the tool platform teams already use; let agents query the catalog over MCP.
     substrate.dev/fill: adopt
-    substrate.dev/candidates: Backstage (Apache-2.0); optional, not in the default stack (S-09)
-    substrate.dev/phase: later
+    substrate.dev/candidates: Backstage from @backstage/create-app 0.9.3 (Apache-2.0), services/backstage; MCP via @backstage/plugin-mcp-actions-backend (S-12)
 spec:
   type: website
   lifecycle: experimental
   owner: group:operator
   system: interface
+  providesApis: [backstage-mcp-api]
   dependsOn: [resource:git-repo]
 ---
 # ================================================================ STORAGE
@@ -647,3 +648,8 @@ apiVersion: backstage.io/v1alpha1
 kind: API
 metadata: {name: kernel-mcp-api, description: "Kernel's MCP tools - memory and operator profiles."}
 spec: {type: mcp-server, lifecycle: production, owner: group:operator, system: interface, definition: "memory: remember, recall, explain, changes_since. operator: every tool."}
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata: {name: backstage-mcp-api, description: "Backstage's catalog actions over MCP, with a static bearer token."}
+spec: {type: mcp-server, lifecycle: experimental, owner: group:operator, system: interface, definition: "POST /api/mcp-actions/v1 (streamable HTTP); token from BACKSTAGE_MCP_TOKEN; actions from the catalog plugin."}

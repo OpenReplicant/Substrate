@@ -1,7 +1,7 @@
 # Substrate's modules
 
 The glue between kernel, Morphogen and the gateway. Each is a kernel module (kernel's
-`modules/_template`, a `module.yaml` valid against `vendor/kernel/kernel/schemas/module.schema.json`,
+`modules/_template`, a `module.yaml` valid against `repos/kernel/kernel/schemas/module.schema.json`,
 its own `kkm_*` role, writes only by `submit_change_set`). Each starts as a brief; tests come next, then a
 builder makes them pass, then Morphogen judges it (Morphogen's demos rule).
 
@@ -13,4 +13,4 @@ builder makes them pass, then Morphogen judges it (Morphogen's demos rule).
 | `dispatcher` | coordination: one task per scope, ordered, within budget | [BRIEF](dispatcher/BRIEF.md) |
 
 A module that turns out general enough moves to kernel's `modules/` by pull request there; the substrate
-then uses it from `vendor/kernel`.
+then uses it from `repos/kernel`.

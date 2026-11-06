@@ -1,0 +1,44 @@
+# Substrate's settings, loaded after app-config.yaml and app-config.production.yaml (deploy/compose.yaml).
+# Lists here replace the earlier files' lists.
+app:
+  title: Substrate
+  baseUrl: http://localhost:${BACKSTAGE_PORT}
+
+organization:
+  name: Substrate
+
+backend:
+  baseUrl: http://localhost:${BACKSTAGE_PORT}
+  listen: ':7007'
+  # The catalog is re-read from files at every start, so an in-memory database is enough here.
+  database:
+    client: better-sqlite3
+    connection: ':memory:'
+  # Claude Code reaches the MCP endpoint (/api/mcp-actions/v1) with this token, limited to MCP and the
+  # catalog (backstage.io/docs/ai/mcp-actions). A static token is that page's interim method.
+  auth:
+    externalAccess:
+      - type: static
+        options:
+          token: ${BACKSTAGE_MCP_TOKEN}
+          subject: claude-code
+        accessRestrictions:
+          - plugin: mcp-actions
+          - plugin: catalog
+  actions:
+    pluginSources:
+      - catalog
+
+auth:
+  providers:
+    # Local only: the port is published on 127.0.0.1. Replace before exposing Backstage anywhere else.
+    guest:
+      dangerouslyAllowOutsideDevelopment: true
+
+catalog:
+  rules:
+    - allow: [Domain, System, Component, API, Resource, Group, User, Location]
+  locations:
+    # The substrate's map, mounted read-only by deploy/compose.yaml
+    - type: file
+      target: /substrate/catalog-info.yaml

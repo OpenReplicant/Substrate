@@ -3,15 +3,16 @@
 A business, or any system, that keeps a cited model of itself, notices when practice drifts from intent,
 and improves only on evidence it cannot fake.
 
-Substrate assembles projects that each do one part, and adds the glue between them (S-01):
+Substrate assembles projects that each do one part, and adds the glue between them:
 
 | Part | Project | Does |
 | --- | --- | --- |
-| World model | [kernel](https://github.com/OpenReplicant/kernel) (`vendor/kernel`) | every claim in one Postgres: attributed, quoted, belief-scored, scoped, bitemporal; encoders, verifiers, recall, the review lane, the MAPE-K loop |
-| Judge | [Morphogen](https://github.com/OpenReplicant/Morphogen) (`vendor/morphogen`) | a change lands only with a verdict the changer cannot reach: rules from the base, outside measurement, held-out cases |
+| World model | [kernel](https://github.com/OpenReplicant/kernel), cloned to `repos/kernel` | every claim in one Postgres: attributed, quoted, belief-scored, scoped, bitemporal; encoders, verifiers, recall, the review lane, the MAPE-K loop |
+| Judge | [Morphogen](https://github.com/OpenReplicant/Morphogen), cloned to `repos/morphogen` | a change lands only with a verdict the changer cannot reach: rules from the base, outside measurement, held-out cases |
 | Harness | Claude Code | the cognitive cycle, the builder, the mapper's hands |
-| Gateway | [Bifrost](https://github.com/maximhq/bifrost) v2.3.2 | every model call routed and measured outside the agent |
-| Telemetry | Prometheus v3.15.0 | the gateway's tokens, cost and errors, recorded by kernel as observations |
+| Gateway | [Bifrost](https://github.com/maximhq/bifrost) v2.3.2 | Claude (API key or your subscription), OpenRouter and local models behind one virtual key; every call measured outside the agent |
+| Map | [Backstage](https://backstage.io) (`services/backstage`) | the catalog people browse, and an MCP endpoint agents query |
+| Telemetry | Prometheus v3.15.0 | the gateway's tokens, cost and errors, for kernel to record as observations |
 
 Read as a mind, these are the Common Model of Cognition's modules: perception (briefings), declarative
 memory (kernel), procedural memory (skills), motor (actuators), the cycle (Claude Code), learning
@@ -20,49 +21,64 @@ memory (kernel), procedural memory (skills), motor (actuators), the cycle (Claud
 policy (people, through clearance and review). Read as a product, they are a Foundry-shaped platform
 whose every value can say where it came from.
 
-`catalog-info.yaml` is the map: 30 components, each with the intent it serves and how it is filled. 21 exist
-already, 3 are adopted open source, 6 are to build. Morphogen reads it as cells (`morphogen.yaml`).
+`catalog-info.yaml` is the map: every part with the intent it serves and how it is filled, most of them
+already built in kernel or Morphogen. Backstage shows it, Morphogen reads it as cells (`morphogen.yaml`).
 
 ## Start
 
-Needs Docker or Podman with compose, Python 3.12+, git, and Claude Code.
+Clone this repository, open Claude Code in it, and ask it to set up. The `setup` skill
+(`.claude/skills/setup/SKILL.md`) walks through each step and checks it. By hand:
 
 ```sh
-git clone --recurse-submodules <this repository> substrate && cd substrate
-scripts/up.sh ~/code/my-project
+git clone https://github.com/OpenReplicant/Substrate substrate && cd substrate
+scripts/bootstrap.sh          # tools, kernel and Morphogen cloned into repos/, kk and Morphogen installed
+cp .env.example .env          # optional: set CONTAINER_ENGINE, provider keys, ports (up.sh does it otherwise)
+scripts/up.sh                 # every service, then kernel connected to this repository
+scripts/check.sh
+scripts/gateway.py on         # Claude Code through the gateway, from the next session
 ```
 
-That runs kernel's `kk up` on the project (its stack, logins, MCP, skill and hooks), then starts the gateway
-and Prometheus beside it. Then wire Claude Code through the gateway and install Morphogen's plugin:
-[harness/README.md](harness/README.md).
+Needs git, Python 3.12+, uv, Podman (default) or Docker with compose, Node 22 or 24 (to build Backstage),
+and Claude Code; gitleaks lets kernel read the project.
+
+| Service | Address (localhost only) |
+| --- | --- |
+| kernel UI and MCP | http://127.0.0.1:8080/ui/ (sign-in printed by `scripts/up.sh`) |
+| model gateway | http://127.0.0.1:8090/ (Claude Code: `/anthropic`) |
+| Backstage | http://127.0.0.1:7007/ (MCP: `/api/mcp-actions/v1`) |
+| Prometheus | http://127.0.0.1:9090/ |
 
 ## Layout
 
 ```
-DECISIONS.md        the defaults and why (S-01..S-10), open questions
-catalog-info.yaml   the map, as a Backstage catalog
-docs/catalog.html   the map as an interactive graph (open in a browser)
-morphogen.yaml      the map as Morphogen cells
-deploy/             compose overlay on kernel's stack (gateway, Prometheus), observer queries
-harness/            Claude Code wiring: kernel, Morphogen, the gateway
-modules/            the glue, as kernel modules: briefs first
-scripts/up.sh       one command for one project
-vendor/kernel       kernel at c23a982 (git submodule)
-vendor/morphogen    Morphogen at 4f36687 (git submodule)
+CLAUDE.md                 instructions for the agent working here
+DECISIONS.md              the defaults and why (S-01...), open questions
+catalog-info.yaml         the map, as a Backstage catalog
+morphogen.yaml            the map as Morphogen cells
+repos.yaml                the upstream projects and the commits last checked
+deploy/                   compose overlay on kernel's stack, Prometheus config, gateway observer queries
+services/backstage/       the Backstage app (create-app 0.9.3) and substrate's config for it
+modules/                  the glue, as kernel modules: briefs first
+scripts/                  bootstrap, up, down, check, gateway, backstage-build, render_bifrost
+upstream/                 fixes prepared for kernel or Morphogen, not yet opened as PRs
+.claude/skills/           setup, upstream
+repos/                    kernel and Morphogen clones (gitignored; each its own git repository)
 ```
 
-## What to build first
+## Working upstream
+
+Fixes found while running the substrate go to kernel or Morphogen by branch and pull request in
+`repos/<repo>` (the `upstream` skill). The first one is ready: `upstream/kernel/0001-*.patch` lets kernel's
+`kk up` run on Podman.
+
+## What to build next
 
 1. `encoder-backstage`: the substrate's own map into kernel, so kernel models the system it runs in.
 2. `encoder-morphogen`: verdicts into kernel, so what was judged is cited beside what was observed.
-3. Gateway metrics as observations (`deploy/observer/`), so cost is a claim.
+3. Gateway metrics as observations (`deploy/observer/`), so model cost is a claim.
 
-Together they make the first distribution (S-10): the system minding itself. Then the resolver (with
-kernel's M6-T9) and the dispatcher (on kernel's M6-T0).
+Together they make the first distribution (S-10): the system minding itself.
 
-## Rules
+## Licence
 
-Kernel's and Morphogen's rules hold here: every claim attributed and quoted, nothing deleted, people hold
-clearance, no method verifies its own output; red team first; pin exact versions and check licences
-(permissive or LGPL libraries in the default stack); look up current docs before relying on a tool. Apache-2.0,
-as both.
+Apache-2.0, as kernel and Morphogen. `services/backstage` is generated from Backstage's template (Apache-2.0).
