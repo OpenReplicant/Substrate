@@ -1,0 +1,649 @@
+# The substrate's map, as a Backstage catalog. Each part states the intent it serves
+# (substrate.dev/intent) and how that intent is filled (substrate.dev/fill):
+#   existing  built, in kernel (vendor/kernel), Morphogen (vendor/morphogen) or Claude Code
+#   adopt     open-source software taken as is (version and licence in substrate.dev/candidates)
+#   build     to be written: a kernel module, a skill, or glue in this repository
+# substrate.dev/basis names where an existing part lives. substrate.dev/phase: later marks deferred parts.
+# Morphogen reads this file directly (morphogen.yaml); encoder-backstage will read it into kernel (S-09).
+
+apiVersion: backstage.io/v1alpha1
+kind: Group
+metadata:
+  name: operator
+  description: The human owner. Holds policy (goals, clearance, autonomy) and approves in the review lane.
+spec:
+  type: team
+  children: []
+---
+apiVersion: backstage.io/v1alpha1
+kind: Group
+metadata:
+  name: agents
+  description: Agent-owned parts; agents change them inside a cell's change scope, behind the judge.
+spec:
+  type: team
+  children: []
+---
+apiVersion: backstage.io/v1alpha1
+kind: Domain
+metadata:
+  name: substrate
+  description: A mind that is also an operational platform - kernel's claims, Morphogen's judge, Claude Code's hands.
+spec:
+  owner: group:operator
+---
+apiVersion: backstage.io/v1alpha1
+kind: System
+metadata:
+  name: interface
+  description: How people, tools and agents reach the substrate.
+spec: {owner: group:operator, domain: substrate}
+---
+apiVersion: backstage.io/v1alpha1
+kind: System
+metadata:
+  name: organism
+  description: The Viable System Model - operations, coordination, control, intelligence, policy.
+spec: {owner: group:operator, domain: substrate}
+---
+apiVersion: backstage.io/v1alpha1
+kind: System
+metadata:
+  name: mind
+  description: The Common Model of Cognition inside one agent.
+spec: {owner: group:operator, domain: substrate}
+---
+apiVersion: backstage.io/v1alpha1
+kind: System
+metadata:
+  name: engine
+  description: Claims with provenance and belief, identity, verification, the judge.
+spec: {owner: group:operator, domain: substrate}
+---
+apiVersion: backstage.io/v1alpha1
+kind: System
+metadata:
+  name: storage
+  description: Durable state and the services that hold it.
+spec: {owner: group:operator, domain: substrate}
+---
+# ================================================================ ENGINE
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: claims-store
+  description: Kernel v0 - entities, claims, artifacts, runs, change sets in one Postgres.
+  annotations:
+    substrate.dev/intent: Hold every assertion attributed, referenced, belief-scored, scoped and bitemporal; write only through change sets; delete nothing.
+    substrate.dev/fill: existing
+    substrate.dev/basis: kernel/schema/001_kernel.sql (frozen v0; D-01, D-02, D-05, D-09, D-10)
+spec:
+  type: library
+  lifecycle: production
+  owner: group:operator
+  system: engine
+  providesApis: [change-sets, api-views, change-events]
+  dependsOn: [resource:postgres]
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: vocabulary
+  description: Standard vocabularies as packs, with SSSOM mappings between them.
+  annotations:
+    substrate.dev/intent: Give claims shared terms without forcing any source to change; new terms go through review.
+    substrate.dev/fill: existing
+    substrate.dev/basis: kernel ontology/ packs and modules/pack-loader (D-23, D-40); find_term and propose_term are kernel M6-T5
+spec:
+  type: library
+  lifecycle: production
+  owner: group:operator
+  system: engine
+  providesApis: [vocab]
+  consumesApis: [change-sets]
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: encoders
+  description: Sources in, proposed claims out - repositories, event logs, BPMN, conversations, papers.
+  annotations:
+    substrate.dev/intent: Turn each source into claims that cite it; re-reading a changed source supersedes what it said.
+    substrate.dev/fill: existing
+    substrate.dev/basis: kernel modules self-encoder, encoder-eventlog, encoder-bpmn, encoder-interaction, encoder-papers, memory-extractor, ingest-filter-gitleaks
+spec:
+  type: library
+  lifecycle: production
+  owner: group:agents
+  system: engine
+  consumesApis: [change-sets, vocab, model-api]
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: validator
+  description: SHACL validation of every change set before it applies.
+  annotations:
+    substrate.dev/intent: Refuse change sets that break the shapes; never write.
+    substrate.dev/fill: existing
+    substrate.dev/basis: kernel modules/validator-shacl (D-24)
+spec:
+  type: service
+  lifecycle: production
+  owner: group:operator
+  system: engine
+  consumesApis: [change-events, api-views, vocab]
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: belief-model
+  description: Belief from independent support and contradiction; swappable.
+  annotations:
+    substrate.dev/intent: Score each claim between 0 and 1 from support, contradiction and fallen premises; reliability feeds belief, never clearance.
+    substrate.dev/fill: existing
+    substrate.dev/basis: kernel modules/belief-corroboration (D-04, D-27, D-62); a learned reliability model is a Morphogen cell later
+spec:
+  type: service
+  lifecycle: production
+  owner: group:agents
+  system: engine
+  consumesApis: [change-events, api-views, change-sets]
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: verifiers
+  description: Quotes checked against sources; conclusions flagged when a premise falls.
+  annotations:
+    substrate.dev/intent: No method verifies its own output (kernel invariant 5).
+    substrate.dev/fill: existing
+    substrate.dev/basis: kernel modules verifier-quotes (D-67) and truth-maintenance (D-90)
+spec:
+  type: service
+  lifecycle: production
+  owner: group:agents
+  system: engine
+  consumesApis: [change-events, api-views, change-sets]
+  dependsOn: [resource:artifact-store]
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: recall
+  description: BM25 by default, embeddings and re-ranking opt-in; indexes are read models.
+  annotations:
+    substrate.dev/intent: Find the claims a question needs, ranked with belief.
+    substrate.dev/fill: existing
+    substrate.dev/basis: kernel modules recall-index and recall-dense (D-60, D-61, D-66)
+spec:
+  type: service
+  lifecycle: production
+  owner: group:agents
+  system: engine
+  providesApis: [recall-api]
+  consumesApis: [api-views, change-events]
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: identity-resolver
+  description: Which records and mentions name the same entity.
+  annotations:
+    substrate.dev/intent: Link names, roles and records of one thing - exactMatch when certain, closeMatch for review; every merge reversible.
+    substrate.dev/fill: build
+    substrate.dev/basis: kernel M6-T9 (planned); Morphogen demos/entity-resolution supplies the cells and held-out pairs (S-07)
+    substrate.dev/candidates: Splink 5.0.0 (MIT), as M6-T9 names
+spec:
+  type: service
+  lifecycle: experimental
+  owner: group:agents
+  system: engine
+  consumesApis: [api-views, change-sets, vocab]
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: morphogen
+  description: The judge, the selector over optimizers, the red team, the evidence log.
+  annotations:
+    substrate.dev/intent: Accept a change only on evidence the changer cannot reach.
+    substrate.dev/fill: existing
+    substrate.dev/basis: vendor/morphogen (PLAN.md phases 0-5 done, 6 started)
+spec:
+  type: service
+  lifecycle: production
+  owner: group:operator
+  system: engine
+  providesApis: [judge-api]
+  dependsOn: [resource:evidence-log, resource:sandbox, resource:git-repo]
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: encoder-morphogen
+  description: Morphogen's verdicts as claims in kernel.
+  annotations:
+    substrate.dev/intent: Let kernel know what was judged, by what evidence, at what cost, so recall and the MAPE-K loop can use it.
+    substrate.dev/fill: build
+    substrate.dev/basis: modules/encoder-morphogen/BRIEF.md (S-08); DQV and PROV are kernel packs already
+spec:
+  type: service
+  lifecycle: experimental
+  owner: group:agents
+  system: engine
+  consumesApis: [judge-api, change-sets, vocab]
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: encoder-backstage
+  description: catalog-info.yaml files as system-structure claims.
+  annotations:
+    substrate.dev/intent: Put the map people already keep into kernel, cited by file and line.
+    substrate.dev/fill: build
+    substrate.dev/basis: modules/encoder-backstage/BRIEF.md (S-09); system structure is kernel's kk-tosca profile (D-07)
+spec:
+  type: service
+  lifecycle: experimental
+  owner: group:agents
+  system: engine
+  consumesApis: [change-sets, vocab]
+  dependsOn: [resource:git-repo]
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: model-gateway
+  description: Every model call passes here, so cost is measured outside the agent.
+  annotations:
+    substrate.dev/intent: Route model calls with budgets and keys; expose tokens, cost and errors as metrics.
+    substrate.dev/fill: adopt
+    substrate.dev/candidates: Bifrost v2.3.2 (Apache-2.0), maximhq/bifrost:v2.3.2 (S-04)
+spec:
+  type: service
+  lifecycle: experimental
+  owner: group:operator
+  system: engine
+  providesApis: [model-api, gateway-metrics]
+---
+# ================================================================ MIND
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: perception
+  description: What the agent is shown each turn - a cited briefing within a budget.
+  annotations:
+    substrate.dev/intent: Present relevant claims and what changed, attributed and bounded.
+    substrate.dev/fill: existing
+    substrate.dev/basis: kernel-mcp briefing and hooks (D-88); context pack decoder is kernel M6-T7
+spec:
+  type: library
+  lifecycle: production
+  owner: group:agents
+  system: mind
+  consumesApis: [recall-api, kernel-mcp-api]
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: working-memory
+  description: A private scope per agent whose writes apply at once at lower belief.
+  annotations:
+    substrate.dev/intent: Let an agent rely on what it just wrote before review.
+    substrate.dev/fill: build
+    substrate.dev/basis: kernel M6-T2 (planned)
+spec:
+  type: library
+  lifecycle: experimental
+  owner: group:agents
+  system: mind
+  consumesApis: [kernel-mcp-api]
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: declarative-memory
+  description: recall, remember, explain, changes_since.
+  annotations:
+    substrate.dev/intent: Remember and recall with provenance; never act on an unsupported memory.
+    substrate.dev/fill: existing
+    substrate.dev/basis: kernel-mcp memory profile (M6-T1, D-88); LongMemEval end to end 0.683 (D-92)
+spec:
+  type: library
+  lifecycle: production
+  owner: group:agents
+  system: mind
+  consumesApis: [kernel-mcp-api]
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: procedural-memory
+  description: Skills as productions, with learned utility.
+  annotations:
+    substrate.dev/intent: Choose the skill to apply from evidence; skills are text cells Morphogen improves.
+    substrate.dev/fill: build
+    substrate.dev/candidates: Claude Code skills; GEPA 0.1.4 (MIT) through Morphogen
+spec:
+  type: library
+  lifecycle: experimental
+  owner: group:agents
+  system: mind
+  consumesApis: [judge-api]
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: motor
+  description: Actuators act only on what was approved.
+  annotations:
+    substrate.dev/intent: Change the world only through approved plans with a fixed action list; record what was done.
+    substrate.dev/fill: existing
+    substrate.dev/basis: kernel modules/actuator-compose (D-53); typed actions beyond Compose are to build
+spec:
+  type: service
+  lifecycle: production
+  owner: group:operator
+  system: mind
+  consumesApis: [api-views, change-sets]
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: cycle
+  description: Central selection - one model step between tool batches.
+  annotations:
+    substrate.dev/intent: Match what is in the briefing against skills and choose the next action.
+    substrate.dev/fill: existing
+    substrate.dev/basis: Claude Code, through the gateway (S-03, S-04)
+spec:
+  type: service
+  lifecycle: production
+  owner: group:operator
+  system: mind
+  consumesApis: [kernel-mcp-api, judge-api, model-api]
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: learning
+  description: Improvements proposed, kept only when judged or approved.
+  annotations:
+    substrate.dev/intent: Learn from what keeps happening without fooling itself.
+    substrate.dev/fill: existing
+    substrate.dev/basis: Morphogen's optimizers (Optuna 5.0.0, GEPA 0.1.4, both MIT) and kernel modules/learner-process (D-76)
+spec:
+  type: library
+  lifecycle: production
+  owner: group:agents
+  system: mind
+  consumesApis: [judge-api, api-views, change-sets]
+---
+# ================================================================ ORGANISM
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: builder
+  description: VSM 1 operations - makes the intent's tests pass.
+  annotations:
+    substrate.dev/intent: Build and change what the intent describes, behind the judge.
+    substrate.dev/fill: existing
+    substrate.dev/basis: Claude Code
+spec:
+  type: service
+  lifecycle: production
+  owner: group:agents
+  system: organism
+  consumesApis: [judge-api, kernel-mcp-api, model-api]
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: control-loop
+  description: VSM 3 control - monitor, analyse, plan; the MAPE-K loop.
+  annotations:
+    substrate.dev/intent: Notice when observed behaviour leaves the documented limits and propose a plan a person approves.
+    substrate.dev/fill: existing
+    substrate.dev/basis: kernel modules observer-prometheus, anomaly, conformance, skill-adaptation-planning (D-50, D-52, D-53)
+spec:
+  type: service
+  lifecycle: production
+  owner: group:agents
+  system: organism
+  consumesApis: [metrics-api, api-views, change-sets]
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: mapper
+  description: VSM 4 intelligence - maps what is, by reading and by asking.
+  annotations:
+    substrate.dev/intent: Keep the map of intended and observed structure current, and turn its gaps into questions.
+    substrate.dev/fill: existing
+    substrate.dev/basis: kernel modules skill-interview, skill-process-extraction, map-gaps; Morphogen skills/map
+spec:
+  type: service
+  lifecycle: production
+  owner: group:agents
+  system: organism
+  consumesApis: [kernel-mcp-api, judge-api, change-sets]
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: triggers
+  description: Processors woken when a pattern forms.
+  annotations:
+    substrate.dev/intent: Wake the right module or skill as soon as a pattern forms, without polling.
+    substrate.dev/fill: existing
+    substrate.dev/basis: kernel pattern triggers (D-79) and NOTIFY (D-32); detectors and reactors are kernel M6-T0 (D-86, confirmed)
+spec:
+  type: service
+  lifecycle: experimental
+  owner: group:agents
+  system: organism
+  consumesApis: [change-events]
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: dispatcher
+  description: VSM 2 coordination - one task per scope, ordered, within budget.
+  annotations:
+    substrate.dev/intent: Keep changes attributable and stop agents colliding or looping; doing nothing is allowed.
+    substrate.dev/fill: build
+    substrate.dev/basis: a reactor over kernel's detectors (M6-T0)
+spec:
+  type: service
+  lifecycle: experimental
+  owner: group:agents
+  system: organism
+  consumesApis: [change-events, api-views, gateway-metrics]
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: policy
+  description: VSM 5 - clearance, scopes, review; goals as owner claims.
+  annotations:
+    substrate.dev/intent: Keep the final say with people, enforced by Postgres, never by a model.
+    substrate.dev/fill: existing
+    substrate.dev/basis: kernel scopes, clearance and the review lane (invariants 3 and 4, D-17); goal claims with a vocabulary are to build
+spec:
+  type: library
+  lifecycle: production
+  owner: group:operator
+  system: organism
+  consumesApis: [api-views, change-sets]
+---
+# ================================================================ INTERFACE
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: kernel-mcp
+  description: Kernel over MCP - the memory profile for agents, the operator profile for everything.
+  annotations:
+    substrate.dev/intent: Let any agent read and write as itself, with clearance and attribution per call.
+    substrate.dev/fill: existing
+    substrate.dev/basis: kernel modules/kernel-mcp on the MCP Python SDK 2.3.0 (D-20, D-28, D-88)
+spec:
+  type: service
+  lifecycle: production
+  owner: group:operator
+  system: interface
+  providesApis: [kernel-mcp-api]
+  consumesApis: [api-views, change-sets, recall-api]
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: ui
+  description: Search and explain, the review queue, the graph, and views as modules.
+  annotations:
+    substrate.dev/intent: Let people see what is believed, why, and approve or reject.
+    substrate.dev/fill: existing
+    substrate.dev/basis: kernel modules/ui with view-bpm, view-devops, view-modules (D-44)
+spec:
+  type: website
+  lifecycle: production
+  owner: group:operator
+  system: interface
+  consumesApis: [kernel-mcp-api]
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: front-door
+  description: Caddy routes /mcp and /ui; HTTPS when public.
+  annotations:
+    substrate.dev/intent: One address for people and agents.
+    substrate.dev/fill: existing
+    substrate.dev/basis: kernel deploy/Caddyfile, caddy:2.11.7-alpine (D-74)
+spec:
+  type: service
+  lifecycle: production
+  owner: group:operator
+  system: interface
+  consumesApis: [kernel-mcp-api]
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: map-view
+  description: A Backstage server over the same catalog files.
+  annotations:
+    substrate.dev/intent: Browse the map in the tool platform teams already use.
+    substrate.dev/fill: adopt
+    substrate.dev/candidates: Backstage (Apache-2.0); optional, not in the default stack (S-09)
+    substrate.dev/phase: later
+spec:
+  type: website
+  lifecycle: experimental
+  owner: group:operator
+  system: interface
+  dependsOn: [resource:git-repo]
+---
+# ================================================================ STORAGE
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: prometheus
+  description: Scrapes the gateway; kernel's observer reads it each window.
+  annotations:
+    substrate.dev/intent: Turn the gateway's counters into windows the observer can record as claims.
+    substrate.dev/fill: adopt
+    substrate.dev/candidates: Prometheus v3.15.0 (Apache-2.0) at the digest kernel's devops demo pins (S-05)
+spec:
+  type: service
+  lifecycle: experimental
+  owner: group:operator
+  system: storage
+  providesApis: [metrics-api]
+  consumesApis: [gateway-metrics]
+---
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: postgres
+  description: Kernel's Postgres 17 image with its extensions (D-22).
+spec: {type: database, owner: group:operator, system: storage}
+---
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: artifact-store
+  description: The kk-artifacts volume - what encoders read, for quotes to be checked against.
+spec: {type: volume, owner: group:operator, system: storage}
+---
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: evidence-log
+  description: Morphogen's hash-chained verdict log, in git's own directory.
+spec: {type: database, owner: group:operator, system: storage}
+---
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: git-repo
+  description: Code, the map, the cells, and history.
+spec: {type: repository, owner: group:operator, system: storage}
+---
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: sandbox
+  description: Containers for judged runs and for modules (Podman or Docker).
+spec: {type: container-runtime, owner: group:operator, system: storage}
+---
+# ================================================================ APIs
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata: {name: change-sets, description: "submit_change_set - the only way to write (kernel D-05)."}
+spec: {type: sql-function, lifecycle: production, owner: group:operator, system: engine, definition: "api.submit_change_set(ops jsonb) under the caller's own role; auto and review lanes."}
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata: {name: api-views, description: "The api schema - what modules read, with row-level security."}
+spec: {type: sql-views, lifecycle: production, owner: group:operator, system: engine, definition: "Views in schema api, security_invoker, clearance per role (kernel spec)."}
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata: {name: change-events, description: "NOTIFY on kernel_change_set; detectors and an applied cursor next (D-32, D-86)."}
+spec: {type: pg-notify, lifecycle: production, owner: group:operator, system: engine, definition: "LISTEN kernel_change_set -> {id, status, scope, lane}."}
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata: {name: vocab, description: "Installed packs, slots and SSSOM mappings."}
+spec: {type: rdf, lifecycle: production, owner: group:operator, system: engine, definition: "ontology/packs.yaml, slots.yaml, mappings.ttl."}
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata: {name: recall-api, description: "Ranked claims for a question."}
+spec: {type: python-module, lifecycle: production, owner: group:agents, system: engine, definition: "recall(question, budget) -> claims with belief and handles."}
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata: {name: judge-api, description: "Morphogen's MCP tools and CLI - status, measure, probe, judge, tune, evidence."}
+spec: {type: mcp-server, lifecycle: production, owner: group:operator, system: engine, definition: "11 MCP tools; rules from the base commit."}
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata: {name: model-api, description: "Anthropic-compatible endpoint at /anthropic, and OpenAI-compatible routes."}
+spec: {type: http, lifecycle: experimental, owner: group:operator, system: engine, definition: "POST /anthropic/v1/messages with a virtual key (Authorization or x-bf-vk)."}
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata: {name: gateway-metrics, description: "Bifrost's /metrics - tokens, cost, errors, latency."}
+spec: {type: prometheus, lifecycle: experimental, owner: group:operator, system: engine, definition: "bifrost_cost_total, bifrost_input_tokens_total, bifrost_output_tokens_total, bifrost_error_requests_total, bifrost_upstream_latency_seconds."}
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata: {name: metrics-api, description: "Prometheus HTTP query API, reached by kernel's observer."}
+spec: {type: http, lifecycle: experimental, owner: group:operator, system: storage, definition: "GET /api/v1/query - queries in the observer's queries.yaml."}
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata: {name: kernel-mcp-api, description: "Kernel's MCP tools - memory and operator profiles."}
+spec: {type: mcp-server, lifecycle: production, owner: group:operator, system: interface, definition: "memory: remember, recall, explain, changes_since. operator: every tool."}

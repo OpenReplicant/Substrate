@@ -1,0 +1,58 @@
+# Substrate: an overlay on kernel's compose project (S-06), the way kernel's devops demo is one.
+# Kernel's stack (db, init, kernel, caddy) comes from vendor/kernel/deploy/compose.yaml, started by
+# `kk up`; this file adds the model gateway and the Prometheus that watches it.
+#
+#   scripts/up.sh ~/code/my-project          # kk up, then the services below
+# or by hand, from the repository root:
+#   docker compose -f vendor/kernel/deploy/compose.yaml -f deploy/compose.yaml \
+#     --env-file vendor/kernel/deploy/.env up -d bifrost prometheus
+#
+# Paths below are relative to vendor/kernel/deploy/ (the first compose file's directory), hence ../../../.
+# Ports are published on localhost only. Bifrost's UI and API: http://127.0.0.1:${BIFROST_PORT:-8090}/
+# Claude Code reaches it at http://127.0.0.1:${BIFROST_PORT:-8090}/anthropic (harness/README.md).
+
+name: knowledge-kernel          # the same project as kernel's stack
+
+services:
+
+  # The model gateway (S-04). Its configuration (providers, virtual keys, budgets) and request logs live
+  # in its own volume; set them up in its UI on first start. Kernel modules that call a model
+  # (memory-extractor: KK_EXTRACT_URL) can point at its OpenAI-compatible routes too.
+  bifrost:
+    image: ${BIFROST_IMAGE:-maximhq/bifrost:v2.3.2}
+    environment:
+      APP_HOST: 0.0.0.0
+      APP_PORT: "8080"
+    volumes:
+      - bifrost-data:/app/data
+    ports:
+      - "127.0.0.1:${BIFROST_PORT:-8090}:8080"
+    networks: [default, gateway-metrics]
+    restart: unless-stopped
+
+  # Scrapes Bifrost's /metrics (S-05). Kernel's observer-prometheus reaches it on kk-reach-prometheus
+  # once installed with the queries in deploy/observer/queries.yaml (deploy/observer/README.md).
+  prometheus:
+    image: ${PROMETHEUS_IMAGE:-quay.io/prometheus/prometheus:v3.15.0@sha256:efd719c99d83b060d9daefdcf00360461adf279f45ef5391f8d111892118753e}
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    user: nobody
+    command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.path=/prometheus",
+              "--storage.tsdb.retention.time=7d"]
+    volumes:
+      - ../../../deploy/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    networks: [gateway-metrics, kk-reach-prometheus]
+    depends_on: [bifrost]
+    restart: unless-stopped
+
+volumes:
+  bifrost-data:
+  prometheus-data:
+
+networks:
+  gateway-metrics:
+    internal: true
+  kk-reach-prometheus:      # the network kernel's observer module joins (kernel D-52)
+    internal: true

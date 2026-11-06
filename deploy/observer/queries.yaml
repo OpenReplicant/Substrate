@@ -1,0 +1,15 @@
+# What kernel's observer-prometheus asks each window about the model gateway (S-05). Same format as
+# kernel's modules/observer-prometheus/queries.yaml: one series per service, labelled `job`; {w} is the
+# window in seconds. Metric names are from Bifrost's plugins/telemetry/main.go on its main branch (read 2026-11-06); confirm
+# them against the running gateway's /metrics before installing (deploy/observer/README.md).
+#
+# The properties are not yet in kernel's ontology/observables.ttl. Adding them is a pack change, which
+# kernel forces through review (D-05); propose them with the module, do not invent them silently.
+- property: urn:kk:property:model-cost-usd
+  query: sum by (job) (increase(bifrost_cost_total[{w}s]))
+- property: urn:kk:property:model-input-tokens
+  query: sum by (job) (increase(bifrost_input_tokens_total[{w}s]))
+- property: urn:kk:property:model-output-tokens
+  query: sum by (job) (increase(bifrost_output_tokens_total[{w}s]))
+- property: urn:kk:property:model-errors
+  query: sum by (job) (increase(bifrost_error_requests_total[{w}s]))

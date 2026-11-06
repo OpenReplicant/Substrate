@@ -1,0 +1,4 @@
+.env
+*.local.yaml
+__pycache__/
+.venv/

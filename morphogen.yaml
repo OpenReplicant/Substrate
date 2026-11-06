@@ -1,0 +1,4 @@
+# The substrate as a Morphogen project: its cells come from the catalog (Morphogen PLAN.md phase 3).
+# Cells gain `change`, `run`, `better` and `tests` (as morphogen.dev/* annotations in catalog-info.yaml,
+# or here by ref) as each part gets a measure; until then `morphogen structure check` maps the whole.
+backstage: catalog-info.yaml

@@ -1,0 +1,6 @@
+[submodule "vendor/kernel"]
+	path = vendor/kernel
+	url = https://github.com/OpenReplicant/kernel
+[submodule "vendor/morphogen"]
+	path = vendor/morphogen
+	url = https://github.com/OpenReplicant/Morphogen

@@ -1,0 +1,12 @@
+# Prometheus for the substrate: the model gateway's counters (S-05). `job` names the compose service,
+# as kernel's observer expects (kernel deploy/demo/prometheus.yml).
+global:
+  scrape_interval: 15s
+scrape_configs:
+  - job_name: bifrost
+    metrics_path: /metrics
+    static_configs:
+      - targets: [bifrost:8080]
+  - job_name: prometheus
+    static_configs:
+      - targets: [localhost:9090]
