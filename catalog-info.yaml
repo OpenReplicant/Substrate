@@ -75,6 +75,7 @@ metadata:
   name: claims-store
   description: Kernel v0 - entities, claims, artifacts, runs, change sets in one Postgres.
   annotations:
+    substrate.dev/otel-service: "kk"
     substrate.dev/intent: Hold every assertion attributed, referenced, belief-scored, scoped and bitemporal; write only through change sets; delete nothing.
     substrate.dev/fill: existing
     substrate.dev/basis: kernel/schema/001_kernel.sql (frozen v0; D-01, D-02, D-05, D-09, D-10)
@@ -364,6 +365,7 @@ metadata:
   name: cycle
   description: Central selection - one model step between tool batches.
   annotations:
+    substrate.dev/untraced: "kernel-mcp-api, backstage-mcp-api, judge-api"   # stdio or plugin calls, not seen in traces
     substrate.dev/intent: Match what is in the briefing against skills and choose the next action.
     substrate.dev/fill: existing
     substrate.dev/basis: Claude Code, through the gateway (S-03, S-04)
@@ -508,7 +510,7 @@ spec:
   owner: group:operator
   system: interface
   providesApis: [kernel-mcp-api]
-  consumesApis: [api-views, change-sets, recall-api]
+  consumesApis: [api-views, change-sets, recall-api, otlp-api]
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Component
@@ -563,7 +565,7 @@ spec:
   owner: group:operator
   system: interface
   providesApis: [console-api]
-  consumesApis: [kernel-mcp-api, metrics-api, bus-api, trace-metrics]
+  consumesApis: [kernel-mcp-api, metrics-api, bus-api, trace-metrics, otlp-api]
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Component
@@ -571,6 +573,7 @@ metadata:
   name: bus
   description: pgmq queues in their own database beside kernel's - triggers, owner, events.
   annotations:
+    substrate.dev/otel-service: "substrate"
     substrate.dev/intent: Carry work and notices between the parts durably, without a second server; never facts.
     substrate.dev/fill: adopt
     substrate.dev/candidates: pgmq v1.13.1 (PostgreSQL License) from kernel's Postgres image (kernel D-94), in database substrate (S-21, S-24)

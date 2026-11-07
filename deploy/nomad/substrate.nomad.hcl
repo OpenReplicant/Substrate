@@ -189,6 +189,10 @@ job "substrate" {
       }
       env {
         KK_ARTIFACTS = "/store"
+        # traces to the collector (kernel D-97, S-28)
+        OTEL_SERVICE_NAME           = "kernel"
+        OTEL_EXPORTER_OTLP_ENDPOINT = "http://127.0.0.1:${var.otel_http_port}"
+        OTEL_EXPORTER_OTLP_PROTOCOL = "http/protobuf"
       }
       template {
         data        = <<-EOT
@@ -281,6 +285,10 @@ job "substrate" {
         BUS_URL          = "postgresql://substrate_bus@127.0.0.1:${var.db_port}/substrate"
         RUNTIME          = "nomad"
         CONTAINER_ENGINE = var.driver
+        # traces to the collector (kernel D-97, S-28)
+        OTEL_SERVICE_NAME           = "console"
+        OTEL_EXPORTER_OTLP_ENDPOINT = "http://127.0.0.1:${var.otel_http_port}"
+        OTEL_EXPORTER_OTLP_PROTOCOL = "http/protobuf"
       }
       template {
         data        = <<-EOT

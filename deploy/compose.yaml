@@ -53,6 +53,8 @@ services:
       RUNTIME: compose
       CONTAINER_ENGINE: ${CONTAINER_ENGINE:-podman}
       SUBSTRATE_BUS_PASSWORD: ${SUBSTRATE_BUS_PASSWORD:?set in .env}
+      <<: *otel
+      OTEL_SERVICE_NAME: console
     volumes:
       - ../../../services/console:/console:ro
       - ../../..:/substrate:ro
@@ -63,6 +65,9 @@ services:
   kernel:
     volumes:
       - ../../../.state/artifacts:/store:ro
+    environment:       # traces to the collector (kernel D-97, S-28); ignored by a kernel image without the SDK
+      <<: *otel
+      OTEL_SERVICE_NAME: kernel
 
   # The model gateway (S-04, S-14). config.json is rendered by scripts/render_bifrost.py from .env (only the
   # providers you have keys for) and seeds Bifrost's own config store in its volume; later edits in its UI

@@ -8,21 +8,26 @@
 {$KK_SITE::80} {
 	bind {$CADDY_BIND:0.0.0.0}
 	encode zstd gzip
-	# A span per request to the OpenTelemetry collector (S-28): OTEL_EXPORTER_OTLP_ENDPOINT and OTEL_SERVICE_NAME
-	# (front-door, the catalog's name) come from the environment, and the trace context is passed upstream.
-	tracing {
-		span front-door
-	}
+	# Spans to the OpenTelemetry collector (S-28), one per request, named after the catalog component each route
+	# serves: Caddy makes server spans only, so the span name is what tells the console's Map which edge
+	# (front-door to console, front-door to kernel-mcp) the request travelled. OTEL_EXPORTER_OTLP_ENDPOINT and
+	# OTEL_SERVICE_NAME (front-door) come from the environment; the trace context is passed upstream.
 
 	# The console (S-22): sign-in with a kernel person login, then live state. Its own path, so kernel's
 	# UI and MCP keep theirs.
 	redir /console /console/
 	handle_path /console/* {
+		tracing {
+			span console
+		}
 		reverse_proxy {$CONSOLE_UPSTREAM:console:8100}
 	}
 
 	# Kernel MCP server (streamable HTTP) and kernel's UI; callers send their own bearer token.
 	handle {
+		tracing {
+			span kernel-mcp
+		}
 		reverse_proxy {$KERNEL_UPSTREAM:kernel:8000}
 	}
 }

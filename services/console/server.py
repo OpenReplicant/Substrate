@@ -365,7 +365,8 @@ def intended() -> dict:
                       "group": a.get("nomad.io/group"), "service": a.get("substrate.dev/otel-service", md["name"]),
                       "runtime": bool(a.get("nomad.io/group")) or "substrate.dev/otel-service" in a,
                       "traced": "otlp-api" in (sp.get("consumesApis") or []),
-                      "only_runtime": a.get("substrate.dev/only-runtime")})
+                      "only_runtime": a.get("substrate.dev/only-runtime"),
+                      "untraced": [x.strip() for x in str(a.get("substrate.dev/untraced", "")).split(",") if x.strip()]})
         name = md["name"]
         for api in sp.get("consumesApis", []) or []:
             for prov in providers.get(api, []):
@@ -425,6 +426,13 @@ async def observed(request: Request, nodes: list[dict]) -> dict:
                     external.add(x)
             edges.append({"source": src, "target": dst, "calls": round(n), "failed": round(fails.get((c, sv), 0)),
                           "kind": r["metric"].get("connection_type") or "call"})
+        # Caddy makes server spans only, named after the component each route serves (deploy/caddy/Caddyfile)
+        for r in await prom('sum by (span_name) (increase(traces_span_metrics_calls_total{service_name="front-door"}[1h]))'):
+            name = r["metric"].get("span_name", "")
+            dst, n = (name if name in by_service.values() else by_service.get(name)), float(r["value"][1])
+            if dst and n > 0 and "front-door" in by_service.values():
+                sending.add("front-door")
+                edges.append({"source": "front-door", "target": dst, "calls": round(n), "failed": 0, "kind": "route"})
         for r in await prom("sum by (service_name) (increase(traces_span_metrics_calls_total[1h]))"):
             comp = by_service.get(r["metric"].get("service_name", ""))
             if comp and float(r["value"][1]) > 0:
@@ -453,6 +461,7 @@ def difference(want: dict, seen: dict) -> list[dict]:
     running = {n["id"] for n in want["nodes"] if n["runtime"]}
     elsewhere = {n["id"]: n["only_runtime"] for n in want["nodes"]
                  if n.get("only_runtime") and n["only_runtime"] != S["RUNTIME"]}
+    untraced = {n["id"]: set(n.get("untraced") or []) for n in want["nodes"]}
     seen_pairs = {(e["source"], e["target"]): e for e in seen["edges"]}
     up, sending = seen["up"], set(seen.get("sending", []))
     out = []
@@ -463,6 +472,9 @@ def difference(want: dict, seen: dict) -> list[dict]:
         elif e["source"] in elsewhere or e["target"] in elsewhere:
             which = e["source"] if e["source"] in elsewhere else e["target"]
             out.append({**e, "standing": "unobservable", "evidence": f"{which} runs only with {elsewhere[which]}"})
+        elif via and via <= untraced.get(e["source"], set()):
+            out.append({**e, "standing": "unobservable",
+                        "evidence": f"{e['source']} uses {', '.join(sorted(via))} without traced calls"})
         elif e["source"] not in running and e["source"] not in traced:
             out.append({**e, "standing": "unobservable", "evidence": f"{e['source']} is not a running part yet"})
         elif via and via <= PULLED:
@@ -610,6 +622,16 @@ app = Starlette(routes=[
     Route("/vendor/cytoscape.js", cytoscape),
 ])
 
+def traced(asgi):
+    """Server spans for requests, client spans for the bus and outbound calls, through kernel's telemetry module when
+    kernel's image carries it (kernel D-97) and an OTLP endpoint is set; the app as it is otherwise."""
+    try:
+        from kernel_mcp.telemetry import wrap
+    except ImportError:
+        return asgi
+    return wrap(asgi, "console")
+
+
 if __name__ == "__main__":
-    uvicorn.run(app, host=S["CONSOLE_HOST"], port=int(S["CONSOLE_PORT"]), proxy_headers=True,
+    uvicorn.run(traced(app), host=S["CONSOLE_HOST"], port=int(S["CONSOLE_PORT"]), proxy_headers=True,
                 forwarded_allow_ips="*", log_level="warning")
