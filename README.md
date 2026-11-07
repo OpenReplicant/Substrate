@@ -39,8 +39,10 @@ scripts/check.sh
 scripts/gateway.py on         # Claude Code through the gateway, from the next session
 ```
 
-Needs git, Python 3.12+, uv, Podman (default) or Docker, Node 22 or 24 (to build Backstage), and Claude
-Code; gitleaks lets kernel read the project.
+On the host it needs only git, python3 (the scripts use its standard library), Podman (default) or Docker, and
+Claude Code. Everything else is built and run in containers (S-19): kernel, gitleaks, uv and Morphogen in the
+`substrate-tools` container, which the commands in `bin/` (`bin/kk`, `bin/morphogen`, kernel's MCP server and
+hooks) run inside; Backstage in a two-stage container build.
 
 ## Runtimes
 
@@ -72,7 +74,9 @@ repos.yaml                the upstream projects and the commits last checked
 deploy/                   compose overlay on kernel's stack; nomad/ (agent and job); Prometheus config; observer queries
 services/backstage/       the Backstage app (create-app 0.9.3) and substrate's config for it
 modules/                  the glue, as kernel modules: briefs first
-scripts/                  bootstrap, up, down, logs, check, gateway, backstage-build, render_bifrost, install_hashicorp
+scripts/                  bootstrap, build, tools, up, down, logs, check, gateway, render_bifrost, point_harness, install_hashicorp
+bin/                      kk, morphogen, gitleaks, kernel-mcp and its hooks: each runs inside the tools container
+deploy/tools/             the tools image (kernel's image plus git and uv)
 scripts/runtime/          one file per runtime: compose.sh, nomad.sh (rt_up, rt_down, rt_status, rt_logs)
 upstream/                 fixes prepared for kernel or Morphogen, not yet opened as PRs
 .claude/skills/           setup, upstream

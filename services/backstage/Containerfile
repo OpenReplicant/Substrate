@@ -1,0 +1,41 @@
+# Backstage for substrate, built entirely in containers (S-19): nothing but the engine is needed on the host.
+# Stage 1 installs and bundles (Backstage's host build, run here instead); stage 2 is Backstage's own
+# packages/backend Dockerfile, taking its inputs from stage 1.
+#
+#   scripts/build.sh backstage
+#
+# node:24-trixie-slim is the base create-app 0.9.3 chose. Pin it by digest once pulled (setup skill, step 3).
+
+FROM node:24-trixie-slim AS build
+# better-sqlite3 compiles a native module
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && \
+    apt-get install -y --no-install-recommends python3 g++ make libsqlite3-dev && \
+    rm -rf /var/lib/apt/lists/*
+USER node
+WORKDIR /app
+COPY --chown=node:node . .
+RUN --mount=type=cache,target=/home/node/.cache/yarn,sharing=locked,uid=1000,gid=1000 \
+    yarn install
+RUN yarn tsc && yarn build:backend
+
+FROM node:24-trixie-slim
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && \
+    apt-get install -y --no-install-recommends libsqlite3-dev && \
+    rm -rf /var/lib/apt/lists/*
+USER node
+WORKDIR /app
+ENV NODE_ENV=production
+COPY --from=build --chown=node:node /app/.yarn/releases ./.yarn/releases
+COPY --from=build --chown=node:node /app/.yarnrc.yml /app/backstage.json ./
+COPY --from=build --chown=node:node /app/yarn.lock /app/package.json /app/packages/backend/dist/skeleton.tar.gz ./
+RUN tar xzf skeleton.tar.gz && rm skeleton.tar.gz
+RUN --mount=type=cache,target=/home/node/.cache/yarn,sharing=locked,uid=1000,gid=1000 \
+    yarn workspaces focus --all --production && rm -rf "$(yarn cache clean)"
+COPY --from=build --chown=node:node /app/examples ./examples
+COPY --from=build --chown=node:node /app/packages/backend/dist/bundle.tar.gz /app/app-config.yaml /app/app-config.production.yaml /app/app-config.substrate.yaml ./
+RUN tar xzf bundle.tar.gz && rm bundle.tar.gz
+CMD ["node", "packages/backend", "--config", "app-config.yaml", "--config", "app-config.production.yaml", "--config", "app-config.substrate.yaml"]

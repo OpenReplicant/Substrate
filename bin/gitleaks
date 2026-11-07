@@ -1,0 +1,3 @@
+#!/bin/sh
+# gitleaks, run inside the substrate-tools container (bin/in-tools, S-19)
+exec "$(dirname "$0")/in-tools" gitleaks "$@"

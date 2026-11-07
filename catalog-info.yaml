@@ -545,6 +545,23 @@ spec:
   providesApis: [backstage-mcp-api]
   dependsOn: [resource:git-repo]
 ---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: tools
+  description: The commands people, scripts and Claude Code run, inside one container (bin/).
+  annotations:
+    substrate.dev/intent: Keep the host bare - kk, Morphogen, gitleaks and kernel's MCP server and hooks run in a container as the host user, seeing only the folders they work on.
+    substrate.dev/fill: build
+    substrate.dev/basis: deploy/tools/Containerfile on kernel's image, scripts/tools.sh, bin/ (S-19)
+spec:
+  type: service
+  lifecycle: experimental
+  owner: group:operator
+  system: interface
+  consumesApis: [change-sets, api-views]
+  dependsOn: [resource:sandbox, resource:git-repo]
+---
 # ================================================================ STORAGE
 apiVersion: backstage.io/v1alpha1
 kind: Component

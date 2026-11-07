@@ -3,9 +3,10 @@
 #
 #   scripts/up.sh [PROJECT_DIR]
 #
-# Steps: .env (secrets generated once) -> the gateway's config -> images (kernel, its Postgres, Backstage if
-# missing) -> every service, by the runtime in .env (compose or nomad, S-16) -> wait until each answers ->
-# kk up --no-stack (logins, MCP, skill, hooks, reading the project into .state/artifacts).
+# Steps: .env (secrets generated once) -> the gateway's config -> images, built in containers (S-19) -> every
+# service, by the runtime in .env (compose or nomad, S-16) -> wait until each answers -> the tools container,
+# seeing the project -> kk up --no-stack inside it (logins, MCP, skill, hooks, reading the project into
+# .state/artifacts) -> the project's Claude Code files pointed at bin/.
 set -eu
 . "$(dirname "$0")/lib.sh"
 
@@ -35,17 +36,7 @@ echo "  runtime: $RUNTIME, engine: $ENGINE"
 say "Gateway config"
 python3 "$ROOT/scripts/render_bifrost.py"
 
-say "Images"
-"$ENGINE" build -q -t knowledge-kernel:local "$KERNEL" >/dev/null && echo "  knowledge-kernel:local built"
-if [ "$RUNTIME" = nomad ]; then   # compose builds kernel's Postgres image itself; Nomad needs it tagged
-  "$ENGINE" build -q -t knowledge-kernel-db:local "$KERNEL/deploy/postgres" >/dev/null && echo "  knowledge-kernel-db:local built"
-fi
-bs_image=$(env_value BACKSTAGE_IMAGE); bs_image=${bs_image:-localhost/substrate-backstage:local}
-if "$ENGINE" image inspect "$bs_image" >/dev/null 2>&1; then
-  echo "  $bs_image present (rebuild with scripts/backstage-build.sh)"
-else
-  "$ROOT/scripts/backstage-build.sh"
-fi
+"$ROOT/scripts/build.sh"
 
 say "Services ($RUNTIME)"
 mkdir -p "$ROOT/.state/artifacts"
@@ -65,10 +56,11 @@ wait_for gateway "http://127.0.0.1:$(env_value BIFROST_PORT)/health" bifrost
 wait_for map "http://127.0.0.1:$(env_value BACKSTAGE_PORT)/.backstage/health/v1/readiness" backstage
 
 say "Kernel: logins and the project ($project)"
-scan=""; command -v gitleaks >/dev/null 2>&1 || { scan="--no-scan"; echo "  gitleaks missing: connecting without reading the project"; }
+"$ROOT/scripts/tools.sh" start "$project"
 KK_ADMIN_URL="postgresql://postgres:$(env_value POSTGRES_PASSWORD)@127.0.0.1:$(env_value KK_DB_PORT)/kk" \
-KK_JWT_SECRET="$(env_value KK_JWT_SECRET)" KK_ARTIFACTS="$ROOT/.state/artifacts" \
-  "$ROOT/.venv/bin/kk" up --no-stack $scan "$project"
+KK_JWT_SECRET="$(env_value KK_JWT_SECRET)" \
+  "$ROOT/bin/kk" up --no-stack "$project"
+python3 "$ROOT/scripts/point_harness.py" "$project"
 
 say "Up"
 "$ROOT/scripts/check.sh" || true

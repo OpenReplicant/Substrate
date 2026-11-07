@@ -1,8 +1,9 @@
+# The build runs in a container (Containerfile, S-19), so sources go in; only host artefacts stay out.
 .git
 .yarn/cache
 .yarn/install-state.gz
 node_modules
-packages/*/src
 packages/*/node_modules
-plugins
+packages/*/dist
+dist-types
 *.local.yaml

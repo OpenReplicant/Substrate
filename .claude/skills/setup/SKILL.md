@@ -9,18 +9,24 @@ Work through the steps in order. Each ends with a check; do not start the next u
 has decided to skip it. Tell the owner, in a line, what each step did. Use the container engine set in
 `.env` (`CONTAINER_ENGINE`, podman by default).
 
-## 1. Tools and clones
+## 1. Host tools, clones and images
 
-Run `scripts/bootstrap.sh`. It lists every tool with its path or MISSING, clones kernel and Morphogen into
-`repos/`, and installs `kk` (editable) and Morphogen's environment.
+Run `scripts/bootstrap.sh`. On the host it needs only git, python3 (standard library), the engine and, for
+`RUNTIME=compose`, its compose; everything else is built in containers (S-19). It clones kernel and Morphogen
+into `repos/`, builds every image (`scripts/build.sh`: kernel, the tools image, Backstage in two stages) and
+starts the `substrate-tools` container that `bin/` runs in.
 
-- A missing tool: tell the owner which and how to install it for their OS; look up the current install
-  instructions rather than recalling them. Optional ones (gitleaks, node, claude when already running) can
-  wait; git, python3 3.12+, uv, the engine and compose cannot.
-- With Podman, `podman compose` needs a provider: `docker-compose` (preferred: it supports everything the
-  compose files use) or `podman-compose`. On macOS, `podman machine` must be running.
+- A missing host tool: tell the owner which and how to install it for their OS; look up the current
+  instructions rather than recalling them. Do not install Python packages, Node, uv or gitleaks on the host:
+  they are in the images.
+- With Podman, `podman compose` needs a provider: `docker-compose` (preferred) or `podman-compose`. On macOS,
+  `podman machine` must be running; the tools container uses host networking, which is untested there.
+- The first Backstage build takes several minutes. When it writes `services/backstage/yarn.lock`, commit it.
+  Record the digest of `node:24-trixie-slim` it pulled (`<engine> image inspect node:24-trixie-slim`) in
+  `services/backstage/Containerfile` as `node:24-trixie-slim@sha256:...`, so later builds use the same base.
 
-**Check:** bootstrap ends with "Done"; `git -C repos/kernel status` and `git -C repos/morphogen status` work.
+**Check:** bootstrap ends with "Done"; `bin/kk --help` and `bin/gitleaks version` answer; `git -C repos/kernel
+status` and `git -C repos/morphogen status` work.
 
 ## 2. Settings
 
@@ -54,8 +60,11 @@ If a service does not come up, read its logs (`scripts/logs.sh <service>`), find
 - **bifrost** refuses its config: read the error; the format is in Bifrost's docs for v2.3.2
   (`quickstart/gateway/provider-configuration.mdx`). If an `anthropic` provider with no keys is the
   problem, change `scripts/render_bifrost.py`, not the rendered file.
-- **backstage** build fails: Node must be 22 or 24 (`services/backstage/package.json` engines). After the
-  first successful `yarn install`, commit `services/backstage/yarn.lock`.
+- **backstage** build fails: read the build output (`scripts/build.sh backstage`); it runs in
+  `services/backstage/Containerfile`, so fix it there. A dependency that needs a system library goes into the
+  build stage's `apt-get install` line.
+- **tools** container: `scripts/tools.sh status`; `bin/kk` says when it is not running. If a hook or the kernel
+  MCP server fails in Claude Code, run the same command through `bin/` by hand to see its error.
 - **kernel** with Podman: kernel's own `kk up` calls `docker`; substrate avoids it by starting the stack
   itself. The fix upstream is `upstream/kernel/0001-*.patch` (the `upstream` skill).
 - **Nomad runtime**: the agent log is `.state/nomad/agent.log`; `nomad job status substrate` and
@@ -110,7 +119,8 @@ provider instead of the gateway.
 - **Backstage:** add it at local scope, reading the token from `.env` without printing it:
   `claude mcp add --transport http --scope local backstage http://127.0.0.1:7007/api/mcp-actions/v1 --header "Authorization: Bearer $BACKSTAGE_MCP_TOKEN"`.
   Confirm the flags with `claude mcp add --help` first. Check: list the catalog's components through it.
-- **Morphogen:** the plugin, from GitHub so the judge is never the code being judged:
+- **Morphogen:** the plugin, from GitHub so the judge is never the code being judged (it runs on the host,
+  with uv, because Claude Code starts it; this is the one host tool beyond the basics, and only for judged runs):
   `/plugin marketplace add OpenReplicant/Morphogen`, then `/plugin install morphogen@morphogen`. Check:
   its `status` tool on this repository (`morphogen.yaml` reads `catalog-info.yaml`).
 

@@ -12,6 +12,7 @@ the glue (S-01, S-11). Read `README.md` for the picture and `DECISIONS.md` for e
 | Bifrost | container `bifrost` | the model gateway: Anthropic, OpenRouter, local models; cost measured outside you |
 | Backstage | `services/backstage`, container `backstage` | the map people browse; its MCP endpoint lets you query the catalog |
 | Prometheus | container `prometheus` | the gateway's metrics, read by kernel's observer |
+| Tools | `bin/`, container `substrate-tools` | kk, Morphogen, gitleaks, kernel's MCP server and hooks, run in a container as you |
 | Runtime | `scripts/runtime/`, `deploy/` | what runs the services: `compose` or `nomad` (`RUNTIME` in `.env`), Podman or Docker (`CONTAINER_ENGINE`) |
 
 ## Getting a machine going
@@ -51,7 +52,7 @@ step before the next. Run it whenever the owner says "set up", "start the stack"
    the next Claude Code session reaches models. First prove the gateway answers (the setup skill's step 5),
    and tell the owner how to undo it (`scripts/gateway.py off`).
 7. **The map is the source.** When a part is added, removed or changes how it is filled, update
-   `catalog-info.yaml`, then confirm `uv run --project repos/morphogen morphogen structure check morphogen.yaml`
+   `catalog-info.yaml`, then confirm `bin/morphogen structure check morphogen.yaml`
    reports no errors.
 
 ## Working with the owner
@@ -64,14 +65,18 @@ step before the next. Run it whenever the owner says "set up", "start the stack"
 ## Commands
 
 ```sh
-scripts/bootstrap.sh            # once per machine: tools, clones, .venv
+scripts/bootstrap.sh            # once per machine: host tools, clones, images, the tools container
 scripts/up.sh [PROJECT]         # the stack, then kk up on PROJECT (default: this repository)
 scripts/check.sh                # is everything up and wired
 scripts/gateway.py on|off|status [--mode subscription|api-key]
-scripts/backstage-build.sh      # rebuild the Backstage image after changing services/backstage
+scripts/build.sh [kernel|db|tools|backstage]   # images, built in containers; backstage after changing services/backstage
+scripts/tools.sh start|stop|status   # the tools container that bin/ runs in
 scripts/logs.sh SERVICE         # a service's recent logs, either runtime
 scripts/down.sh [--volumes] [--agent]   # stop (delete data after asking; with nomad, stop the agent)
 python3 scripts/render_bifrost.py   # after changing provider keys in .env; then restart bifrost
 ```
 
-Kernel's command is `.venv/bin/kk`; Morphogen's is `uv run --project repos/morphogen morphogen`.
+Kernel's command is `bin/kk`; Morphogen's is `bin/morphogen`. Both run inside the `substrate-tools` container,
+as do `bin/gitleaks` and kernel's MCP server and hooks (S-19). Install nothing on the host for them: a tool the
+scripts need goes into `deploy/tools/Containerfile`. Morphogen's judged runs (judge, tune, measure) start
+sandboxes of their own and go through its Claude Code plugin, which runs on the host.

@@ -1,0 +1,20 @@
+# substrate-tools: every command the scripts and Claude Code's hooks need, so the host needs only git, python3,
+# the container engine and Claude Code (S-19). Built on kernel's own image, so kk, kernel-mcp, its hooks and
+# gitleaks are exactly what the stack runs; adds git and uv for Morphogen's commands.
+#
+#   scripts/build.sh tools        (after the kernel image)
+#
+# Runs as one long-lived container (scripts/tools.sh) that host wrappers in bin/ exec into.
+
+ARG KERNEL_IMAGE=knowledge-kernel:local
+FROM ${KERNEL_IMAGE}
+USER root
+RUN apk add --no-cache git
+# uv 0.13.4 (2026-10-20, MIT OR Apache-2.0, from PyPI); the same CA secret as kernel's own Dockerfile
+RUN --mount=type=secret,id=ca,required=false \
+    if [ -f /run/secrets/ca ]; then export PIP_CERT=/run/secrets/ca; fi; \
+    pip install --no-cache-dir uv==0.13.4
+# uv keeps Morphogen's environment beside repos/morphogen, built for this image's Python (3.13, musl)
+ENV UV_LINK_MODE=copy UV_PYTHON_DOWNLOADS=never
+# the user is set at run time to the host user (scripts/tools.sh)
+CMD ["sleep", "infinity"]

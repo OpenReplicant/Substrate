@@ -1,55 +1,55 @@
 #!/bin/sh
-# Once per machine: check the tools, clone kernel and Morphogen into repos/ (full clones you can push from),
-# and install their commands into .venv. Safe to run again: existing clones are left as they are.
+# Once per machine: check the few host tools, clone kernel and Morphogen into repos/ (full clones you can push
+# from), and build every image. Everything else (Python packages, gitleaks, uv, Node, yarn) lives in
+# containers (S-19). Safe to run again: existing clones are left as they are.
 #
 #   scripts/bootstrap.sh
 set -eu
 . "$(dirname "$0")/lib.sh"
 
-say "Tools"
-missing=""
-need() { command -v "$1" >/dev/null 2>&1 && printf '  %-10s %s\n' "$1" "$(command -v "$1")" || { printf '  %-10s MISSING (%s)\n' "$1" "$2"; missing="$missing $1"; }; }
-need git "https://git-scm.com"
-need python3 "3.12 or later"
-need uv "Morphogen's tooling: https://docs.astral.sh/uv/"
-need "$ENGINE" "CONTAINER_ENGINE in .env picks docker or podman"
-echo "  runtime    $RUNTIME (RUNTIME in .env: compose or nomad)"
-need node "22 or 24, for building Backstage"
-need corepack "ships with Node; provides yarn"
-need claude "Claude Code"
-need gitleaks "kernel's ingest filter; without it kk up skips reading the project"
-python3 -c 'import sys; sys.exit(sys.version_info < (3, 12))' || { echo "  python3 is older than 3.12"; missing="$missing python3"; }
+say "Host tools"
+required_missing=""
+have() { command -v "$1" >/dev/null 2>&1; }
+show() { if have "$1"; then printf '  %-10s %s\n' "$1" "$(command -v "$1")"; else printf '  %-10s missing: %s\n' "$1" "$2"; fi; }
+require() { show "$1" "$2"; have "$1" || required_missing="$required_missing $1"; }
+
+require git "https://git-scm.com"
+require python3 "any Python 3.9+; the scripts use only its standard library"
+require "$ENGINE" "CONTAINER_ENGINE in .env picks podman or docker"
 if [ "$RUNTIME" = compose ]; then
-  "$ENGINE" compose version >/dev/null 2>&1 && echo "  compose    $("$ENGINE" compose version 2>/dev/null | head -1)" \
-    || { echo "  compose    MISSING ($ENGINE compose; with Podman, install docker-compose or podman-compose)"; missing="$missing compose"; }
+  if "$ENGINE" compose version >/dev/null 2>&1; then
+    printf '  %-10s %s\n' compose "$("$ENGINE" compose version 2>/dev/null | head -1)"
+  else
+    printf '  %-10s missing: %s compose (with Podman: the docker-compose provider, or podman-compose)\n' compose "$ENGINE"
+    required_missing="$required_missing compose"
+  fi
 fi
 if [ "$RUNTIME" = nomad ] && [ "$(uname -s)" != Linux ]; then
   echo "  RUNTIME=nomad needs Linux (the Podman driver is Linux only, and host networking is used); use RUNTIME=compose here" >&2
   exit 1
 fi
-case "$missing" in
-  *git*|*python3*|*uv*|*"$ENGINE"*|*compose*) echo "Install the missing tools above, then run this again." >&2; exit 1 ;;
-esac
+show claude "Claude Code, to work in this repository (not needed to run the stack)"
+echo "  runtime    $RUNTIME (RUNTIME in .env: compose or nomad)"
+if [ -n "$required_missing" ]; then
+  echo "Install:$required_missing, then run this again." >&2
+  exit 1
+fi
 
 say "Upstream clones (repos.yaml)"
 mkdir -p "$ROOT/repos"
-clone() {   # name url branch
+clone() {   # name
+  url=$(sed -n "/^$1:/,/^[a-z]/s/^  url: //p" "$ROOT/repos.yaml")
+  branch=$(sed -n "/^$1:/,/^[a-z]/s/^  branch: //p" "$ROOT/repos.yaml")
   if [ -d "$ROOT/repos/$1/.git" ]; then
     echo "  $1: present ($(git -C "$ROOT/repos/$1" rev-parse --abbrev-ref HEAD) at $(git -C "$ROOT/repos/$1" rev-parse --short HEAD))"
   else
-    git clone --branch "$3" "$2" "$ROOT/repos/$1"
+    git clone --branch "$branch" "$url" "$ROOT/repos/$1"
   fi
 }
-clone kernel "$(sed -n '/^kernel:/,/^[a-z]/s/^  url: //p' "$ROOT/repos.yaml")" main
-clone morphogen "$(sed -n '/^morphogen:/,/^[a-z]/s/^  url: //p' "$ROOT/repos.yaml")" main
+clone kernel
+clone morphogen
 
-say "Commands"
-[ -d "$ROOT/.venv" ] || python3 -m venv "$ROOT/.venv"
-"$ROOT/.venv/bin/pip" install -q --upgrade pip
-"$ROOT/.venv/bin/pip" install -q -e "$KERNEL"
-echo "  kk:        $ROOT/.venv/bin/kk (editable: changes in repos/kernel apply at once)"
-(cd "$MORPHOGEN" && uv sync -q)
-echo "  morphogen: uv run --project repos/morphogen morphogen"
+"$ROOT/scripts/build.sh"
 
 if [ "$RUNTIME" = nomad ]; then
   say "Nomad (pinned, checksums checked)"
@@ -62,6 +62,10 @@ if [ "$RUNTIME" = nomad ]; then
       || echo "  note: the Podman driver needs Podman's API socket: systemctl --user enable --now podman.socket"
   fi
 fi
+
+say "Tools container"
+"$ROOT/scripts/tools.sh" start
+echo "  bin/kk, bin/morphogen, bin/gitleaks and kernel's MCP commands now run inside it"
 
 say "Done"
 echo "Next: scripts/up.sh"

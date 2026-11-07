@@ -1,0 +1,3 @@
+#!/bin/sh
+# kernel-mcp-hook, run inside the substrate-tools container (bin/in-tools, S-19)
+exec "$(dirname "$0")/in-tools" kernel-mcp-hook "$@"

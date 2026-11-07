@@ -37,7 +37,14 @@ code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "http://127.0.0.1:$mport/a
   -H 'Accept: application/json, text/event-stream' \
   -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"check","version":"0"}}}')
 [ "$code" = "200" ] && ok "Backstage MCP answers with the token" || bad "Backstage MCP initialize returned $code"
-[ -f "$ROOT/.mcp.json" ] && grep -q '"kernel"' "$ROOT/.mcp.json" && ok "kernel MCP entry in .mcp.json" || note "no kernel MCP entry here (kk up writes it into the project it connects)"
+"$ROOT/scripts/tools.sh" status >/dev/null 2>&1 && ok "tools container running (bin/ wrappers work)" || bad "tools container not running: scripts/tools.sh start"
+"$ROOT/bin/gitleaks" version >/dev/null 2>&1 && ok "gitleaks in the tools container: $("$ROOT/bin/gitleaks" version 2>/dev/null)" || bad "bin/gitleaks does not run"
+if [ -f "$ROOT/.mcp.json" ] && grep -q '"kernel"' "$ROOT/.mcp.json"; then
+  grep -q "$ROOT/bin/kernel-mcp" "$ROOT/.mcp.json" && ok "kernel MCP entry runs bin/kernel-mcp" \
+    || bad "kernel MCP entry does not use bin/kernel-mcp: python3 scripts/point_harness.py ."
+else
+  note "no kernel MCP entry here (scripts/up.sh writes it into the project it connects)"
+fi
 "$ROOT/scripts/gateway.py" status >/dev/null 2>&1 && ok "Claude Code: $("$ROOT/scripts/gateway.py" status)" || note "Claude Code: $("$ROOT/scripts/gateway.py" status 2>&1)"
 
 say "Upstream clones"

@@ -62,7 +62,7 @@ services:
     networks: [default, gateway-metrics, kk-reach-prometheus]
     depends_on: [bifrost]
 
-  # The map (S-12): Backstage built from services/backstage (scripts/backstage-build.sh), reading
+  # The map (S-12): Backstage built in containers from services/backstage (scripts/build.sh backstage), reading
   # catalog-info.yaml. Its MCP endpoint lets Claude Code query the catalog.
   backstage:
     <<: *locked
