@@ -116,8 +116,31 @@ td:first-child, th:first-child { padding-left: 0; }
 .kv { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; font-size: 13px; margin: 0; }
 .kv dt { color: var(--muted); } .kv dd { margin: 0; }
 .repo { display: grid; gap: 2px; }
+/* views and the map */
+.views { display: flex; gap: 16px; border-bottom: 1px solid var(--line); }
+.views a { color: var(--muted); text-decoration: none; padding: 4px 0 8px; font-weight: 500; }
+.views a[aria-current="page"] { color: var(--ink); box-shadow: inset 0 -2px 0 var(--accent); }
+.tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+.tab { border: 1px solid var(--line); background: transparent; color: var(--muted); border-radius: 6px; padding: 3px 10px; font-size: 12.5px; }
+.tab[aria-pressed="true"] { background: var(--ink); color: var(--panel); border-color: var(--ink); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; font-size: 12.5px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 12px; height: 12px; border-radius: 3px; display: inline-block; border: 2px solid transparent; }
+.sw.built { background: var(--accent); } .sw.building { background: var(--warn-soft); border-color: var(--warn); }
+.sw.planned { background: transparent; border: 2px dashed var(--muted); }
+.sw.up { background: var(--ok); } .sw.down { background: var(--bad); } .sw.quiet { background: var(--line); }
+.sw.ext { background: transparent; border: 2px dotted var(--muted); }
+.ln { width: 22px; height: 0; display: inline-block; border-top: 2px solid var(--ok); }
+.ln.unseen { border-top: 2px dashed var(--muted); } .ln.undeclared { border-top: 3px solid var(--bad); }
+.map-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+.map-body.with-detail { grid-template-columns: minmax(0, 1fr) 260px; }
+.graph { height: min(72vh, 720px); min-height: 420px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); }
+.detail { border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; font-size: 13px; align-self: start; }
+.kv2 { display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 8px; overflow-wrap: anywhere; }
+@media (max-width: 860px) { .map-body, .map-body.with-detail { grid-template-columns: minmax(0, 1fr); } .graph { height: 60vh; } }
 .repo + .repo { border-top: 1px solid var(--line); padding-top: 8px; }
 </style>
+<script src="vendor/cytoscape.js"></script>
 <script src="app.js"></script>
 <script defer src="vendor/alpine.js"></script>
 </head>
@@ -148,7 +171,12 @@ td:first-child, th:first-child { padding-left: 0; }
   <p class="err" x-show="error" x-text="error"></p>
   <p class="note" x-show="flash" x-text="flash"></p>
 
-  <div class="grid">
+  <nav class="views" aria-label="Views">
+    <a href="#overview" :aria-current="view === 'overview' ? 'page' : null">Overview</a>
+    <a href="#map" :aria-current="view === 'map' ? 'page' : null">Map</a>
+  </nav>
+
+  <div class="grid" x-show="view === 'overview'">
     <main class="col">
       <section class="panel focus-panel" aria-labelledby="spec-h">
         <div class="panel-head"><h2 id="spec-h">Becoming</h2><span class="aside mono">docs/spec.md</span></div>
@@ -301,6 +329,46 @@ td:first-child, th:first-child { padding-left: 0; }
       </section>
     </aside>
   </div>
+
+  <!-- The self-model's two faces (spec 1): the intended map as it is built, what is observed, and where they differ -->
+  <section class="panel" x-show="view === 'map'" aria-labelledby="map2-h">
+    <div class="panel-head">
+      <h2 id="map2-h">Map</h2>
+      <div class="tabs" role="group" aria-label="What to show">
+        <button class="tab" :aria-pressed="mode === 'intended'" @click="setMode('intended')">Intended</button>
+        <button class="tab" :aria-pressed="mode === 'observed'" @click="setMode('observed')">Observed</button>
+        <button class="tab" :aria-pressed="mode === 'difference'" @click="setMode('difference')">Difference</button>
+      </div>
+      <span class="aside" x-text="m ? 'updated ' + when(m.at) : (mapError || 'loading…')"></span>
+    </div>
+    <p class="err" x-show="mapError" x-text="mapError"></p>
+    <div class="legend" x-show="mode === 'intended'">
+      <span><i class="sw built"></i>built</span><span><i class="sw building"></i>being built</span><span><i class="sw planned"></i>planned</span>
+      <span class="note">from catalog-info.yaml and docs/build.yaml</span>
+    </div>
+    <div class="legend" x-show="mode === 'observed'">
+      <span><i class="sw up"></i>running</span><span><i class="sw down"></i>not answering</span><span><i class="sw quiet"></i>not seen</span><span><i class="sw ext"></i>outside</span>
+      <span class="note">health, Prometheus, Nomad, and calls in the last hour</span>
+    </div>
+    <div class="legend" x-show="mode === 'difference'">
+      <span><i class="ln confirmed"></i>declared and seen</span><span><i class="ln unseen"></i>declared, not seen</span><span><i class="ln undeclared"></i>seen, not declared</span>
+      <span class="note" x-text="m ? gapCount + ' gap(s)' : ''"></span>
+    </div>
+    <div class="map-body" :class="picked ? 'with-detail' : ''">
+      <div class="graph" x-ref="graph" role="img" aria-label="Graph of substrate's components"></div>
+      <aside class="detail" x-show="picked">
+        <template x-if="picked">
+          <div style="display:grid; gap:6px">
+            <strong x-text="picked.title"></strong>
+            <template x-for="row in picked.rows" :key="row[0]">
+              <div class="kv2"><span class="muted" x-text="row[0]"></span><span x-text="row[1]"></span></div>
+            </template>
+          </div>
+        </template>
+      </aside>
+    </div>
+    <p class="note" x-show="m && m.notes && m.notes.length" x-text="m ? 'Not reachable: ' + m.notes.join('; ') : ''"></p>
+  </section>
 </div>
 
 <p class="wrap note" x-show="signedIn === null">Loading…</p>

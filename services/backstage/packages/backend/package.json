@@ -45,6 +45,7 @@
     "@backstage/plugin-signals-backend": "^0.3.20",
     "@backstage/plugin-techdocs-backend": "^2.4.0",
     "@backstage/plugin-user-settings-backend": "^0.4.8",
+    "@opentelemetry/auto-instrumentations-node": "0.82.0",
     "app": "link:../app",
     "better-sqlite3": "^12.0.0",
     "node-gyp": "^10.0.0",

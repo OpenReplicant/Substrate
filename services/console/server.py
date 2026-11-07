@@ -51,7 +51,7 @@ SETTINGS = {
     "CONTAINER_ENGINE": "podman",
     "CONSOLE_HOST": "0.0.0.0",
     "CONSOLE_PORT": "8100",
-    "ALPINE_DIR": "/kk/modules/ui/web/vendor",   # kernel's pinned Alpine.js, in kernel's image
+    "ALPINE_DIR": "/kk/modules/ui/web/vendor",   # kernel's pinned Alpine.js and Cytoscape.js, in kernel's image
     "COOKIE_PATH": "/console",                    # where the front door serves the console
 }
 S = {k: os.environ.get(k, v) for k, v in SETTINGS.items()}
@@ -336,6 +336,171 @@ async def bus() -> dict:
         return {"ok": False, "error": f"bus: {type(e).__name__}"}
 
 
+# ---------------------------------------------------------------- the map: intended and observed (spec 1)
+
+PROBE_COMPONENT = {"kernel": "kernel-mcp", "gateway": "model-gateway", "map": "map-view", "prometheus": "prometheus",
+                   "postgres": "bus", "nomad": "scheduler"}
+
+
+def intended() -> dict:
+    """The blueprint: catalog components and the relations they declare, each with where it stands in the build.
+    A component consuming an API that another provides is an edge from the first to the second; so is dependsOn."""
+    docs = [d for d in yaml.safe_load_all((ROOT / "catalog-info.yaml").read_text()) if d]
+    plan = {str(st["id"]): st for st in (spec().get("steps") or [])}
+    comps = [d for d in docs if d.get("kind") == "Component"]
+    providers: dict[str, list[str]] = {}
+    for d in comps:
+        for api in d.get("spec", {}).get("providesApis", []) or []:
+            providers.setdefault(api, []).append(d["metadata"]["name"])
+    nodes, edges = [], {}
+    for d in comps:
+        md, sp = d["metadata"], d.get("spec", {})
+        a = md.get("annotations") or {}
+        fill, step = a.get("substrate.dev/fill", ""), a.get("substrate.dev/step")
+        st = plan.get(str(step)) if step is not None else None
+        state = ({"done": "built", "doing": "building"}.get(st["status"], "planned") if st
+                 else "built" if fill == "existing" else "planned")
+        nodes.append({"id": md["name"], "system": sp.get("system", ""), "description": md.get("description", ""),
+                      "fill": fill, "state": state, "step": step, "step_status": st["status"] if st else None,
+                      "group": a.get("nomad.io/group"), "service": a.get("substrate.dev/otel-service", md["name"]),
+                      "runtime": bool(a.get("nomad.io/group")) or "substrate.dev/otel-service" in a,
+                      "traced": "otlp-api" in (sp.get("consumesApis") or []),
+                      "only_runtime": a.get("substrate.dev/only-runtime")})
+        name = md["name"]
+        for api in sp.get("consumesApis", []) or []:
+            for prov in providers.get(api, []):
+                if prov != name:
+                    edges.setdefault((name, prov), []).append(api)
+        for dep in sp.get("dependsOn", []) or []:
+            if str(dep).startswith("component:"):
+                edges.setdefault((name, str(dep).split(":", 1)[1].split("/")[-1]), []).append("dependsOn")
+    return {"nodes": nodes, "edges": [{"source": a, "target": b, "via": v} for (a, b), v in edges.items()]}
+
+
+async def observed(request: Request, nodes: list[dict]) -> dict:
+    """What is: which parts answer (health, Prometheus targets, Nomad allocations, the request that came through
+    the front door) and what called what in the last hour (the collector's service graph)."""
+    by_service = {n["service"]: n["id"] for n in nodes}
+    up: dict[str, dict] = {}
+    for h in await health():
+        comp = PROBE_COMPONENT.get(h["name"])
+        if comp:
+            up[comp] = {"ok": h["ok"], "how": f"{h['name']} probe: {h['detail']}"}
+    up["console"] = {"ok": True, "how": "answering this request"}
+    if request.headers.get("x-forwarded-for"):
+        up["front-door"] = {"ok": True, "how": "this request came through it"}
+    notes = []
+    try:
+        for r in await prom("up"):
+            job = r["metric"].get("job", "")
+            comp = {"bifrost": "model-gateway"}.get(job, job)
+            if comp in by_service.values():
+                up.setdefault(comp, {"ok": r["value"][1] == "1", "how": f"Prometheus target {job}"})
+    except Exception as e:
+        notes.append(f"Prometheus: {type(e).__name__}")
+    if S["NOMAD_ADDR"]:
+        try:
+            r = await fetch(S["NOMAD_ADDR"] + "/v1/job/substrate/allocations")
+            running = {a["TaskGroup"] for a in r.json() if a.get("ClientStatus") == "running"}
+            for n in nodes:
+                if n.get("group"):
+                    ok = n["group"] in running
+                    up[n["id"]] = {"ok": ok and up.get(n["id"], {}).get("ok", True),
+                                   "how": f"Nomad group {n['group']} " + ("running" if ok else "not running")}
+        except Exception as e:
+            notes.append(f"Nomad: {type(e).__name__}")
+    edges, external, sending = [], set(), set()
+    try:
+        rows = await prom("sum by (client, server, connection_type) (increase(traces_service_graph_request_total[1h]))")
+        fails = {(r["metric"].get("client"), r["metric"].get("server")): float(r["value"][1]) for r in
+                 await prom("sum by (client, server) (increase(traces_service_graph_request_failed_total[1h]))")}
+        for r in rows:
+            c, sv, n = r["metric"].get("client", ""), r["metric"].get("server", ""), float(r["value"][1])
+            if n <= 0:
+                continue
+            src, dst = by_service.get(c, c), by_service.get(sv, sv)
+            sending.update(x for x in (src, dst) if x in by_service.values())
+            for x in (src, dst):
+                if x not in by_service.values():
+                    external.add(x)
+            edges.append({"source": src, "target": dst, "calls": round(n), "failed": round(fails.get((c, sv), 0)),
+                          "kind": r["metric"].get("connection_type") or "call"})
+        for r in await prom("sum by (service_name) (increase(traces_span_metrics_calls_total[1h]))"):
+            comp = by_service.get(r["metric"].get("service_name", ""))
+            if comp and float(r["value"][1]) > 0:
+                sending.add(comp)
+                up.setdefault(comp, {"ok": True, "how": "sending spans"})
+        # every resource sending OTLP metrics shows up as target_info, labelled with its service name
+        for r in await prom("group by (job) (target_info)"):
+            comp = by_service.get(r["metric"].get("job", ""))
+            if comp:
+                sending.add(comp)
+    except Exception as e:
+        notes.append(f"call graph: {type(e).__name__}")
+    for comp in sending:
+        up.setdefault(comp, {"ok": True, "how": "sending telemetry"})
+    return {"up": up, "edges": edges, "external": sorted(external), "notes": notes, "sending": sorted(sending)}
+
+
+PULLED = {"gateway-metrics", "trace-metrics", "scheduler-metrics", "metrics-api"}   # read by scraping or querying
+
+
+def difference(want: dict, seen: dict) -> list[dict]:
+    """Every edge with its standing: declared and seen, declared but not seen, seen but never declared, or not
+    observable yet. A gap is claimed only where its evidence could exist: a call between two parts that both send
+    spans, a metrics source whose scrape or query answers, a part that should send telemetry and does not."""
+    traced = {n["id"] for n in want["nodes"] if n["traced"]}
+    running = {n["id"] for n in want["nodes"] if n["runtime"]}
+    elsewhere = {n["id"]: n["only_runtime"] for n in want["nodes"]
+                 if n.get("only_runtime") and n["only_runtime"] != S["RUNTIME"]}
+    seen_pairs = {(e["source"], e["target"]): e for e in seen["edges"]}
+    up, sending = seen["up"], set(seen.get("sending", []))
+    out = []
+    for e in want["edges"]:
+        key, via = (e["source"], e["target"]), set(e["via"])
+        if key in seen_pairs:
+            out.append({**e, **seen_pairs[key], "standing": "confirmed", "evidence": "calls in the last hour"})
+        elif e["source"] in elsewhere or e["target"] in elsewhere:
+            which = e["source"] if e["source"] in elsewhere else e["target"]
+            out.append({**e, "standing": "unobservable", "evidence": f"{which} runs only with {elsewhere[which]}"})
+        elif e["source"] not in running and e["source"] not in traced:
+            out.append({**e, "standing": "unobservable", "evidence": f"{e['source']} is not a running part yet"})
+        elif via and via <= PULLED:
+            ok = up.get(e["target"], {}).get("ok")
+            out.append({**e, "standing": "confirmed" if ok else "unseen",
+                        "evidence": up.get(e["target"], {}).get("how", "no answer from its metrics")})
+        elif via == {"otlp-api"}:
+            out.append({**e, "standing": "confirmed" if e["source"] in sending else "unseen",
+                        "evidence": "spans arriving" if e["source"] in sending else "no spans from it in the last hour"})
+        elif e["source"] in traced and e["target"] in traced:
+            out.append({**e, "standing": "unseen", "evidence": "both send spans; no calls between them in the last hour"})
+        else:
+            out.append({**e, "standing": "unobservable", "evidence": "one end does not send spans yet"})
+    declared = {(e["source"], e["target"]) for e in want["edges"]}
+    out += [{**e, "standing": "undeclared"} for k, e in seen_pairs.items() if k not in declared]
+    return out
+
+
+async def map_view(request: Request):
+    if not await person(request):
+        return j({"error": "sign in"}, 401)
+    try:
+        want = intended()
+    except Exception as e:
+        return j({"error": f"catalog-info.yaml: {type(e).__name__}"}, 500)
+    seen = await observed(request, want["nodes"])
+    return j({"at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "nodes": want["nodes"],
+              "external": seen["external"], "up": seen["up"], "edges": difference(want, seen), "notes": seen["notes"]})
+
+
+async def cytoscape(request: Request):
+    # kernel's UI ships Cytoscape.js (MIT); the console serves the same pinned file from this origin
+    found = sorted(Path(S["ALPINE_DIR"]).glob("cytoscape-*.min.js"))
+    if not found:
+        return Response("Cytoscape.js not found in kernel's image", status_code=500)
+    return FileResponse(found[-1], media_type="text/javascript", headers=HEADERS)
+
+
 # ---------------------------------------------------------------- routes
 
 async def index(request: Request):
@@ -441,7 +606,8 @@ app = Starlette(routes=[
     Route("/", index), Route("/app.js", script), Route("/vendor/alpine.js", alpine),
     Route("/api/login", login, methods=["POST"]), Route("/api/logout", logout, methods=["POST"]),
     Route("/api/state", state), Route("/api/review", decide, methods=["POST"]),
-    Route("/api/goal", goal, methods=["POST"]),
+    Route("/api/goal", goal, methods=["POST"]), Route("/api/map", map_view),
+    Route("/vendor/cytoscape.js", cytoscape),
 ])
 
 if __name__ == "__main__":

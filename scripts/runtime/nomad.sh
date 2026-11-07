@@ -79,8 +79,8 @@ EOF
 rt_up() {
   nomad_agent || return 1
   nomad_variables || return 1
-  mkdir -p "$ROOT/.state/data/postgres" "$ROOT/.state/data/bifrost" "$ROOT/.state/data/prometheus" "$ROOT/.state/artifacts"
-  chmod 777 "$ROOT/.state/data/bifrost" "$ROOT/.state/data/prometheus"     # the images run as non-root users
+  mkdir -p "$ROOT/.state/data/postgres" "$ROOT/.state/data/bifrost" "$ROOT/.state/data/prometheus" "$ROOT/.state/artifacts" "$ROOT/.state/otel"
+  chmod 777 "$ROOT/.state/data/bifrost" "$ROOT/.state/data/prometheus" "$ROOT/.state/otel"     # the images run as non-root users
   parts=$(sed -n 's/.*KK_SERVE_PARTS:-\([^}]*\)}.*/\1/p' "$KERNEL/deploy/compose.yaml" | head -1)
   prefix=""; [ "$ENGINE" = podman ] && prefix="localhost/"   # how each engine names a locally built image
   nomad job run -detach \
@@ -97,6 +97,9 @@ rt_up() {
     -var "bifrost_port=$(env_value BIFROST_PORT)" \
     -var "backstage_port=$(env_value BACKSTAGE_PORT)" \
     -var "prometheus_port=$(env_value PROMETHEUS_PORT)" \
+    -var "otel_image=$(qualify "$(env_value OTEL_COLLECTOR_IMAGE)")" \
+    -var "otel_grpc_port=$(env_value OTEL_GRPC_PORT)" \
+    -var "otel_http_port=$(env_value OTEL_HTTP_PORT)" \
     "$ROOT/deploy/nomad/substrate.nomad.hcl"
 }
 
@@ -114,7 +117,7 @@ rt_status() {
   nomad job status substrate
 }
 
-rt_logs() {   # TASK (postgres, init, kernel, caddy, console, bifrost, backstage, prometheus)
+rt_logs() {   # TASK (postgres, init, kernel, caddy, console, bifrost, backstage, prometheus, otel-collector)
   nomad alloc logs -stderr -job substrate "$1"
   nomad alloc logs -job substrate "$1" | tail -200
 }

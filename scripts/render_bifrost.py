@@ -51,6 +51,15 @@ def render(env: dict[str, str]) -> dict:
     return {
         "client": {"enforce_auth_on_inference": True},
         "providers": providers,
+        # telemetry: the /metrics Prometheus scrapes (on by default; listed so it stays on beside otel).
+        # otel: a span per model call to the collector (S-28), metadata only (tokens, cost, latency, status),
+        # never message content. Its service name is the catalog's (model-gateway).
+        "plugins": [
+            {"name": "telemetry", "enabled": True, "config": {}},
+            {"name": "otel", "enabled": True, "config": {
+                "service_name": "model-gateway", "collector_url": "env.OTEL_COLLECTOR_URL",
+                "trace_type": "genai_extension", "protocol": "http", "disable_content_logging": True}},
+        ],
         "governance": {"virtual_keys": [{
             "id": "vk-substrate",
             "name": "substrate",

@@ -16,6 +16,7 @@ Substrate assembles projects that each do one part, and adds the glue between th
 | Front door | [Caddy](https://caddyserver.com) 2.11.7 (`deploy/caddy`) | one address, 127.0.0.1:8080, for kernel's UI and MCP and the console; plugins by listing them |
 | Console | `services/console` | the owner's live page at `/console/`: review lane, verdicts, spend, stack, bus, the spec's progress; sign in with your kernel login |
 | Bus | [pgmq](https://github.com/pgmq/pgmq) 1.13.1, in kernel's Postgres | queues between the parts (`triggers`, `owner`, `events`), in a database of its own beside kernel's |
+| Observation | [OpenTelemetry collector](https://opentelemetry.io/docs/collector/) 0.163.2 | traces from every part become the observed call graph; the console's Map compares it with the catalog |
 | Control plane | [Nomad](https://developer.hashicorp.com/nomad) 2.0.7, or compose | runs every service; one scheduler for containers, processes and clusters (`RUNTIME` in `.env`, S-16, S-17) |
 
 Read as a mind, these are the Common Model of Cognition's modules: perception (briefings), declarative
@@ -84,7 +85,7 @@ repos.yaml                the upstream projects and the commits last checked
 deploy/                   compose overlay on kernel's stack; nomad/ (agent and job); Prometheus config; observer queries
 services/backstage/       the Backstage app (create-app 0.9.3) and substrate's config for it
 modules/                  the glue, as kernel modules: briefs first
-scripts/                  bootstrap, build, tools, up, down, logs, check, gateway, render_bifrost, point_harness, install_hashicorp
+scripts/                  bootstrap, build, tools, up, down, logs, check, gateway, telemetry, bus, spec, render_bifrost, point_harness, install_hashicorp
 bin/                      kk, morphogen, gitleaks, kernel-mcp and its hooks: each runs inside the tools container
 deploy/tools/             the tools image (kernel's image plus git and uv)
 scripts/runtime/          one file per runtime: compose.sh, nomad.sh (rt_up, rt_down, rt_status, rt_logs)

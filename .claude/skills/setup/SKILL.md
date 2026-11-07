@@ -81,7 +81,15 @@ If a service does not come up, read its logs (`scripts/logs.sh <service>`), find
   image as `nobody` and reads this checkout read-only; a permission error there means a file in the checkout is
   not world-readable.
 
-**Check:** `scripts/check.sh` shows ok for kernel, gateway, map, prometheus, the console and the bus. Tell the
+- **otel-collector**: `scripts/logs.sh otel-collector`. It needs `.state/otel` writable (up.sh makes it so). Claude
+  Code's telemetry is switched on by `scripts/up.sh` for the connected project (`scripts/telemetry.py status`; off
+  with `scripts/telemetry.py off`), from the next session. Backstage loads OpenTelemetry through NODE_OPTIONS: if
+  it fails to start with a "Cannot find module @opentelemetry" error, its image predates the dependency, so run
+  `scripts/build.sh backstage`. Bifrost reads its otel plugin from the config it was first seeded with; on an
+  existing Bifrost data volume, add the plugin in its dashboard or start from a fresh volume.
+
+**Check:** `scripts/check.sh` shows ok for kernel, gateway, map, prometheus, the console, the bus and the
+OpenTelemetry collector. The console's Map (http://127.0.0.1:8080/console/#map) shows the parts running. Tell the
 owner the kernel sign-in that `kk up` printed (name `owner`, the password it shows): it opens both kernel's UI
 (http://127.0.0.1:8080/ui/) and the console (http://127.0.0.1:8080/console/). Ask them to sign in to the
 console once and say what they see.

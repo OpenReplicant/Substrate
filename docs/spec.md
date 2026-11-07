@@ -60,6 +60,10 @@ work comes from:
 | Trust (Morphogen's levels) | stated | measured |
 | Alone it becomes | documentation that rots | a system that only preserves whatever it happens to be |
 
+Runtime reconciliation, whether a declared job is actually running, is Nomad's and is not rebuilt here (S-27).
+The observed calls come from OpenTelemetry (S-28), with `service.name` equal to the catalog's component name, so
+the two halves join by name. The console's Map draws intended, observed and their difference (S-29).
+
 Both halves are claims in one store, attributed and scoped, which is what makes them comparable: a detector
 asks where they disagree (a dependency used but not declared, a declared owner who never acts, a process path
 taken that the model does not have). The same pattern already appears three times: Kubernetes-style
@@ -184,6 +188,7 @@ role:
 | self-encoder (kernel) | this repository and the clones | code, config and docs as claims |
 | `encoder-backstage` | `catalog-info.yaml` | the map as `kk-tosca` claims (S-09) |
 | `observer-prometheus` (kernel) | Bifrost metrics through Prometheus | cost, tokens and errors per window (S-05) |
+| `observer-prometheus` (kernel) | the OpenTelemetry collector's service graph through Prometheus | observed calls between parts per window (S-28) |
 | `encoder-morphogen` | Morphogen's evidence log | verdicts as DQV measurements (S-08) |
 | `encoder-nomad` (new) | Nomad's event stream | allocations, failures, restarts; a failure also goes on the `triggers` queue |
 | detectors (kernel M6-T0) | claims already in kernel | drift and conflict findings; each also goes on the `triggers` queue |
@@ -282,7 +287,7 @@ the same steps with their status, checks and what each needs; the `build-out` sk
 | --- | --- | --- | --- |
 | 0 | The stack runs | substrate | `scripts/check.sh` passes on compose with Podman (console and bus included), then on Nomad |
 | 1 | Verdicts become claims | `modules/encoder-morphogen` | each Morphogen verdict appears in kernel as a DQV measurement with lineage |
-| 2 | The map becomes claims | `modules/encoder-backstage` | recall answers "what depends on bifrost?" from catalog claims |
+| 2 | The map becomes claims | `modules/encoder-backstage` | recall answers "what depends on bifrost?" from catalog claims, and the first intended-against-observed gap reaches review |
 | 3 | Working memory | kernel M6-T2, upstream PR (owner decides) | a new session states the active goal and focus without being told |
 | 4 | Episodes | kernel's `encoder-interaction`, wired by substrate | a finished session appears as an episode; the extractor's proposals reach review |
 | 5 | Activation | `modules/activation` | Morphogen verdict: better than plain recall on held-out questions, or the module is dropped |

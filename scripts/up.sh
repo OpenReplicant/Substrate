@@ -46,7 +46,8 @@ python3 "$ROOT/scripts/render_bifrost.py"
 "$ROOT/scripts/build.sh"
 
 say "Services ($RUNTIME)"
-mkdir -p "$ROOT/.state/artifacts"
+mkdir -p "$ROOT/.state/artifacts" "$ROOT/.state/otel"
+chmod 777 "$ROOT/.state/otel"      # the collector runs as a non-root user and writes Claude Code's events here
 rt_up
 
 say "Waiting for each service"
@@ -71,6 +72,7 @@ say "Kernel: logins and the project ($project)"
 KK_ADMIN_URL="postgresql://postgres:$(env_value POSTGRES_PASSWORD)@127.0.0.1:$(env_value KK_DB_PORT)/kk" \
 KK_JWT_SECRET="$(env_value KK_JWT_SECRET)" \
   "$ROOT/bin/kk" up --no-stack --commands-dir "$ROOT/bin" "$project"   # Claude Code runs bin/'s wrappers (kernel D-95)
+python3 "$ROOT/scripts/telemetry.py" on --project "$project"     # its metrics, events and traces to the collector (S-28)
 
 say "Up"
 "$ROOT/scripts/check.sh" || true

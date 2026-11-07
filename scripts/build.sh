@@ -50,10 +50,14 @@ build_tools() {
   "$ENGINE" build -q -t substrate-tools:local --build-arg "KERNEL_IMAGE=$(local_name knowledge-kernel:local)" \
     -f "$ROOT/deploy/tools/Containerfile" "$ROOT/deploy/tools" >/dev/null && echo "  substrate-tools:local"
 }
+# What the Backstage image was built from: its package files, so a dependency added here triggers a rebuild.
+backstage_hash() { cat "$ROOT"/services/backstage/package.json "$ROOT"/services/backstage/packages/*/package.json | cksum | cut -d' ' -f1; }
+
 build_backstage() {
   image=$(env_value BACKSTAGE_IMAGE); image=${image:-localhost/substrate-backstage:local}
   echo "  $image: building in containers (the first build takes several minutes)"
-  "$ENGINE" build -t "$image" -f "$ROOT/services/backstage/Containerfile" "$ROOT/services/backstage"
+  "$ENGINE" build -t "$image" --label "substrate.backstage.packages=$(backstage_hash)" \
+    -f "$ROOT/services/backstage/Containerfile" "$ROOT/services/backstage"
   # keep the lock file the build resolved, so every machine installs the same versions
   if [ ! -f "$ROOT/services/backstage/yarn.lock" ]; then
     id=$("$ENGINE" create "$image")
@@ -76,10 +80,11 @@ case "${1:-all}" in
     build_caddy
     build_tools
     image=$(env_value BACKSTAGE_IMAGE); image=${image:-localhost/substrate-backstage:local}
-    if "$ENGINE" image inspect "$image" >/dev/null 2>&1; then
+    built=$("$ENGINE" image inspect -f '{{index .Config.Labels "substrate.backstage.packages"}}' "$image" 2>/dev/null || true)
+    if [ -n "$built" ] && [ "$built" = "$(backstage_hash)" ]; then
       echo "  $image present (rebuild: scripts/build.sh backstage)"
     else
-      build_backstage
+      build_backstage   # missing, or its package files changed since it was built
     fi ;;
   *) echo "usage: scripts/build.sh [kernel|db|caddy|tools|backstage]" >&2; exit 1 ;;
 esac

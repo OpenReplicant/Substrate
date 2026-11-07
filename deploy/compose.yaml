@@ -9,9 +9,18 @@
 #   model gateway       http://127.0.0.1:${BIFROST_PORT}/    (Claude Code: .../anthropic)
 #   map                 http://127.0.0.1:${BACKSTAGE_PORT}/  (MCP: .../api/mcp-actions/v1)
 #   Prometheus          http://127.0.0.1:${PROMETHEUS_PORT}/
+#   OpenTelemetry       127.0.0.1:${OTEL_GRPC_PORT} (gRPC), :${OTEL_HTTP_PORT} (HTTP): Claude Code and anything on this machine
 # Works with Docker or Podman (CONTAINER_ENGINE in .env, S-13).
 
 name: knowledge-kernel          # the same project as kernel's stack
+
+# Where parts send OpenTelemetry (S-28): the collector, over OTLP/HTTP; each part adds its catalog name.
+x-otel: &otel
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+  OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+  OTEL_TRACES_EXPORTER: otlp
+  OTEL_METRICS_EXPORTER: none
+  OTEL_LOGS_EXPORTER: none
 
 x-locked: &locked
   cap_drop: [ALL]
@@ -26,6 +35,9 @@ services:
     image: ${FRONT_DOOR_IMAGE:-localhost/substrate-caddy:local}
     volumes: !override
       - ../../../deploy/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+    environment:
+      <<: *otel
+      OTEL_SERVICE_NAME: front-door
     depends_on: [kernel, console]
 
   # The console (S-22): live state for people, behind the front door at /console/. Runs in kernel's image
@@ -64,6 +76,7 @@ services:
       BIFROST_VIRTUAL_KEY: ${BIFROST_VIRTUAL_KEY:?set in .env}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OTEL_COLLECTOR_URL: http://otel-collector:4318/v1/traces     # Bifrost's otel plugin (render_bifrost.py)
     volumes:
       - bifrost-data:/app/data
       - ../../../.state/bifrost/config.json:/app/data/config.json:ro
@@ -87,7 +100,7 @@ services:
     ports:
       - "127.0.0.1:${PROMETHEUS_PORT:-9090}:9090"
     networks: [default, gateway-metrics, kk-reach-prometheus]
-    depends_on: [bifrost]
+    depends_on: [bifrost, otel-collector]
 
   # The map (S-12): Backstage built in containers from services/backstage (scripts/build.sh backstage), reading
   # catalog-info.yaml. Its MCP endpoint lets Claude Code query the catalog.
@@ -100,10 +113,31 @@ services:
       BACKSTAGE_PORT: ${BACKSTAGE_PORT:-7007}
       BACKSTAGE_LISTEN: "0.0.0.0:7007"
       BACKSTAGE_MCP_TOKEN: ${BACKSTAGE_MCP_TOKEN:?set in .env}
+      <<: *otel
+      OTEL_SERVICE_NAME: map-view
+      # zero-code instrumentation, installed in the image (services/backstage/packages/backend/package.json)
+      NODE_OPTIONS: --require @opentelemetry/auto-instrumentations-node/register
+      OTEL_NODE_DISABLED_INSTRUMENTATIONS: fs,dns,net
     volumes:
       - ../../../catalog-info.yaml:/substrate/catalog-info.yaml:ro
     ports:
       - "127.0.0.1:${BACKSTAGE_PORT:-7007}:7007"
+
+  # The OpenTelemetry collector (S-28): traces become the observed call graph and per-service rates for
+  # Prometheus; Claude Code's events go to .state/otel/logs.jsonl. Published on 127.0.0.1 for the host's harness.
+  otel-collector:
+    <<: *locked
+    image: ${OTEL_COLLECTOR_IMAGE:-docker.io/otel/opentelemetry-collector-contrib:0.163.2}
+    read_only: true
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    environment:
+      OTEL_LISTEN_HOST: 0.0.0.0
+    volumes:
+      - ../../../deploy/otel/collector.yaml:/etc/otelcol-contrib/config.yaml:ro
+      - ../../../.state/otel:/otel
+    ports:
+      - "127.0.0.1:${OTEL_GRPC_PORT:-4317}:4317"
+      - "127.0.0.1:${OTEL_HTTP_PORT:-4318}:4318"
 
 volumes:
   bifrost-data:

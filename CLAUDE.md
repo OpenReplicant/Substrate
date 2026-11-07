@@ -15,6 +15,7 @@ the glue (S-01, S-11). Read `README.md` for the picture and `DECISIONS.md` for e
 | Console | `services/console/`, container `console` | the owner's live page: review lane, verdicts, spend, stack, bus, the spec's progress; kernel sign-in |
 | Bus | database `substrate` in kernel's Postgres | pgmq queues (`deploy/bus/queues.txt`): `triggers`, `owner`, `events`; work and notices, never facts |
 | Prometheus | container `prometheus` | the gateway's metrics, read by kernel's observer |
+| OpenTelemetry | container `otel-collector`, `deploy/otel/` | every part's traces become the observed call graph (Map); `service.name` = catalog name |
 | Tools | `bin/`, container `substrate-tools` | kk, Morphogen, gitleaks, kernel's MCP server and hooks, run in a container as you |
 | Runtime | `scripts/runtime/`, `deploy/` | what runs the services: `compose` or `nomad` (`RUNTIME` in `.env`), Podman or Docker (`CONTAINER_ENGINE`) |
 
@@ -83,6 +84,7 @@ scripts/gateway.py on|off|status [--mode subscription|api-key]
 scripts/build.sh [kernel|db|caddy|tools|backstage]   # images, built in containers; backstage after changing services/backstage
 scripts/bus.sh                  # the bus: database, pgmq, queues (after adding one to deploy/bus/queues.txt)
 python3 scripts/spec.py status|next|set ID STATUS   # where the spec's build plan stands
+scripts/telemetry.py on|off|status   # Claude Code's metrics, events and traces to the collector
 scripts/tools.sh start|stop|status   # the tools container that bin/ runs in
 scripts/logs.sh SERVICE         # a service's recent logs, either runtime
 scripts/down.sh [--volumes] [--agent]   # stop (delete data after asking; with nomad, stop the agent)

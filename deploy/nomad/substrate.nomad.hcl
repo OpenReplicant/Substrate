@@ -69,6 +69,18 @@ variable "prometheus_port" {
   type    = number
   default = 9090
 }
+variable "otel_image" {
+  type    = string
+  default = "docker.io/otel/opentelemetry-collector-contrib:0.163.2"
+}
+variable "otel_grpc_port" {
+  type    = number
+  default = 4317
+}
+variable "otel_http_port" {
+  type    = number
+  default = 4318
+}
 variable "console_port" {
   type    = number
   default = 8100
@@ -221,6 +233,10 @@ job "substrate" {
         CADDY_BIND       = "127.0.0.1"
         KERNEL_UPSTREAM  = "127.0.0.1:${var.kernel_port}"
         CONSOLE_UPSTREAM = "127.0.0.1:${var.console_port}"
+        # spans to the collector (S-28)
+        OTEL_SERVICE_NAME           = "front-door"
+        OTEL_EXPORTER_OTLP_ENDPOINT = "http://127.0.0.1:${var.otel_http_port}"
+        OTEL_EXPORTER_OTLP_PROTOCOL = "http/protobuf"
       }
       service {
         name     = "caddy"
@@ -312,8 +328,9 @@ job "substrate" {
         ]
       }
       env {
-        APP_HOST = "127.0.0.1"
-        APP_PORT = "${var.bifrost_port}"
+        APP_HOST           = "127.0.0.1"
+        APP_PORT           = "${var.bifrost_port}"
+        OTEL_COLLECTOR_URL = "http://127.0.0.1:${var.otel_http_port}/v1/traces"
       }
       template {
         data        = <<-EOT
@@ -364,6 +381,15 @@ job "substrate" {
       env {
         BACKSTAGE_PORT   = "${var.backstage_port}"
         BACKSTAGE_LISTEN = "127.0.0.1:${var.backstage_port}"
+        # zero-code OpenTelemetry, installed in the image (S-28)
+        NODE_OPTIONS                        = "--require @opentelemetry/auto-instrumentations-node/register"
+        OTEL_SERVICE_NAME                   = "map-view"
+        OTEL_EXPORTER_OTLP_ENDPOINT         = "http://127.0.0.1:${var.otel_http_port}"
+        OTEL_EXPORTER_OTLP_PROTOCOL         = "http/protobuf"
+        OTEL_TRACES_EXPORTER                = "otlp"
+        OTEL_METRICS_EXPORTER               = "none"
+        OTEL_LOGS_EXPORTER                  = "none"
+        OTEL_NODE_DISABLED_INSTRUMENTATIONS = "fs,dns,net"
       }
       template {
         data        = <<-EOT
@@ -397,6 +423,49 @@ job "substrate" {
     network {
       port "http" {
         static = var.prometheus_port
+      }
+      port "otlp_grpc" {
+        static = var.otel_grpc_port
+      }
+      port "otlp_http" {
+        static = var.otel_http_port
+      }
+      port "otel_prom" {
+        static = 8889
+      }
+    }
+
+    # The OpenTelemetry collector (S-28), with the same config as compose (deploy/otel/collector.yaml).
+    task "otel-collector" {
+      driver = var.driver
+      config {
+        image        = var.otel_image
+        network_mode = "host"
+        args         = ["--config=/etc/otelcol-contrib/config.yaml"]
+        volumes = [
+          "${var.root}/deploy/otel/collector.yaml:/etc/otelcol-contrib/config.yaml:ro",
+          "${var.root}/.state/otel:/otel",
+        ]
+      }
+      env {
+        OTEL_LISTEN_HOST = "127.0.0.1"
+      }
+      service {
+        name     = "otel-collector"
+        provider = "nomad"
+        port     = "otel_prom"
+        tags     = ["metrics"]
+        check {
+          type     = "http"
+          path     = "/metrics"
+          port     = "otel_prom"
+          interval = "15s"
+          timeout  = "3s"
+        }
+      }
+      resources {
+        cpu    = 200
+        memory = 256
       }
     }
 

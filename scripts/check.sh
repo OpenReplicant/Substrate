@@ -30,6 +30,13 @@ curl -fsS "http://127.0.0.1:$bport/metrics" 2>/dev/null | grep -q '^bifrost_\|^#
   && ok "gateway exposes bifrost_* metrics" || note "no bifrost_* metrics yet (they appear after the first request)"
 curl -fsS "http://127.0.0.1:$pport/api/v1/query?query=up%7Bjob%3D%22bifrost%22%7D" 2>/dev/null | grep -q '"value":\[[^]]*,"1"\]' \
   && ok "prometheus scrapes the gateway" || bad "prometheus target 'bifrost' is not up"
+for job in otel-collector; do
+  curl -fsS "http://127.0.0.1:$pport/api/v1/query?query=up%7Bjob%3D%22$job%22%7D" 2>/dev/null | grep -q '"value":\[[^]]*,"1"\]' \
+    && ok "prometheus scrapes the OpenTelemetry collector" || bad "prometheus target '$job' is not up (scripts/logs.sh otel-collector)"
+done
+curl -fsS "http://127.0.0.1:$pport/api/v1/query?query=count(traces_service_graph_request_total)" 2>/dev/null | grep -q '"value"' \
+  && ok "observed call graph has edges" || note "no observed calls yet (they appear once instrumented parts talk to each other)"
+"$ROOT/scripts/telemetry.py" status >/dev/null 2>&1 && ok "Claude Code: $("$ROOT/scripts/telemetry.py" status)" || note "Claude Code telemetry is off (scripts/telemetry.py on)"
 if [ "$RUNTIME" = nomad ]; then
   curl -fsS "http://127.0.0.1:$pport/api/v1/query?query=up%7Bjob%3D%22nomad%22%7D" 2>/dev/null | grep -q '"value":\[[^]]*,"1"\]' \
     && ok "prometheus scrapes Nomad's allocation metrics" || bad "prometheus target 'nomad' is not up"

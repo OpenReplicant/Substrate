@@ -228,6 +228,7 @@ metadata:
     substrate.dev/intent: Let kernel know what was judged, by what evidence, at what cost, so recall and the MAPE-K loop can use it.
     substrate.dev/fill: build
     substrate.dev/basis: modules/encoder-morphogen/BRIEF.md (S-08); DQV and PROV are kernel packs already
+    substrate.dev/step: "1"
 spec:
   type: service
   lifecycle: experimental
@@ -244,6 +245,7 @@ metadata:
     substrate.dev/intent: Put the map people already keep into kernel, cited by file and line.
     substrate.dev/fill: build
     substrate.dev/basis: modules/encoder-backstage/BRIEF.md (S-09); system structure is kernel's kk-tosca profile (D-07)
+    substrate.dev/step: "2"
 spec:
   type: service
   lifecycle: experimental
@@ -261,11 +263,15 @@ metadata:
     substrate.dev/intent: Route model calls with budgets and keys; expose tokens, cost and errors as metrics.
     substrate.dev/fill: adopt
     substrate.dev/candidates: Bifrost v2.3.2 (Apache-2.0), maximhq/bifrost:v2.3.2 (S-04)
+    substrate.dev/step: "0"
+    nomad.io/job-id: "substrate"
+    nomad.io/group: "gateway"
 spec:
   type: service
   lifecycle: experimental
   owner: group:operator
   system: engine
+  consumesApis: [otlp-api]
   providesApis: [model-api, gateway-metrics]
 ---
 # ================================================================ MIND
@@ -294,6 +300,7 @@ metadata:
     substrate.dev/intent: Let an agent rely on what it just wrote before review.
     substrate.dev/fill: build
     substrate.dev/basis: kernel M6-T2 (planned)
+    substrate.dev/step: "3"
 spec:
   type: library
   lifecycle: experimental
@@ -326,6 +333,7 @@ metadata:
     substrate.dev/intent: Choose the skill to apply from evidence; skills are text cells Morphogen improves.
     substrate.dev/fill: build
     substrate.dev/candidates: Claude Code skills; GEPA 0.1.4 (MIT) through Morphogen
+    substrate.dev/step: "7"
 spec:
   type: library
   lifecycle: experimental
@@ -342,6 +350,7 @@ metadata:
     substrate.dev/intent: Change the world only through approved plans with a fixed action list; record what was done.
     substrate.dev/fill: existing
     substrate.dev/basis: kernel modules/actuator-compose (D-53); an actuator acting through the scheduler's API (restart, scale, run a job, with an ACL token scoped to exactly that) is to build (S-17)
+    substrate.dev/step: "8"
 spec:
   type: service
   lifecycle: production
@@ -358,12 +367,13 @@ metadata:
     substrate.dev/intent: Match what is in the briefing against skills and choose the next action.
     substrate.dev/fill: existing
     substrate.dev/basis: Claude Code, through the gateway (S-03, S-04)
+    substrate.dev/otel-service: "claude-code"
 spec:
   type: service
   lifecycle: production
   owner: group:operator
   system: mind
-  consumesApis: [kernel-mcp-api, judge-api, model-api, backstage-mcp-api]
+  consumesApis: [kernel-mcp-api, judge-api, model-api, backstage-mcp-api, otlp-api]
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Component
@@ -455,6 +465,7 @@ metadata:
     substrate.dev/intent: Keep changes attributable and stop agents colliding or looping; doing nothing is allowed.
     substrate.dev/fill: build
     substrate.dev/basis: a reactor over kernel's detectors (M6-T0)
+    substrate.dev/step: "9"
 spec:
   type: service
   lifecycle: experimental
@@ -488,6 +499,9 @@ metadata:
     substrate.dev/intent: Let any agent read and write as itself, with clearance and attribution per call.
     substrate.dev/fill: existing
     substrate.dev/basis: kernel modules/kernel-mcp on the MCP Python SDK 2.3.0 (D-20, D-28, D-88)
+    nomad.io/job-id: "substrate"
+    nomad.io/group: "kernel"
+    substrate.dev/otel-service: "kernel"
 spec:
   type: service
   lifecycle: production
@@ -521,12 +535,15 @@ metadata:
     substrate.dev/intent: One address for people and agents, extendable with Caddy plugins.
     substrate.dev/fill: adopt
     substrate.dev/basis: kernel's Caddy service and routes (D-74), with substrate's deploy/caddy/Caddyfile; plugins from deploy/caddy/plugins.txt built by xcaddy (S-20)
+    substrate.dev/step: "0"
+    nomad.io/job-id: "substrate"
+    nomad.io/group: "kernel"
 spec:
   type: service
   lifecycle: experimental
   owner: group:operator
   system: interface
-  consumesApis: [kernel-mcp-api, console-api]
+  consumesApis: [kernel-mcp-api, console-api, otlp-api]
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Component
@@ -537,13 +554,16 @@ metadata:
     substrate.dev/intent: Let the owner see what needs them and act on it from one page, signed in as themselves.
     substrate.dev/fill: build
     substrate.dev/basis: services/console, run in kernel's image; kernel's sign-in and review tools, Prometheus, Morphogen's evidence log, the bus (S-22)
+    substrate.dev/step: "0"
+    nomad.io/job-id: "substrate"
+    nomad.io/group: "console"
 spec:
   type: website
   lifecycle: experimental
   owner: group:operator
   system: interface
   providesApis: [console-api]
-  consumesApis: [kernel-mcp-api, metrics-api, bus-api]
+  consumesApis: [kernel-mcp-api, metrics-api, bus-api, trace-metrics]
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Component
@@ -554,6 +574,7 @@ metadata:
     substrate.dev/intent: Carry work and notices between the parts durably, without a second server; never facts.
     substrate.dev/fill: adopt
     substrate.dev/candidates: pgmq v1.13.1 (PostgreSQL License) from kernel's Postgres image (kernel D-94), in database substrate (S-21, S-24)
+    substrate.dev/step: "0"
 spec:
   type: service
   lifecycle: experimental
@@ -570,11 +591,15 @@ metadata:
     substrate.dev/intent: Browse the map in the tool platform teams already use; let agents query the catalog over MCP.
     substrate.dev/fill: adopt
     substrate.dev/candidates: Backstage from @backstage/create-app 0.9.3 (Apache-2.0), services/backstage; MCP via @backstage/plugin-mcp-actions-backend (S-12)
+    substrate.dev/step: "0"
+    nomad.io/job-id: "substrate"
+    nomad.io/group: "map"
 spec:
   type: website
   lifecycle: experimental
   owner: group:operator
   system: interface
+  consumesApis: [otlp-api]
   providesApis: [backstage-mcp-api]
   dependsOn: [resource:git-repo]
 ---
@@ -587,6 +612,7 @@ metadata:
     substrate.dev/intent: Keep the host bare - kk, Morphogen, gitleaks and kernel's MCP server and hooks run in a container as the host user, seeing only the folders they work on.
     substrate.dev/fill: build
     substrate.dev/basis: deploy/tools/Containerfile on kernel's image, scripts/tools.sh, bin/ (S-19)
+    substrate.dev/step: "0"
 spec:
   type: service
   lifecycle: experimental
@@ -602,10 +628,12 @@ metadata:
   name: scheduler
   description: One control plane for containers, processes and clusters; swappable (S-16).
   annotations:
+    substrate.dev/only-runtime: nomad
     substrate.dev/intent: Run every service and job, restart what fails, place work by resources, find services by name, hold secrets, and give the control loop an API to act through.
     substrate.dev/fill: adopt
     substrate.dev/candidates: Nomad 2.0.7 (BUSL-1.1, S-18) with nomad-driver-podman 0.6.5 (MPL-2.0), deploy/nomad; compose (kernel's stack plus deploy/compose.yaml) as the other runtime; k3s (Apache-2.0) considered (S-17)
     substrate.dev/note: Linux only for Nomad with Podman; compose stays the default until Nomad passes scripts/check.sh on the owner's machine.
+    substrate.dev/step: "0"
 spec:
   type: service
   lifecycle: experimental
@@ -623,13 +651,35 @@ metadata:
     substrate.dev/intent: Turn the gateway's counters into windows the observer can record as claims.
     substrate.dev/fill: adopt
     substrate.dev/candidates: Prometheus v3.15.0 (Apache-2.0) at the digest kernel's devops demo pins (S-05)
+    substrate.dev/step: "0"
+    nomad.io/job-id: "substrate"
+    nomad.io/group: "telemetry"
 spec:
   type: service
   lifecycle: experimental
   owner: group:operator
   system: storage
   providesApis: [metrics-api]
-  consumesApis: [gateway-metrics, scheduler-metrics]
+  consumesApis: [gateway-metrics, scheduler-metrics, trace-metrics]
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: otel-collector
+  description: OpenTelemetry collector - traces become the observed call graph; metrics go to Prometheus.
+  annotations:
+    substrate.dev/intent: Observe what actually calls what, so the intended map can be checked against it.
+    substrate.dev/fill: adopt
+    substrate.dev/candidates: otelcol-contrib 0.163.2 (Apache-2.0) with the servicegraph and spanmetrics connectors (S-28)
+    substrate.dev/step: "0"
+    nomad.io/job-id: "substrate"
+    nomad.io/group: "telemetry"
+spec:
+  type: service
+  lifecycle: experimental
+  owner: group:operator
+  system: storage
+  providesApis: [otlp-api, trace-metrics]
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Resource
@@ -741,3 +791,13 @@ apiVersion: backstage.io/v1alpha1
 kind: API
 metadata: {name: console-api, description: "The console's JSON routes behind the front door at /console/api."}
 spec: {type: http, lifecycle: experimental, owner: group:operator, system: interface, definition: "POST login, logout, review, goal; GET state (a kernel sign-in cookie)."}
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata: {name: otlp-api, description: "OTLP over gRPC (4317) and HTTP (4318): traces, metrics, logs."}
+spec: {type: otlp, lifecycle: experimental, owner: group:operator, system: storage, definition: "OpenTelemetry Protocol; service.name is the catalog's component name, or its substrate.dev/otel-service annotation."}
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata: {name: trace-metrics, description: "The observed call graph and span rates, as Prometheus metrics."}
+spec: {type: prometheus, lifecycle: experimental, owner: group:operator, system: storage, definition: "traces_service_graph_request_total{client, server, connection_type}, traces_span_metrics_calls_total{service_name, span_name}."}

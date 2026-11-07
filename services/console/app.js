@@ -1,11 +1,21 @@
 // The console's page logic (S-22). A file of its own: the CSP allows scripts from this origin only.
+
+// The map's graph lives outside Alpine's reactive state (Cytoscape keeps its own).
+let cy = null;
+const SYSTEMS = ['interface', 'mind', 'organism', 'engine', 'storage', 'outside'];
+const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
 document.addEventListener('alpine:init', () => {
   Alpine.data('substrateConsole', () => ({
     signedIn: null, name: 'owner', password: '', signinError: '',
     s: null, loading: false, error: '', lastOk: 0, now: Date.now(),
     draft: '', busy: {}, flash: '', open: {},
+    view: 'overview', m: null, mode: 'difference', mapError: '', picked: null,
 
     async init() {
+      this.route();
+      window.addEventListener('hashchange', () => this.route());
+      setInterval(() => { if (this.signedIn && this.view === 'map' && !document.hidden) this.loadMap(); }, 30000);
       await this.refresh();
       setInterval(() => { this.now = Date.now(); }, 1000);
       setInterval(() => { if (this.signedIn && !document.hidden) this.refresh(); }, 10000);
@@ -25,6 +35,7 @@ document.addEventListener('alpine:init', () => {
         if (status === 401) { this.signedIn = false; this.s = null; return; }
         if (status !== 200) { this.error = data.error || ('the console answered ' + status); return; }
         this.s = data; this.signedIn = true; this.error = ''; this.lastOk = Date.now();
+        if (this.view === 'map' && !this.m) this.loadMap();
       } catch (e) {
         this.error = 'the console did not answer; the stack may be down (scripts/check.sh)';
       } finally { this.loading = false; }
@@ -49,6 +60,106 @@ document.addEventListener('alpine:init', () => {
       this.flash = status === 200 ? 'Goal sent to the owner queue' : (data.error || 'the bus refused the goal');
       if (status === 200) this.draft = '';
       await this.refresh();
+    },
+
+    route() {
+      this.view = location.hash === '#map' ? 'map' : 'overview';
+      if (this.view === 'map') this.$nextTick(() => this.loadMap());
+    },
+    async loadMap() {
+      if (!this.signedIn) return;
+      const { status, data } = await this.call('api/map');
+      if (status === 401) { this.signedIn = false; return; }
+      if (status !== 200) { this.mapError = data.error || ('the map answered ' + status); return; }
+      this.m = data; this.mapError = '';
+      this.$nextTick(() => this.draw());
+    },
+    setMode(mode) { this.mode = mode; this.picked = null; this.draw(); },
+    get gapCount() { return this.m ? this.m.edges.filter(e => e.standing === 'unseen' || e.standing === 'undeclared').length : 0; },
+
+    // One layout for every mode: a column per catalog system (and one for what is outside), so the intended and
+    // the observed graphs can be compared by position.
+    elements() {
+      const m = this.m, mode = this.mode, cols = {}, els = [];
+      const nodes = m.nodes.map(n => ({ ...n }));
+      for (const x of m.external) nodes.push({ id: x, system: 'outside', external: true });
+      for (const n of nodes) (cols[SYSTEMS.includes(n.system) ? n.system : 'engine'] ||= []).push(n);
+      SYSTEMS.forEach((sys, c) => {
+        const list = (cols[sys] || []).sort((a, b) => a.id.localeCompare(b.id));
+        if (!list.length) return;
+        els.push({ group: 'nodes', data: { id: 'sys:' + sys, label: sys.toUpperCase(), w: 120 }, classes: 'sys',
+                   position: { x: c * 210, y: 0 }, selectable: false });
+        list.forEach((n, r) => {
+          const up = m.up[n.id];
+          let cls = n.external ? 'ext' : '';
+          if (mode === 'intended') cls = n.external ? 'hidden' : n.state;
+          else if (!n.external) cls = up ? (up.ok ? 'up' : 'down') : 'quiet';
+          els.push({ group: 'nodes', data: { id: n.id, label: n.id, w: Math.max(70, n.id.length * 7 + 22), n },
+                     classes: cls, position: { x: c * 210, y: 52 + r * 50 } });
+        });
+      });
+      for (const e of m.edges) {
+        let show = false, cls = e.standing;
+        if (mode === 'intended') { show = e.standing !== 'undeclared'; cls = 'declared'; }
+        else if (mode === 'observed') { show = e.standing === 'confirmed' || e.standing === 'undeclared'; cls = 'observed'; }
+        else show = e.standing !== 'unobservable';
+        if (show) els.push({ group: 'edges', data: { id: e.source + '>' + e.target, source: e.source, target: e.target,
+                                                     calls: e.calls || 0, e }, classes: cls });
+      }
+      return els.filter(x => x.classes !== 'hidden');
+    },
+    draw() {
+      if (!this.m || !this.$refs.graph || typeof cytoscape === 'undefined') return;
+      const ink = css('--ink'), muted = css('--muted'), line = css('--line'), panel = css('--panel');
+      const style = [
+        { selector: 'node', style: { label: 'data(label)', 'font-size': 11, color: ink, 'text-valign': 'center',
+            'text-halign': 'center', width: 'data(w)', height: 26, shape: 'round-rectangle', 'background-color': panel,
+            'border-width': 1.5, 'border-color': line, 'font-family': 'system-ui, sans-serif' } },
+        { selector: 'node.sys', style: { 'background-opacity': 0, 'border-width': 0, color: muted, 'font-size': 10,
+            'font-weight': 600, events: 'no' } },
+        { selector: 'node.built', style: { 'background-color': css('--accent'), 'border-color': css('--accent'), color: panel } },
+        { selector: 'node.building', style: { 'background-color': css('--warn-soft'), 'border-color': css('--warn'), 'border-width': 2 } },
+        { selector: 'node.planned', style: { 'border-style': 'dashed', 'border-color': muted, color: muted } },
+        { selector: 'node.up', style: { 'background-color': css('--ok-soft'), 'border-color': css('--ok'), 'border-width': 2 } },
+        { selector: 'node.down', style: { 'background-color': css('--bad-soft'), 'border-color': css('--bad'), 'border-width': 2 } },
+        { selector: 'node.quiet', style: { color: muted, opacity: 0.55 } },
+        { selector: 'node.ext', style: { 'border-style': 'dotted', 'border-color': muted, 'border-width': 2 } },
+        { selector: 'edge', style: { width: 1.4, 'line-color': line, 'target-arrow-color': line, 'target-arrow-shape': 'triangle',
+            'arrow-scale': 0.8, 'curve-style': 'bezier' } },
+        { selector: 'edge.declared', style: { 'line-color': muted, 'target-arrow-color': muted, opacity: 0.5 } },
+        { selector: 'edge.observed, edge.confirmed', style: { 'line-color': css('--ok'), 'target-arrow-color': css('--ok'),
+            width: 'mapData(calls, 0, 500, 1.5, 5)' } },
+        { selector: 'edge.unseen', style: { 'line-style': 'dashed', 'line-color': muted, 'target-arrow-color': muted } },
+        { selector: 'edge.undeclared', style: { 'line-color': css('--bad'), 'target-arrow-color': css('--bad'), width: 3 } },
+        { selector: ':selected', style: { 'overlay-color': css('--accent'), 'overlay-opacity': 0.15 } },
+      ];
+      if (cy) cy.destroy();
+      cy = cytoscape({ container: this.$refs.graph, elements: this.elements(), style, layout: { name: 'preset', padding: 24 },
+                       wheelSensitivity: 0.3, boxSelectionEnabled: false });
+      cy.on('tap', 'node', (ev) => this.pickNode(ev.target.data('n')));
+      cy.on('tap', 'edge', (ev) => this.pickEdge(ev.target.data('e')));
+      cy.on('tap', (ev) => { if (ev.target === cy) this.picked = null; });
+    },
+    pickNode(n) {
+      if (!n) return;
+      const up = this.m.up[n.id];
+      const rows = n.external ? [['seen', 'called from inside, not in the catalog']] : [
+        ['system', n.system], ['fill', n.fill || '–'], ['intended', n.state + (n.step != null ? ' (step ' + n.step + ': ' + n.step_status + ')' : '')],
+        ['observed', up ? (up.ok ? 'running' : 'not answering') + ' · ' + up.how : (n.runtime ? 'not seen' : 'not a running part')],
+        ['about', n.description || '–']];
+      this.picked = { title: n.id, rows };
+      this.$nextTick(() => cy && cy.resize());
+    },
+    pickEdge(e) {
+      if (!e) return;
+      const words = { confirmed: 'declared and seen', unseen: 'declared, not seen in the last hour',
+                      undeclared: 'seen, not declared in the catalog', unobservable: 'declared; not observable yet' };
+      const rows = [['standing', words[e.standing] || e.standing]];
+      if (e.via) rows.push(['declared', e.via.join(', ')]);
+      if (e.calls != null) rows.push(['calls', e.calls + ' in the last hour' + (e.failed ? ', ' + e.failed + ' failed' : '')]);
+      if (e.evidence) rows.push(['evidence', e.evidence]);
+      this.picked = { title: e.source + ' → ' + e.target, rows };
+      this.$nextTick(() => cy && cy.resize());
     },
 
     get okCount() { return this.s ? this.s.services.filter(x => x.ok).length : 0; },
