@@ -7,7 +7,7 @@
 kernel:
   url: https://github.com/OpenReplicant/kernel
   branch: main
-  checked: c23a9827660638aea0a503e7b323604ff4a19f11   # 2026-10-19
+  checked: bbb54e97473257566462157cba6540b714a29480   # 2026-11-07 (D-94, D-95, D-96)
 morphogen:
   url: https://github.com/OpenReplicant/Morphogen
   branch: main
