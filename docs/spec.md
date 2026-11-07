@@ -32,6 +32,52 @@ The design's four principles carry over, with substrate's added:
    module keeps a private database; the bus is a database in the same Postgres, not a second server.
 6. **Nothing on the host but git, python3, the engine and Claude Code.** Every new command runs in
    `substrate-tools` (S-19).
+7. **Organization is the owner's; structure is free to change under judgment.** What makes the system itself
+   (purpose, goals, policy, who decides what, kernel's invariants) changes only through the owner. What
+   currently realises it (code, config, skills, model routes, where services run) changes whenever a verdict
+   says the change fits better.
+
+### Software as a process, not a product
+
+A software factory makes software the way a plant makes a car: built, checked at a gate, shipped, then someone
+else's concern. The factory and its product are separate things. Substrate has no product in that sense. The
+running system is the software, and its work is keeping itself fitted to its purpose; code is its current
+structure, not its output, and there is no "done", only the next adaptation. In Maturana and Varela's terms a
+factory is allopoietic (it produces something other than itself) and substrate is autopoietic (it produces and
+maintains itself), and principle 7 is their split between organization and structure. Substrate's first
+distribution being the system minding itself (S-10) follows from this: self-reference is the normal case.
+
+### The self-model has two faces
+
+A self-maintaining system needs a model of itself in two halves, and the gap between them is where all of its
+work comes from:
+
+| | Intended (the blueprint) | Observed (the structure) |
+| --- | --- | --- |
+| Says | what the system is meant to be: parts, owners, relations, limits, the documented process | what it actually is: what runs, what calls what, what happened, what it cost |
+| Written by | people, as declarations they own | encoders and observers, as measurements |
+| In substrate | `catalog-info.yaml` (Backstage's format), owner claims, process models (BPMN) | code (self-encoder), Nomad and Prometheus (observers), event logs, episodes, Morphogen's measurements |
+| Trust (Morphogen's levels) | stated | measured |
+| Alone it becomes | documentation that rots | a system that only preserves whatever it happens to be |
+
+Both halves are claims in one store, attributed and scoped, which is what makes them comparable: a detector
+asks where they disagree (a dependency used but not declared, a declared owner who never acts, a process path
+taken that the model does not have). The same pattern already appears three times: Kubernetes-style
+controllers (spec against status), kernel's conformance checking (documented process against the event log,
+D-50), and Morphogen's structure (intended cells against observed traces).
+
+A gap can close in **either direction**, and choosing which is a decision, not a computation. Practice may be
+brought back to intent (a fix, judged by Morphogen), or intent may be revised to match practice that turned out
+better (kernel's process learner proposes this, D-76). The review lane is where that choice is made. A system
+that always enforced its blueprint would be rigid; one that always accepted what it observed would have no
+identity. Keeping both, and deciding between them on evidence, is what lets it change without ceasing to be
+itself.
+
+This is why Backstage is in the stack. Its catalog is the most widely used format in which owners declare what
+their systems are, who owns them and how they relate, kept beside the code. It is a good blueprint and nothing
+more: it does not observe, so on its own it drifts from reality. Substrate supplies the other half and the loop
+between them (`encoder-backstage` turns the declarations into claims; observers supply what is; detectors and
+the review lane close the gap).
 
 ## 2. Module map
 
