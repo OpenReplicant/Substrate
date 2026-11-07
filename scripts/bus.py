@@ -1,4 +1,5 @@
-"""The message bus (S-21): pgmq in its own database, `substrate`, beside kernel's `kk` in the same Postgres.
+"""The message bus (S-21, S-24): pgmq in its own database, `substrate`, beside kernel's `kk` in the same Postgres.
+kernel's Postgres image carries the extension (kernel D-94); this creates it where substrate uses it.
 
 Idempotent, run by scripts/bus.sh on every `scripts/up.sh`: the login `substrate_bus` (password on stdin), the
 database it owns, the pgmq extension (updated in place when the image carries a newer version), the queues in
@@ -69,7 +70,8 @@ def main() -> int:
     with psycopg.connect(make_conninfo(**params), autocommit=True) as c:
         avail = c.execute("select default_version, installed_version from pg_available_extensions where name = 'pgmq'").fetchone()
         if not avail:
-            print("pgmq is not in this Postgres image: scripts/build.sh db, then restart the db service", file=sys.stderr)
+            print("pgmq is not in this Postgres image: update repos/kernel (kernel D-94), scripts/build.sh db, then restart db",
+                  file=sys.stderr)
             return 1
         if avail[1] is None:
             c.execute("create extension pgmq")

@@ -74,9 +74,9 @@ If a service does not come up, read its logs (`scripts/logs.sh <service>`), find
   supported Nomad versions and pin a driver that matches (record it in `DECISIONS.md`). Rootless Podman
   cannot bind ports below 1024, which is why every port here is above it.
 
-- **db** with pgmq: substrate's Postgres image is kernel's plus pgmq (`deploy/postgres/Containerfile`); if
-  `scripts/bus.sh` says pgmq is not in the image, run `scripts/build.sh db` and restart the db service. With
-  compose, the overlay's `build: !reset null` needs Compose 2.24 or later.
+- **db**: kernel's Postgres image carries pgvector, pg_cron, pgmq and pgGraph (kernel D-94). If
+  `scripts/bus.sh` says pgmq is not in the image, `repos/kernel` predates it: pull it, `scripts/build.sh db`,
+  and restart the db service.
 - **caddy** / **console**: `scripts/logs.sh caddy` and `scripts/logs.sh console`. The console runs in kernel's
   image as `nobody` and reads this checkout read-only; a permission error there means a file in the checkout is
   not world-readable.

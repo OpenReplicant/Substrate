@@ -553,7 +553,7 @@ metadata:
   annotations:
     substrate.dev/intent: Carry work and notices between the parts durably, without a second server; never facts.
     substrate.dev/fill: adopt
-    substrate.dev/candidates: pgmq v1.13.1 (PostgreSQL License) installed onto kernel's Postgres image (S-21)
+    substrate.dev/candidates: pgmq v1.13.1 (PostgreSQL License) from kernel's Postgres image (kernel D-94), in database substrate (S-21, S-24)
 spec:
   type: service
   lifecycle: experimental
@@ -635,7 +635,7 @@ apiVersion: backstage.io/v1alpha1
 kind: Resource
 metadata:
   name: postgres
-  description: Kernel's Postgres 17 image with its extensions (D-22), plus pgmq for the bus (S-21).
+  description: Kernel's Postgres 17 image - pgvector, pg_cron, pgmq, pgGraph (kernel D-22, D-94; S-24).
 spec: {type: database, owner: group:operator, system: storage}
 ---
 apiVersion: backstage.io/v1alpha1

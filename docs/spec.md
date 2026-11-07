@@ -44,6 +44,7 @@ notices between parts travel on the bus; facts never do.
 | Cycle (decide, act, observe) | A Claude Code session, with hooks run through `bin/` in the `substrate-tools` container | Runs |
 | Working memory | Kernel's agent working-memory scope (M6-T2), read and written through the kernel MCP memory profile | Planned in kernel |
 | Declarative memory | Kernel claims plus recall (BM25 and embeddings, D-60, D-61); a new `activation` module reranks recall | Claims run; activation new |
+| Associations (graph) | pgGraph over `kernel.current_edge`, in kernel's Postgres image | Extension in the image; the graph module new |
 | Episodic memory | Kernel's `encoder-interaction` turns session transcripts into episode claims; kernel's memory extractor proposes facts from them | Encoder in kernel; substrate wiring new |
 | Procedural memory | Claude Code skills (`.claude/skills/`), each with a utility claim | Skills run; utility new |
 | Utility and learning | DQV measurement claims written by `encoder-morphogen` from Morphogen verdicts, plus token and cost counts from Bifrost through Prometheus | Planned (S-08, S-05) |
@@ -57,8 +58,10 @@ notices between parts travel on the bus; facts never do.
 | Interrupts and triggers | The bus (pgmq, S-21): `triggers` for what should start a session, `events` for the feed | Queues run; producers and the dispatcher new |
 | The owner's view | The console (S-22) behind the front door (S-20), signed in with a kernel login | Runs |
 
-Graph questions (what depends on what) are answered by SQL over claims; a graph extension such as Apache AGE
-comes only when an algorithm needs one (kernel D-08), as its own decision.
+Graph questions (what depends on what, who is near whom, paths and neighbourhoods) go to **pgGraph**, which
+kernel's Postgres image carries (kernel D-94, S-24): a rebuildable graph over `kernel.current_edge` (D-86),
+queried as the calling role so row-level security, and with it clearance, still applies. Storage stays SQL
+(kernel D-08).
 
 ## 3. Working memory
 
@@ -115,7 +118,7 @@ tunes).
 results with three terms:
 
 - base level: how recently and how often the claim was recalled or cited (from kernel's recall log);
-- spreading: links from the entities in working memory;
+- spreading: links from the entities in working memory, read as pgGraph neighbourhoods;
 - belief: the claim's fused belief score.
 
 The weights start fixed. The module lands only if Morphogen judges it better than plain recall on held-out
@@ -142,7 +145,9 @@ role:
 **Motor is actuators.** An action is declared in the ontology (name, inputs, the entity it changes, who may run
 it) and every run is recorded as a claim. The first actuators:
 
-- git: branch, commit, pull request (the `upstream` skill for kernel and Morphogen);
+- git: branch, commit, and a pull or merge request on whichever forge the repository lives on (GitHub, Forgejo,
+  Gitea, GitLab; S-25), with the `upstream` skill for kernel and Morphogen. A forge's merge button is not an
+  approval path; approvals stay in the review lane and Morphogen's verdicts;
 - Nomad: update or restart a job through its API, with an ACL token limited to the substrate namespace;
 - the map: a catalog change as a pull request to `catalog-info.yaml`.
 
@@ -269,6 +274,7 @@ decision.
 - Morphogen (https://github.com/OpenReplicant/Morphogen)
 - Claude Code hooks reference: https://code.claude.com/docs/en/hooks.md (read 2026-11-07)
 - pgmq v1.13.1: https://github.com/pgmq/pgmq (`INSTALLATION.md`)
+- pgGraph v1.2.1: https://github.com/evokoa/pggraph (installation, administration and security guides)
 - Caddy: the official image's docs on adding modules (docker-library/docs, `caddy/content.md`)
 - Laird, Lebiere and Rosenbloom, "A Standard Model of the Mind," *AI Magazine* 38(4), 2017
 - Beer, *The Heart of Enterprise*, Wiley, 1979 (the Viable System Model)

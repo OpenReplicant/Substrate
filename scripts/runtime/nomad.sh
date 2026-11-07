@@ -88,7 +88,7 @@ rt_up() {
     -var "driver=$ENGINE" \
     -var "serve_parts=$parts" \
     -var "kernel_image=${prefix}knowledge-kernel:local" \
-    -var "db_image=$(qualify "$(env_value SUBSTRATE_DB_IMAGE)")" \
+    -var "db_image=${prefix}knowledge-kernel-db:local" \
     -var "caddy_image=$(qualify "$(env_value FRONT_DOOR_IMAGE)")" \
     -var "bifrost_image=$(qualify "$(env_value BIFROST_IMAGE)")" \
     -var "prometheus_image=$(qualify "$(env_value PROMETHEUS_IMAGE)")" \

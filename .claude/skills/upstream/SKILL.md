@@ -5,8 +5,15 @@ description: Contribute a fix or improvement found while running the substrate b
 
 # Contribute upstream
 
-`repos/kernel` and `repos/morphogen` are full clones of their GitHub repositories (`repos.yaml`). A fix
-to either belongs there, not in substrate.
+`repos/kernel` and `repos/morphogen` are full clones (`repos.yaml`, or `repos.local.yaml` when the owner
+points one at another forge). A fix to either belongs there, not in substrate.
+
+**Any forge** (S-25). The canonical repositories are on GitHub, but a clone's `origin` may be a Forgejo, Gitea
+or GitLab mirror or fork. Work out which from `git -C repos/<repo> remote get-url origin` and use that forge's
+way of proposing a change: on GitHub a pull request (`gh`), on GitLab a merge request, on Forgejo or Gitea a
+pull request. When no CLI for that forge is set up, push the branch and give the owner the link the push prints
+(each of these forges prints one), or the forge's compare page. A change accepted on a mirror still has to reach
+the canonical repository; say where it landed and what is left.
 
 ## Before changing anything
 
@@ -32,7 +39,7 @@ to either belongs there, not in substrate.
 
 1. `git -C repos/<repo> push -u origin <branch>`. If the owner has no push access there, push to their fork
    and open the PR from it.
-2. `gh pr create` from `repos/<repo>`: what broke, where it was found (substrate, which step), the fix, the
+2. Open the pull or merge request on that forge (`gh pr create` on GitHub): what broke, where it was found (substrate, which step), the fix, the
    checks run. Link the substrate commit or issue that found it.
 3. Delete the applied file from `upstream/<repo>/` in substrate, and commit that.
 4. While the PR is open, `repos/<repo>` stays on that branch only if substrate needs the fix to run; say so

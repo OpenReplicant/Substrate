@@ -2,7 +2,7 @@
 # Build substrate's images, all inside the container engine (S-19). With no argument, builds what is missing
 # and rebuilds kernel and tools (cheap: the engine's layer cache keeps unchanged steps).
 #
-#   scripts/build.sh                    # kernel, db (kernel's Postgres plus pgmq), front door, tools, and Backstage if missing
+#   scripts/build.sh                    # kernel, db (kernel's Postgres image), front door, tools, and Backstage if missing
 #   scripts/build.sh kernel|db|caddy|tools|backstage
 set -eu
 . "$(dirname "$0")/lib.sh"
@@ -22,12 +22,14 @@ full_name() {
   esac
 }
 
-# Kernel's Postgres image (pgvector, pg_cron), then substrate's on top of it with pgmq (S-21).
+# Kernel's Postgres image: pgvector, pg_cron, pgmq, pgGraph (kernel D-94; S-24). Compose builds it as its own
+# db service; Nomad runs the tagged image. Either way it is rebuilt here, so a newer kernel Dockerfile takes effect.
 build_db() {
-  "$ENGINE" build -q -t knowledge-kernel-db:local "$KERNEL/deploy/postgres" >/dev/null && echo "  knowledge-kernel-db:local"
-  image=$(env_value SUBSTRATE_DB_IMAGE); image=${image:-localhost/substrate-db:local}
-  "$ENGINE" build -q -t "$image" --build-arg "KERNEL_DB_IMAGE=$(local_name knowledge-kernel-db:local)" \
-    -f "$ROOT/deploy/postgres/Containerfile" "$ROOT/deploy/postgres" >/dev/null && echo "  $image (with pgmq)"
+  if [ "$RUNTIME" = compose ]; then
+    compose build -q db >/dev/null && echo "  db (kernel's Postgres image, built by compose)"
+  else
+    "$ENGINE" build -q -t knowledge-kernel-db:local "$KERNEL/deploy/postgres" >/dev/null && echo "  knowledge-kernel-db:local"
+  fi
 }
 
 # The front door (S-20): the stock Caddy image, or Caddy built with the plugins in deploy/caddy/plugins.txt.

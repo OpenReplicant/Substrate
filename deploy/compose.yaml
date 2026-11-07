@@ -20,12 +20,6 @@ x-locked: &locked
 
 services:
 
-  # Kernel's Postgres plus pgmq (S-21), built by scripts/build.sh db on top of kernel's own image. `!reset`
-  # drops kernel's build of deploy/postgres, so compose runs this image instead (Compose 2.24 or later).
-  db:
-    build: !reset null
-    image: ${SUBSTRATE_DB_IMAGE:-localhost/substrate-db:local}
-
   # The front door (S-20): kernel's Caddy service with substrate's Caddyfile (kernel's routes plus /console) and,
   # when deploy/caddy/plugins.txt lists any, a Caddy built with them (scripts/build.sh caddy).
   caddy:

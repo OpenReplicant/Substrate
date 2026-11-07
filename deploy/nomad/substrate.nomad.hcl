@@ -23,8 +23,8 @@ variable "kernel_image" {
 }
 variable "db_image" {
   type        = string
-  default     = "localhost/substrate-db:local"
-  description = "kernel's Postgres plus pgmq (S-21)"
+  default     = "localhost/knowledge-kernel-db:local"
+  description = "kernel's Postgres image: pgvector, pg_cron, pgmq, pgGraph (kernel D-94)"
 }
 variable "caddy_image" {
   type        = string
@@ -90,7 +90,9 @@ job "substrate" {
       config {
         image        = var.db_image
         network_mode = "host"
-        args         = ["postgres", "-c", "listen_addresses=127.0.0.1", "-c", "port=${var.db_port}"]
+        # as kernel's compose: pg_cron and pgGraph load at start (kernel D-94)
+        args = ["postgres", "-c", "listen_addresses=127.0.0.1", "-c", "port=${var.db_port}",
+        "-c", "shared_preload_libraries=pg_cron,graph", "-c", "cron.database_name=kk"]
         volumes      = ["${var.root}/.state/data/postgres:/var/lib/postgresql/data"]
       }
       env {

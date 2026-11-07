@@ -35,10 +35,12 @@ if [ -n "$required_missing" ]; then
   exit 1
 fi
 
-say "Upstream clones (repos.yaml)"
+say "Upstream clones (repos.yaml, repos.local.yaml)"
 mkdir -p "$ROOT/repos"
 clone() {   # name
-  url=$(sed -n "/^$1:/,/^[a-z]/s/^  url: //p" "$ROOT/repos.yaml")
+  # repos.local.yaml (gitignored) may point a repository at another forge: a Forgejo, Gitea or GitLab mirror or fork
+  url=$(sed -n "/^$1:/,/^[a-z]/s/^  url: //p" "$ROOT/repos.local.yaml" 2>/dev/null)
+  [ -n "$url" ] || url=$(sed -n "/^$1:/,/^[a-z]/s/^  url: //p" "$ROOT/repos.yaml")
   branch=$(sed -n "/^$1:/,/^[a-z]/s/^  branch: //p" "$ROOT/repos.yaml")
   if [ -d "$ROOT/repos/$1/.git" ]; then
     echo "  $1: present ($(git -C "$ROOT/repos/$1" rev-parse --abbrev-ref HEAD) at $(git -C "$ROOT/repos/$1" rev-parse --short HEAD))"
