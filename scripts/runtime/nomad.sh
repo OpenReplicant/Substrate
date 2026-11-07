@@ -52,13 +52,15 @@ EOF
 
 # One Variable per group, holding only that group's secrets (read by the job's templates).
 nomad_variables() {
+  secrets_export || return 1   # from the secrets slot when they are not in .env (S-31)
   specs=$(python3 - "$ENV_FILE" <<'EOF'
-import json, sys
+import json, os, sys
 env = {}
 for line in open(sys.argv[1]).read().splitlines():
     k, sep, v = line.partition("=")
     if sep and not k.startswith("#"):
         env[k.strip()] = v.strip()
+env.update({k: v for k, v in os.environ.items() if v})
 groups = {"db": ["POSTGRES_PASSWORD"],
           "kernel": ["POSTGRES_PASSWORD", "KK_AUTHENTICATOR_PASSWORD", "KK_JWT_SECRET"],
           "gateway": ["BIFROST_VIRTUAL_KEY", "ANTHROPIC_API_KEY", "OPENROUTER_API_KEY"],

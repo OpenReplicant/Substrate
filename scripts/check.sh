@@ -46,6 +46,7 @@ code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "http://127.0.0.1:$mport/a
   -H 'Accept: application/json, text/event-stream' \
   -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"check","version":"0"}}}')
 [ "$code" = "200" ] && ok "Backstage MCP answers with the token" || bad "Backstage MCP initialize returned $code"
+if st=$(sec_status 2>&1); then ok "secrets ($SECRETS): $st"; else bad "secrets ($SECRETS): $st"; fi
 "$ROOT/scripts/tools.sh" status >/dev/null 2>&1 && ok "tools container running (bin/ wrappers work)" || bad "tools container not running: scripts/tools.sh start"
 if out=$(KK_ADMIN_URL="postgresql://postgres:$(env_value POSTGRES_PASSWORD)@127.0.0.1:$(env_value KK_DB_PORT)/kk" \
          "$ROOT/bin/in-tools" python3 "$ROOT/scripts/bus.py" --check 2>&1); then ok "bus: $out"; else bad "bus: $out"; fi

@@ -16,6 +16,7 @@ Substrate assembles projects that each do one part, and adds the glue between th
 | Front door | [Caddy](https://caddyserver.com) 2.11.7 (`deploy/caddy`) | one address, 127.0.0.1:8080, for kernel's UI and MCP and the console; plugins by listing them |
 | Console | `services/console` | the owner's live page at `/console/`: review lane, verdicts, spend, stack, bus, the spec's progress; sign in with your kernel login |
 | Bus | [pgmq](https://github.com/pgmq/pgmq) 1.13.1, in kernel's Postgres | queues between the parts (`triggers`, `owner`, `events`), in a database of its own beside kernel's |
+| Secrets | a slot: `.env`, or [OpenBao](https://openbao.org) 2.7.1 | `SECRETS=openbao` keeps every secret in OpenBao (policies, audit, versions) instead of `.env`; scripts read them the same way either way |
 | Observation | [OpenTelemetry collector](https://opentelemetry.io/docs/collector/) 0.163.2 | traces from every part become the observed call graph; the console's Map compares it with the catalog |
 | Control plane | [Nomad](https://developer.hashicorp.com/nomad) 2.0.7, or compose | runs every service; one scheduler for containers, processes and clusters (`RUNTIME` in `.env`, S-16, S-17) |
 

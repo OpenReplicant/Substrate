@@ -685,6 +685,23 @@ spec:
   providesApis: [otlp-api, trace-metrics]
 ---
 apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: secrets
+  description: The secrets slot - .env, or OpenBao on 127.0.0.1:8200; every script reads secrets through it.
+  annotations:
+    substrate.dev/intent: Keep credentials out of files people read, with an audit trail, behind one swappable interface.
+    substrate.dev/fill: adopt
+    substrate.dev/candidates: env (default), OpenBao 2.7.1 (MPL-2.0; static seal, self-initialised); later SOPS, Infisical, a cloud KMS (S-31)
+    substrate.dev/step: "0"
+spec:
+  type: service
+  lifecycle: experimental
+  owner: group:operator
+  system: storage
+  providesApis: [secrets-api]
+---
+apiVersion: backstage.io/v1alpha1
 kind: Resource
 metadata:
   name: postgres
@@ -804,3 +821,8 @@ apiVersion: backstage.io/v1alpha1
 kind: API
 metadata: {name: trace-metrics, description: "The observed call graph and span rates, as Prometheus metrics."}
 spec: {type: prometheus, lifecycle: experimental, owner: group:operator, system: storage, definition: "traces_service_graph_request_total{client, server, connection_type}, traces_span_metrics_calls_total{service_name, span_name}."}
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata: {name: secrets-api, description: "The secrets slot's verbs: sec_start, sec_stop, sec_get NAME, sec_put NAME, sec_status."}
+spec: {type: shell, lifecycle: experimental, owner: group:operator, system: storage, definition: "scripts/secrets/<backend>.sh; names in deploy/secrets.txt; values on stdin and stdout, never argv."}

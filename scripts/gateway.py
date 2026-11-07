@@ -22,14 +22,10 @@ OWNED = ("ANTHROPIC_BASE_URL", "ANTHROPIC_CUSTOM_HEADERS", "ANTHROPIC_AUTH_TOKEN
 
 
 def read_env() -> dict[str, str]:
-    env = {}
-    path = ROOT / ".env"
-    if path.exists():
-        for line in path.read_text().splitlines():
-            k, sep, v = line.partition("=")
-            if sep and not k.startswith("#"):
-                env[k.strip()] = v.strip()
-    return env
+    """.env, with secrets through the secrets slot (S-31)."""
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from settings import read
+    return read()
 
 
 def main() -> None:
@@ -56,7 +52,7 @@ def main() -> None:
         cfg = read_env()
         vk, port = cfg.get("BIFROST_VIRTUAL_KEY"), cfg.get("BIFROST_PORT") or "8090"
         if not vk:
-            sys.exit("BIFROST_VIRTUAL_KEY is empty in .env: run scripts/up.sh first")
+            sys.exit("BIFROST_VIRTUAL_KEY is not set (scripts/secrets.sh list): run scripts/up.sh first")
         env["ANTHROPIC_BASE_URL"] = f"http://127.0.0.1:{port}/anthropic"
         if a.mode == "subscription":
             env["ANTHROPIC_CUSTOM_HEADERS"] = f"x-bf-vk: {vk}"

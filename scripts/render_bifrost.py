@@ -16,13 +16,10 @@ ROOT = Path(__file__).resolve().parent.parent
 
 
 def read_env(path: Path) -> dict[str, str]:
-    env = {}
-    for line in path.read_text().splitlines():
-        line = line.strip()
-        if line and not line.startswith("#") and "=" in line:
-            k, v = line.split("=", 1)
-            env[k.strip()] = v.strip().strip('"').strip("'")
-    return env
+    """.env, with secrets through the secrets slot (S-31): which providers exist depends on whether keys are set."""
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from settings import read
+    return read()
 
 
 def ollama_default(env: dict[str, str]) -> str:

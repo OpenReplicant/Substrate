@@ -107,6 +107,7 @@ notices between parts travel on the bus; facts never do.
 | Goals and policy | Owner claims in kernel, under the owner role; proposed from the console onto the bus's `owner` queue | Proposal path runs; goal vocabulary new |
 | Interrupts and triggers | The bus (pgmq, S-21): `triggers` for what should start a session, `events` for the feed | Queues run; producers and the dispatcher new |
 | The owner's view | The console (S-22) behind the front door (S-20), signed in with a kernel login | Runs |
+| Secrets | The secrets slot (S-31): `.env`, or OpenBao with policies and an audit trail | Runs |
 
 Graph questions (what depends on what, who is near whom, paths and neighbourhoods) go to **pgGraph**, which
 kernel's Postgres image carries (kernel D-94, S-24): a rebuildable graph over `kernel.current_edge` (D-86),

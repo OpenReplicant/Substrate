@@ -36,6 +36,9 @@ the first run, ask the owner for what only they can give, one question, all at o
 - `RUNTIME`: compose (default; Linux or macOS) or nomad (Linux; the chosen control plane, S-17). Recommend
   compose for the very first run and nomad once that passes, so a failure has one new cause at a time;
 - `CONTAINER_ENGINE`: podman (their default) or docker;
+- `SECRETS`: env (secrets in `.env`, the default) or openbao (OpenBao on 127.0.0.1:8200, S-31). Recommend env
+  for the very first run, then `SECRETS=openbao` and `scripts/secrets.sh migrate` once `scripts/check.sh`
+  passes, so a failure has one new cause at a time;
 - `ANTHROPIC_API_KEY`: leave empty to use their Claude subscription through the gateway (recommended for
   Claude Code), or a key for API billing;
 - `OPENROUTER_API_KEY`: for OpenRouter models;
@@ -81,6 +84,10 @@ If a service does not come up, read its logs (`scripts/logs.sh <service>`), find
   image as `nobody` and reads this checkout read-only; a permission error there means a file in the checkout is
   not world-readable.
 
+- **secrets** with `SECRETS=openbao`: `scripts/secrets.sh status`; the server's log is
+  `<engine> logs substrate-openbao`. Its unseal key and the scripts' password are in `.state/openbao/keys`
+  (mode 600): back them up with `.state/openbao/data`, or the secrets are gone. To go back to `.env`, set
+  `SECRETS=env` and write each value back with `scripts/secrets.sh put` (reading it first under openbao).
 - **otel-collector**: `scripts/logs.sh otel-collector`. It needs `.state/otel` writable (up.sh makes it so). Claude
   Code's telemetry is switched on by `scripts/up.sh` for the connected project (`scripts/telemetry.py status`; off
   with `scripts/telemetry.py off`), from the next session. Backstage loads OpenTelemetry through NODE_OPTIONS: if

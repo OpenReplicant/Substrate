@@ -16,6 +16,7 @@ the glue (S-01, S-11). Read `README.md` for the picture and `DECISIONS.md` for e
 | Bus | database `substrate` in kernel's Postgres | pgmq queues (`deploy/bus/queues.txt`): `triggers`, `owner`, `events`; work and notices, never facts |
 | Prometheus | container `prometheus` | the gateway's metrics, read by kernel's observer |
 | OpenTelemetry | container `otel-collector`, `deploy/otel/` | every part's traces become the observed call graph (Map); `service.name` = catalog name |
+| Secrets | `scripts/secrets/`, `deploy/secrets.txt` | a slot (`SECRETS` in `.env`): `env` (`.env` itself, default) or `openbao` (OpenBao on 127.0.0.1:8200, outside the runtime) |
 | Tools | `bin/`, container `substrate-tools` | kk, Morphogen, gitleaks, kernel's MCP server and hooks, run in a container as you |
 | Runtime | `scripts/runtime/`, `deploy/` | what runs the services: `compose` or `nomad` (`RUNTIME` in `.env`), Podman or Docker (`CONTAINER_ENGINE`) |
 
@@ -50,8 +51,10 @@ The owner stops it by deleting `docs/spec.md` or marking steps `dropped`.
 1. **Look it up, then pin it.** Read a tool's current docs before relying on it (versions, flags, config
    keys); pin exact versions; prefer releases at least two weeks old; record what you pinned and where you
    read it, in `DECISIONS.md` when it is a default.
-2. **Secrets stay in `.env`** (gitignored, mode 600). Never print one into a file that is committed, a
-   log, a commit message or chat. `.env.example` lists every setting, empty.
+2. **Secrets go through the secrets slot** (`deploy/secrets.txt` lists them; `env_value` in scripts, `settings.py`
+   in Python, `scripts/secrets.sh get|put` by hand). With `SECRETS=env` they live in `.env` (gitignored, mode
+   600); with `SECRETS=openbao` in OpenBao. Never print one into a file that is committed, a log, a commit
+   message or chat. `.env.example` lists every setting, empty. A new secret is a line in `deploy/secrets.txt`.
 3. **Both runtimes, both engines.** Every script works with `RUNTIME=compose` and `RUNTIME=nomad`, and with
    `CONTAINER_ENGINE=podman` (the owner's default) and `docker`. Scripts call only the runtime's four verbs
    (`rt_up`, `rt_down`, `rt_status`, `rt_logs`); a service added to the stack goes into both
@@ -85,6 +88,7 @@ scripts/build.sh [kernel|db|caddy|tools|backstage]   # images, built in containe
 scripts/bus.sh                  # the bus: database, pgmq, queues (after adding one to deploy/bus/queues.txt)
 python3 scripts/spec.py status|next|set ID STATUS   # where the spec's build plan stands
 scripts/telemetry.py on|off|status   # Claude Code's metrics, events and traces to the collector
+scripts/secrets.sh start|status|list|get NAME|put NAME|migrate   # the secrets slot (env or openbao)
 scripts/tools.sh start|stop|status   # the tools container that bin/ runs in
 scripts/logs.sh SERVICE         # a service's recent logs, either runtime
 scripts/down.sh [--volumes] [--agent]   # stop (delete data after asking; with nomad, stop the agent)
