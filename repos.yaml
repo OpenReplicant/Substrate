@@ -2,8 +2,8 @@
 # scripts/bootstrap.sh clones each on its default branch. Any git forge works (S-25): to clone from a Forgejo,
 # Gitea or GitLab mirror or fork instead, put the same keys with your url in repos.local.yaml (gitignored), e.g.
 #   kernel:
-#     url: https://forge.example.org/me/kernel `checked` is the commit substrate was last
-# checked against; scripts/check.sh says when a clone has moved past it.
+#     url: https://forge.example.org/me/kernel
+# `checked` is the commit substrate was last checked against; scripts/check.sh says when a clone has moved past it.
 kernel:
   url: https://github.com/OpenReplicant/kernel
   branch: main
