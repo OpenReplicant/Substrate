@@ -11,6 +11,9 @@ the glue (S-01, S-11). Read `README.md` for the picture and `DECISIONS.md` for e
 | Claude Code | you | the cycle, the builder, the mapper's hands |
 | Bifrost | container `bifrost` | the model gateway: Anthropic, OpenRouter, local models; cost measured outside you |
 | Backstage | `services/backstage`, container `backstage` | the map people browse; its MCP endpoint lets you query the catalog |
+| Front door | `deploy/caddy/`, container `caddy` | Caddy at 127.0.0.1:8080: kernel's UI and MCP, and `/console/`; plugins in `deploy/caddy/plugins.txt` |
+| Console | `services/console/`, container `console` | the owner's live page: review lane, verdicts, spend, stack, bus, the spec's progress; kernel sign-in |
+| Bus | database `substrate` in kernel's Postgres | pgmq queues (`deploy/bus/queues.txt`): `triggers`, `owner`, `events`; work and notices, never facts |
 | Prometheus | container `prometheus` | the gateway's metrics, read by kernel's observer |
 | Tools | `bin/`, container `substrate-tools` | kk, Morphogen, gitleaks, kernel's MCP server and hooks, run in a container as you |
 | Runtime | `scripts/runtime/`, `deploy/` | what runs the services: `compose` or `nomad` (`RUNTIME` in `.env`), Podman or Docker (`CONTAINER_ENGINE`) |
@@ -21,10 +24,18 @@ Use the `setup` skill (`.claude/skills/setup/SKILL.md`). It walks the owner thro
 the gateway's providers, routing Claude Code through the gateway, and the MCP connections, checking each
 step before the next. Run it whenever the owner says "set up", "start the stack", or a check fails.
 
+## Becoming the spec
+
+`docs/spec.md` is what substrate is meant to become, and `docs/build.yaml` its build plan. While they are in
+place, the SessionStart hook (`.claude/settings.json`, `scripts/spec.py hook`) names the next step, and
+sessions work through the plan with the `build-out` skill (`.claude/skills/build-out/SKILL.md`) unless the owner
+asks for something else: setup first (step 0), then one step per session, each ending with its check passing.
+The owner stops it by deleting `docs/spec.md` or marking steps `dropped`.
+
 ## Where work goes
 
-- **Glue** (this repository): `scripts/`, `deploy/`, `services/backstage/`, `modules/` (kernel modules that
-  connect the parts, briefs first), `catalog-info.yaml` (the map).
+- **Glue** (this repository): `scripts/`, `deploy/`, `services/` (Backstage, the console), `modules/` (kernel
+  modules that connect the parts, briefs first), `catalog-info.yaml` (the map), `docs/` (the spec).
 - **Fixes and improvements to kernel or Morphogen** go upstream, in their own repositories, by pull request:
   the `upstream` skill (`.claude/skills/upstream/SKILL.md`). Never patch a clone and leave it: a change in
   `repos/` that is not on a branch with a PR is lost work. Each clone has its own `CLAUDE.md`; read it before
@@ -69,7 +80,9 @@ scripts/bootstrap.sh            # once per machine: host tools, clones, images, 
 scripts/up.sh [PROJECT]         # the stack, then kk up on PROJECT (default: this repository)
 scripts/check.sh                # is everything up and wired
 scripts/gateway.py on|off|status [--mode subscription|api-key]
-scripts/build.sh [kernel|db|tools|backstage]   # images, built in containers; backstage after changing services/backstage
+scripts/build.sh [kernel|db|caddy|tools|backstage]   # images, built in containers; backstage after changing services/backstage
+scripts/bus.sh                  # the bus: database, pgmq, queues (after adding one to deploy/bus/queues.txt)
+python3 scripts/spec.py status|next|set ID STATUS   # where the spec's build plan stands
 scripts/tools.sh start|stop|status   # the tools container that bin/ runs in
 scripts/logs.sh SERVICE         # a service's recent logs, either runtime
 scripts/down.sh [--volumes] [--agent]   # stop (delete data after asking; with nomad, stop the agent)

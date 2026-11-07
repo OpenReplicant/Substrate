@@ -1,0 +1,25 @@
+# Substrate's Postgres (S-21): kernel's image (pgvector, pg_cron; repos/kernel/deploy/postgres) plus pgmq, the
+# message bus. pgmq is plain SQL (no C library), so installing it is copying its control file and scripts into
+# Postgres's extension folder; `CREATE EXTENSION pgmq` happens in the `substrate` database (scripts/bus.py),
+# never in kernel's `kk` database.
+#
+#   scripts/build.sh db      # builds kernel's image first, then this one on top
+#
+# pgmq v1.13.1 (2026-10-19, PostgreSQL License), checked out by tag and verified against its commit id.
+ARG KERNEL_DB_IMAGE=knowledge-kernel-db:local
+ARG PG_IMAGE=postgres:17.11-bookworm
+
+FROM ${PG_IMAGE} AS pgmq
+ARG PGMQ_VERSION=1.13.1
+ARG PGMQ_COMMIT=8eab18272e50077ab9f72d9787296655f2849dcc
+RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates && rm -rf /var/lib/apt/lists/*
+RUN git clone --depth 1 --branch "v${PGMQ_VERSION}" https://github.com/pgmq/pgmq /src \
+ && test "$(git -C /src rev-parse HEAD)" = "${PGMQ_COMMIT}" \
+ && mkdir /out \
+ && cp /src/pgmq-extension/pgmq.control /out/ \
+ && cp /src/pgmq-extension/sql/pgmq.sql "/out/pgmq--${PGMQ_VERSION}.sql" \
+ && cp /src/pgmq-extension/sql/pgmq--*--*.sql /out/ \
+ && grep -q "default_version = '${PGMQ_VERSION}'" /out/pgmq.control
+
+FROM ${KERNEL_DB_IMAGE}
+COPY --from=pgmq /out/ /usr/share/postgresql/17/extension/

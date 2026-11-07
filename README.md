@@ -13,6 +13,9 @@ Substrate assembles projects that each do one part, and adds the glue between th
 | Gateway | [Bifrost](https://github.com/maximhq/bifrost) v2.3.2 | Claude (API key or your subscription), OpenRouter and local models behind one virtual key; every call measured outside the agent |
 | Map | [Backstage](https://backstage.io) (`services/backstage`) | the catalog people browse, and an MCP endpoint agents query |
 | Telemetry | Prometheus v3.15.0 | the gateway's tokens, cost and errors, for kernel to record as observations |
+| Front door | [Caddy](https://caddyserver.com) 2.11.7 (`deploy/caddy`) | one address, 127.0.0.1:8080, for kernel's UI and MCP and the console; plugins by listing them |
+| Console | `services/console` | the owner's live page at `/console/`: review lane, verdicts, spend, stack, bus, the spec's progress; sign in with your kernel login |
+| Bus | [pgmq](https://github.com/pgmq/pgmq) 1.13.1, in kernel's Postgres | queues between the parts (`triggers`, `owner`, `events`), in a database of its own beside kernel's |
 | Control plane | [Nomad](https://developer.hashicorp.com/nomad) 2.0.7, or compose | runs every service; one scheduler for containers, processes and clusters (`RUNTIME` in `.env`, S-16, S-17) |
 
 Read as a mind, these are the Common Model of Cognition's modules: perception (briefings), declarative
@@ -25,6 +28,13 @@ whose every value can say where it came from.
 `catalog-info.yaml` is the map: every part with the intent it serves and how it is filled, most of them
 already built in kernel or Morphogen. Backstage shows it, Morphogen reads it as cells (`morphogen.yaml`).
 
+## Where it is going
+
+[`docs/spec.md`](docs/spec.md) is what substrate is meant to become (a mind in an organism), and
+[`docs/build.yaml`](docs/build.yaml) its build plan. Left in place, they make Claude Code sessions here build it
+out a step at a time once the stack runs (the `build-out` skill), asking you for the decisions that are yours.
+`python3 scripts/spec.py status` shows where it stands; deleting `docs/spec.md` stops it.
+
 ## Start
 
 Clone this repository, open Claude Code in it, and ask it to set up. The `setup` skill
@@ -35,7 +45,7 @@ git clone https://github.com/OpenReplicant/Substrate substrate && cd substrate
 scripts/bootstrap.sh          # tools, kernel and Morphogen cloned into repos/, kk and Morphogen installed
 cp .env.example .env          # optional: set CONTAINER_ENGINE, provider keys, ports (up.sh does it otherwise)
 scripts/up.sh                 # every service, then kernel connected to this repository
-scripts/check.sh
+scripts/check.sh              # then open http://127.0.0.1:8080/console/ and sign in as owner
 scripts/gateway.py on         # Claude Code through the gateway, from the next session
 ```
 

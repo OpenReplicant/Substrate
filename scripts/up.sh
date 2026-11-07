@@ -15,15 +15,22 @@ project=$(cd "${1:-$ROOT}" && pwd)
 
 say "Settings (.env)"
 if [ ! -f "$ENV_FILE" ]; then cp "$ROOT/.env.example" "$ENV_FILE"; chmod 600 "$ENV_FILE"; echo "  created .env"; fi
-python3 - "$ENV_FILE" <<'EOF'
+python3 - "$ENV_FILE" "$ROOT/.env.example" <<'EOF'
 import secrets, sys
-path = sys.argv[1]
+path, example = sys.argv[1], sys.argv[2]
 gen = {"POSTGRES_PASSWORD": lambda: secrets.token_urlsafe(24),
        "KK_AUTHENTICATOR_PASSWORD": lambda: secrets.token_urlsafe(24),
        "KK_JWT_SECRET": lambda: secrets.token_urlsafe(48),
        "BIFROST_VIRTUAL_KEY": lambda: "sk-bf-" + secrets.token_hex(24),
-       "BACKSTAGE_MCP_TOKEN": lambda: secrets.token_urlsafe(32)}
+       "BACKSTAGE_MCP_TOKEN": lambda: secrets.token_urlsafe(32),
+       "SUBSTRATE_BUS_PASSWORD": lambda: secrets.token_urlsafe(24)}
 lines, filled = open(path).read().splitlines(), []
+# settings added to .env.example since this .env was made: append them with their defaults
+have = {l.partition("=")[0] for l in lines if "=" in l and not l.startswith("#")}
+added = [l for l in open(example).read().splitlines() if "=" in l and not l.startswith("#") and l.partition("=")[0] not in have]
+if added:
+    lines += ["", "# added from .env.example by scripts/up.sh"] + added
+    print("  added new settings: " + ", ".join(l.partition("=")[0] for l in added))
 for i, line in enumerate(lines):
     k, sep, v = line.partition("=")
     if sep and k in gen and not v.strip():
@@ -54,6 +61,10 @@ wait_for() {   # name url
 wait_for kernel "http://127.0.0.1:8080/ui/views.json" kernel
 wait_for gateway "http://127.0.0.1:$(env_value BIFROST_PORT)/health" bifrost
 wait_for map "http://127.0.0.1:$(env_value BACKSTAGE_PORT)/.backstage/health/v1/readiness" backstage
+wait_for console "http://127.0.0.1:8080/console/" console
+
+say "Message bus"
+"$ROOT/scripts/bus.sh"
 
 say "Kernel: logins and the project ($project)"
 "$ROOT/scripts/tools.sh" start "$project"
@@ -64,3 +75,9 @@ python3 "$ROOT/scripts/point_harness.py" "$project"
 
 say "Up"
 "$ROOT/scripts/check.sh" || true
+echo
+echo "  Console: http://127.0.0.1:8080/console/ (sign in as owner with the password kk up printed above)"
+if [ -f "$ROOT/docs/spec.md" ]; then
+  echo "  The spec is in place (docs/spec.md): the next Claude Code session here continues its build plan"
+  echo "  (python3 scripts/spec.py status; delete docs/spec.md to stop that)."
+fi

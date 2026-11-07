@@ -62,7 +62,8 @@ for line in open(sys.argv[1]).read().splitlines():
 groups = {"db": ["POSTGRES_PASSWORD"],
           "kernel": ["POSTGRES_PASSWORD", "KK_AUTHENTICATOR_PASSWORD", "KK_JWT_SECRET"],
           "gateway": ["BIFROST_VIRTUAL_KEY", "ANTHROPIC_API_KEY", "OPENROUTER_API_KEY"],
-          "map": ["BACKSTAGE_MCP_TOKEN"]}
+          "map": ["BACKSTAGE_MCP_TOKEN"],
+          "console": ["SUBSTRATE_BUS_PASSWORD"]}
 for g, keys in groups.items():
     items = {k: env[k] for k in keys if env.get(k)}
     print(f"nomad/jobs/substrate/{g}\t" + json.dumps({"Items": items}))
@@ -72,7 +73,7 @@ EOF
   printf '%s\n' "$specs" | while IFS='	' read -r path spec; do
     printf '%s' "$spec" | nomad var put -force -in=json "$path" - >/dev/null || exit 1
   done || return 1
-  echo "  secrets written to Nomad Variables nomad/jobs/substrate/{db,kernel,gateway,map}"
+  echo "  secrets written to Nomad Variables nomad/jobs/substrate/{db,kernel,gateway,map,console}"
 }
 
 rt_up() {
@@ -87,8 +88,8 @@ rt_up() {
     -var "driver=$ENGINE" \
     -var "serve_parts=$parts" \
     -var "kernel_image=${prefix}knowledge-kernel:local" \
-    -var "db_image=${prefix}knowledge-kernel-db:local" \
-    -var "caddy_image=$(qualify "$(env_value CADDY_IMAGE)")" \
+    -var "db_image=$(qualify "$(env_value SUBSTRATE_DB_IMAGE)")" \
+    -var "caddy_image=$(qualify "$(env_value FRONT_DOOR_IMAGE)")" \
     -var "bifrost_image=$(qualify "$(env_value BIFROST_IMAGE)")" \
     -var "prometheus_image=$(qualify "$(env_value PROMETHEUS_IMAGE)")" \
     -var "backstage_image=$(qualify "$(env_value BACKSTAGE_IMAGE)")" \
@@ -113,7 +114,7 @@ rt_status() {
   nomad job status substrate
 }
 
-rt_logs() {   # TASK (postgres, init, kernel, caddy, bifrost, backstage, prometheus)
+rt_logs() {   # TASK (postgres, init, kernel, caddy, console, bifrost, backstage, prometheus)
   nomad alloc logs -stderr -job substrate "$1"
   nomad alloc logs -job substrate "$1" | tail -200
 }

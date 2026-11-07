@@ -22,11 +22,14 @@ variable "kernel_image" {
   default = "localhost/knowledge-kernel:local"
 }
 variable "db_image" {
-  type    = string
-  default = "localhost/knowledge-kernel-db:local"
+  type        = string
+  default     = "localhost/substrate-db:local"
+  description = "kernel's Postgres plus pgmq (S-21)"
 }
 variable "caddy_image" {
-  type = string
+  type        = string
+  default     = "localhost/substrate-caddy:local"
+  description = "the front door, with any plugins in deploy/caddy/plugins.txt (S-20)"
 }
 variable "bifrost_image" {
   type = string
@@ -65,6 +68,10 @@ variable "backstage_port" {
 variable "prometheus_port" {
   type    = number
   default = 9090
+}
+variable "console_port" {
+  type    = number
+  default = 8100
 }
 
 job "substrate" {
@@ -196,23 +203,22 @@ job "substrate" {
       }
     }
 
-    # Kernel's Caddy, routing 127.0.0.1:ui_port to kk serve, as in kernel's compose stack.
+    # The front door (S-20): substrate's Caddyfile (kernel's routes plus /console), the same file compose uses,
+    # with the addresses that differ under host networking given as environment.
     task "caddy" {
       driver = var.driver
       config {
         image        = var.caddy_image
         network_mode = "host"
         command      = "caddy"
-        args         = ["run", "--config", "/local/Caddyfile", "--adapter", "caddyfile"]
+        args         = ["run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
+        volumes      = ["${var.root}/deploy/caddy/Caddyfile:/etc/caddy/Caddyfile:ro"]
       }
-      template {
-        data        = <<-EOT
-          http://127.0.0.1:${var.ui_port} {
-          	encode zstd gzip
-          	reverse_proxy 127.0.0.1:${var.kernel_port}
-          }
-        EOT
-        destination = "local/Caddyfile"
+      env {
+        KK_SITE          = "http://127.0.0.1:${var.ui_port}"
+        CADDY_BIND       = "127.0.0.1"
+        KERNEL_UPSTREAM  = "127.0.0.1:${var.kernel_port}"
+        CONSOLE_UPSTREAM = "127.0.0.1:${var.console_port}"
       }
       service {
         name     = "caddy"
@@ -222,6 +228,65 @@ job "substrate" {
       resources {
         cpu    = 100
         memory = 64
+      }
+    }
+  }
+
+  # ------------------------------------------------------------------ the console (S-22)
+  group "console" {
+    network {
+      port "http" {
+        static = var.console_port
+      }
+    }
+
+    task "console" {
+      driver = var.driver
+      config {
+        image        = var.kernel_image
+        network_mode = "host"
+        command      = "python3"
+        args         = ["/console/server.py"]
+        volumes = [
+          "${var.root}/services/console:/console:ro",
+          "${var.root}:/substrate:ro",
+        ]
+      }
+      env {
+        CONSOLE_HOST     = "127.0.0.1"
+        CONSOLE_PORT     = "${var.console_port}"
+        KERNEL_URL       = "http://127.0.0.1:${var.kernel_port}"
+        BIFROST_URL      = "http://127.0.0.1:${var.bifrost_port}"
+        BACKSTAGE_URL    = "http://127.0.0.1:${var.backstage_port}"
+        PROMETHEUS_URL   = "http://127.0.0.1:${var.prometheus_port}"
+        NOMAD_ADDR       = "http://127.0.0.1:4646"
+        BUS_URL          = "postgresql://substrate_bus@127.0.0.1:${var.db_port}/substrate"
+        RUNTIME          = "nomad"
+        CONTAINER_ENGINE = var.driver
+      }
+      template {
+        data        = <<-EOT
+          {{ with nomadVar "nomad/jobs/substrate/console" }}{{ range $k, $v := . }}
+          {{ $k }}={{ $v }}
+          {{ end }}{{ end }}
+        EOT
+        destination = "secrets/console.env"
+        env         = true
+      }
+      service {
+        name     = "console"
+        provider = "nomad"
+        port     = "http"
+        check {
+          type     = "http"
+          path     = "/"
+          interval = "15s"
+          timeout  = "3s"
+        }
+      }
+      resources {
+        cpu    = 200
+        memory = 192
       }
     }
   }

@@ -2,8 +2,8 @@
 # Build substrate's images, all inside the container engine (S-19). With no argument, builds what is missing
 # and rebuilds kernel and tools (cheap: the engine's layer cache keeps unchanged steps).
 #
-#   scripts/build.sh                    # kernel, kernel-db (Nomad), tools, and Backstage if missing
-#   scripts/build.sh kernel|db|tools|backstage
+#   scripts/build.sh                    # kernel, db (kernel's Postgres plus pgmq), front door, tools, and Backstage if missing
+#   scripts/build.sh kernel|db|caddy|tools|backstage
 set -eu
 . "$(dirname "$0")/lib.sh"
 
@@ -13,8 +13,36 @@ local_name() { if [ "$ENGINE" = podman ]; then printf 'localhost/%s' "$1"; else 
 build_kernel() {
   "$ENGINE" build -q -t knowledge-kernel:local "$KERNEL" >/dev/null && echo "  knowledge-kernel:local"
 }
+# A registry image by its full name, so Podman never has to guess a registry for a short one.
+full_name() {
+  case "$1" in
+    localhost/*|*.*/*|*:*/*) printf '%s' "$1" ;;
+    */*) printf 'docker.io/%s' "$1" ;;
+    *) printf 'docker.io/library/%s' "$1" ;;
+  esac
+}
+
+# Kernel's Postgres image (pgvector, pg_cron), then substrate's on top of it with pgmq (S-21).
 build_db() {
   "$ENGINE" build -q -t knowledge-kernel-db:local "$KERNEL/deploy/postgres" >/dev/null && echo "  knowledge-kernel-db:local"
+  image=$(env_value SUBSTRATE_DB_IMAGE); image=${image:-localhost/substrate-db:local}
+  "$ENGINE" build -q -t "$image" --build-arg "KERNEL_DB_IMAGE=$(local_name knowledge-kernel-db:local)" \
+    -f "$ROOT/deploy/postgres/Containerfile" "$ROOT/deploy/postgres" >/dev/null && echo "  $image (with pgmq)"
+}
+
+# The front door (S-20): the stock Caddy image, or Caddy built with the plugins in deploy/caddy/plugins.txt.
+build_caddy() {
+  image=$(env_value FRONT_DOOR_IMAGE); image=${image:-localhost/substrate-caddy:local}
+  base=$(env_value CADDY_IMAGE); base=$(full_name "${base:-caddy:2.11.7-alpine}")
+  version=${base##*:}; version=${version%-alpine}
+  if grep -qv '^[[:space:]]*\(#\|$\)' "$ROOT/deploy/caddy/plugins.txt"; then
+    "$ENGINE" build -q -t "$image" --build-arg "CADDY_VERSION=$version" \
+      -f "$ROOT/deploy/caddy/Containerfile" "$ROOT/deploy/caddy" >/dev/null \
+      && echo "  $image (Caddy $version with: $(grep -v '^[[:space:]]*\(#\|$\)' "$ROOT/deploy/caddy/plugins.txt" | awk '{print $1}' | tr '\n' ' '))"
+  else
+    "$ENGINE" image inspect "$base" >/dev/null 2>&1 || "$ENGINE" pull -q "$base" >/dev/null
+    "$ENGINE" tag "$base" "$image" && echo "  $image (Caddy $version, no plugins)"
+  fi
 }
 build_tools() {
   "$ENGINE" build -q -t substrate-tools:local --build-arg "KERNEL_IMAGE=$(local_name knowledge-kernel:local)" \
@@ -37,11 +65,13 @@ say "Images ($ENGINE)"
 case "${1:-all}" in
   kernel) build_kernel ;;
   db) build_db ;;
+  caddy) build_caddy ;;
   tools) build_tools ;;
   backstage) build_backstage ;;
   all)
     build_kernel
-    [ "$RUNTIME" = nomad ] && build_db   # compose builds kernel's Postgres image itself
+    build_db
+    build_caddy
     build_tools
     image=$(env_value BACKSTAGE_IMAGE); image=${image:-localhost/substrate-backstage:local}
     if "$ENGINE" image inspect "$image" >/dev/null 2>&1; then
@@ -49,5 +79,5 @@ case "${1:-all}" in
     else
       build_backstage
     fi ;;
-  *) echo "usage: scripts/build.sh [kernel|db|tools|backstage]" >&2; exit 1 ;;
+  *) echo "usage: scripts/build.sh [kernel|db|caddy|tools|backstage]" >&2; exit 1 ;;
 esac

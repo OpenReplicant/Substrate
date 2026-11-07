@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Substrate Console</title>
+<style>
+/* Layout: a header strip of vital signs; a wide work column (spec progress, review lane, verdicts) beside a
+   narrow column of the body's state (stack, spend, bus, map, upstream). Served from this origin only (CSP). */
+:root {
+  --bg: #f4f6f6; --panel: #ffffff; --ink: #17201f; --muted: #5d6b69; --line: #d9e0df;
+  --accent: #0e6b70; --accent-soft: #e1efef;
+  --ok: #2f7a3e; --ok-soft: #e3f1e5; --warn: #9a6200; --warn-soft: #f8edd8; --bad: #b23a2e; --bad-soft: #f8e4e1;
+  --font-display: "IBM Plex Sans Condensed", "Roboto Condensed", "Arial Narrow", sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root {
+  --bg: #0f1514; --panel: #161e1d; --ink: #e3ebea; --muted: #93a3a1; --line: #2a3634;
+  --accent: #5fbcbf; --accent-soft: #1b3233;
+  --ok: #73c483; --ok-soft: #1c3121; --warn: #e0ae55; --warn-soft: #362a14; --bad: #ec8a7f; --bad-soft: #3a1f1c;
+  color-scheme: dark; } }
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font: 14px/1.5 var(--font-body); }
+[x-cloak] { display: none !important; }
+.wrap { max-width: 1180px; margin: 0 auto; padding: 20px 16px 40px; display: grid; gap: 16px; }
+h1, h2 { font-family: var(--font-display); font-weight: 600; margin: 0; }
+h1 { font-size: 22px; }
+h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.mono, code { font-family: var(--font-mono); font-size: 12.5px; }
+.num { font-variant-numeric: tabular-nums; }
+button, input { font: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.top { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; }
+.brand { display: flex; align-items: baseline; gap: 10px; }
+.brand small, .muted { color: var(--muted); }
+.vitals { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; align-items: center; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--panel); font-size: 12.5px; white-space: nowrap; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); flex: none; }
+.dot.warn { background: var(--warn); } .dot.bad { background: var(--bad); } .dot.off { background: var(--line); }
+.linkbtn { background: none; border: 0; color: var(--muted); padding: 0; text-decoration: underline; font-size: 12.5px; }
+
+.grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
+.col { display: grid; gap: 16px; min-width: 0; }
+@media (max-width: 860px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; display: grid; gap: 12px; min-width: 0; }
+.panel-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.panel-head .aside { margin-left: auto; color: var(--muted); font-size: 12.5px; }
+.err { font-size: 12.5px; color: var(--bad); background: var(--bad-soft); padding: 6px 10px; border-radius: 6px; overflow-wrap: anywhere; }
+.note { font-size: 12.5px; color: var(--muted); }
+.empty { color: var(--muted); font-size: 13px; }
+
+/* sign-in */
+.signin { max-width: 360px; margin: 12vh auto 0; display: grid; gap: 12px; }
+.signin label { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
+.signin input, .newgoal input { padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); min-width: 0; }
+
+/* spec */
+.focus-panel { border-left: 3px solid var(--accent); }
+.next-title { font-family: var(--font-display); font-size: 19px; font-weight: 600; }
+.steps { display: flex; gap: 4px; flex-wrap: wrap; }
+.step { width: 26px; height: 26px; border-radius: 6px; display: grid; place-items: center; font-size: 12px;
+  border: 1px solid var(--line); color: var(--muted); font-family: var(--font-mono); }
+.step.done { background: var(--ok-soft); color: var(--ok); border-color: transparent; }
+.step.doing { background: var(--accent); color: var(--panel); border-color: var(--accent); }
+.step.blocked { background: var(--warn-soft); color: var(--warn); border-color: transparent; }
+.goals { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.goals li { display: grid; grid-template-columns: 74px minmax(0, 1fr); gap: 10px; font-size: 13px; }
+.newgoal { display: flex; gap: 8px; }
+.newgoal input { flex: 1; }
+
+/* review */
+.items { display: grid; gap: 8px; }
+.item { display: grid; grid-template-columns: 4px minmax(0, 1fr) auto; gap: 12px; border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px 10px 0; }
+.stripe { border-radius: 0 3px 3px 0; background: var(--accent); }
+.item[data-kind="drift"] .stripe { background: var(--warn); }
+.item[data-kind="vocabulary"] .stripe { background: var(--bad); }
+.item-body { display: grid; gap: 3px; min-width: 0; }
+.kind { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.item-title { font-weight: 500; overflow-wrap: anywhere; }
+.actions { display: flex; flex-direction: column; gap: 6px; align-self: center; }
+.btn { border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 6px; padding: 4px 12px; font-size: 12.5px; }
+.btn.primary { background: var(--accent); color: var(--panel); border-color: var(--accent); }
+.btn:hover { border-color: var(--accent); }
+.btn:disabled { opacity: .5; cursor: default; }
+@media (max-width: 520px) { .item { grid-template-columns: 4px minmax(0, 1fr); } .actions { grid-column: 2; flex-direction: row; } }
+
+/* tables */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { text-align: left; font-weight: 500; color: var(--muted); font-size: 12px; padding: 0 8px 6px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td { padding: 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+tr:last-child td { border-bottom: 0; }
+td:first-child, th:first-child { padding-left: 0; }
+.right { text-align: right; }
+.pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 500; }
+.pill.pass { background: var(--ok-soft); color: var(--ok); }
+.pill.fail { background: var(--bad-soft); color: var(--bad); }
+
+/* side */
+.svc { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.svc li { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+.big { font-family: var(--font-display); font-size: 28px; font-weight: 600; line-height: 1; }
+.spend-top { display: flex; align-items: end; justify-content: space-between; gap: 12px; }
+.spark { width: 150px; height: 40px; max-width: 100%; }
+.bars { display: grid; gap: 6px; }
+.bar { display: grid; grid-template-columns: 92px minmax(0, 1fr) 62px; gap: 8px; align-items: center; font-size: 12.5px; }
+.track { height: 6px; background: var(--bg); border-radius: 3px; overflow: hidden; }
+.fill { height: 100%; background: var(--accent); }
+.kv { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; font-size: 13px; margin: 0; }
+.kv dt { color: var(--muted); } .kv dd { margin: 0; }
+.repo { display: grid; gap: 2px; }
+.repo + .repo { border-top: 1px solid var(--line); padding-top: 8px; }
+</style>
+<script src="app.js"></script>
+<script defer src="vendor/alpine.js"></script>
+</head>
+<body x-data="substrateConsole">
+
+<!-- sign-in: the person's kernel login (kk person add; kk up printed the owner's) -->
+<form class="signin wrap" x-cloak x-show="signedIn === false" @submit.prevent="signIn()">
+  <h1>Substrate</h1>
+  <p class="muted">Sign in with your kernel login. <code>scripts/up.sh</code> printed the owner's password; others are made with <code>bin/kk person add</code>.</p>
+  <label for="name">Name <input id="name" x-model="name" autocomplete="username" required></label>
+  <label for="password">Password <input id="password" type="password" x-model="password" autocomplete="current-password" required></label>
+  <button class="btn primary" type="submit">Sign in</button>
+  <p class="err" x-show="signinError" x-text="signinError"></p>
+</form>
+
+<div class="wrap" x-cloak x-show="signedIn && s">
+  <header class="top">
+    <div class="brand"><h1>Substrate</h1><small x-text="s && s.me ? 'signed in as ' + (s.me.role || '') : ''"></small></div>
+    <div class="vitals">
+      <span class="chip"><span class="dot" :class="okCount < (s ? s.services.length : 0) ? 'warn' : ''"></span><span class="num" x-text="okCount + ' / ' + (s ? s.services.length : 0) + ' up'"></span></span>
+      <span class="chip mono" x-text="s ? s.runtime + ' · ' + s.engine : ''"></span>
+      <span class="chip num" x-show="s && s.spend.ok" x-text="s && s.spend.ok ? money(s.spend.today) + ' today' : ''"></span>
+      <span class="chip"><span class="dot" :class="reviewCount ? 'warn' : ''"></span><span class="num" x-text="reviewCount === null ? 'review: ?' : reviewCount + ' to review'"></span></span>
+      <span class="chip muted" x-text="loading ? 'updating…' : 'updated ' + ago"></span>
+      <button class="linkbtn" @click="signOut()">Sign out</button>
+    </div>
+  </header>
+  <p class="err" x-show="error" x-text="error"></p>
+  <p class="note" x-show="flash" x-text="flash"></p>
+
+  <div class="grid">
+    <main class="col">
+      <section class="panel focus-panel" aria-labelledby="spec-h">
+        <div class="panel-head"><h2 id="spec-h">Becoming</h2><span class="aside mono">docs/spec.md</span></div>
+        <template x-if="s && s.spec.present && s.spec.next">
+          <div style="display:grid; gap:8px">
+            <div class="next-title" x-text="'Step ' + s.spec.next.id + ': ' + s.spec.next.title"></div>
+            <div class="note" x-text="s.spec.next.needs_owner ? 'Waits for your decision before it can start.' : (s.spec.next.status === 'doing' ? 'In progress.' : 'Next for the build-out skill.')"></div>
+          </div>
+        </template>
+        <p class="empty" x-show="s && s.spec.present && !s.spec.next">Every step of the build plan is done.</p>
+        <p class="empty" x-show="s && !s.spec.present">No spec in this checkout (docs/build.yaml), so nothing is being built out.</p>
+        <div class="steps" x-show="s && s.spec.present">
+          <template x-for="st in (s ? s.spec.steps || [] : [])" :key="st.id">
+            <span class="step" :class="stepClass(st)" :title="st.title + ' (' + st.status + ')'" x-text="st.id"></span>
+          </template>
+        </div>
+        <div class="panel-head"><h2>Proposed goals</h2><span class="aside">bus: owner queue</span></div>
+        <ul class="goals">
+          <template x-for="g in (s && s.bus.ok ? s.bus.proposed : [])" :key="g.id">
+            <li><span class="mono muted" x-text="when(g.at)"></span><span x-text="g.text"></span></li>
+          </template>
+        </ul>
+        <p class="empty" x-show="s && s.bus.ok && !s.bus.proposed.length">None yet. A goal you propose waits here for the next session to take up.</p>
+        <form class="newgoal" @submit.prevent="propose()">
+          <label for="goal" hidden>Propose a goal</label>
+          <input id="goal" x-model="draft" maxlength="500" placeholder="e.g. keep model spend under $40 a month">
+          <button class="btn" type="submit" :disabled="!draft.trim()">Propose</button>
+        </form>
+      </section>
+
+      <section class="panel" aria-labelledby="rev-h">
+        <div class="panel-head"><h2 id="rev-h">Review lane</h2><span class="aside">kernel: what needs a person</span></div>
+        <p class="err" x-show="s && !s.review.ok" x-text="s && s.review.error"></p>
+        <div class="items" x-show="s && s.review.ok">
+          <template x-for="r in (s && s.review.ok ? s.review.items : [])" :key="r.id">
+            <article class="item" :data-kind="r.kind">
+              <div class="stripe"></div>
+              <div class="item-body">
+                <span class="kind" x-text="r.kind + ' · ' + r.ops + (r.ops === 1 ? ' claim' : ' claims') + ' · ' + when(r.at)"></span>
+                <span class="item-title" x-text="r.title || r.id"></span>
+                <span class="note" x-text="'from ' + (r.by || '?') + (r.scope ? ' in ' + r.scope : '')"></span>
+                <span class="note" x-show="r.evidence" x-text="r.evidence"></span>
+              </div>
+              <div class="actions">
+                <button class="btn primary" :disabled="!!busy[r.id]" @click="decide(r, true)">Approve</button>
+                <button class="btn" :disabled="!!busy[r.id]" @click="decide(r, false)">Decline</button>
+              </div>
+            </article>
+          </template>
+          <p class="empty" x-show="s && s.review.ok && !s.review.items.length">Nothing waits for review.</p>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="ver-h">
+        <div class="panel-head"><h2 id="ver-h">Recent verdicts</h2><span class="aside">Morphogen evidence log</span></div>
+        <p class="err" x-show="s && !s.verdicts.ok" x-text="s && s.verdicts.error"></p>
+        <p class="empty" x-show="s && s.verdicts.ok && !s.verdicts.items.length" x-text="(s && s.verdicts.note) || 'No verdicts yet.'"></p>
+        <div class="table-wrap" x-show="s && s.verdicts.ok && s.verdicts.items.length">
+          <table>
+            <thead><tr><th>Target</th><th>Result</th><th class="right">Gain</th><th>Gate</th><th>When</th></tr></thead>
+            <template x-for="v in (s && s.verdicts.ok ? s.verdicts.items : [])" :key="v.seq">
+              <tbody>
+                <tr>
+                  <td><button class="linkbtn" style="color:var(--ink); text-decoration:none" @click="open[v.seq] = !open[v.seq]" :aria-expanded="!!open[v.seq]" x-text="v.cell || v.target"></button></td>
+                  <td><span class="pill" :class="v.verdict" x-text="v.verdict"></span></td>
+                  <td class="right num mono" x-text="v.gain == null ? '–' : (v.gain >= 0 ? '+' : '') + (v.gain * 100).toFixed(1) + '%'"></td>
+                  <td class="mono" x-text="v.gate || '–'"></td>
+                  <td class="mono muted" x-text="when(v.at)"></td>
+                </tr>
+                <tr x-show="open[v.seq]"><td colspan="5" class="note" x-text="v.claim + ' (trust: ' + v.trust + ')'"></td></tr>
+              </tbody>
+            </template>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <aside class="col">
+      <section class="panel" aria-labelledby="stack-h">
+        <div class="panel-head"><h2 id="stack-h">Stack</h2><span class="aside mono" x-text="s ? s.runtime : ''"></span></div>
+        <ul class="svc">
+          <template x-for="x in (s ? s.services : [])" :key="x.name">
+            <li><span class="dot" :class="x.ok ? '' : 'bad'"></span><span x-text="x.name"></span>
+                <span class="mono muted num" x-text="x.ok ? (x.ms != null ? x.ms + ' ms' : 'ok') : x.detail"></span></li>
+          </template>
+        </ul>
+      </section>
+
+      <section class="panel" aria-labelledby="spend-h">
+        <div class="panel-head"><h2 id="spend-h">Model spend</h2><span class="aside">Bifrost · 7 days</span></div>
+        <p class="err" x-show="s && !s.spend.ok" x-text="s && s.spend.error"></p>
+        <template x-if="s && s.spend.ok">
+          <div style="display:grid; gap:12px">
+            <div class="spend-top">
+              <div>
+                <div class="big num" x-text="money(s.spend.today)"></div>
+                <div class="note num" x-text="tokens(s.spend.tokens_in) + ' in · ' + tokens(s.spend.tokens_out) + ' out, last 24 h'"></div>
+              </div>
+              <svg class="spark" viewBox="0 0 150 40" role="img" aria-label="Daily spend, last 7 days">
+                <line x1="3" y1="37" x2="147" y2="37" stroke="var(--line)" stroke-width="1"></line>
+                <polygon :points="spark(true)" fill="var(--accent-soft)"></polygon>
+                <polyline :points="spark(false)" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linejoin="round"></polyline>
+                <circle :cx="lastPoint.x" :cy="lastPoint.y" r="2.5" fill="var(--accent)"></circle>
+              </svg>
+            </div>
+            <div class="bars">
+              <template x-for="p in s.spend.providers" :key="p.name">
+                <div class="bar"><span class="mono" x-text="p.name"></span>
+                  <div class="track"><div class="fill" :style="'width:' + providerPct(p) + '%'"></div></div>
+                  <span class="right num mono" x-text="money(p.usd)"></span></div>
+              </template>
+              <p class="empty" x-show="!s.spend.providers.length">No model calls through the gateway yet.</p>
+            </div>
+          </div>
+        </template>
+      </section>
+
+      <section class="panel" aria-labelledby="bus-h">
+        <div class="panel-head"><h2 id="bus-h">Bus</h2><span class="aside">pgmq</span></div>
+        <p class="err" x-show="s && !s.bus.ok" x-text="s && s.bus.error"></p>
+        <dl class="kv num" x-show="s && s.bus.ok">
+          <template x-for="q in (s && s.bus.ok ? s.bus.queues : [])" :key="q.name">
+            <div style="display:contents"><dt class="mono" x-text="q.name"></dt><dd x-text="q.waiting + ' waiting · ' + q.total + ' total'"></dd></div>
+          </template>
+        </dl>
+      </section>
+
+      <section class="panel" aria-labelledby="map-h">
+        <div class="panel-head"><h2 id="map-h">Map</h2><span class="aside mono">catalog-info.yaml</span></div>
+        <p class="err" x-show="s && !s.map.ok" x-text="s && s.map.error"></p>
+        <dl class="kv num" x-show="s && s.map.ok">
+          <template x-for="(n, k) in (s && s.map.ok ? s.map.kinds : {})" :key="k">
+            <div style="display:contents"><dt x-text="k"></dt><dd x-text="n"></dd></div>
+          </template>
+        </dl>
+        <p class="note">In kernel as claims once <code>encoder-backstage</code> is built (spec step 2).</p>
+      </section>
+
+      <section class="panel" aria-labelledby="up-h">
+        <div class="panel-head"><h2 id="up-h">Upstream</h2><span class="aside">clones in repos/</span></div>
+        <template x-for="r in (s ? s.upstream : [])" :key="r.name">
+          <div class="repo">
+            <strong x-text="r.name"></strong>
+            <span class="mono" x-text="r.present ? (r.branch || 'detached') + ' @ ' + (r.sha || '?').slice(0, 7) : 'missing: scripts/bootstrap.sh'"></span>
+            <span class="note" x-text="r.present ? (r.at_checked ? 'at the checked commit' : 'checked at ' + r.checked.slice(0, 7)) : ''"></span>
+            <span class="note" x-show="r.branches && r.branches.length" x-text="'branches: ' + (r.branches || []).join(', ')"></span>
+            <span class="note" x-show="r.patches.length" x-text="r.patches.length + ' patch(es) waiting in upstream/' + r.name"></span>
+          </div>
+        </template>
+      </section>
+    </aside>
+  </div>
+</div>
+
+<p class="wrap note" x-show="signedIn === null">Loading…</p>
+</body>
+</html>

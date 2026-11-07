@@ -1,0 +1,6 @@
+# The message bus's queues (S-21), one per line: name, then what goes on it. scripts/bus.py creates each one in
+# the `substrate` database (pgmq). Messages are JSON with at least "kind", "by" and "at". Adding a queue is a
+# line here and `scripts/up.sh` (or `scripts/bus.sh`); removing one drops its messages, so do that by hand.
+triggers   things that should start a session without a person: detector findings, failed allocations, goals past due (the dispatcher reads it, spec step 9)
+owner      what the owner sends from the console: proposed goals, notes for the next session
+events     what happened in the stack, for the console's feed: verdicts, reviews, restarts

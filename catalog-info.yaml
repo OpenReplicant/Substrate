@@ -438,13 +438,13 @@ metadata:
   annotations:
     substrate.dev/intent: Wake the right module or skill as soon as a pattern forms, without polling.
     substrate.dev/fill: existing
-    substrate.dev/basis: kernel pattern triggers (D-79) and NOTIFY (D-32); detectors and reactors are kernel M6-T0 (D-86, confirmed)
+    substrate.dev/basis: kernel pattern triggers (D-79) and NOTIFY (D-32); detectors and reactors are kernel M6-T0 (D-86, confirmed); what should start a session goes on the bus's triggers queue (spec 9)
 spec:
   type: service
   lifecycle: experimental
   owner: group:agents
   system: organism
-  consumesApis: [change-events]
+  consumesApis: [change-events, bus-api]
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Component
@@ -460,7 +460,7 @@ spec:
   lifecycle: experimental
   owner: group:agents
   system: organism
-  consumesApis: [change-events, api-views, gateway-metrics]
+  consumesApis: [change-events, api-views, gateway-metrics, bus-api]
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Component
@@ -516,17 +516,50 @@ apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
   name: front-door
-  description: Caddy routes /mcp and /ui; HTTPS when public.
+  description: Caddy at 127.0.0.1:8080 - kernel's /mcp and /ui, and the console at /console/; HTTPS when public.
   annotations:
-    substrate.dev/intent: One address for people and agents.
-    substrate.dev/fill: existing
-    substrate.dev/basis: kernel deploy/Caddyfile, caddy:2.11.7-alpine (D-74)
+    substrate.dev/intent: One address for people and agents, extendable with Caddy plugins.
+    substrate.dev/fill: adopt
+    substrate.dev/basis: kernel's Caddy service and routes (D-74), with substrate's deploy/caddy/Caddyfile; plugins from deploy/caddy/plugins.txt built by xcaddy (S-20)
 spec:
   type: service
-  lifecycle: production
+  lifecycle: experimental
   owner: group:operator
   system: interface
-  consumesApis: [kernel-mcp-api]
+  consumesApis: [kernel-mcp-api, console-api]
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: console
+  description: The owner's live page - review lane, verdicts, spend, stack, bus, the spec's progress.
+  annotations:
+    substrate.dev/intent: Let the owner see what needs them and act on it from one page, signed in as themselves.
+    substrate.dev/fill: build
+    substrate.dev/basis: services/console, run in kernel's image; kernel's sign-in and review tools, Prometheus, Morphogen's evidence log, the bus (S-22)
+spec:
+  type: website
+  lifecycle: experimental
+  owner: group:operator
+  system: interface
+  providesApis: [console-api]
+  consumesApis: [kernel-mcp-api, metrics-api, bus-api]
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: bus
+  description: pgmq queues in their own database beside kernel's - triggers, owner, events.
+  annotations:
+    substrate.dev/intent: Carry work and notices between the parts durably, without a second server; never facts.
+    substrate.dev/fill: adopt
+    substrate.dev/candidates: pgmq v1.13.1 (PostgreSQL License) installed onto kernel's Postgres image (S-21)
+spec:
+  type: service
+  lifecycle: experimental
+  owner: group:operator
+  system: organism
+  providesApis: [bus-api]
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Component
@@ -602,7 +635,7 @@ apiVersion: backstage.io/v1alpha1
 kind: Resource
 metadata:
   name: postgres
-  description: Kernel's Postgres 17 image with its extensions (D-22).
+  description: Kernel's Postgres 17 image with its extensions (D-22), plus pgmq for the bus (S-21).
 spec: {type: database, owner: group:operator, system: storage}
 ---
 apiVersion: backstage.io/v1alpha1
@@ -698,3 +731,13 @@ apiVersion: backstage.io/v1alpha1
 kind: API
 metadata: {name: scheduler-metrics, description: "Nomad's allocation and node metrics in Prometheus format."}
 spec: {type: prometheus, lifecycle: experimental, owner: group:operator, system: storage, definition: "GET /v1/metrics?format=prometheus (publish_allocation_metrics, publish_node_metrics)."}
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata: {name: bus-api, description: "pgmq's SQL functions in database substrate - send, read, archive, delete, metrics."}
+spec: {type: sql-function, lifecycle: experimental, owner: group:operator, system: organism, definition: "pgmq.send(queue, jsonb), pgmq.read(queue, vt, n), pgmq.delete(queue, id), pgmq.metrics_all(); queues in deploy/bus/queues.txt."}
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata: {name: console-api, description: "The console's JSON routes behind the front door at /console/api."}
+spec: {type: http, lifecycle: experimental, owner: group:operator, system: interface, definition: "POST login, logout, review, goal; GET state (a kernel sign-in cookie)."}

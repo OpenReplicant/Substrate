@@ -1,0 +1,107 @@
+# The spec's build plan (docs/spec.md, section 10) and where it stands. The `build-out` skill works through it
+# while docs/spec.md is in place; scripts/spec.py reads it (status, next, set) and so does the console.
+#
+# status: todo | doing | done | blocked | dropped
+#   blocked  waits on something outside the step (named in `waiting_on`); the skill moves to the next step
+#            whose `after` steps are done, if there is one
+#   dropped  the owner or a verdict decided against it; the skill skips it
+# needs_owner: the step contains a decision that is the owner's (kernel changes, licences, money). The skill
+#   prepares the case (a brief, a draft PR, the evidence) and asks; it does not decide.
+# check: what proves the step done; run it, and only then set status to done (with `done_on` and the commit).
+steps:
+  - id: 0
+    title: The stack runs
+    spec: "10, 11"
+    where: substrate
+    after: []
+    status: todo
+    check: scripts/check.sh passes with RUNTIME=compose and CONTAINER_ENGINE=podman, then with RUNTIME=nomad
+    notes: >-
+      The setup skill does this step. Includes the front door, the console (sign in as owner) and the bus. Nomad
+      is the second half; if it cannot pass on this machine, record why, set waiting_on, and go on with compose.
+
+  - id: 1
+    title: Verdicts become claims
+    spec: "4, 6, 8"
+    where: modules/encoder-morphogen
+    after: [0]
+    status: todo
+    check: >-
+      after one judged run (Morphogen's status tool shows a verdict), kernel recall finds a DQV measurement for it
+      with PROV lineage back to the evidence record's hash
+    notes: Brief in modules/encoder-morphogen/BRIEF.md. A kernel module, so it follows kernel's module contract.
+
+  - id: 2
+    title: The map becomes claims
+    spec: "2, 6"
+    where: modules/encoder-backstage
+    after: [0]
+    status: todo
+    check: recall answers "what depends on bifrost?" from catalog claims, citing claim ids
+    notes: Brief in modules/encoder-backstage/BRIEF.md. The console's Map panel then shows claims in kernel.
+
+  - id: 3
+    title: Working memory
+    spec: "3"
+    where: kernel M6-T2 (upstream pull request)
+    after: [0]
+    status: todo
+    needs_owner: true
+    check: a new session states the active goal and focus without being told
+    notes: >-
+      A kernel change: prepare the case against kernel's docs/milestone-6.md and ask the owner before opening
+      the PR (the upstream skill). Goals proposed in the console (bus queue `owner`) become goal claims here.
+
+  - id: 4
+    title: Episodes
+    spec: "5"
+    where: kernel's encoder-interaction, wired by substrate's SessionEnd hook
+    after: [0]
+    status: todo
+    check: a finished session appears as an episode in kernel; the memory extractor's proposals reach review
+
+  - id: 5
+    title: Activation
+    spec: "5"
+    where: modules/activation
+    after: [3, 4]
+    status: todo
+    check: a Morphogen verdict that activation beats plain recall on held-out questions; otherwise set dropped
+
+  - id: 6
+    title: Skill utility
+    spec: "4, 8"
+    where: encoder-morphogen plus observer-prometheus
+    after: [1, 3]
+    status: todo
+    check: working memory lists the skills relevant to the goal with success rate and cost
+
+  - id: 7
+    title: Skill promotion
+    spec: "4, 8"
+    where: chunking, judged by Morphogen
+    after: [4, 6]
+    status: todo
+    needs_owner: true
+    check: one skill drafted from repeated episodes passes judgment and lands through the review lane
+
+  - id: 8
+    title: Motor
+    spec: "6"
+    where: actuators, modules/encoder-nomad
+    after: [0]
+    status: todo
+    check: a failed allocation is noticed, a fix is proposed, judged and applied through Nomad's API
+    notes: Needs RUNTIME=nomad passing (step 0's second half).
+
+  - id: 9
+    title: Organism
+    spec: "9"
+    where: modules/dispatcher, the bus's triggers queue, the goal vocabulary
+    after: [3, 8]
+    status: todo
+    needs_owner: true
+    check: >-
+      a drift finding put on the `triggers` queue starts a headless session that closes it with a verdict, and
+      the owner sees it in the review lane
+    notes: The goal vocabulary is a pack change in kernel (review lane); the owner decides on it.

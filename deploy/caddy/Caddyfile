@@ -1,0 +1,23 @@
+# The front door (S-20): kernel's routes, unchanged (repos/kernel/deploy/Caddyfile), plus the console. Read by
+# both runtimes; what differs between them comes from the environment:
+#   KK_SITE           site address (compose: :80 inside the container; nomad: http://127.0.0.1:<ui_port>)
+#   CADDY_BIND        interface to listen on (nomad, host networking: 127.0.0.1)
+#   KERNEL_UPSTREAM   kk serve (compose: kernel:8000)
+#   CONSOLE_UPSTREAM  the console (compose: console:8100)
+# With KK_SITE set to a public host name, Caddy gets and renews a certificate, as in kernel's file.
+{$KK_SITE::80} {
+	bind {$CADDY_BIND:0.0.0.0}
+	encode zstd gzip
+
+	# The console (S-22): sign-in with a kernel person login, then live state. Its own path, so kernel's
+	# UI and MCP keep theirs.
+	redir /console /console/
+	handle_path /console/* {
+		reverse_proxy {$CONSOLE_UPSTREAM:console:8100}
+	}
+
+	# Kernel MCP server (streamable HTTP) and kernel's UI; callers send their own bearer token.
+	handle {
+		reverse_proxy {$KERNEL_UPSTREAM:kernel:8000}
+	}
+}
