@@ -3,8 +3,9 @@
 #
 #   scripts/up.sh [PROJECT_DIR]
 #
-# Steps: .env (secrets generated once) -> the gateway's config -> images (kernel, Backstage if missing) ->
-# every service -> wait until each answers -> kk up --no-stack (logins, MCP, skill, hooks, reading the project).
+# Steps: .env (secrets generated once) -> the gateway's config -> images (kernel, its Postgres, Backstage if
+# missing) -> every service, by the runtime in .env (compose or nomad, S-16) -> wait until each answers ->
+# kk up --no-stack (logins, MCP, skill, hooks, reading the project into .state/artifacts).
 set -eu
 . "$(dirname "$0")/lib.sh"
 
@@ -29,13 +30,16 @@ for i, line in enumerate(lines):
 open(path, "w").write("\n".join(lines) + "\n")
 print("  generated " + ", ".join(filled) if filled else "  secrets already set")
 EOF
-echo "  engine: $ENGINE"
+echo "  runtime: $RUNTIME, engine: $ENGINE"
 
 say "Gateway config"
 python3 "$ROOT/scripts/render_bifrost.py"
 
 say "Images"
 "$ENGINE" build -q -t knowledge-kernel:local "$KERNEL" >/dev/null && echo "  knowledge-kernel:local built"
+if [ "$RUNTIME" = nomad ]; then   # compose builds kernel's Postgres image itself; Nomad needs it tagged
+  "$ENGINE" build -q -t knowledge-kernel-db:local "$KERNEL/deploy/postgres" >/dev/null && echo "  knowledge-kernel-db:local built"
+fi
 bs_image=$(env_value BACKSTAGE_IMAGE); bs_image=${bs_image:-localhost/substrate-backstage:local}
 if "$ENGINE" image inspect "$bs_image" >/dev/null 2>&1; then
   echo "  $bs_image present (rebuild with scripts/backstage-build.sh)"
@@ -43,26 +47,27 @@ else
   "$ROOT/scripts/backstage-build.sh"
 fi
 
-say "Services"
-compose up -d
+say "Services ($RUNTIME)"
+mkdir -p "$ROOT/.state/artifacts"
+rt_up
 
 say "Waiting for each service"
 wait_for() {   # name url
   i=0
   until curl -fsS -o /dev/null "$2" 2>/dev/null; do
-    i=$((i + 1)); [ $i -gt 90 ] && { echo "  $1 did not answer at $2: $ENGINE compose ... logs" >&2; return 1; }
+    i=$((i + 1)); [ $i -gt 120 ] && { echo "  $1 did not answer at $2: scripts/logs.sh $3" >&2; return 1; }
     sleep 2
   done
   echo "  $1 ok"
 }
-wait_for kernel "http://127.0.0.1:8080/ui/views.json"
-wait_for gateway "http://127.0.0.1:$(env_value BIFROST_PORT)/health"
-wait_for map "http://127.0.0.1:$(env_value BACKSTAGE_PORT)/.backstage/health/v1/readiness"
+wait_for kernel "http://127.0.0.1:8080/ui/views.json" kernel
+wait_for gateway "http://127.0.0.1:$(env_value BIFROST_PORT)/health" bifrost
+wait_for map "http://127.0.0.1:$(env_value BACKSTAGE_PORT)/.backstage/health/v1/readiness" backstage
 
 say "Kernel: logins and the project ($project)"
 scan=""; command -v gitleaks >/dev/null 2>&1 || { scan="--no-scan"; echo "  gitleaks missing: connecting without reading the project"; }
 KK_ADMIN_URL="postgresql://postgres:$(env_value POSTGRES_PASSWORD)@127.0.0.1:$(env_value KK_DB_PORT)/kk" \
-KK_JWT_SECRET="$(env_value KK_JWT_SECRET)" \
+KK_JWT_SECRET="$(env_value KK_JWT_SECRET)" KK_ARTIFACTS="$ROOT/.state/artifacts" \
   "$ROOT/.venv/bin/kk" up --no-stack $scan "$project"
 
 say "Up"

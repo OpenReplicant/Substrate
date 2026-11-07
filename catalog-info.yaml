@@ -341,13 +341,13 @@ metadata:
   annotations:
     substrate.dev/intent: Change the world only through approved plans with a fixed action list; record what was done.
     substrate.dev/fill: existing
-    substrate.dev/basis: kernel modules/actuator-compose (D-53); typed actions beyond Compose are to build
+    substrate.dev/basis: kernel modules/actuator-compose (D-53); an actuator acting through the scheduler's API (restart, scale, run a job, with an ACL token scoped to exactly that) is to build (S-17)
 spec:
   type: service
   lifecycle: production
   owner: group:operator
   system: mind
-  consumesApis: [api-views, change-sets]
+  consumesApis: [api-views, change-sets, scheduler-api]
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Component
@@ -549,6 +549,24 @@ spec:
 apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
+  name: scheduler
+  description: One control plane for containers, processes and clusters; swappable (S-16).
+  annotations:
+    substrate.dev/intent: Run every service and job, restart what fails, place work by resources, find services by name, hold secrets, and give the control loop an API to act through.
+    substrate.dev/fill: adopt
+    substrate.dev/candidates: Nomad 2.0.7 (BUSL-1.1, S-18) with nomad-driver-podman 0.6.5 (MPL-2.0), deploy/nomad; compose (kernel's stack plus deploy/compose.yaml) as the other runtime; k3s (Apache-2.0) considered (S-17)
+    substrate.dev/note: Linux only for Nomad with Podman; compose stays the default until Nomad passes scripts/check.sh on the owner's machine.
+spec:
+  type: service
+  lifecycle: experimental
+  owner: group:operator
+  system: storage
+  providesApis: [scheduler-api, scheduler-metrics]
+  dependsOn: [resource:sandbox]
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
   name: prometheus
   description: Scrapes the gateway; kernel's observer reads it each window.
   annotations:
@@ -561,7 +579,7 @@ spec:
   owner: group:operator
   system: storage
   providesApis: [metrics-api]
-  consumesApis: [gateway-metrics]
+  consumesApis: [gateway-metrics, scheduler-metrics]
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Resource
@@ -653,3 +671,13 @@ apiVersion: backstage.io/v1alpha1
 kind: API
 metadata: {name: backstage-mcp-api, description: "Backstage's catalog actions over MCP, with a static bearer token."}
 spec: {type: mcp-server, lifecycle: experimental, owner: group:operator, system: interface, definition: "POST /api/mcp-actions/v1 (streamable HTTP); token from BACKSTAGE_MCP_TOKEN; actions from the catalog plugin."}
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata: {name: scheduler-api, description: "Nomad's HTTP API - jobs, allocations, services, Variables; ACL tokens scope what each caller may do."}
+spec: {type: http, lifecycle: experimental, owner: group:operator, system: storage, definition: "http://127.0.0.1:4646/v1/ (jobs, allocations, service registrations, variables)."}
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata: {name: scheduler-metrics, description: "Nomad's allocation and node metrics in Prometheus format."}
+spec: {type: prometheus, lifecycle: experimental, owner: group:operator, system: storage, definition: "GET /v1/metrics?format=prometheus (publish_allocation_metrics, publish_node_metrics)."}

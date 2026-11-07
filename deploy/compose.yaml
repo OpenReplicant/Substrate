@@ -19,6 +19,12 @@ x-locked: &locked
 
 services:
 
+  # kernel reads what kk up scans from the host folder .state/artifacts (scripts/up.sh sets KK_ARTIFACTS to it),
+  # in place of kernel's kk-artifacts volume, so the quote verifier sees the same files in either runtime.
+  kernel:
+    volumes:
+      - ../../../.state/artifacts:/store:ro
+
   # The model gateway (S-04, S-14). config.json is rendered by scripts/render_bifrost.py from .env (only the
   # providers you have keys for) and seeds Bifrost's own config store in its volume; later edits in its UI
   # persist there. Provider keys stay in the environment, referenced as env.NAME.
@@ -65,6 +71,7 @@ services:
               "--config", "app-config.substrate.yaml"]
     environment:
       BACKSTAGE_PORT: ${BACKSTAGE_PORT:-7007}
+      BACKSTAGE_LISTEN: "0.0.0.0:7007"
       BACKSTAGE_MCP_TOKEN: ${BACKSTAGE_MCP_TOKEN:?set in .env}
     volumes:
       - ../../../catalog-info.yaml:/substrate/catalog-info.yaml:ro

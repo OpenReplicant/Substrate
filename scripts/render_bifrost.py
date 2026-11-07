@@ -25,6 +25,16 @@ def read_env(path: Path) -> dict[str, str]:
     return env
 
 
+def ollama_default(env: dict[str, str]) -> str:
+    """Where the gateway reaches a model server on this machine: loopback under Nomad (host networking),
+    the host's alias from inside a container under compose."""
+    if env.get("RUNTIME", "compose") == "nomad":
+        return "http://127.0.0.1:11434"
+    if env.get("CONTAINER_ENGINE", "podman") == "podman":
+        return "http://host.containers.internal:11434"
+    return "http://host.docker.internal:11434"
+
+
 def render(env: dict[str, str]) -> dict:
     providers: dict[str, dict] = {
         # Always present: with no API key, Claude Code's subscription token is forwarded to Anthropic and the
@@ -37,8 +47,7 @@ def render(env: dict[str, str]) -> dict:
                                              "models": ["*"], "weight": 1.0}]}
     if env.get("OLLAMA_ENABLED", "true").lower() == "true":
         providers["ollama"] = {"keys": [{"name": "ollama-local", "value": "", "models": ["*"], "weight": 1.0,
-                                         "ollama_key_config": {"url": env.get("OLLAMA_URL")
-                                                               or "http://host.docker.internal:11434"}}]}
+                                         "ollama_key_config": {"url": env.get("OLLAMA_URL") or ollama_default(env)}}]}
     return {
         "client": {"enforce_auth_on_inference": True},
         "providers": providers,

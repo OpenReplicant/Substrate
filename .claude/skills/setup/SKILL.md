@@ -27,6 +27,8 @@ Run `scripts/bootstrap.sh`. It lists every tool with its path or MISSING, clones
 If `.env` does not exist, `scripts/up.sh` creates it from `.env.example` and generates the secrets. Before
 the first run, ask the owner for what only they can give, one question, all at once:
 
+- `RUNTIME`: compose (default; Linux or macOS) or nomad (Linux; the chosen control plane, S-17). Recommend
+  compose for the very first run and nomad once that passes, so a failure has one new cause at a time;
 - `CONTAINER_ENGINE`: podman (their default) or docker;
 - `ANTHROPIC_API_KEY`: leave empty to use their Claude subscription through the gateway (recommended for
   Claude Code), or a key for API billing;
@@ -46,8 +48,7 @@ minutes) the Backstage image, starts every service, waits for each, then connect
 kernel with `kk up --no-stack` (owner and agent logins in `~/.config/knowledge-kernel`, `.mcp.json`,
 kernel's skill and hooks).
 
-If a service does not come up, read its logs (`<engine> compose -f repos/kernel/deploy/compose.yaml
--f deploy/compose.yaml --env-file .env logs <service>`), find the cause, fix it in this repository, and run
+If a service does not come up, read its logs (`scripts/logs.sh <service>`), find the cause, fix it in this repository, and run
 `scripts/up.sh` again. Known places to look:
 
 - **bifrost** refuses its config: read the error; the format is in Bifrost's docs for v2.3.2
@@ -57,6 +58,12 @@ If a service does not come up, read its logs (`<engine> compose -f repos/kernel/
   first successful `yarn install`, commit `services/backstage/yarn.lock`.
 - **kernel** with Podman: kernel's own `kk up` calls `docker`; substrate avoids it by starting the stack
   itself. The fix upstream is `upstream/kernel/0001-*.patch` (the `upstream` skill).
+- **Nomad runtime**: the agent log is `.state/nomad/agent.log`; `nomad job status substrate` and
+  `scripts/logs.sh <task>` show each task. With Podman, the driver needs Podman's API socket
+  (`systemctl --user enable --now podman.socket`) and `nomad node status -self -verbose` should list
+  `driver.podman` as healthy; if it does not load on Nomad 2.0.7, read the driver's release notes for the
+  supported Nomad versions and pin a driver that matches (record it in `DECISIONS.md`). Rootless Podman
+  cannot bind ports below 1024, which is why every port here is above it.
 
 **Check:** `scripts/check.sh` shows ok for kernel, gateway, map and prometheus. Tell the owner the kernel
 UI sign-in that `kk up` printed (name `owner`, the password it shows) and where the UIs are.

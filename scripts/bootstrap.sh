@@ -13,13 +13,20 @@ need git "https://git-scm.com"
 need python3 "3.12 or later"
 need uv "Morphogen's tooling: https://docs.astral.sh/uv/"
 need "$ENGINE" "CONTAINER_ENGINE in .env picks docker or podman"
+echo "  runtime    $RUNTIME (RUNTIME in .env: compose or nomad)"
 need node "22 or 24, for building Backstage"
 need corepack "ships with Node; provides yarn"
 need claude "Claude Code"
 need gitleaks "kernel's ingest filter; without it kk up skips reading the project"
 python3 -c 'import sys; sys.exit(sys.version_info < (3, 12))' || { echo "  python3 is older than 3.12"; missing="$missing python3"; }
-"$ENGINE" compose version >/dev/null 2>&1 && echo "  compose    $("$ENGINE" compose version 2>/dev/null | head -1)" \
-  || { echo "  compose    MISSING ($ENGINE compose; with Podman, install docker-compose or podman-compose)"; missing="$missing compose"; }
+if [ "$RUNTIME" = compose ]; then
+  "$ENGINE" compose version >/dev/null 2>&1 && echo "  compose    $("$ENGINE" compose version 2>/dev/null | head -1)" \
+    || { echo "  compose    MISSING ($ENGINE compose; with Podman, install docker-compose or podman-compose)"; missing="$missing compose"; }
+fi
+if [ "$RUNTIME" = nomad ] && [ "$(uname -s)" != Linux ]; then
+  echo "  RUNTIME=nomad needs Linux (the Podman driver is Linux only, and host networking is used); use RUNTIME=compose here" >&2
+  exit 1
+fi
 case "$missing" in
   *git*|*python3*|*uv*|*"$ENGINE"*|*compose*) echo "Install the missing tools above, then run this again." >&2; exit 1 ;;
 esac
@@ -43,6 +50,18 @@ say "Commands"
 echo "  kk:        $ROOT/.venv/bin/kk (editable: changes in repos/kernel apply at once)"
 (cd "$MORPHOGEN" && uv sync -q)
 echo "  morphogen: uv run --project repos/morphogen morphogen"
+
+if [ "$RUNTIME" = nomad ]; then
+  say "Nomad (pinned, checksums checked)"
+  v=$(env_value NOMAD_VERSION); v=${v:-$(sed -n 's/^NOMAD_VERSION=//p' "$ROOT/.env.example")}
+  python3 "$ROOT/scripts/install_hashicorp.py" nomad "$v" "$ROOT/.state/bin"
+  if [ "$ENGINE" = podman ]; then
+    v=$(env_value NOMAD_DRIVER_PODMAN_VERSION); v=${v:-$(sed -n 's/^NOMAD_DRIVER_PODMAN_VERSION=//p' "$ROOT/.env.example")}
+    python3 "$ROOT/scripts/install_hashicorp.py" nomad-driver-podman "$v" "$ROOT/.state/nomad/plugins"
+    systemctl --user is-active podman.socket >/dev/null 2>&1 || [ "$(id -u)" = 0 ] \
+      || echo "  note: the Podman driver needs Podman's API socket: systemctl --user enable --now podman.socket"
+  fi
+fi
 
 say "Done"
 echo "Next: scripts/up.sh"

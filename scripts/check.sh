@@ -13,7 +13,11 @@ probe() { curl -fsS -o /dev/null "$@" 2>/dev/null; }
 
 bport=$(env_value BIFROST_PORT); mport=$(env_value BACKSTAGE_PORT); pport=$(env_value PROMETHEUS_PORT)
 
-say "Services ($ENGINE)"
+say "Services ($RUNTIME on $ENGINE)"
+if [ "$RUNTIME" = nomad ]; then
+  nomad node status 2>/dev/null | grep -q ready && ok "nomad agent ready at $NOMAD_ADDR" || bad "nomad agent not ready ($NOMAD_ADDR)"
+  nomad job status -short substrate 2>/dev/null | grep -q 'running' && ok "nomad job substrate running" || bad "nomad job substrate is not running"
+fi
 probe "http://127.0.0.1:8080/ui/views.json" && ok "kernel      http://127.0.0.1:8080/ui/" || bad "kernel UI does not answer"
 probe "http://127.0.0.1:$bport/health" && ok "gateway     http://127.0.0.1:$bport/" || bad "gateway does not answer"
 probe "http://127.0.0.1:$mport/.backstage/health/v1/readiness" && ok "map         http://127.0.0.1:$mport/" || bad "Backstage does not answer"
@@ -24,6 +28,10 @@ curl -fsS "http://127.0.0.1:$bport/metrics" 2>/dev/null | grep -q '^bifrost_\|^#
   && ok "gateway exposes bifrost_* metrics" || note "no bifrost_* metrics yet (they appear after the first request)"
 curl -fsS "http://127.0.0.1:$pport/api/v1/query?query=up%7Bjob%3D%22bifrost%22%7D" 2>/dev/null | grep -q '"value":\[[^]]*,"1"\]' \
   && ok "prometheus scrapes the gateway" || bad "prometheus target 'bifrost' is not up"
+if [ "$RUNTIME" = nomad ]; then
+  curl -fsS "http://127.0.0.1:$pport/api/v1/query?query=up%7Bjob%3D%22nomad%22%7D" 2>/dev/null | grep -q '"value":\[[^]]*,"1"\]' \
+    && ok "prometheus scrapes Nomad's allocation metrics" || bad "prometheus target 'nomad' is not up"
+fi
 code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "http://127.0.0.1:$mport/api/mcp-actions/v1" \
   -H "Authorization: Bearer $(env_value BACKSTAGE_MCP_TOKEN)" -H 'Content-Type: application/json' \
   -H 'Accept: application/json, text/event-stream' \

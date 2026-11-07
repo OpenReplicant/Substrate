@@ -9,7 +9,9 @@ organization:
 
 backend:
   baseUrl: http://localhost:${BACKSTAGE_PORT}
-  listen: ':7007'
+  # host:port. compose: 0.0.0.0:7007 inside the container, published on 127.0.0.1; Nomad: host networking,
+  # 127.0.0.1:BACKSTAGE_PORT
+  listen: ${BACKSTAGE_LISTEN}
   # The catalog is re-read from files at every start, so an in-memory database is enough here.
   database:
     client: better-sqlite3

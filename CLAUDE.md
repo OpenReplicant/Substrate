@@ -12,6 +12,7 @@ the glue (S-01, S-11). Read `README.md` for the picture and `DECISIONS.md` for e
 | Bifrost | container `bifrost` | the model gateway: Anthropic, OpenRouter, local models; cost measured outside you |
 | Backstage | `services/backstage`, container `backstage` | the map people browse; its MCP endpoint lets you query the catalog |
 | Prometheus | container `prometheus` | the gateway's metrics, read by kernel's observer |
+| Runtime | `scripts/runtime/`, `deploy/` | what runs the services: `compose` or `nomad` (`RUNTIME` in `.env`), Podman or Docker (`CONTAINER_ENGINE`) |
 
 ## Getting a machine going
 
@@ -38,8 +39,12 @@ step before the next. Run it whenever the owner says "set up", "start the stack"
    read it, in `DECISIONS.md` when it is a default.
 2. **Secrets stay in `.env`** (gitignored, mode 600). Never print one into a file that is committed, a
    log, a commit message or chat. `.env.example` lists every setting, empty.
-3. **Both engines.** Every script and compose file works with `CONTAINER_ENGINE=podman` (the owner's
-   default) and `docker`. Test a change to `scripts/` or `deploy/` with the engine in `.env`, and say which.
+3. **Both runtimes, both engines.** Every script works with `RUNTIME=compose` and `RUNTIME=nomad`, and with
+   `CONTAINER_ENGINE=podman` (the owner's default) and `docker`. Scripts call only the runtime's four verbs
+   (`rt_up`, `rt_down`, `rt_status`, `rt_logs`); a service added to the stack goes into both
+   `deploy/compose.yaml` and `deploy/nomad/substrate.nomad.hcl`. Test a change with what `.env` sets, and say
+   which. Nomad is Linux only and BUSL-licensed (S-18): nothing outside `scripts/runtime/nomad.sh` and
+   `deploy/nomad/` may require it.
 4. **Licences:** permissive or LGPL libraries in the default stack (kernel D-11). Check before adding.
 5. **Every change ends with `scripts/check.sh` passing**, or with the failure named and explained.
 6. **Do not route your own session through the gateway untested.** `scripts/gateway.py on` changes how
@@ -64,7 +69,8 @@ scripts/up.sh [PROJECT]         # the stack, then kk up on PROJECT (default: thi
 scripts/check.sh                # is everything up and wired
 scripts/gateway.py on|off|status [--mode subscription|api-key]
 scripts/backstage-build.sh      # rebuild the Backstage image after changing services/backstage
-scripts/down.sh [--volumes]     # stop (and, asked twice, delete data)
+scripts/logs.sh SERVICE         # a service's recent logs, either runtime
+scripts/down.sh [--volumes] [--agent]   # stop (delete data after asking; with nomad, stop the agent)
 python3 scripts/render_bifrost.py   # after changing provider keys in .env; then restart bifrost
 ```
 
