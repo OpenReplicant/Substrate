@@ -1,9 +1,10 @@
-"""Point a project's Claude Code files at substrate's bin/ wrappers (S-19).
+"""Repair: point a project's Claude Code files at substrate's bin/ wrappers (S-19).
 
     python3 scripts/point_harness.py PROJECT
 
-`kk up` runs inside the tools container, so it writes the paths of kernel-mcp, kernel-mcp-hook and
-kernel-mcp-cue as the container sees them. This rewrites those commands, in PROJECT/.mcp.json and
+scripts/up.sh no longer needs this: it runs `kk up --commands-dir bin/` (kernel D-95), which writes the
+wrappers directly. Use it for a project connected by an older kernel, whose files name kernel-mcp,
+kernel-mcp-hook and kernel-mcp-cue as the tools container sees them (kk up keeps hooks it already finds). This rewrites those commands, in PROJECT/.mcp.json and
 PROJECT/.claude/settings.local.json, to the wrappers in bin/, which run the same commands inside the
 container. Everything else in the files is kept. Running it again changes nothing.
 """

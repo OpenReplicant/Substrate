@@ -158,7 +158,7 @@ lane. Reads never do.
 
 The cycle is a Claude Code session. Hooks connect it to kernel; all of them run through `bin/` in the tools
 container, so the host needs nothing more. Substrate adds to kernel's existing `SessionStart` and `PreToolUse`
-hooks rather than defining a second set, and `scripts/point_harness.py` keeps the commands pointed at `bin/`.
+hooks rather than defining a second set, and `kk up --commands-dir bin/` (kernel D-95) points the commands at `bin/`.
 The one hook substrate commits itself (`.claude/settings.json`) is the build-out's: at `SessionStart` it says
 which step of this spec is next (`scripts/spec.py hook`).
 

@@ -6,7 +6,7 @@
 # Steps: .env (secrets generated once) -> the gateway's config -> images, built in containers (S-19) -> every
 # service, by the runtime in .env (compose or nomad, S-16) -> wait until each answers -> the tools container,
 # seeing the project -> kk up --no-stack inside it (logins, MCP, skill, hooks, reading the project into
-# .state/artifacts) -> the project's Claude Code files pointed at bin/.
+# .state/artifacts), with the project's Claude Code files pointing at bin/ (--commands-dir).
 set -eu
 . "$(dirname "$0")/lib.sh"
 
@@ -70,8 +70,7 @@ say "Kernel: logins and the project ($project)"
 "$ROOT/scripts/tools.sh" start "$project"
 KK_ADMIN_URL="postgresql://postgres:$(env_value POSTGRES_PASSWORD)@127.0.0.1:$(env_value KK_DB_PORT)/kk" \
 KK_JWT_SECRET="$(env_value KK_JWT_SECRET)" \
-  "$ROOT/bin/kk" up --no-stack "$project"
-python3 "$ROOT/scripts/point_harness.py" "$project"
+  "$ROOT/bin/kk" up --no-stack --commands-dir "$ROOT/bin" "$project"   # Claude Code runs bin/'s wrappers (kernel D-95)
 
 say "Up"
 "$ROOT/scripts/check.sh" || true

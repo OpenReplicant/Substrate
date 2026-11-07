@@ -52,6 +52,5 @@ Update `repos.yaml`'s `checked` commit to the main commit substrate was tested a
 
 ## Prepared now
 
-| Patch | Repository | What |
-| --- | --- | --- |
-| `upstream/kernel/0001-kk-up-and-kk-demo-KK_CONTAINER_ENGINE-chooses-docker.patch` | kernel | `kk up` and `kk demo` honour `KK_CONTAINER_ENGINE` (docker or podman) instead of calling `docker`. Needs: kernel's `smoke_kernel.sh` and `kk up` on a project with Podman. Add a decision row to kernel's `docs/decisions.md` with the PR |
+Nothing waits in `upstream/`. Open upstream work (2026-11-07): kernel#103 (one Postgres image, D-94),
+kernel#104 (`kk up --commands-dir`, D-95), kernel#105 (`KK_CONTAINER_ENGINE`, D-96).
