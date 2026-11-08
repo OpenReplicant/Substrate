@@ -1,11 +1,17 @@
 # Substrate
 
-A super-agent that adapts to any situation by changing its own architecture. It models a system as cited
-claims, acts on that model, and changes something (including itself) only on evidence it cannot fake.
+A self-modifying agent platform: an agent in charge of a system of components, and its own system is one of
+them. It models each system as cited claims, acts on that model, and changes something (itself included) only
+on evidence it cannot fake.
 
-- **Modelling itself** makes it autopoietic.
-- **Modelling other systems** makes it an engineer.
-- **Adapting to model anything** makes it a generalist.
+A component is anything that can be modified: a service, a library, a skill, a hook, a parameter, a prompt, a
+vocabulary. The catalog uses Backstage's entity model because its kinds and types cover all of them, and
+Morphogen judges anything named there as a cell.
+
+- **Modelling itself** makes it autopoietic, and self is not a special case: it is one project among others.
+- **Modelling other systems beside itself** makes it an engineer.
+- **Adapting to model anything** that can be described as components makes it a generalist. That is the
+  direction; managing systems of components is the scope.
 
 ## The loop
 
@@ -43,8 +49,8 @@ interface that keeps it possible, when to bring it back, and the commit to resto
 ## Where it is going
 
 [`docs/spec.md`](docs/spec.md) is what substrate is meant to become, and [`docs/build.yaml`](docs/build.yaml)
-its six-step build plan: cut to the core, one loop on itself, kernel as a content system, catalogs to choose
-from, another system, a second domain. Left in place, they make Claude Code sessions here build it out a step at a time (the `build-out`
+its build plan: cut to the core, one loop on itself, kernel as a content system, catalogs to choose from,
+another system beside itself. Left in place, they make Claude Code sessions here build it out a step at a time (the `build-out`
 skill). `python3 scripts/spec.py status` shows where it stands; deleting `docs/spec.md` stops it.
 
 ## Start

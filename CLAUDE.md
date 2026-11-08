@@ -1,8 +1,10 @@
 # Substrate
 
-A super-agent that models a system as cited claims, acts on that model, and changes something (including
-itself) only on evidence it cannot fake. Modelling itself makes it autopoietic, modelling other systems makes it
-an engineer, adapting to model anything makes it a generalist. Read `README.md` for the picture,
+A self-modifying agent platform: an agent in charge of a system of components, its own system included. A
+component is anything that can be modified (a service, a skill, a hook, a parameter, a prompt), named in the
+catalog's entity model. It models each system as cited claims, acts on that model, and changes something only on
+evidence it cannot fake. Self is not a special case: substrate is one project in kernel like any other system,
+so nothing you build here may work only on itself. Read `README.md` for the picture,
 `docs/spec.md` for where it is going, and `DECISIONS.md` for every default and why (S-41 sets the current scope).
 
 | Part | Where | Role |
@@ -29,7 +31,7 @@ or when a check fails.
 
 ## Becoming the spec
 
-`docs/spec.md` is what substrate is meant to become, and `docs/build.yaml` its six-step build plan. While they
+`docs/spec.md` is what substrate is meant to become, and `docs/build.yaml` its build plan. While they
 are in place, the SessionStart hook (`.claude/settings.json`, `scripts/spec.py hook`) names the next step, and
 sessions work through the plan with the `build-out` skill (`.claude/skills/build-out/SKILL.md`) unless the owner
 asks for something else, one step per session, each ending with its check passing. The owner stops it by

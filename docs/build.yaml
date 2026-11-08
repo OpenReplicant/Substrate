@@ -40,8 +40,10 @@ steps:
     after: [1]
     status: todo
     check: >-
-      with catalog-info.yaml as the intended half and the code plus running containers as the observed half
-      (kernel's self-encoder, `rt_status`), one real gap reaches the review lane; Claude Code proposes a change that
+      substrate is modelled as its own kernel project at component level (services, skills, hooks, parameters as
+      catalog components), through the same encoders and checks any other system would use, with nothing that
+      works only on itself; with catalog-info.yaml as the intended half and what is observed (the code, the
+      skills and hooks on disk, the running containers) as the observed half, one real gap reaches the review lane; Claude Code proposes a change that
       closes it (either way: fix the code or revise the map) on a branch; Morphogen judges it; encoder-morphogen
       records the verdict; and recall, asked about the gap, returns gap, change and verdict by claim id
     notes: >-
@@ -86,26 +88,30 @@ steps:
       upstream.
 
   - id: 5
-    title: "Engineer: another system"
+    title: "Engineer: another system beside itself"
     spec: "1, 6, 7"
-    where: substrate, a new kernel project for the system
+    where: substrate, a second kernel project for the system
     after: [4]
     status: todo
     needs_owner: true
     check: >-
-      for a real system the owner names, kernel holds a cited graph built from at least one interview (a person's
-      statements as claims attributed to them, quoting the transcript) and one observed source; at least one gap
-      between the two reaches review; one improvement closing a gap is proposed, judged by Morphogen and applied
+      a real system the owner names is a second project in the same world model as substrate, its components
+      cited from at least one interview (a person's statements as claims attributed to them, quoting the
+      transcript) and one observed source; the relations between the two systems (substrate manages it, a
+      component of one uses an API of the other) are claims; at least one gap reaches review; and one change
+      closing a gap is proposed, judged by Morphogen and applied by the same loop that changed substrate in step 2
     notes: >-
-      The owner picks the system and who is interviewed. An interview skill (questions drawn from the gaps and the
-      thin parts of the graph) is likely the first new skill.
+      The owner picks the system and who is interviewed. A catalog entry that names an entity in another
+      system's catalog is a cross-project reference; kernel's encoder-backstage resolves refs within one file
+      today, so that is an upstream change when this step needs it. An interview skill (questions drawn from the
+      gaps and the thin parts of the graph) is likely the first new skill.
 
   - id: 6
     title: "Generalist: a second domain"
     spec: "1, 2, 4"
     where: whatever the domain needs, added through the loop
     after: [5]
-    status: todo
+    status: dropped
     needs_owner: true
     check: >-
       a domain unlike step 5's reaches step 5's check; what it needed (content types, vocabularies, mappings,
@@ -114,3 +120,5 @@ steps:
     notes: >-
       The owner picks the domain. Owner, 2026-11-08: a new kind of system "may come with code and maybe even a
       CMS/UI view"; the design stays open, and the only hard restriction is Morphogen's, against reward hacking.
+      Dropped 2026-11-08 (S-49, owner): managing systems of components, itself included, is the scope; the
+      generalist level stays a direction in the spec rather than a step.

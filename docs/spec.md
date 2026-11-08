@@ -8,20 +8,36 @@ organism") is in git at `a00fb61`; this one replaces it (S-41).
 
 ## 1. What substrate is
 
-A super-agent that adapts to any situation by changing its own architecture. It models a system as cited
-claims, acts on that model, and changes something (including itself) only on evidence it cannot fake.
+A self-modifying agent platform: an agent in charge of a system of components, and its own system is one of
+them. It models each system as cited claims, acts on that model, and changes something (itself included) only
+on evidence it cannot fake.
 
-The same loop, pointed at three widening targets, gives three levels:
+**Components are the unit.** A component is anything that can be modified: a service, a library, a skill, a
+hook, a parameter, a prompt, a vocabulary, a process step. Backstage's entity model (kinds such as Component,
+Resource, API, System, and a free `type` on each) covers all of them, which is why the catalog uses it. That
+is the level at which substrate understands what it learns, at least structurally: what the parts are, what
+each is for, what depends on what, and what may change. Morphogen reads the same catalog as cells, so whatever
+can be named as a component can be judged as one.
+
+**Self is not a special case.** Substrate models itself exactly as it models any other system: its own project
+in kernel, its own catalog, the same encoders, drift checks and judge. Nothing in the loop works only on itself.
+That is what makes it self-modifying, and what makes several systems in one world model ordinary: each is a
+project, and the relations between them (this one manages that one; this component calls that API) are claims
+like any other.
+
+The same loop, pointed at widening targets, gives three levels:
 
 | Level | It models | Which makes it | Proven when |
 | --- | --- | --- | --- |
-| **Autopoietic** | itself: its parts, skills and map | self-maintaining | it proposes a change to its own architecture, the change is judged, and the verdict lands as claims |
-| **Engineer** | another system, from observation, exploration and interviews | able to improve what it models | it builds a cited graph of a real system and makes one judged improvement to it |
-| **Generalist** | anything, by growing what a domain needs: content types, vocabularies, encoders, code, views | adaptable | a second, unlike domain is modelled and improved by the same loop, and everything it needed was added through that loop |
+| **Autopoietic** | itself: its components (services, skills, hooks, parameters) and its map | self-modifying | a gap in its own model is found, a change closing it is judged, and the verdict lands as claims (step 2) |
+| **Engineer** | another system beside itself, from observation, exploration and interviews | able to manage what it models | both systems are in one world model, and one judged change is made to the other (step 5) |
+| **Generalist** | anything that can be described as components, by growing what a domain needs: content types, vocabularies, encoders, code, views | adaptable | a direction, not a build step: where kernel's content model points |
 
 Each level depends on the one before. Self first, because the system is right here and every claim can be
-checked. Engineer is the same loop aimed outward. Generalist is the test of the foundation: a new domain may
-bring code and a view of its own, but it should not need a new store, a new judge or a different loop.
+checked. Engineer is the same loop aimed at a second system, with the first still in view. Generalist is
+where the foundation leads: a new domain may bring code and a view of its own, but it should not need a new
+store, a new judge or a different loop. Managing systems of components is the scope; going further is left
+open (S-49).
 
 ## 2. How it works: science-minded
 
@@ -192,11 +208,12 @@ Each step ends with a check anyone can run. [`build.yaml`](build.yaml) holds the
 | # | Step | Done when |
 | --- | --- | --- |
 | 1 | Cut to the core | the stack is kernel's Postgres, kernel and the tools container; each removed part is an option in the map (section 8); `scripts/check.sh` passes |
-| 2 | Autopoietic: one loop on itself | a gap between the self-map and the code is found, a change closing it is proposed and judged, and recall traces gap → change → verdict by claim ids |
+| 2 | Autopoietic: one loop on itself | substrate is modelled as its own project at component level (services, skills, hooks, parameters) with nothing self-only; a gap between the map and what is observed is found, a change closing it is proposed and judged, and recall traces gap → change → verdict by claim ids |
 | 3 | Kernel as a content system | the catalog is a content type in kernel, read and edited as items, with its claims and drift checks unchanged (needs the owner: a kernel change) |
 | 4 | Catalogs to choose from | one real choice (a component a step needs) is made by searching the source catalogs, shortlisting candidates as entries with cited claims, testing them, and recording the pick and the rejections |
-| 5 | Engineer: another system | a real system the owner picks has a cited graph built from at least one interview and one observed source, and one improvement to it is judged and applied (needs the owner: which system) |
-| 6 | Generalist: a second domain | a domain unlike step 5's reaches the same check, and what it needed (content, encoders, code, a view) was added through the loop and judged where it claimed to improve something |
+| 5 | Engineer: another system beside itself | a real system the owner picks is a second project in the same world model, its graph cited from at least one interview and one observed source; the relations between it and substrate are claims; and one change to it is judged and applied the same way step 2 changed substrate (needs the owner: which system) |
+
+A sixth step, a second unlike domain, was dropped (S-49): the generalist level stays a direction.
 
 ## 10. Limitations
 
