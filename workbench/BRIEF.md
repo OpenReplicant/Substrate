@@ -1,6 +1,6 @@
 # Workbench: brief
 
-*Working name; the name is the owner's to choose. Status: proposed (2026-11-08), not built.*
+*Working name. Status: W1 done (2026-11-08, S-54); W2 next. The owner agreed the decisions in section 10.*
 
 A small content system on Postgres with a desktop-like UI, extended by plugins. Content types are real tables;
 every value can say where it came from, through a claims table beside them; vocabularies and their mappings are

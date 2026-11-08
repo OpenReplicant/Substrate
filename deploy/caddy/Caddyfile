@@ -1,0 +1,16 @@
+# The front door: kernel's routes (repos/kernel/deploy/Caddyfile, unchanged) plus Workbench's API.
+#   /api/*   PostgREST (workbench/BRIEF.md section 7); the prefix is stripped, so /api/note is PostgREST's /note
+#   the rest kernel: its UI at /ui/ and MCP at /mcp
+# With KK_SITE set to a public host name, Caddy gets and renews a certificate, as in kernel's file.
+{$KK_SITE::80} {
+	encode zstd gzip
+
+	redir /api /api/
+	handle_path /api/* {
+		reverse_proxy postgrest:3000
+	}
+
+	handle {
+		reverse_proxy kernel:8000
+	}
+}

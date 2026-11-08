@@ -14,11 +14,13 @@ probe() { curl -fsS -o /dev/null "$@" 2>/dev/null; }
 say "Services ($RUNTIME on $ENGINE)"
 probe "http://127.0.0.1:8080/ui/views.json" && ok "kernel      http://127.0.0.1:8080/ui/ (MCP at /mcp)" || bad "kernel UI does not answer (scripts/logs.sh kernel, caddy)"
 running=$(rt_status 2>/dev/null | awk 'NR > 1 {print $1}' | tr '\n' ' ')
-for s in db kernel caddy; do
+code=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:8080/api/")
+[ "$code" = "200" ] && ok "workbench   http://127.0.0.1:8080/api/ (PostgREST, OpenAPI at the root)" || bad "workbench API returned $code (scripts/logs.sh postgrest)"
+for s in db kernel caddy postgrest; do
   case "$running" in *"-$s-"*) ;; *) bad "service $s is not running (scripts/logs.sh $s)" ;; esac
 done
-extra=$(printf '%s\n' $running | grep -v -e '-db-' -e '-kernel-' -e '-caddy-' -e '-init-' || true)
-[ -z "$extra" ] && ok "only the core runs (db, kernel, caddy)" || note "also running, outside the core: $(echo $extra)"
+extra=$(printf '%s\n' $running | grep -v -e '-db-' -e '-kernel-' -e '-caddy-' -e '-init-' -e '-postgrest-' || true)
+[ -z "$extra" ] && ok "only the core runs (db, kernel, caddy, postgrest)" || note "also running, outside the core: $(echo $extra)"
 
 say "Wiring"
 if st=$(sec_status 2>&1); then ok "secrets ($SECRETS): $st"; else bad "secrets ($SECRETS): $st"; fi

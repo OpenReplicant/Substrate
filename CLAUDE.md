@@ -12,6 +12,7 @@ so nothing you build here may work only on itself. Read `README.md` for the pict
 | kernel | `repos/kernel` (its own git repo) | the store and the model: a content system on Postgres, claims as the assertion type, ontologies and aliases as content |
 | Morphogen | `repos/morphogen` (its own git repo) | the judge: a change lands only with a verdict the changer cannot reach |
 | Claude Code | you | the actor: explorer, interviewer, builder, mapper |
+| Workbench | `workbench/` (built to leave), `plugins/substrate/`, container `postgrest` | the content system replacing kernel: typed tables, claims beside every value, PostgREST at `/api`; `workbench/BRIEF.md` (W1 of 4 done) |
 | Tools | `bin/`, container `substrate-tools` | kk, Morphogen, gitleaks, kernel's MCP server and hooks, run in a container as you |
 | Glue | `scripts/`, `deploy/`, `modules/`, `catalog-info.yaml` | brings the parts up, connects them, and keeps the map: what runs, what could, where to search |
 
@@ -89,6 +90,7 @@ python3 scripts/spec.py status|next|set ID STATUS   # where the spec's build pla
 scripts/verdicts.sh [PROJECT]   # Morphogen's verdicts into kernel as claims (also run by a hook after judged runs)
 scripts/map.sh [PROJECT]        # catalog-info.yaml into kernel (also run by a hook after edits to it)
 scripts/trace.sh NAME           # a part's chain in kernel: observed, declared, each gap and how it was decided
+scripts/workbench.sh migrate|plugin load DIR|user add NAME|user reset NAME|user list   # Workbench (prints passwords once: the owner runs user add)
 scripts/tools.sh start|stop|status   # the tools container that bin/ runs in
 scripts/logs.sh SERVICE         # a service's recent logs
 scripts/down.sh [--volumes]     # stop (delete data after asking)

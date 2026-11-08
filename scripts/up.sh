@@ -28,8 +28,18 @@ until curl -fsS -o /dev/null "http://127.0.0.1:8080/ui/views.json" 2>/dev/null; 
 done
 echo "  kernel ok"
 
-say "Kernel: logins and the project ($project)"
+say "Workbench: its database, the core schema, substrate's plugin (workbench/BRIEF.md)"
 "$ROOT/scripts/tools.sh" start "$project"
+"$ROOT/scripts/workbench.sh" migrate
+"$ROOT/scripts/workbench.sh" plugin load "$ROOT/plugins/substrate" | python3 -c 'import json, sys; d = json.load(sys.stdin); print("  plugin", d["plugin"], d["version"], "types:", ", ".join(t["type"] for t in d["types"]))'
+i=0
+until curl -fsS -o /dev/null "http://127.0.0.1:8080/api/" 2>/dev/null; do
+  i=$((i + 1)); [ $i -gt 60 ] && { echo "  the API did not answer at http://127.0.0.1:8080/api/: scripts/logs.sh postgrest" >&2; exit 1; }
+  sleep 2
+done
+echo "  API ok: http://127.0.0.1:8080/api/ (a person: scripts/workbench.sh user add NAME)"
+
+say "Kernel: logins and the project ($project)"
 KK_ADMIN_URL="postgresql://postgres:$(env_value POSTGRES_PASSWORD)@127.0.0.1:$(env_value KK_DB_PORT)/kk" \
 KK_JWT_SECRET="$(env_value KK_JWT_SECRET)" \
   "$ROOT/bin/kk" up --no-stack --commands-dir "$ROOT/bin" "$project"   # Claude Code runs bin/'s wrappers (kernel D-95)

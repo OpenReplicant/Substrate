@@ -1,0 +1,16 @@
+[project]
+name = "workbench"
+version = "0.1.0"
+description = "A content system on Postgres with claims beside every value, a desktop-like UI, and plugins"
+license = "Apache-2.0"
+requires-python = ">=3.11"
+dependencies = [
+  "psycopg==3.3.6",      # LGPL-3.0, used as a library
+  "PyYAML==6.0.3",       # MIT
+]
+
+[project.scripts]
+workbench = "workbench.cli:main"
+
+[tool.setuptools.package-data]
+workbench = ["sql/*.sql"]

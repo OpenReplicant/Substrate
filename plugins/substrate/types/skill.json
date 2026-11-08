@@ -1,0 +1,10 @@
+{
+  "title": "Skill",
+  "description": "A Claude Code skill: a folder with SKILL.md, chosen by its description.",
+  "type": "object",
+  "properties": {
+    "description": {"type": "string", "description": "the frontmatter description, which decides when it is used"},
+    "path": {"type": "string", "description": "where it lives, e.g. .claude/skills/setup/SKILL.md"},
+    "agents": {"type": "array", "items": {"type": "string"}, "description": "the tools it is for (AiResource spec.agents)"}
+  }
+}

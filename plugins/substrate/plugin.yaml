@@ -1,0 +1,8 @@
+# Substrate's plugin for Workbench (workbench/BRIEF.md section 6): the kinds of thing Substrate models. W1 has
+# its content types; its extractors (catalog-info.yaml, Claude Code's .claude/, Morphogen's evidence log) and
+# panels (the map, drift, trace) come in W3.
+id: substrate
+version: 0.1.0
+licence: Apache-2.0
+requires: {workbench: "1"}
+content_types: [types/*.json]

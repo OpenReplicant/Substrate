@@ -334,17 +334,17 @@ apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
   name: front-door
-  description: Kernel's Caddy at 127.0.0.1:8080 - /mcp and /ui; HTTPS when KK_SITE names a public host.
+  description: Kernel's Caddy at 127.0.0.1:8080 - /mcp and /ui for kernel, /api for Workbench; HTTPS when KK_SITE names a public host.
   annotations:
     substrate.dev/intent: One address for people and agents.
     substrate.dev/fill: adopt
-    substrate.dev/basis: kernel's caddy service and Caddyfile (D-74), unchanged; CADDY_IMAGE pins docker.io/library/caddy:2.11.7-alpine
+    substrate.dev/basis: kernel's caddy service (D-74) with deploy/caddy/Caddyfile (kernel's routes plus /api); CADDY_IMAGE pins docker.io/library/caddy:2.11.7-alpine
 spec:
   type: service
   lifecycle: production
   owner: group:operator
   system: core
-  consumesApis: [kernel-mcp-api]
+  consumesApis: [kernel-mcp-api, workbench-api]
 ---
 # ================================================================ CORE: judge and actor
 apiVersion: backstage.io/v1alpha1
@@ -513,6 +513,44 @@ spec:
   lifecycle: production
   owner: group:operator
   system: core
+---
+# ================================================================ CORE: Workbench (S-52, S-53, S-54)
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: workbench
+  description: A content system on Postgres - typed tables per content type, claims beside every value, vocabularies and SSSOM mappings, plugins.
+  annotations:
+    substrate.dev/intent: Hold what substrate knows about any system as typed items whose every value can say where it came from; replaces kernel at W4.
+    substrate.dev/fill: build
+    substrate.dev/basis: workbench/ (BRIEF.md; W1 done - store, rules in SQL, sign-in), plugins/substrate
+    substrate.dev/step: "W1"
+spec:
+  type: service
+  lifecycle: experimental
+  owner: group:operator
+  system: core
+  providesApis: [workbench-api]
+  dependsOn: [resource:postgres]
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: workbench-rest
+  description: PostgREST v16.5 at /api - the Workbench schema as a JSON API with an OpenAPI description; roles from the sign-in JWT.
+  annotations:
+    substrate.dev/intent: Serve the store without a hand-written data API, so every client gets the rules Postgres enforces.
+    substrate.dev/fill: adopt
+    substrate.dev/basis: deploy/compose.yaml service postgrest, deploy/caddy/Caddyfile (/api)
+    substrate.dev/candidates: docker.io/postgrest/postgrest:v16.5 (MIT, 2026-10-20)
+spec:
+  type: service
+  lifecycle: experimental
+  owner: group:operator
+  system: core
+  subcomponentOf: workbench
+  providesApis: [workbench-api]
+  dependsOn: [resource:postgres]
 ---
 # ================================================================ CORE: glue
 apiVersion: backstage.io/v1alpha1
@@ -952,3 +990,8 @@ apiVersion: backstage.io/v1alpha1
 kind: API
 metadata: {name: otlp-api, description: "OTLP over gRPC (4317) and HTTP (4318)."}
 spec: {type: grpc, lifecycle: option, owner: group:operator, system: options, definition: "OpenTelemetry protocol; service.name is the catalog name."}
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata: {name: workbench-api, description: "Workbench's JSON API at /api - a view per content type, claims, content_types, rpc/login, rpc/whoami."}
+spec: {type: openapi, lifecycle: experimental, owner: group:operator, system: core, definition: "PostgREST's OpenAPI 2.0 description at http://127.0.0.1:8080/api/ (filtered by the caller's role)."}

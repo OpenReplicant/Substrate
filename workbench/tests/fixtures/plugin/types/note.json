@@ -1,0 +1,11 @@
+{
+  "title": "Note",
+  "description": "A short note, for the tests.",
+  "type": "object",
+  "properties": {
+    "body": {"type": "string", "description": "What the note says"},
+    "stars": {"type": "integer"},
+    "tags": {"type": "array", "items": {"type": "string"}},
+    "due": {"type": "string", "format": "date-time"}
+  }
+}

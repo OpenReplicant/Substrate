@@ -1,0 +1,14 @@
+{
+  "title": "Component",
+  "description": "Anything in a system that can be modified: a service, library, website, or a part of one (Backstage's Component and Resource kinds).",
+  "type": "object",
+  "properties": {
+    "kind": {"type": "string", "description": "Backstage kind: Component, Resource, AiResource, System, API"},
+    "type": {"type": "string", "description": "spec.type: service, library, website, skill, hook, database, ..."},
+    "lifecycle": {"type": "string", "description": "spec.lifecycle: production, experimental, option, listed, deprecated"},
+    "description": {"type": "string"},
+    "owner": {"type": "string", "description": "an entity ref, e.g. group:operator"},
+    "system": {"type": "string", "description": "the system it belongs to: core, options, sources"},
+    "annotations": {"type": "object", "description": "metadata.annotations as written"}
+  }
+}
