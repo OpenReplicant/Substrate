@@ -587,6 +587,7 @@ spec:
   system: interface
   providesApis: [console-api]
   consumesApis: [kernel-mcp-api, metrics-api, bus-api, trace-metrics, otlp-api]
+  dependsOn: [component:map-view]   # the stack panel reads Backstage's readiness (services/console/server.py)
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Component

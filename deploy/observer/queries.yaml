@@ -4,9 +4,11 @@
 # {w} is the window in seconds; service names are catalog names, or a node's substrate.dev/otel-service.
 
 # Client and server spans paired by the collector's servicegraph connector (includes virtual nodes such as a
-# model provider or a database, named by peer attributes).
+# model provider or a database, named by peer attributes). Not parts, so never observed calls: "user" (the
+# connector's name for a caller that sent no span, e.g. a browser), "unknown" (a callee no peer attribute named)
+# and ":memory:" (an in-process SQLite, Backstage's cache). Each would reach the review lane as noise (S-35).
 - edge: {from: client, to: server}
-  query: sum by (client, server) (increase(traces_service_graph_request_total[{w}s]))
+  query: sum by (client, server) (increase(traces_service_graph_request_total{client!="user", server!~"unknown|:memory:"}[{w}s]))
 
 # The front door makes only server spans, named per route (deploy/caddy/Caddyfile: `tracing { span <part> }`).
 - edge: {from: "=front-door", to: span_name}
