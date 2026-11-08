@@ -55,4 +55,6 @@ Update `repos.yaml`'s `checked` commit to the main commit substrate was tested a
 Nothing waits in `upstream/`. Open upstream work (2026-11-07): kernel#103 (one Postgres image, D-94),
 kernel#104 (`kk up --commands-dir`, D-95), kernel#105 (`KK_CONTAINER_ENGINE`, D-96). 2026-11-08: kernel#111 (registry-qualified base images, so Podman
 without search registries can build); `repos/kernel` stays on `fix/qualified-image-names` until it merges. kernel#112 (draft: `docs/content.md`, kernel
-as an ontological content system, D-101 proposed; the owner's review).
+as an ontological content system, D-101 proposed; the owner's review). kernel#113 (draft, stacked on #111: skills and hooks
+as components, map-drift's component gaps, D-102; substrate step 2 runs on it, so `repos/kernel` stays on
+`components-beyond-services`).

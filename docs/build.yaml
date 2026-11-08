@@ -34,7 +34,8 @@ steps:
       that step 2 replaces their observed half. Ask the owner before deleting any data volume.
 
   - id: 2
-    status: doing
+    status: blocked
+    waiting_on: "owner: how a map revision is judged (Morphogen refuses catalog edits), and approving the six gaps' direction; kernel#113"
     title: "Autopoietic: one loop on itself"
     spec: "1, 3, 6, 7"
     where: substrate, kernel's encoders and map-drift
