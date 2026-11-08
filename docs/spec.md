@@ -104,7 +104,10 @@ The glue is this repository: scripts that bring the parts up and connect them, t
 ### Kernel as a content system
 
 Kernel is a claim log with ontologies, shaped as a content management system on Postgres (kernel D-101,
-`docs/content.md`, PR OpenReplicant/kernel#112):
+`docs/content.md`, PR OpenReplicant/kernel#112). What sets it apart from a CMS, and why it is a kernel: claims,
+structure and ontologies sit together at the centre of the world model, and everything that works on them is a
+module around it. Ontologies serve as the taxonomies; claim extraction (encoders), comparison (map-drift) and
+graph projection (pgGraph) are modules (owner, 2026-11-08).
 
 - **Content types** are pack classes with SHACL shapes; **items** are entities; **versions** are artifacts. A
   content type can come with its own view.

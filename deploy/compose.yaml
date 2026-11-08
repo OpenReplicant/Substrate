@@ -12,7 +12,9 @@ name: knowledge-kernel          # the same project as kernel's stack
 services:
 
   # kernel reads what kk up scans from the host folder .state/artifacts, in place of kernel's kk-artifacts
-  # volume, so the quote verifier sees exactly what the tools container wrote.
+  # volume, so the quote verifier sees exactly what the tools container wrote. Its parts: kernel's default plus
+  # map drift, which compares the map with what the repository has (skills, hooks; kernel D-102, spec step 2).
   kernel:
+    command: ["kk", "serve", "--host", "0.0.0.0", "--only", "${KK_SERVE_PARTS:-mcp,validator,belief,recall,quotes,tms,conformance,learner,gaps,drift}"]
     volumes:
       - ../../../.state/artifacts:/store:ro

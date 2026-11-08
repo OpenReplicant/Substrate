@@ -34,11 +34,11 @@ steps:
       that step 2 replaces their observed half. Ask the owner before deleting any data volume.
 
   - id: 2
+    status: doing
     title: "Autopoietic: one loop on itself"
     spec: "1, 3, 6, 7"
     where: substrate, kernel's encoders and map-drift
     after: [1]
-    status: todo
     check: >-
       substrate is modelled as its own kernel project at component level (services, skills, hooks, parameters as
       catalog components), through the same encoders and checks any other system would use, with nothing that

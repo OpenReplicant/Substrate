@@ -3,7 +3,7 @@
 # as you, on the host network (it reaches Postgres at 127.0.0.1 like the rest of the harness), and sees only
 # this checkout, kernel's login folder and the projects connected to kernel, each at its own host path.
 #
-#   scripts/tools.sh start [PROJECT...]   # (re)create it if the folders it should see have changed
+#   scripts/tools.sh start [PROJECT...]   # (re)create it if the folders it should see, or its image, have changed
 #   scripts/tools.sh stop | status
 set -eu
 . "$(dirname "$0")/lib.sh"
@@ -26,7 +26,10 @@ start() {
   list=$(projects "$@")
   want=$(printf '%s\n%s\n' "$ROOT" "$list" | cksum | cut -d' ' -f1)
   have=$("$ENGINE" inspect -f '{{index .Config.Labels "substrate.mounts"}}' "$NAME" 2>/dev/null || true)
-  if running && [ "$want" = "$have" ]; then echo "  $NAME running"; return; fi
+  # a rebuilt image (scripts/build.sh) must replace the running container, or bin/ keeps running the old code
+  img_want=$("$ENGINE" image inspect -f '{{.Id}}' "$(image)" 2>/dev/null || true)
+  img_have=$("$ENGINE" inspect -f '{{.Image}}' "$NAME" 2>/dev/null || true)
+  if running && [ "$want" = "$have" ] && [ "${img_want#sha256:}" = "${img_have#sha256:}" ]; then echo "  $NAME running"; return; fi
   "$ENGINE" rm -f "$NAME" >/dev/null 2>&1 || true
   mkdir -p "$logins" "$ROOT/.state/artifacts" "$ROOT/.state/uv-cache"
   set -- --detach --name "$NAME" --label "substrate.mounts=$want" --network host \
