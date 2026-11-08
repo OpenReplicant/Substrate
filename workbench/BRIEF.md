@@ -41,7 +41,7 @@ for the system's own tables; schema `content` for one table per content type.
 | `wb.mapping` | SSSOM mappings between terms: subject, predicate (`skos:exactMatch`, `closeMatch`, ...), object, `mapping_justification`, confidence, author, mapping set |
 | `wb.decision` | the review lane: what was decided (a gap, a dispute, a merge, a proposal), the evidence, status, decided by, note |
 | `wb.embedding` | vectors for items, claims or sources (pgvector), per model |
-| `wb.user`, `wb.session` | sign-in: name, password hash (scrypt), role (`owner`, `editor`, `viewer`); `workbench user add|reset` from the command line |
+| `wb.user` | sign-in: name, password hash (pgcrypto `crypt`, bcrypt), role (`owner`, `editor`, `viewer`, each a Postgres role); `workbench user add|reset` from the command line |
 
 **Items and claims.** An item's columns are its current values; the claims are why. Every write records a
 claim, whether an extractor made it or a person typed it, so any field can answer "where did this come from?".
@@ -56,8 +56,10 @@ candidate resolver plugin.
 **Projections.** pgGraph over `wb.relation` for neighbourhoods and paths; pgvector over `wb.embedding`;
 Postgres full-text over titles, fields and quotes. Each is a query or view, rebuildable, never the truth.
 
-**Rules.** Plugins write through the API, which records the claim and the run; nothing writes the content
-tables around it. Nothing is deleted except by an explicit redaction, which is itself a recorded decision.
+**Rules live in Postgres**, so every client gets them, whether that's the UI, a plugin, an agent or curl.
+Triggers record a claim for every insert and update, attributed to the signed-in user from the request's JWT or
+to the extractor's run. Row-level security applies each role's rights. Content tables are written only through
+the API (PostgREST, section 7); nothing writes around it. Nothing is deleted except by an explicit redaction, which is itself a recorded decision.
 A content type's schema changes additively by default; a destructive change is a migration the owner runs.
 
 ## 3. Extractors
@@ -81,12 +83,15 @@ A desktop in the browser, with WordPress's admin as its starting shape:
   a trace view (a part's chain: observed, declared, gaps, decisions);
 - live updates over Server-Sent Events from Postgres's LISTEN/NOTIFY.
 
+**Alpine.js** (3.17.5, MIT, 2026-10-20) drives the shell and the core panels: the menu, lists, forms and the
+review lane are Alpine components over the API, with no build step. The shell exposes Alpine to plugins, so a
+plugin panel can be Alpine too; it can equally bring anything else, since a panel only mounts into an element.
+
 **Layout library: Dockview** (`dockview-core`, MIT, no dependencies, vanilla TypeScript API). It handles
 docking, tabs, splits, floating groups, pop-out windows and serialisable layouts. Pin 8.6.2 (2026-10-25); 8.7
 to 8.9 are under two weeks old. GridStack (MIT, no dependencies; 14.0.0, 2026-09-21) is the candidate for a
 free-form widget grid inside the dashboard panel if Dockview's grid is not enough. Golden Layout (MIT) is set
-aside: its last release was 2.6.0 in 2022. Plugin UI is plain ES modules, so no framework is imposed; the shell
-itself uses none.
+aside: its last release was 2.6.0 in 2022. Plugin UI is plain ES modules, so no framework is imposed.
 
 ## 5. Plugins and integrations
 
@@ -104,7 +109,10 @@ server: substrate_plugin          # optional Python module with register(wb)
 client: web/index.js              # optional ES module: panels, widgets, commands, menu
 ```
 
-**Server side (Python).** `register(wb)` may call `wb.content_type(...)`, `wb.extractor(name, fn)`,
+**Database side (SQL).** A plugin's `migrations` add tables, views, functions and triggers. A function in an
+exposed schema becomes an endpoint at `/api/rpc/<name>` with no server code. Most plugin logic belongs here.
+
+**Server side (Python), for what SQL cannot do.** `register(wb)` may call `wb.content_type(...)`, `wb.extractor(name, fn)`,
 `wb.route(path, handler)` (under `/api/plugins/<id>/`), `wb.on(event, fn)` (item and claim changes,
 decisions) and `wb.task(name, fn, schedule)`. An extractor is `fn(source, ctx) -> iterable of records`; `ctx`
 records the run and writes through the API.
@@ -113,8 +121,8 @@ records the run and writes through the API.
 unmount function), `widgets` (dashboard pieces, same shape), `commands` and `menu` entries. `ctx` gives `api`
 (the REST client), `open(panelId, params)`, `events` (subscribe to live changes), `user` and `settings`.
 
-**Integrations.** Everything a panel does goes through a JSON HTTP API described by OpenAPI, so other tools can
-do the same. An MCP server over the same API lets agents (Claude Code) read and write as a named user. Events
+**Integrations.** Everything a panel does goes through PostgREST's JSON API, which publishes its own OpenAPI
+description at `/api/`, filtered by the caller's role. So any tool can do what a panel does. An MCP server over the same API lets agents (Claude Code) read and write as a named user. Events
 leave through webhooks or pgmq queues when a plugin asks for them.
 
 **Versioning.** The plugin API is `1`. A breaking change raises it, and the core keeps serving the previous one
@@ -131,25 +139,51 @@ for a release.
 - Breaking out means moving `workbench/` to its own repository and cloning it into `repos/`, as kernel and
   Morphogen are.
 
-## 7. Server
+## 7. Services
 
-Python, because the extractors and resolvers worth reusing are Python (kernel's encoders, Splink):
+```
+browser ──▶ Caddy (front door) ──┬─ /            the shell: static files (Alpine.js, Dockview, plugin modules)
+                                 ├─ /api/*       PostgREST ──▶ Postgres (content.*, wb.*, rpc functions)
+                                 └─ /wb/*        workbench server (Python): plugins, extractors, events, MCP ──▶ Postgres
+```
 
-| Package | Licence | Pin (two weeks or older) |
+- **Postgres** holds the data and the rules: tables, views, triggers that record claims, row-level security per
+  role, and SQL functions for sign-in (`login` returns a JWT), recording claims and deciding review items.
+- **PostgREST** turns that schema into the API: tables and views as endpoints, functions as `/rpc/<name>`, the
+  JWT's `role` claim as the Postgres role for each request, and an OpenAPI description. There is no hand-written
+  data API. After a migration, `NOTIFY pgrst, 'reload schema'` refreshes it.
+- **Caddy** is the one address: TLS when public, static files, routing. It is the same Caddy kernel's stack
+  runs now.
+- **The workbench server** (Python) does what SQL cannot do. It loads plugins: it runs their migrations, turns
+  their JSON Schema types into tables, and serves their client modules. It also runs extractors (they write
+  through PostgREST, with a run of their own), streams events from LISTEN/NOTIFY as Server-Sent Events, and
+  offers MCP for agents.
+
+Sign-in follows PostgREST's own pattern (its v16.5 docs, `how-tos/sql-user-management.rst`, read from its
+repository): passwords hashed with pgcrypto's `crypt` and `gen_salt('bf')`, and a `login` function that checks
+them and signs a JWT with pgjwt's `sign`. pgjwt is one SQL file that needs only pgcrypto, so Workbench vendors
+its `pgjwt--0.2.0.sql` with its MIT licence. The JWT secret is a setting in `.env`.
+
+| Part | Licence | Pin (two weeks or older) |
 | --- | --- | --- |
+| PostgREST | MIT | `docker.io/postgrest/postgrest:v16.5` (2026-10-20) |
+| Caddy | Apache-2.0 | 2.11.7, as kernel pins |
+| pgjwt | MIT | 0.2.0 (SQL, vendored) |
+| Alpine.js | MIT | 3.17.5 (2026-10-20) |
+| dockview-core | MIT | 8.6.2 (2026-10-25) |
 | Starlette | BSD-3-Clause | 1.10.0 (2026-10-24) |
 | Uvicorn | BSD-3-Clause | 0.54.0 (2026-09-25) |
 | psycopg | LGPL-3.0 (library) | 3.3.6 (2026-09-18) |
 | jsonschema | MIT | 4.26.0 (2026-01-07) |
 
-All four are allowed by kernel D-11's posture (permissive, or LGPL as a library).
+All of them are allowed by kernel D-11's posture (permissive, or LGPL as a library).
 
 ## 8. Alternatives considered (GitHub, 2026-11-08)
 
 | Project | Licence | Why not as the base |
 | --- | --- | --- |
 | Payload | MIT | The closest: content types, an admin UI, plugins, auth, Postgres. But it is Next.js and TypeScript end to end, has no claims or provenance layer, and its admin is CRUD screens, not a window manager. Its collection and plugin config are worth borrowing |
-| PostgREST | MIT | An API for any Postgres schema. A candidate to serve `content.*` read-only later; it does not do claims, extractors or a UI |
+| PostgREST | MIT | Adopted as the API layer (section 7), not as the whole project: it does not do claims, extractors or a UI |
 | Supabase | Apache-2.0 | A whole platform (auth, storage, functions); far more than one owner's system needs |
 | Directus, Strapi | not plainly permissive (GitHub reports NOASSERTION; Directus set aside in S-39) | fails the licence rule |
 | Graphiti | Apache-2.0 | Temporal knowledge graphs for agents, claims-shaped, on Neo4j, FalkorDB or Kuzu, not Postgres |
@@ -159,7 +193,7 @@ All four are allowed by kernel D-11's posture (permissive, or LGPL as a library)
 
 | # | Step | Done when |
 | --- | --- | --- |
-| W1 | Store, API, sign-in | migrations create `wb.*`; a content type registered from a plugin gets its table; the API creates, edits and lists items, and every write records a claim; `workbench user add owner` and signing in work |
+| W1 | Store, API, sign-in | migrations create `wb.*`; a content type registered from a plugin gets its table; PostgREST creates, edits and lists items behind Caddy, a trigger records a claim for every write, and a viewer cannot write; `workbench user add owner` and signing in through `/api/rpc/login` work |
 | W2 | Shell and core panels | the sidebar, Dockview window manager, dashboard, content list, item editor with claims beside each field, and review lane run; a layout survives a reload |
 | W3 | Plugin loader and Substrate's plugin | `plugins/substrate` loads; its extractors read `catalog-info.yaml` and `.claude/`, and the drift panel shows declared against observed |
 | W4 | Kernel leaves the stack | everything Substrate used kernel for runs on Workbench, including Morphogen's verdicts as claims; kernel stops in `deploy/compose.yaml` and becomes an option |
