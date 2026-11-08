@@ -92,8 +92,8 @@ If a service does not come up, read its logs (`scripts/logs.sh <service>`), find
   Code's telemetry is switched on by `scripts/up.sh` for the connected project (`scripts/telemetry.py status`; off
   with `scripts/telemetry.py off`), from the next session. Backstage loads OpenTelemetry through NODE_OPTIONS: if
   it fails to start with a "Cannot find module @opentelemetry" error, its image predates the dependency, so run
-  `scripts/build.sh backstage`. Bifrost reads its otel plugin from the config it was first seeded with; on an
-  existing Bifrost data volume, add the plugin in its dashboard or start from a fresh volume.
+  `scripts/build.sh backstage`. The rendered config is authoritative at every start (`source_of_truth`, S-40), so a provider or
+  plugin added or removed in `.env` follows after `scripts/up.sh`.
 
 **Check:** `scripts/check.sh` shows ok for kernel, gateway, map, prometheus, the console, the bus and the
 OpenTelemetry collector. The console's Map (http://127.0.0.1:8080/console/#map) shows the parts running. Tell the
@@ -116,6 +116,9 @@ into a shell variable; do not print it):
   model under 10B parameters (kernel's rule for evals; Oct 2026: `liquid/lfm-2.5-2.6b:free`).
 - Ollama: `ollama/<a model the owner has pulled>` (`ollama list` on the host).
 
+In subscription mode a request is forwarded to Anthropic only when it carries Claude Code's own login
+(`Authorization: Bearer sk-ant-oat…`), so a curl without it gets 403 "not allowed for virtual key": expected, and
+step 5 is the proof. Models are named with their provider (`anthropic/claude-haiku-5-5`) unless the route implies it.
 Look up the exact routes in Bifrost's docs before calling them. The dashboard is password-protected from the
 first start (S-34): user `admin`, password `scripts/secrets.sh get BIFROST_ADMIN_PASSWORD`; `/metrics` is
 whitelisted so Prometheus scrapes without it.

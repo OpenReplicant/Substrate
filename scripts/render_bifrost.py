@@ -50,6 +50,10 @@ def render(env: dict[str, str]) -> dict:
         # login: admin, BIFROST_ADMIN_PASSWORD). /metrics stays open for Prometheus: it carries counts and cost, no
         # content, and the port is bound to 127.0.0.1. Keys: config.schema.json at transports/v2.3.2.
         "client": {"enforce_auth_on_inference": True, "whitelisted_routes": ["/metrics"]},
+        # The rendered config wins at every start for the sections it has (providers, the virtual key, auth,
+        # plugins), so a provider dropped from .env leaves Bifrost too; dashboard edits to those sections do not
+        # survive a restart. Top-level key in config.schema.json at transports/v2.3.2 (S-40).
+        "source_of_truth": "config.json",
         "providers": providers,
         # telemetry: the /metrics Prometheus scrapes (on by default; listed so it stays on beside otel).
         # otel: a span per model call to the collector (S-28), metadata only (tokens, cost, latency, status),
