@@ -89,6 +89,7 @@ scripts/bus.sh                  # the bus: database, pgmq, queues (after adding 
 python3 scripts/spec.py status|next|set ID STATUS   # where the spec's build plan stands
 scripts/telemetry.py on|off|status   # Claude Code's metrics, events and traces to the collector
 scripts/secrets.sh start|status|list|get NAME|put NAME|migrate   # the secrets slot (env or openbao)
+scripts/verdicts.sh [PROJECT]   # Morphogen's verdicts into kernel as claims (also run by a hook after judged runs)
 scripts/tools.sh start|stop|status   # the tools container that bin/ runs in
 scripts/logs.sh SERVICE         # a service's recent logs, either runtime
 scripts/down.sh [--volumes] [--agent]   # stop (delete data after asking; with nomad, stop the agent)

@@ -11,7 +11,8 @@ export PATH
 
 # a value as written in .env (empty if unset)
 env_file_value() {
-  [ -f "$ENV_FILE" ] && sed -n "s/^$1=//p" "$ENV_FILE" | tail -1 | tr -d '"'"'"
+  [ -f "$ENV_FILE" ] || return 0   # no .env yet (before bootstrap or up.sh): every setting is empty
+  sed -n "s/^$1=//p" "$ENV_FILE" | tail -1 | tr -d '"'"'"
 }
 
 # is NAME one of the secrets (deploy/secrets.txt)?

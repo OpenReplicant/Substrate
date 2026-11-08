@@ -10,6 +10,19 @@
           }
         ]
       }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "mcp__.*morphogen.*",
+        "hooks": [
+          {
+            "type": "command",
+            "async": true,
+            "timeout": 120,
+            "command": "\"$CLAUDE_PROJECT_DIR/scripts/verdicts.sh\" --hook"
+          }
+        ]
+      }
     ]
   }
 }

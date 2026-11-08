@@ -1,5 +1,16 @@
 # encoder-morphogen: verdicts as claims
 
+**Built in kernel** (kernel D-99, PR OpenReplicant/kernel#108): `repos/kernel/modules/encoder-morphogen`, because
+kernel's modules come only from its own repository (kernel D-43). This brief is what substrate asked for; the
+module's manifest and its decision row are what was built. Substrate runs it with `scripts/verdicts.sh`, and the
+PostToolUse hook in `.claude/settings.json` runs that after each Morphogen tool call.
+
+The open question below is answered: `measured` is observed, `simulated` inferred (kernel D-99).
+
+---
+
+# encoder-morphogen: verdicts as claims
+
 **For:** kernel should know what was judged, on what evidence, and at what cost, so recall can cite it,
 the MAPE-K loop can weigh it, and people can review it beside everything else (S-08). Morphogen's
 evidence log stays the integrity record; this module copies, it never replaces.

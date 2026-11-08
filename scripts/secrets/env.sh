@@ -22,4 +22,7 @@ with os.fdopen(fd, "w") as f:
 os.chmod(path, 0o600)
 ' "$ENV_FILE" "$1"
 }
-sec_status() { echo ".env (mode $(stat -c %a "$ENV_FILE" 2>/dev/null || stat -f %Lp "$ENV_FILE"))"; }
+sec_status() {
+  [ -f "$ENV_FILE" ] || { echo ".env (not created yet: scripts/up.sh makes it)"; return 0; }
+  echo ".env (mode $(stat -c %a "$ENV_FILE" 2>/dev/null || stat -f %Lp "$ENV_FILE" 2>/dev/null))"
+}

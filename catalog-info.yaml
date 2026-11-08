@@ -226,6 +226,7 @@ metadata:
   name: encoder-morphogen
   description: Morphogen's verdicts as claims in kernel.
   annotations:
+    substrate.dev/built-in: "kernel modules/encoder-morphogen (kernel D-99)"
     substrate.dev/intent: Let kernel know what was judged, by what evidence, at what cost, so recall and the MAPE-K loop can use it.
     substrate.dev/fill: build
     substrate.dev/basis: modules/encoder-morphogen/BRIEF.md (S-08); DQV and PROV are kernel packs already
