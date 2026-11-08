@@ -117,7 +117,11 @@ steps:
       Owner, 2026-11-08: Backstage fits the idea of catalogs of things, "but it was not built for what we have in
       mind, and only its MCP server helps to justify it"; the YAML "also looks bloated". The owner's decision: the
       catalog's file format. Recommendation to prepare: keep catalog-info.yaml as the input for now (encoder-backstage
-      reads it, kernel D-100) and propose a leaner format as a second encoder, judged on the same check.
+      reads it, kernel D-100) and propose a leaner format as a second encoder, judged on the same check. This is
+      also the first proof of kernel as a content system (kernel docs/content.md, D-101, draft PR
+      OpenReplicant/kernel#112): a catalog entry is a content type, read and edited as an item through per-type views
+      and item tools, with its claims and drift checks unchanged. Off-the-shelf Postgres dashboards were set aside
+      (one shared login, edits in place); PostgREST plus react-admin stays possible as kernel's api-adapter slot.
 
   - id: 3
     title: Working memory

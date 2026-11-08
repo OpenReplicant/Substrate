@@ -11,7 +11,8 @@ are copied here.
 
 Substrate becomes a mind inside an organism, built only from its own stack. Each agent runs the Common Model of
 Cognition (CMC); the agents, people and services together form a Viable System Model (VSM) organism. There is
-one store (kernel's Postgres), one judge (Morphogen), one gateway (Bifrost), one control plane (compose or
+one store (kernel's Postgres, an ontological content system: typed items with revisions and review, claims as the
+assertion type and the index over the rest, kernel D-101, proposed), one judge (Morphogen), one gateway (Bifrost), one control plane (compose or
 Nomad), one front door (Caddy), one bus (pgmq, in the same Postgres), and every tool runs in a container.
 
 This spec adapts the design "Common Model of Cognition on Claude Code"
@@ -94,7 +95,8 @@ catalog format was the first one used, because it is the most widely used way ow
 code (`encoder-backstage` reads it into claims, kernel D-100). Backstage itself, the server, was not built for
 this: a catalog here is any kind of thing (a service, a customer, a process, a game's rules), and its home is
 kernel, where it is claims with provenance that recall and kernel's MCP already answer. So the catalog lives in
-kernel, a file is one way to write it, and a browsing view is an optional slot (step 13). The blueprint alone
+kernel, as items of a content type (kernel's `docs/content.md`, D-101), a file is one way to write it, and a
+browsing view is an optional slot (step 13). The blueprint alone
 does not observe, so on its own it drifts from reality; substrate supplies the other half and the loop between
 them (encoders turn declarations into claims; observers supply what is; detectors, triage and the review lane
 close the gap).
@@ -108,7 +110,7 @@ notices between parts travel on the bus; facts never do.
 | Cognitive module | Substrate part | State today |
 | --- | --- | --- |
 | Cycle (decide, act, observe) | A Claude Code session, with hooks run through `bin/` in the `substrate-tools` container | Runs |
-| Working memory | Kernel's agent working-memory scope (M6-T2), read and written through the kernel MCP memory profile | Planned in kernel |
+| Working memory | Kernel's agent working-memory scope (M6-T2), read and written through the kernel MCP memory profile; proposed as one session-brief item (kernel D-101) | Planned in kernel |
 | Declarative memory | Kernel claims plus recall (BM25 and embeddings, D-60, D-61); a new `activation` module reranks recall | Claims run; activation new |
 | Associations (graph) | pgGraph over `kernel.current_edge`, in kernel's Postgres image | Extension in the image; the graph module new |
 | Episodic memory | Kernel's `encoder-interaction` turns session transcripts into episode claims; kernel's memory extractor proposes facts from them | Encoder in kernel; substrate wiring new |

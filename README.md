@@ -7,7 +7,7 @@ Substrate assembles projects that each do one part, and adds the glue between th
 
 | Part | Project | Does |
 | --- | --- | --- |
-| World model | [kernel](https://github.com/OpenReplicant/kernel), cloned to `repos/kernel` | every claim in one Postgres: attributed, quoted, belief-scored, scoped, bitemporal; encoders, verifiers, recall, the review lane, the MAPE-K loop |
+| World model | [kernel](https://github.com/OpenReplicant/kernel), cloned to `repos/kernel` | an ontological content system in one Postgres: typed items with revisions and review; claims (attributed, quoted, belief-scored, scoped, bitemporal) as the assertion type and the index over the rest; encoders, verifiers, recall, the MAPE-K loop |
 | Judge | [Morphogen](https://github.com/OpenReplicant/Morphogen), cloned to `repos/morphogen` | a change lands only with a verdict the changer cannot reach: rules from the base, outside measurement, held-out cases |
 | Harness | Claude Code | the cognitive cycle, the builder, the mapper's hands |
 | Gateway | [Bifrost](https://github.com/maximhq/bifrost) v2.3.2 | Claude (API key or your subscription), OpenRouter and local models behind one virtual key; every call measured outside the agent |
