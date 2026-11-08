@@ -11,11 +11,12 @@
 # check: what proves the step done; run it, and only then set status to done (with `done_on` and the commit).
 steps:
   - id: 1
+    status: done
+    done_on: 2026-11-08
     title: Cut to the core
     spec: "4, 8"
     where: substrate (deploy/, scripts/, services/, catalog-info.yaml, README.md)
     after: []
-    status: todo
     check: >-
       scripts/up.sh starts only kernel's Postgres, kernel (with the Caddy its own stack runs) and substrate-tools;
       scripts/check.sh passes on compose with Podman; Bifrost, Prometheus, the OpenTelemetry collector, Backstage,

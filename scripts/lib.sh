@@ -6,8 +6,6 @@ case "$ROOT" in */scripts) ROOT=$(dirname "$ROOT") ;; esac   # sourced from scri
 KERNEL="$ROOT/repos/kernel"
 MORPHOGEN="$ROOT/repos/morphogen"
 ENV_FILE="$ROOT/.env"
-PATH="$ROOT/.state/bin:$PATH"   # pinned tools bootstrap.sh installs (nomad)
-export PATH
 
 # a value as written in .env (empty if unset)
 env_file_value() {
@@ -19,7 +17,7 @@ env_file_value() {
 is_secret() { grep -q "^$1[[:space:]]" "$ROOT/deploy/secrets.txt"; }
 secret_names() { sed -n 's/^\([A-Z][A-Z0-9_]*\)[[:space:]].*/\1/p' "$ROOT/deploy/secrets.txt"; }
 
-# a setting's value (empty if unset): the environment wins; a secret comes from the secrets slot (S-31)
+# a setting's value (empty if unset): the environment wins; a secret comes from the secrets slot
 env_value() {
   eval "current=\${$1:-}"
   if [ -n "$current" ]; then printf '%s' "$current"; return; fi
@@ -53,7 +51,8 @@ RUNTIME=${RUNTIME:-compose}
 SECRETS=$(env_file_value SECRETS)
 SECRETS=${SECRETS:-env}
 [ -f "$ROOT/scripts/secrets/$SECRETS.sh" ] || { echo "SECRETS '$SECRETS' has no scripts/secrets/$SECRETS.sh" >&2; exit 1; }
-# The secrets slot's verbs: sec_start, sec_stop, sec_get NAME, sec_put NAME (value on stdin), sec_status (S-31)
+# The secrets slot's verbs: sec_start, sec_stop, sec_get NAME, sec_put NAME (value on stdin), sec_status.
+# env is the one backend (S-41); another is a new file in scripts/secrets/.
 . "$ROOT/scripts/secrets/$SECRETS.sh"
 
 compose() {
@@ -63,5 +62,6 @@ compose() {
 
 say() { printf '\n== %s\n' "$*"; }
 
-# The runtime's verbs: rt_up, rt_down, rt_status, rt_logs SERVICE (S-16)
+# The runtime's verbs: rt_up, rt_down, rt_status, rt_logs SERVICE. compose is the one runtime (S-41);
+# another is a new file in scripts/runtime/.
 . "$ROOT/scripts/runtime/$RUNTIME.sh"

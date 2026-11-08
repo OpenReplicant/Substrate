@@ -11,45 +11,18 @@ bad()  { printf '  FAIL  %s\n' "$*"; fails=$((fails + 1)); }
 note() { printf '  note  %s\n' "$*"; }
 probe() { curl -fsS -o /dev/null "$@" 2>/dev/null; }
 
-bport=$(env_value BIFROST_PORT); mport=$(env_value BACKSTAGE_PORT); pport=$(env_value PROMETHEUS_PORT)
-
 say "Services ($RUNTIME on $ENGINE)"
-if [ "$RUNTIME" = nomad ]; then
-  nomad node status 2>/dev/null | grep -q ready && ok "nomad agent ready at $NOMAD_ADDR" || bad "nomad agent not ready ($NOMAD_ADDR)"
-  nomad job status -short substrate 2>/dev/null | grep -q 'running' && ok "nomad job substrate running" || bad "nomad job substrate is not running"
-fi
-probe "http://127.0.0.1:8080/ui/views.json" && ok "kernel      http://127.0.0.1:8080/ui/" || bad "kernel UI does not answer"
-probe "http://127.0.0.1:$bport/health" && ok "gateway     http://127.0.0.1:$bport/" || bad "gateway does not answer"
-probe "http://127.0.0.1:$mport/.backstage/health/v1/readiness" && ok "map         http://127.0.0.1:$mport/" || bad "Backstage does not answer"
-probe "http://127.0.0.1:$pport/-/ready" && ok "prometheus  http://127.0.0.1:$pport/" || bad "Prometheus does not answer"
-code=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:8080/console/api/state")
-[ "$code" = "401" ] && ok "console     http://127.0.0.1:8080/console/ (asks for sign-in)" || bad "console through the front door returned $code (scripts/logs.sh console, caddy)"
+probe "http://127.0.0.1:8080/ui/views.json" && ok "kernel      http://127.0.0.1:8080/ui/ (MCP at /mcp)" || bad "kernel UI does not answer (scripts/logs.sh kernel, caddy)"
+running=$(rt_status 2>/dev/null | awk 'NR > 1 {print $1}' | tr '\n' ' ')
+for s in db kernel caddy; do
+  case "$running" in *"-$s-"*) ;; *) bad "service $s is not running (scripts/logs.sh $s)" ;; esac
+done
+extra=$(printf '%s\n' $running | grep -v -e '-db-' -e '-kernel-' -e '-caddy-' -e '-init-' || true)
+[ -z "$extra" ] && ok "only the core runs (db, kernel, caddy)" || note "also running, outside the core: $(echo $extra)"
 
 say "Wiring"
-curl -fsS "http://127.0.0.1:$bport/metrics" 2>/dev/null | grep -q '^bifrost_\|^# HELP bifrost_' \
-  && ok "gateway exposes bifrost_* metrics" || note "no bifrost_* metrics yet (they appear after the first request)"
-curl -fsS "http://127.0.0.1:$pport/api/v1/query?query=up%7Bjob%3D%22bifrost%22%7D" 2>/dev/null | grep -q '"value":\[[^]]*,"1"\]' \
-  && ok "prometheus scrapes the gateway" || bad "prometheus target 'bifrost' is not up"
-for job in otel-collector; do
-  curl -fsS "http://127.0.0.1:$pport/api/v1/query?query=up%7Bjob%3D%22$job%22%7D" 2>/dev/null | grep -q '"value":\[[^]]*,"1"\]' \
-    && ok "prometheus scrapes the OpenTelemetry collector" || bad "prometheus target '$job' is not up (scripts/logs.sh otel-collector)"
-done
-curl -fsS "http://127.0.0.1:$pport/api/v1/query?query=count(traces_service_graph_request_total)" 2>/dev/null | grep -q '"value"' \
-  && ok "observed call graph has edges" || note "no observed calls yet (they appear once instrumented parts talk to each other)"
-"$ROOT/scripts/telemetry.py" status >/dev/null 2>&1 && ok "Claude Code: $("$ROOT/scripts/telemetry.py" status)" || note "Claude Code telemetry is off (scripts/telemetry.py on)"
-if [ "$RUNTIME" = nomad ]; then
-  curl -fsS "http://127.0.0.1:$pport/api/v1/query?query=up%7Bjob%3D%22nomad%22%7D" 2>/dev/null | grep -q '"value":\[[^]]*,"1"\]' \
-    && ok "prometheus scrapes Nomad's allocation metrics" || bad "prometheus target 'nomad' is not up"
-fi
-code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "http://127.0.0.1:$mport/api/mcp-actions/v1" \
-  -H "Authorization: Bearer $(env_value BACKSTAGE_MCP_TOKEN)" -H 'Content-Type: application/json' \
-  -H 'Accept: application/json, text/event-stream' \
-  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"check","version":"0"}}}')
-[ "$code" = "200" ] && ok "Backstage MCP answers with the token" || bad "Backstage MCP initialize returned $code"
 if st=$(sec_status 2>&1); then ok "secrets ($SECRETS): $st"; else bad "secrets ($SECRETS): $st"; fi
 "$ROOT/scripts/tools.sh" status >/dev/null 2>&1 && ok "tools container running (bin/ wrappers work)" || bad "tools container not running: scripts/tools.sh start"
-if out=$(KK_ADMIN_URL="postgresql://postgres:$(env_value POSTGRES_PASSWORD)@127.0.0.1:$(env_value KK_DB_PORT)/kk" \
-         "$ROOT/bin/in-tools" python3 "$ROOT/scripts/bus.py" --check 2>&1); then ok "bus: $out"; else bad "bus: $out"; fi
 if out=$(KK_ADMIN_URL="postgresql://postgres:$(env_value POSTGRES_PASSWORD)@127.0.0.1:$(env_value KK_DB_PORT)/kk" \
          "$ROOT/bin/in-tools" python3 "$ROOT/scripts/map_check.py" 2>&1); then ok "map in kernel: $out"
 else bad "map in kernel: $(echo "$out" | tail -1) (scripts/map.sh)"; fi
@@ -60,7 +33,6 @@ if [ -f "$ROOT/.mcp.json" ] && grep -q '"kernel"' "$ROOT/.mcp.json"; then
 else
   note "no kernel MCP entry here (scripts/up.sh writes it into the project it connects)"
 fi
-"$ROOT/scripts/gateway.py" status >/dev/null 2>&1 && ok "Claude Code: $("$ROOT/scripts/gateway.py" status)" || note "Claude Code: $("$ROOT/scripts/gateway.py" status 2>&1)"
 
 if [ -f "$ROOT/docs/build.yaml" ]; then
   note "spec: $(python3 "$ROOT/scripts/spec.py" next --short 2>&1)"

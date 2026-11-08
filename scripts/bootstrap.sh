@@ -1,7 +1,6 @@
 #!/bin/sh
 # Once per machine: check the few host tools, clone kernel and Morphogen into repos/ (full clones you can push
-# from), and build every image. Everything else (Python packages, gitleaks, uv, Node, yarn) lives in
-# containers (S-19). Safe to run again: existing clones are left as they are.
+# from), and build every image. Everything else (Python packages, gitleaks, uv) lives in containers (S-19). Safe to run again: existing clones are left as they are.
 #
 #   scripts/bootstrap.sh
 set -eu
@@ -16,20 +15,13 @@ require() { show "$1" "$2"; have "$1" || required_missing="$required_missing $1"
 require git "https://git-scm.com"
 require python3 "any Python 3.9+; the scripts use only its standard library"
 require "$ENGINE" "CONTAINER_ENGINE in .env picks podman or docker"
-if [ "$RUNTIME" = compose ]; then
-  if "$ENGINE" compose version >/dev/null 2>&1; then
-    printf '  %-10s %s\n' compose "$("$ENGINE" compose version 2>/dev/null | head -1)"
-  else
-    printf '  %-10s missing: %s compose (with Podman: the docker-compose provider, or podman-compose)\n' compose "$ENGINE"
-    required_missing="$required_missing compose"
-  fi
-fi
-if [ "$RUNTIME" = nomad ] && [ "$(uname -s)" != Linux ]; then
-  echo "  RUNTIME=nomad needs Linux (the Podman driver is Linux only, and host networking is used); use RUNTIME=compose here" >&2
-  exit 1
+if "$ENGINE" compose version >/dev/null 2>&1; then
+  printf '  %-10s %s\n' compose "$("$ENGINE" compose version 2>/dev/null | head -1)"
+else
+  printf '  %-10s missing: %s compose (with Podman: the docker-compose provider, or podman-compose)\n' compose "$ENGINE"
+  required_missing="$required_missing compose"
 fi
 show claude "Claude Code, to work in this repository (not needed to run the stack)"
-echo "  runtime    $RUNTIME (RUNTIME in .env: compose or nomad)"
 if [ -n "$required_missing" ]; then
   echo "Install:$required_missing, then run this again." >&2
   exit 1
@@ -54,18 +46,6 @@ clone morphogen
 
 "$ROOT/scripts/settings.sh"
 "$ROOT/scripts/build.sh"
-
-if [ "$RUNTIME" = nomad ]; then
-  say "Nomad (pinned, checksums checked)"
-  v=$(env_value NOMAD_VERSION); v=${v:-$(sed -n 's/^NOMAD_VERSION=//p' "$ROOT/.env.example")}
-  python3 "$ROOT/scripts/install_hashicorp.py" nomad "$v" "$ROOT/.state/bin"
-  if [ "$ENGINE" = podman ]; then
-    v=$(env_value NOMAD_DRIVER_PODMAN_VERSION); v=${v:-$(sed -n 's/^NOMAD_DRIVER_PODMAN_VERSION=//p' "$ROOT/.env.example")}
-    python3 "$ROOT/scripts/install_hashicorp.py" nomad-driver-podman "$v" "$ROOT/.state/nomad/plugins"
-    systemctl --user is-active podman.socket >/dev/null 2>&1 || [ "$(id -u)" = 0 ] \
-      || echo "  note: the Podman driver needs Podman's API socket: systemctl --user enable --now podman.socket"
-  fi
-fi
 
 say "Tools container"
 "$ROOT/scripts/tools.sh" start

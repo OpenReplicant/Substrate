@@ -40,9 +40,6 @@ OpenTelemetry, Backstage, Nomad, OpenBao, a bus, a console) are options in its o
 (`catalog-info.yaml`, system `options`; [`docs/spec.md`](docs/spec.md) section 8). Each says where it fits, the
 interface that keeps it possible, when to bring it back, and the commit to restore it from.
 
-> **In transition.** The cut to these three parts is build step 1. Until it lands, `deploy/` and `scripts/`
-> still carry the earlier, larger stack (S-41).
-
 ## Where it is going
 
 [`docs/spec.md`](docs/spec.md) is what substrate is meant to become, and [`docs/build.yaml`](docs/build.yaml)
@@ -73,7 +70,7 @@ catalog-info.yaml    the map: what runs (core), what it can choose (options), wh
 morphogen.yaml       the same map as Morphogen cells
 repos.yaml           the upstream projects and the commits last checked
 docs/                the spec and its build plan
-deploy/              the compose overlay on kernel's stack; the tools image
+deploy/              the compose overlay on kernel's stack; the secrets list; the tools image
 modules/             briefs for kernel modules that connect the parts
 scripts/             bootstrap, up, down, check, logs, tools, spec, verdicts, map
 bin/                 kk, morphogen, gitleaks, kernel-mcp: each runs inside the tools container

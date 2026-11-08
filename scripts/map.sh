@@ -1,7 +1,8 @@
 #!/bin/sh
-# The map into kernel (spec step 2, kernel D-100, S-33): runs kernel's encoder-backstage on catalog-info.yaml inside
-# the tools container, as the module's own agent. The catalog stays in Backstage's terms; kernel's mappings pack
-# relates them to kk-tosca, and map-drift (a kk serve part) compares the declared calls with the observed ones.
+# The map into kernel (kernel D-100, S-33): runs kernel's encoder-backstage on catalog-info.yaml inside the tools
+# container, as the module's own agent. The catalog stays in Backstage's terms; kernel's mappings pack relates
+# them to kk-tosca. Its three systems (core, options, sources; S-47) all become claims, so recall can answer what
+# runs, what could be chosen and where to search.
 # Safe to run any time: an unchanged file submits nothing, a changed one supersedes what the last version said.
 # The PostToolUse hook in .claude/settings.json runs it after an edit to a catalog-info.yaml.
 #

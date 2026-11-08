@@ -1,4 +1,4 @@
-# The `env` secrets backend (S-31): secrets live in .env (mode 600) beside every other setting. The default.
+# The `env` secrets backend: secrets live in .env (mode 600) beside every other setting. The one backend (S-41).
 # shellcheck shell=sh
 
 sec_start() { :; }

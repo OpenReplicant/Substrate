@@ -11,7 +11,7 @@ an engineer, adapting to model anything makes it a generalist. Read `README.md` 
 | Morphogen | `repos/morphogen` (its own git repo) | the judge: a change lands only with a verdict the changer cannot reach |
 | Claude Code | you | the actor: explorer, interviewer, builder, mapper |
 | Tools | `bin/`, container `substrate-tools` | kk, Morphogen, gitleaks, kernel's MCP server and hooks, run in a container as you |
-| Glue | `scripts/`, `deploy/`, `modules/`, `catalog-info.yaml` | brings the parts up, connects them, and maps substrate itself |
+| Glue | `scripts/`, `deploy/`, `modules/`, `catalog-info.yaml` | brings the parts up, connects them, and keeps the map: what runs, what could, where to search |
 
 Everything else (a model gateway, Prometheus, OpenTelemetry, Backstage, Nomad, OpenBao, a bus, a console) is an
 option in `catalog-info.yaml` (system `options`, spec section 8): don't build it now, don't close the door on it.
@@ -21,11 +21,6 @@ Claims are hypotheses, and a change is an experiment judged on cases you have no
 restriction is Morphogen: never weaken a check to pass it, never read or tune on held-out cases, never edit
 the judge's rules from the change being judged. You are expected to be tempted sometimes; the judge is there
 for that.
-
-**In transition.** Until build step 1 (cut to the core) lands, `deploy/`, `scripts/` and `services/` still
-carry the earlier stack: Bifrost, Prometheus, the OpenTelemetry collector, Backstage, OpenBao, Nomad, the
-console, the bus. Don't extend any of them. If this session is routed through the gateway
-(`scripts/gateway.py status`), turn it off (`scripts/gateway.py off`) before Bifrost is removed.
 
 ## Getting a machine going
 
@@ -62,8 +57,8 @@ deleting `docs/spec.md` or marking steps `dropped`.
 3. **Choose from catalogs, not memory.** When picking a component, search the source catalogs
    (`catalog-info.yaml`, system `sources`) and the options, record the candidates with cited claims, test the
    shortlist, and record the pick and the rejections (spec section 5).
-4. **Secrets live in `.env`** (gitignored, mode 600), read through `env_value` in scripts and `settings.py` in
-   Python, so another store can sit behind the same calls later. Never print one into a file that is committed,
+4. **Secrets live in `.env`** (gitignored, mode 600), read through `env_value` and the `sec_*` verbs
+   (`scripts/lib.sh`), so another store can sit behind the same calls later. Never print one into a file that is committed,
    a log, a commit message or chat. `.env.example` lists every setting, empty.
 5. **One tested path.** Compose with Podman (the owner's default). Scripts call only the runtime's four verbs
    (`rt_up`, `rt_down`, `rt_status`, `rt_logs`) and keep engine-specific code in `scripts/lib.sh`, so Docker

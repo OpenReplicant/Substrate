@@ -1,9 +1,0 @@
-# Caddy plugins built into the front door (S-20), one Go module per line, pinned: module@version.
-# Empty (the default): the stock image is used as is, with nothing to compile. With a line here,
-# scripts/build.sh caddy builds Caddy with xcaddy in containers (deploy/caddy/Containerfile).
-# Before adding one: read its README for the Caddy version it supports, check its licence (permissive, kernel
-# D-11), pick a release at least two weeks old, and record it in DECISIONS.md.
-#
-# Examples (not enabled):
-#   github.com/mholt/caddy-ratelimit@<version>      rate limits per route
-#   github.com/greenpau/caddy-security@<version>    an auth portal (OAuth, OIDC), if the console outgrows kernel sign-in
