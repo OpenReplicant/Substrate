@@ -53,4 +53,5 @@ Update `repos.yaml`'s `checked` commit to the main commit substrate was tested a
 ## Prepared now
 
 Nothing waits in `upstream/`. Open upstream work (2026-11-07): kernel#103 (one Postgres image, D-94),
-kernel#104 (`kk up --commands-dir`, D-95), kernel#105 (`KK_CONTAINER_ENGINE`, D-96).
+kernel#104 (`kk up --commands-dir`, D-95), kernel#105 (`KK_CONTAINER_ENGINE`, D-96). 2026-11-08: kernel#111 (registry-qualified base images, so Podman
+without search registries can build); `repos/kernel` stays on `fix/qualified-image-names` until it merges.
