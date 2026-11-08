@@ -35,7 +35,7 @@ steps:
 
   - id: 2
     status: blocked
-    waiting_on: "owner: how a map revision is judged (Morphogen refuses catalog edits), and approving the six gaps' direction; kernel#113"
+    waiting_on: "owner: decide the six component gaps in kernel's review lane (recommended: approve; the map now declares them); then scripts/trace.sh setup shows the whole chain"
     title: "Autopoietic: one loop on itself"
     spec: "1, 3, 6, 7"
     where: substrate, kernel's encoders and map-drift
@@ -44,9 +44,11 @@ steps:
       substrate is modelled as its own kernel project at component level (services, skills, hooks, parameters as
       catalog components), through the same encoders and checks any other system would use, with nothing that
       works only on itself; with catalog-info.yaml as the intended half and what is observed (the code, the
-      skills and hooks on disk, the running containers) as the observed half, one real gap reaches the review lane; Claude Code proposes a change that
-      closes it (either way: fix the code or revise the map) on a branch; Morphogen judges it; encoder-morphogen
-      records the verdict; and recall, asked about the gap, returns gap, change and verdict by claim id
+      skills and hooks on disk, the running containers) as the observed half, one real gap reaches the review lane;
+      a change closing it is proposed and decided by whoever decides that kind of change (spec section 7, S-51: a
+      map revision by the owner in the review lane, since Morphogen refuses catalog edits; a component change by a
+      Morphogen verdict); and kernel, asked about the gap, returns gap, change and decision by claim id
+      (scripts/trace.py)
     notes: >-
       Absorbs the previous plan's steps 1 (verdicts become claims, kernel D-99, built) and 2 (the map becomes
       claims, kernel D-100, built). What is new is the observed half without telemetry, and the loop run once end

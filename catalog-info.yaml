@@ -433,6 +433,87 @@ spec:
   subcomponentOf: claude-code
   consumesApis: [kernel-mcp-api, judge-api]
 ---
+# ================================================================ CORE: skills and hooks (AiResource, Backstage 1.51; kernel D-102)
+# Each is a part the self-encoder reads from .claude/ (skills by their frontmatter name, hooks as <event>-<script>),
+# so map-drift can tell when one exists that the map does not declare, or the other way round.
+apiVersion: backstage.io/v1alpha1
+kind: AiResource
+metadata:
+  name: setup
+  description: Bring the stack up on a machine and wire it, checking each step before the next.
+  annotations:
+    substrate.dev/basis: .claude/skills/setup/SKILL.md
+spec:
+  type: skill
+  lifecycle: production
+  owner: group:agents
+  system: core
+---
+apiVersion: backstage.io/v1alpha1
+kind: AiResource
+metadata:
+  name: build-out
+  description: Work through docs/build.yaml one step at a time - brief, build, check, record - stopping at the owner's decisions.
+  annotations:
+    substrate.dev/basis: .claude/skills/build-out/SKILL.md
+spec:
+  type: skill
+  lifecycle: production
+  owner: group:agents
+  system: core
+---
+apiVersion: backstage.io/v1alpha1
+kind: AiResource
+metadata:
+  name: upstream
+  description: Take a fix or improvement to kernel or Morphogen upstream, by branch and pull request in that repository.
+  annotations:
+    substrate.dev/basis: .claude/skills/upstream/SKILL.md
+spec:
+  type: skill
+  lifecycle: production
+  owner: group:agents
+  system: core
+---
+apiVersion: backstage.io/v1alpha1
+kind: AiResource
+metadata:
+  name: sessionstart-spec
+  description: At session start, names the build plan's next step while docs/spec.md is in place (scripts/spec.py hook).
+  annotations:
+    substrate.dev/basis: .claude/settings.json hooks.SessionStart
+spec:
+  type: hook
+  lifecycle: production
+  owner: group:operator
+  system: core
+---
+apiVersion: backstage.io/v1alpha1
+kind: AiResource
+metadata:
+  name: posttooluse-verdicts
+  description: After a Morphogen tool call, records its verdicts in kernel as claims (scripts/verdicts.sh --hook).
+  annotations:
+    substrate.dev/basis: .claude/settings.json hooks.PostToolUse (matcher mcp__.*morphogen.*)
+spec:
+  type: hook
+  lifecycle: production
+  owner: group:operator
+  system: core
+---
+apiVersion: backstage.io/v1alpha1
+kind: AiResource
+metadata:
+  name: posttooluse-map
+  description: After an edit to a catalog-info.yaml, reads the map into kernel again (scripts/map.sh --hook).
+  annotations:
+    substrate.dev/basis: .claude/settings.json hooks.PostToolUse (matcher Edit|Write|MultiEdit)
+spec:
+  type: hook
+  lifecycle: production
+  owner: group:operator
+  system: core
+---
 # ================================================================ CORE: glue
 apiVersion: backstage.io/v1alpha1
 kind: Component

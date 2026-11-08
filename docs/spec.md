@@ -173,6 +173,24 @@ run is recorded as a claim.
 A response that changes a running system needs a passing verdict or the owner's approval in the review lane.
 Reads never do. Approval is never a forge's merge button.
 
+### Who decides a change
+
+Which kind of change it is decides who judges it (S-51). The rule underneath every row: **no one judges a
+change to the thing that judges.**
+
+| What changes | Proposed by | Decided by | Why |
+| --- | --- | --- | --- |
+| A component (code, a skill, a hook, a parameter) to make it better | Claude Code, or one of Morphogen's optimizers (`tune`) | Morphogen's verdict: rules from the base, held-out cases, the red team | the changer cannot reach the evaluator; an optimizer inside Morphogen is still only a candidate source |
+| The map (which way a gap closes: revise intent, or fix practice) | Claude Code, from a gap map-drift found | the owner, in kernel's review lane | Morphogen reads the catalog as its own rules and refuses any candidate that edits it, so a map revision can never be its own verdict |
+| A part added or removed, with no claim to improve anything | Claude Code, in a build step | the step's check, then the map revision above | adding a part is not an experiment; the map records it |
+| **The judge itself**: Morphogen's code, its cells and rules (`morphogen.yaml`), its red team, its statistics | anyone, Morphogen's own map skill included | never Morphogen: the ratchet. A red-team test that proves the hole must pass the current judge first; the fix reaches Morphogen's main by a pull request the owner reviews; every earlier cheat must keep failing; A/A checks after a statistics change | a judge that approves changes to itself is the reward hack in its purest form; the recursion stops at a person and a test suite that only grows |
+| Who decides, and how much is automated (organization) | anyone | the owner only | section 3: organization is never automated |
+
+When the judge changes, verdicts given under the old one stay what they were. A planned Morphogen addition
+re-judges past verdicts under a stricter judge and flags passes that only passed through the hole it closed.
+Kernel records each step as claims either way: the proposal, the test that proved the hole, the review, and the
+verdicts before and after.
+
 The owner sees kernel's UI: the review lane (gaps, proposals, verdicts, each with evidence) and recall over
 everything. Only decisions that are the owner's reach them: organization (section 3), kernel changes, licences,
 money. When the lane gets noisy, fix the noise where it starts (an encoder, a query).
@@ -211,7 +229,7 @@ Each step ends with a check anyone can run. [`build.yaml`](build.yaml) holds the
 | # | Step | Done when |
 | --- | --- | --- |
 | 1 | Cut to the core | the stack is kernel's Postgres, kernel and the tools container; each removed part is an option in the map (section 8); `scripts/check.sh` passes |
-| 2 | Autopoietic: one loop on itself | substrate is modelled as its own project at component level (services, skills, hooks, parameters) with nothing self-only; a gap between the map and what is observed is found, a change closing it is proposed and judged, and recall traces gap → change → verdict by claim ids |
+| 2 | Autopoietic: one loop on itself | substrate is modelled as its own project at component level (services, skills, hooks, parameters) with nothing self-only; a gap between the map and what is observed is found, a change closing it is proposed and decided by whoever decides that kind of change (section 7: a map revision by the owner in review, a component change by Morphogen), and kernel traces gap → change → decision by claim ids |
 | 3 | Kernel as a content system | the catalog is a content type in kernel, read and edited as items, with its claims and drift checks unchanged (needs the owner: a kernel change) |
 | 4 | Catalogs to choose from | one real choice (a component a step needs) is made by searching the source catalogs, shortlisting candidates as entries with cited claims, testing them, and recording the pick and the rejections |
 | 5 | Engineer: another system beside itself | a real system the owner picks is a second project in the same world model, its graph cited from at least one interview and one observed source; the relations between it and substrate are claims; and one change to it is judged and applied the same way step 2 changed substrate (needs the owner: which system) |

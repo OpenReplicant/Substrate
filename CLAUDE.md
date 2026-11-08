@@ -88,6 +88,7 @@ scripts/build.sh [kernel|db|tools]   # images, built in containers
 python3 scripts/spec.py status|next|set ID STATUS   # where the spec's build plan stands
 scripts/verdicts.sh [PROJECT]   # Morphogen's verdicts into kernel as claims (also run by a hook after judged runs)
 scripts/map.sh [PROJECT]        # catalog-info.yaml into kernel (also run by a hook after edits to it)
+scripts/trace.sh NAME           # a part's chain in kernel: observed, declared, each gap and how it was decided
 scripts/tools.sh start|stop|status   # the tools container that bin/ runs in
 scripts/logs.sh SERVICE         # a service's recent logs
 scripts/down.sh [--volumes]     # stop (delete data after asking)
