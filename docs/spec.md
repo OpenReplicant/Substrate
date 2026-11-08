@@ -27,7 +27,7 @@ The design's four principles carry over, with substrate's added:
    counts) that bias what is recalled and chosen.
 3. **Hooks are the architecture; prompts are the content.** Anything that must always happen runs as a hook.
 4. **Learning is online and gated.** Utilities and activations update on their own; new or changed skills land
-   only with a Morphogen verdict and an owner's approval.
+   only with a Morphogen verdict, and with the owner's approval when the automation level asks for it (section 9a).
 5. **One of each.** One store, one judge, one gateway, one control plane, one bus, one hook set per event. No
    module keeps a private database; the bus is a database in the same Postgres, not a second server.
 6. **Nothing on the host but git, python3, the engine and Claude Code.** Every new command runs in
@@ -36,6 +36,12 @@ The design's four principles carry over, with substrate's added:
    (purpose, goals, policy, who decides what, kernel's invariants) changes only through the owner. What
    currently realises it (code, config, skills, model routes, where services run) changes whenever a verdict
    says the change fits better.
+8. **Small defaults, open slots.** Each slot (runtime, engine, secrets, map view, model provider) has one default
+   that is tested on a fresh machine; the others stay behind the same interface, marked untested until their own
+   check passes. A second default is added only when a goal needs it.
+9. **Automated by default, reversible always.** The automation level (section 9a) decides how much reaches the
+   owner; at every level each decision is attributed and can be undone. What principle 7 calls organization is
+   never automated.
 
 ### Software as a process, not a product
 
@@ -46,6 +52,12 @@ structure, not its output, and there is no "done", only the next adaptation. In 
 factory is allopoietic (it produces something other than itself) and substrate is autopoietic (it produces and
 maintains itself), and principle 7 is their split between organization and structure. Substrate's first
 distribution being the system minding itself (S-10) follows from this: self-reference is the normal case.
+
+Self-reference is the core, not the limit. Agents today take actions to achieve goals; substrate changes its own
+structure to achieve goals (owner, 2026-11-08). The same organism can become an assistant, a business's brain or a
+player of a game by taking on different goals and growing the structure they need: new encoders for what it must
+perceive, new actuators for what it must change, new skills for how. Its first goal is keeping itself fitted, so
+the loops are proven on itself before they are pointed outward.
 
 ### The self-model has two faces
 
@@ -77,11 +89,15 @@ that always enforced its blueprint would be rigid; one that always accepted what
 identity. Keeping both, and deciding between them on evidence, is what lets it change without ceasing to be
 itself.
 
-This is why Backstage is in the stack. Its catalog is the most widely used format in which owners declare what
-their systems are, who owns them and how they relate, kept beside the code. It is a good blueprint and nothing
-more: it does not observe, so on its own it drifts from reality. Substrate supplies the other half and the loop
-between them (`encoder-backstage` turns the declarations into claims; observers supply what is; detectors and
-the review lane close the gap).
+The blueprint is a **catalog of things**: what exists, who owns it, what it is for, how it relates. Backstage's
+catalog format was the first one used, because it is the most widely used way owners declare systems beside their
+code (`encoder-backstage` reads it into claims, kernel D-100). Backstage itself, the server, was not built for
+this: a catalog here is any kind of thing (a service, a customer, a process, a game's rules), and its home is
+kernel, where it is claims with provenance that recall and kernel's MCP already answer. So the catalog lives in
+kernel, a file is one way to write it, and a browsing view is an optional slot (step 13). The blueprint alone
+does not observe, so on its own it drifts from reality; substrate supplies the other half and the loop between
+them (encoders turn declarations into claims; observers supply what is; detectors, triage and the review lane
+close the gap).
 
 ## 2. Module map
 
@@ -106,6 +122,7 @@ notices between parts travel on the bus; facts never do.
 | Identity resolution | Kernel M6-T9 resolver, judged by Morphogen (S-07) | Planned |
 | Goals and policy | Owner claims in kernel, under the owner role; proposed from the console onto the bus's `owner` queue | Proposal path runs; goal vocabulary new |
 | Interrupts and triggers | The bus (pgmq, S-21): `triggers` for what should start a session, `events` for the feed | Queues run; producers and the dispatcher new |
+| Coordination (triage) | A `triage` agent with its own reviewer login: settles review items at the automation level, each decision attributed and reversible (section 9a) | New (step 12) |
 | The owner's view | The console (S-22) behind the front door (S-20), signed in with a kernel login | Runs |
 | Secrets | The secrets slot (S-31): `.env`, or OpenBao with policies and an audit trail | Runs |
 
@@ -152,8 +169,8 @@ so a poor skill is visible before it is chosen.
 
 **Chunking (new skills).** When the episode log shows the same sequence of steps succeeding several times, the
 agent drafts a skill for it on a branch. Morphogen judges the draft against the old way on held-out tasks (red
-team first, A/A checks), and the result goes to kernel's review lane. The skill lands only with a passing verdict
-and the owner's approval in review.
+team first, A/A checks), and the result goes to kernel's review lane. The skill lands only with a passing verdict,
+and with the owner's approval in review when the automation level asks for it.
 
 **Demotion.** A skill whose utility falls below its baseline over a window is flagged in review with its
 evidence. Removal is a change like any other: judged, then approved.
@@ -187,7 +204,7 @@ role:
 | Encoder | Reads | Writes |
 | --- | --- | --- |
 | self-encoder (kernel) | this repository and the clones | code, config and docs as claims |
-| `encoder-backstage` | `catalog-info.yaml` | the map as `kk-tosca` claims (S-09) |
+| `encoder-backstage` | `catalog-info.yaml` (the first catalog format; others later, step 13) | the map as `kk-tosca` claims (S-09) |
 | `observer-prometheus` (kernel) | Bifrost metrics through Prometheus | cost, tokens and errors per window (S-05) |
 | `observer-prometheus` (kernel) | the OpenTelemetry collector's service graph through Prometheus | observed calls between parts per window (S-28) |
 | `encoder-morphogen` | Morphogen's evidence log | verdicts as DQV measurements (S-08) |
@@ -260,7 +277,7 @@ business, laid out on Beer's Viable System Model.
 | VSM system | Role | Substrate part |
 | --- | --- | --- |
 | 1 Operations | the work itself | skills and workflows acting on the business's systems |
-| 2 Coordination | keep operations from colliding | the review lane, plus a `dispatcher` module that gives each entity one active session at a time |
+| 2 Coordination | keep operations from colliding | the review lane and the `triage` agent (section 9a), plus a `dispatcher` module that gives each entity one active session at a time |
 | 3 Control | resources and performance now | kernel's MAPE-K loop over claims; budgets read from Bifrost costs |
 | 3* Audit | check what operations report | Morphogen red team and kernel verifiers |
 | 4 Intelligence | the outside and the future | source encoders, drift detectors (M6-T0), the planner role |
@@ -277,7 +294,40 @@ session has started, so a crash leaves it to be read again (pgmq's visibility ti
 
 **The owner** sees one console: the review lane, recent verdicts, spend, the stack and this spec's progress,
 signed in with their kernel login. Anything that needs their decision arrives in the review lane with its
-evidence.
+evidence, and what triage settled is listed beside it with an undo.
+
+### 9a. Triage and the automation level
+
+Beer's system 2 and 3 exist to absorb variety, so that system 5 sees only what needs its judgment. A review lane
+that sends every item to one person fails the way the first run did (2026-11-08): four of five gaps were
+telemetry noise, and they were approved without being read. Triage is the part that absorbs that variety.
+
+**Order.** Noise is fixed where it starts (an observer query, an encoder) rather than declined again and again;
+what still arrives goes to triage first; only what triage escalates reaches the owner.
+
+**The triage agent** is a kernel agent (`urn:kk:agent:triage`) with its own reviewer login. Kernel already
+refuses approval by a change set's submitter (KK025) and records who decided (`decided_by`), so triage never
+settles its own proposals, and every decision is attributed to it. For each item it writes a recommendation with
+its evidence (the claims, the code line, the observation) and a confidence.
+
+**The automation level** is a setting (`AUTOMATION` in `.env`, read through the console too):
+
+| Level | Triage settles | Reaches the owner |
+| --- | --- | --- |
+| `full` (default) | everything outside organization: approves or declines with its reason | escalations: low confidence, conflicting evidence, or an item it cannot classify |
+| `assisted` | nothing; it recommends | every item, with the recommendation and evidence first |
+| `manual` | nothing; it does not run | every item as it is |
+
+**Reversible always.** An approval triage gave is undone by retracting what it applied (kernel never deletes; a
+status records the retraction and who made it); a decline is undone by resubmitting. The console lists triage's
+recent decisions with an undo for each, and an undo is itself a recorded decision that triage learns from.
+
+**Never automated, at any level** (principle 7): owner claims (goals, policies, authority), clearance grants,
+kernel's invariants and schema, licences, and spending above the budget the owner set. These always reach the
+owner.
+
+**Learning.** Triage's recommendations are a cell Morphogen judges: the owner's undos and escalation answers are
+held-out evidence of where it was wrong. A rising undo rate lowers what it settles alone.
 
 ## 10. Build plan
 
@@ -289,6 +339,10 @@ the same steps with their status, checks and what each needs; the `build-out` sk
 | 0 | The stack runs | substrate | `scripts/check.sh` passes on compose with Podman (console and bus included), then on Nomad |
 | 1 | Verdicts become claims | `modules/encoder-morphogen` | each Morphogen verdict appears in kernel as a DQV measurement with lineage |
 | 2 | The map becomes claims | `modules/encoder-backstage` | recall answers "what depends on bifrost?" from catalog claims, and the first intended-against-observed gap reaches review |
+| 10 | A fresh-machine test | `scripts/fresh.sh` | a clean checkout in a throwaway container bootstraps and passes `scripts/check.sh` with no manual step |
+| 11 | One default per slot | substrate | the defaults (compose, Podman, `.env`) are the only tested path; the others keep their interfaces, marked untested |
+| 12 | Triage and the automation level | `modules/triage`, the console | at `full`, a noise gap is settled by triage, listed in the console with an undo, and the undo restores it |
+| 13 | The map without Backstage | substrate, kernel's MCP | catalog questions are answered from kernel claims with Backstage off; the view is an optional slot |
 | 3 | Working memory | kernel M6-T2, upstream PR (owner decides) | a new session states the active goal and focus without being told |
 | 4 | Episodes | kernel's `encoder-interaction`, wired by substrate | a finished session appears as an episode; the extractor's proposals reach review |
 | 5 | Activation | `modules/activation` | Morphogen verdict: better than plain recall on held-out questions, or the module is dropped |
@@ -297,13 +351,16 @@ the same steps with their status, checks and what each needs; the `build-out` sk
 | 8 | Motor | actuators, `encoder-nomad` | a failed allocation is noticed, a fix is proposed, judged and applied through Nomad's API |
 | 9 | Organism | `modules/dispatcher`, triggers on the bus, goal vocabulary | a drift finding on `triggers` starts a headless session that closes it with a verdict, and the owner sees it in review |
 
-Steps 1 and 2 need nothing from kernel's roadmap and come first. Step 3 changes kernel and waits for the owner's
-decision.
+Steps 1 and 2 need nothing from kernel's roadmap and come first. Steps 10 to 13 come next (owner, 2026-11-08):
+every step from 3 on adds a source of review items, so triage comes before them, and a fresh-machine test before
+anything is built on the stack again. Step 3 changes kernel and waits for the owner's decision.
 
 ## 11. Limitations
 
-- **Untested on a real machine.** The stack has been validated by config checks and dry runs only. Step 0 comes
-  before anything else here.
+- **One tested path.** The stack first ran on a real machine on 2026-11-08 (compose, Podman 4.9), after four fixes
+  no dry run had caught. Step 10 keeps it that way; other slot choices are untested until their checks pass.
+- **Full automation is a bet on triage.** At the default level most items are settled without the owner. Undo,
+  attribution and the never-automated list bound the damage; the undo rate measures it.
 - **Kernel changes are the owner's call.** Working memory (M6-T2), identity resolution (M6-T9) and detectors
   (M6-T0) are kernel milestones; substrate proposes them upstream and waits.
 - **Skill choice stays Claude Code's.** Utility can inform the choice through working memory; it cannot force

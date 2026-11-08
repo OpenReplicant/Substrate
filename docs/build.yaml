@@ -15,10 +15,13 @@ steps:
     where: substrate
     after: []
     status: todo
-    check: scripts/check.sh passes with RUNTIME=compose and CONTAINER_ENGINE=podman, then with RUNTIME=nomad
+    check: >-
+      scripts/check.sh passes with RUNTIME=compose and CONTAINER_ENGINE=podman, and the setup skill's steps 4 to 6
+      (each provider answers, Claude Code through the gateway, the MCP connections) are done
     notes: >-
-      The setup skill does this step. Includes the front door, the console (sign in as owner) and the bus. Nomad
-      is the second half; if it cannot pass on this machine, record why, set waiting_on, and go on with compose.
+      The setup skill does this step. Includes the front door, the console (sign in as owner) and the bus. First run
+      on the owner's machine 2026-11-08: check.sh passes on compose with Podman 4.9 after four fixes (8e65f43,
+      kernel#111). Nomad is no longer part of this step (step 11: one default per slot).
 
   - id: 1
     title: Verdicts become claims
@@ -54,11 +57,73 @@ steps:
       parts observer and drift). Checked end to end on Postgres with Substrate's catalog and a stand-in Prometheus;
       done when the check passes on the owner's machine with the real stack (needs step 0).
 
+  - id: 10
+    title: A fresh-machine test
+    spec: "1 (principle 8), 11"
+    where: scripts/fresh.sh
+    after: [0]
+    status: todo
+    check: >-
+      scripts/fresh.sh clones this repository into a throwaway container (Podman in Podman, or a VM where that
+      fails), runs scripts/bootstrap.sh and scripts/up.sh with no manual step, and scripts/check.sh passes there
+    notes: >-
+      Every bug of the first real run (2026-11-08) was in a path no dry run exercised: a missing optional file under
+      set -e, Podman short names, secrets generated after the build that needs them, Bifrost locking itself. Run it
+      before any change to scripts/, deploy/ or the images is called done.
+
+  - id: 11
+    title: One default per slot
+    spec: "1 (principle 8)"
+    where: substrate
+    after: [10]
+    status: todo
+    check: >-
+      README, .env.example and check.sh name one tested default per slot (compose, Podman, SECRETS=env, the map view
+      off); check.sh says "untested" when another is set instead of failing silently; the interfaces (rt_* verbs,
+      sec_* functions, the map-view slot) are unchanged
+    notes: >-
+      Owner, 2026-11-08: "reducing some defaults but keeping interfaces adaptable for later." Nomad, Docker and
+      OpenBao stay behind their interfaces, out of the tested path until a goal needs them. CLAUDE.md rule 3 (both
+      runtimes, both engines) becomes: the default is tested, the interface is kept.
+
+  - id: 12
+    title: Triage and the automation level
+    spec: "9a"
+    where: modules/triage, services/console
+    after: [10]
+    status: todo
+    check: >-
+      with AUTOMATION=full, a seeded noise gap is declined by urn:kk:agent:triage with its reason, appears in the
+      console's triage list, and its undo restores it to the lane; with AUTOMATION=assisted the same gap waits with
+      the recommendation; an owner claim is never settled by triage at any level
+    notes: >-
+      Owner, 2026-11-08: "I like your approval flow, but maybe allow a toggle on how automated things are with
+      full-auto default and reversible." Kernel needs no change: triage is an agent with a reviewer login, and kernel
+      refuses self-approval (KK025) and records decided_by. Brief first (modules/triage/BRIEF.md): how it classifies,
+      where its confidence comes from, what it escalates.
+
+  - id: 13
+    title: The map without Backstage
+    spec: "1, 6"
+    where: substrate, kernel's MCP
+    after: [11]
+    status: todo
+    needs_owner: true
+    check: >-
+      with the Backstage service off, recall over kernel's MCP answers "what depends on the model gateway?" and the
+      console's Map draws intended, observed and their difference from kernel claims; Backstage runs only when the
+      map-view slot asks for it
+    notes: >-
+      Owner, 2026-11-08: Backstage fits the idea of catalogs of things, "but it was not built for what we have in
+      mind, and only its MCP server helps to justify it"; the YAML "also looks bloated". The owner's decision: the
+      catalog's file format. Recommendation to prepare: keep catalog-info.yaml as the input for now (encoder-backstage
+      reads it, kernel D-100) and propose a leaner format as a second encoder, judged on the same check.
+
   - id: 3
     title: Working memory
     spec: "3"
     where: kernel M6-T2 (upstream pull request)
-    after: [0]
+    after: [0, 10, 11, 12, 13]
     status: todo
     needs_owner: true
     check: a new session states the active goal and focus without being told
@@ -70,7 +135,7 @@ steps:
     title: Episodes
     spec: "5"
     where: kernel's encoder-interaction, wired by substrate's SessionEnd hook
-    after: [0]
+    after: [0, 10, 11, 12, 13]
     status: todo
     check: a finished session appears as an episode in kernel; the memory extractor's proposals reach review
 
@@ -103,7 +168,7 @@ steps:
     title: Motor
     spec: "6"
     where: actuators, modules/encoder-nomad
-    after: [0]
+    after: [0, 10, 11, 12, 13]
     status: todo
     check: a failed allocation is noticed, a fix is proposed, judged and applied through Nomad's API
     notes: Needs RUNTIME=nomad passing (step 0's second half).
