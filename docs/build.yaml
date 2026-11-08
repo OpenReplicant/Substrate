@@ -30,7 +30,7 @@ steps:
       after one judged run (Morphogen's status tool shows a verdict), kernel recall finds a DQV measurement for it
       with PROV lineage back to the evidence record's hash
     notes: >-
-      Built as kernel's encoder-morphogen (kernel D-99, PR OpenReplicant/kernel#108), checked end to end on
+      Built as kernel's encoder-morphogen (kernel D-99, merged as OpenReplicant/kernel#108, 1f70681), checked end to end on
       Postgres with a log written by Morphogen itself. Runs as scripts/verdicts.sh, and after each Morphogen tool
       call through the PostToolUse hook. Done when the check passes on the owner's machine after a real judged run
       (it needs step 0's stack).
