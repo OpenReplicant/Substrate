@@ -50,6 +50,9 @@ if st=$(sec_status 2>&1); then ok "secrets ($SECRETS): $st"; else bad "secrets (
 "$ROOT/scripts/tools.sh" status >/dev/null 2>&1 && ok "tools container running (bin/ wrappers work)" || bad "tools container not running: scripts/tools.sh start"
 if out=$(KK_ADMIN_URL="postgresql://postgres:$(env_value POSTGRES_PASSWORD)@127.0.0.1:$(env_value KK_DB_PORT)/kk" \
          "$ROOT/bin/in-tools" python3 "$ROOT/scripts/bus.py" --check 2>&1); then ok "bus: $out"; else bad "bus: $out"; fi
+if out=$(KK_ADMIN_URL="postgresql://postgres:$(env_value POSTGRES_PASSWORD)@127.0.0.1:$(env_value KK_DB_PORT)/kk" \
+         "$ROOT/bin/in-tools" python3 "$ROOT/scripts/map_check.py" 2>&1); then ok "map in kernel: $out"
+else bad "map in kernel: $(echo "$out" | tail -1) (scripts/map.sh)"; fi
 "$ROOT/bin/gitleaks" version >/dev/null 2>&1 && ok "gitleaks in the tools container: $("$ROOT/bin/gitleaks" version 2>/dev/null)" || bad "bin/gitleaks does not run"
 if [ -f "$ROOT/.mcp.json" ] && grep -q '"kernel"' "$ROOT/.mcp.json"; then
   grep -q "$ROOT/bin/kernel-mcp" "$ROOT/.mcp.json" && ok "kernel MCP entry runs bin/kernel-mcp" \

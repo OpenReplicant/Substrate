@@ -79,6 +79,10 @@ KK_JWT_SECRET="$(env_value KK_JWT_SECRET)" \
   "$ROOT/bin/kk" up --no-stack --commands-dir "$ROOT/bin" "$project"   # Claude Code runs bin/'s wrappers (kernel D-95)
 python3 "$ROOT/scripts/telemetry.py" on --project "$project"     # its metrics, events and traces to the collector (S-28)
 
+say "The map into kernel (catalog-info.yaml, S-33)"
+"$ROOT/scripts/map.sh" "$ROOT"
+[ "$project" = "$ROOT" ] || [ ! -f "$project/catalog-info.yaml" ] || "$ROOT/scripts/map.sh" "$project"
+
 say "Up"
 "$ROOT/scripts/check.sh" || true
 echo

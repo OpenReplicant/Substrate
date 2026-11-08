@@ -40,7 +40,7 @@ steps:
     spec: "2, 6"
     where: modules/encoder-backstage
     after: [0]
-    status: todo
+    status: doing
     check: >-
       recall answers "what depends on bifrost?" from catalog claims, citing claim ids; and the first gap between
       intended and observed (the console's Map, difference view) reaches the review lane as claims on both sides,
@@ -48,7 +48,11 @@ steps:
     notes: >-
       Brief in modules/encoder-backstage/BRIEF.md. The observed side comes from the OpenTelemetry collector's
       service graph through Prometheus (S-28), so the detector compares two sets of claims rather than running a
-      reconciler of its own (S-27). Owner, 2026-11-07: "it would be cool to render both views".
+      reconciler of its own (S-27). Owner, 2026-11-07: "it would be cool to render both views". Built in kernel
+      (D-100, PR OpenReplicant/kernel#110): the catalog in Backstage's own terms (owner: "left in its original form"),
+      mapped to kk-tosca; observed calls; map-drift's gaps in the review lane. Wired by S-33 (scripts/map.sh, kk serve
+      parts observer and drift). Checked end to end on Postgres with Substrate's catalog and a stand-in Prometheus;
+      done when the check passes on the owner's machine with the real stack (needs step 0).
 
   - id: 3
     title: Working memory

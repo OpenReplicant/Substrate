@@ -62,12 +62,19 @@ services:
 
   # kernel reads what kk up scans from the host folder .state/artifacts (scripts/up.sh sets KK_ARTIFACTS to it),
   # in place of kernel's kk-artifacts volume, so the quote verifier sees the same files in either runtime.
+  # Its parts: kernel's default and, for spec step 2 (S-33), the metrics observer (the collector's call graph from
+  # Prometheus, as claims) and map drift (the catalog against those calls, gaps to the review lane). scripts/runtime/
+  # nomad.sh reads the same default from this line, so both runtimes run the same parts.
   kernel:
+    command: ["kk", "serve", "--host", "0.0.0.0", "--only", "${KK_SERVE_PARTS:-mcp,validator,belief,recall,quotes,tms,conformance,learner,gaps,observer,drift}"]
     volumes:
       - ../../../.state/artifacts:/store:ro
+      - ../../../deploy/observer:/observer:ro
     environment:       # traces to the collector (kernel D-97, S-28); ignored by a kernel image without the SDK
       <<: *otel
       OTEL_SERVICE_NAME: kernel
+      PROMETHEUS_URL: http://prometheus:9090
+      KK_QUERIES: /observer/queries.yaml
 
   # The model gateway (S-04, S-14). config.json is rendered by scripts/render_bifrost.py from .env (only the
   # providers you have keys for) and seeds Bifrost's own config store in its volume; later edits in its UI

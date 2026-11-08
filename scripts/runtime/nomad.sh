@@ -83,7 +83,9 @@ rt_up() {
   nomad_variables || return 1
   mkdir -p "$ROOT/.state/data/postgres" "$ROOT/.state/data/bifrost" "$ROOT/.state/data/prometheus" "$ROOT/.state/artifacts" "$ROOT/.state/otel"
   chmod 777 "$ROOT/.state/data/bifrost" "$ROOT/.state/data/prometheus" "$ROOT/.state/otel"     # the images run as non-root users
-  parts=$(sed -n 's/.*KK_SERVE_PARTS:-\([^}]*\)}.*/\1/p' "$KERNEL/deploy/compose.yaml" | head -1)
+  # what kk serve runs: KK_SERVE_PARTS if set, else substrate's compose default (S-33), so both runtimes match
+  parts=$(env_value KK_SERVE_PARTS)
+  [ -n "$parts" ] || parts=$(sed -n 's/.*KK_SERVE_PARTS:-\([^}]*\)}.*/\1/p' "$ROOT/deploy/compose.yaml" | head -1)
   prefix=""; [ "$ENGINE" = podman ] && prefix="localhost/"   # how each engine names a locally built image
   nomad job run -detach \
     -var "root=$ROOT" \

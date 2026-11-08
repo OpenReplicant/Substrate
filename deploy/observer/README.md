@@ -9,8 +9,8 @@ property and window (kernel D-52). The substrate only gives it different queries
 2. Propose the four properties (`model-cost-usd`, `model-input-tokens`, `model-output-tokens`,
    `model-errors`) as `sosa:ObservableProperty` terms through kernel's review lane, next to
    `ontology/observables.ttl`'s existing ones.
-3. Install the observer with these queries mounted in place of its own `queries.yaml`, as kernel's devops
-   demo installs it: `kk module install repos/kernel/modules/observer-prometheus`, then its compose file
-   from `repos/kernel/deploy/modules/`.
+3. Uncomment the four gateway queries at the end of `queries.yaml`. The observer already runs in the kernel
+   container with this file (`kk serve` part `observer`, `KK_QUERIES=/observer/queries.yaml`, S-33), where it
+   records the collector's call graph for map drift; restart the kernel service to pick up the change.
 
-Not done yet: steps 2 and 3 need a running stack; the session that wrote this had none.
+Not done yet: steps 1 and 2 need a running stack.

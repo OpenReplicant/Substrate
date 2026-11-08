@@ -242,11 +242,11 @@ apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
   name: encoder-backstage
-  description: catalog-info.yaml files as system-structure claims.
+  description: catalog-info.yaml files as claims in Backstage's own terms, mapped to kk-tosca.
   annotations:
     substrate.dev/intent: Put the map people already keep into kernel, cited by file and line.
-    substrate.dev/fill: build
-    substrate.dev/basis: modules/encoder-backstage/BRIEF.md (S-09); system structure is kernel's kk-tosca profile (D-07)
+    substrate.dev/fill: existing
+    substrate.dev/basis: "kernel modules/encoder-backstage and the backstage pack (D-100); run by scripts/map.sh (S-33)"
     substrate.dev/step: "2"
 spec:
   type: service
@@ -255,6 +255,25 @@ spec:
   system: engine
   consumesApis: [change-sets, vocab]
   dependsOn: [resource:git-repo]
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: map-drift
+  description: The declared map against the calls observed; each gap to the review lane with claims on both sides.
+  annotations:
+    substrate.dev/intent: Notice when practice drifts from the map, and let a person decide which side is right.
+    substrate.dev/fill: existing
+    substrate.dev/basis: "kernel modules/map-drift and observer-prometheus edges (D-100), kk serve parts drift and observer (S-33)"
+    substrate.dev/step: "2"
+spec:
+  type: service
+  lifecycle: experimental
+  owner: group:operator
+  system: engine
+  # runs inside the kernel process (kernel-mcp's node in traces), so its own calls show as kernel's
+  subcomponentOf: kernel-mcp
+  consumesApis: [change-events, api-views, change-sets]
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Component
@@ -511,7 +530,8 @@ spec:
   owner: group:operator
   system: interface
   providesApis: [kernel-mcp-api]
-  consumesApis: [api-views, change-sets, recall-api, otlp-api]
+  # the kernel process also runs the metrics observer (kk serve part observer), which queries Prometheus (S-33)
+  consumesApis: [api-views, change-sets, recall-api, metrics-api, otlp-api]
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Component

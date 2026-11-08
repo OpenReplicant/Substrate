@@ -1,35 +1,19 @@
-# encoder-backstage: the catalog as system-structure claims
+# encoder-backstage: the catalog as claims, in Backstage's own terms
+
+**Built in kernel** (kernel D-100, `repos/kernel/modules/encoder-backstage`, with `map-drift` and the metrics
+observer's call edges); substrate runs it with `scripts/map.sh` (S-33). This brief records what it was for.
 
 **For:** teams already keep a map in `catalog-info.yaml`. Read it into kernel so the map is cited,
 belief-scored and reviewable like everything else, and so Morphogen's verdicts and kernel's observations
 attach to the same nodes (S-09). The substrate's own catalog is the first input.
 
-**Pattern:** kernel's `self-encoder` (D-26, D-68): a command that reads files and submits one change set
-per file; re-reading a changed file supersedes what it said.
+**Vocabulary:** the catalog stays in Backstage's terms (owner, 2026-11-07: "left in its original form"): kernel's
+`backstage` pack names its kinds, its well-known relations (`ownedBy`, `partOf`, `providesApi`, `consumesApi`,
+`dependsOn`, `memberOf`, `childOf`) and its fields (`type`, `lifecycle`, `tag`, `annotation`). Kernel's mappings
+pack relates them to kk-tosca (system structure) and ORG (groups) with SKOS, so a module that reasons in
+kk-tosca, such as `map-drift`, reads a Backstage catalog through the mappings. Components and resources are
+`urn:kk:node:<name>`, the node names other modules use.
 
-## Mapping (to kernel's kk-tosca profile, D-07)
-
-| Backstage | Claims |
-| --- | --- |
-| Domain, System, Component, Resource | an entity typed `kkt:NodeTemplate`, its kind as the node type |
-| `system`, `domain`, `subcomponentOf` | containment, as the profile's sub-topology terms |
-| API, `providesApis`, `consumesApis` | `kkt:CapabilityDefinition` and `kkt:RequirementDefinition`, fulfilled by `kkt:fulfills` |
-| `dependsOn` | `kkt:dependsOn` |
-| owner, lifecycle | ORG and lifecycle claims; owner links to the person or group entity |
-| `substrate.dev/*` annotations | intent and fill as qualifiers; candidates as claims about the software |
-
-Every claim cites the file and the entity's line as its reference (artifact plus quote), evidence type
-`deterministic`.
-
-## Tests first
-
-- the substrate's own `catalog-info.yaml` gives the expected node count (30 components, 5 resources, 5 systems, 1 domain, 10 APIs) and
-  every relation, each citing its line;
-- re-reading an unchanged file submits nothing; removing an entity supersedes its claims, deleting none;
-- an unknown kind or a dangling ref becomes a finding, not a crash;
-- `kk explain` on any node shows the file and line it came from.
-
-## Check before building
-
-Read `ontology/kk-tosca.ttl` for the exact containment and fulfilment terms; the table above names them
-from the term list, not from their definitions.
+**Checks (kernel):** every claim deterministic and citing its line; an unchanged file submits nothing, a changed one
+supersedes or retracts; an unknown kind or a dangling ref is a finding, not a crash; and end to end, Substrate's
+catalog (68 entities, 696 claims) with observed calls gives the first gap in the review lane, citing both sides.

@@ -1,15 +1,26 @@
-# What kernel's observer-prometheus asks each window about the model gateway (S-05). Same format as
-# kernel's modules/observer-prometheus/queries.yaml: one series per service, labelled `job`; {w} is the
-# window in seconds. Metric names are from Bifrost's plugins/telemetry/main.go on its main branch (read 2026-11-06); confirm
-# them against the running gateway's /metrics before installing (deploy/observer/README.md).
-#
-# The properties are not yet in kernel's ontology/observables.ttl. Adding them is a pack change, which
-# kernel forces through review (D-05); propose them with the module, do not invent them silently.
-- property: urn:kk:property:model-cost-usd
-  query: sum by (job) (increase(bifrost_cost_total[{w}s]))
-- property: urn:kk:property:model-input-tokens
-  query: sum by (job) (increase(bifrost_input_tokens_total[{w}s]))
-- property: urn:kk:property:model-output-tokens
-  query: sum by (job) (increase(bifrost_output_tokens_total[{w}s]))
-- property: urn:kk:property:model-errors
-  query: sum by (job) (increase(bifrost_error_requests_total[{w}s]))
+# What kernel's metrics observer asks Prometheus each window (kernel D-52, D-100), for Substrate: the calls the
+# OpenTelemetry collector saw (deploy/otel/collector.yaml). Each becomes an observed kkt:connectsTo claim between
+# two catalog nodes, which map-drift compares with what catalog-info.yaml declares (step 2, S-33).
+# {w} is the window in seconds; service names are catalog names, or a node's substrate.dev/otel-service.
+
+# Client and server spans paired by the collector's servicegraph connector (includes virtual nodes such as a
+# model provider or a database, named by peer attributes).
+- edge: {from: client, to: server}
+  query: sum by (client, server) (increase(traces_service_graph_request_total[{w}s]))
+
+# The front door makes only server spans, named per route (deploy/caddy/Caddyfile: `tracing { span <part> }`).
+- edge: {from: "=front-door", to: span_name}
+  query: sum by (span_name) (increase(traces_span_metrics_calls_total{service_name="front-door"}[{w}s]))
+
+# The model gateway's counters (S-05), off until their properties exist in kernel: confirm the metric names against
+# the running gateway's /metrics, propose model-cost-usd, model-input-tokens, model-output-tokens and model-errors as
+# sosa:ObservableProperty terms through kernel's review lane (deploy/observer/README.md), then uncomment.
+# Metric names from Bifrost's plugins/telemetry/main.go on its main branch (read 2026-11-06).
+# - property: urn:kk:property:model-cost-usd
+#   query: sum by (job) (increase(bifrost_cost_total[{w}s]))
+# - property: urn:kk:property:model-input-tokens
+#   query: sum by (job) (increase(bifrost_input_tokens_total[{w}s]))
+# - property: urn:kk:property:model-output-tokens
+#   query: sum by (job) (increase(bifrost_output_tokens_total[{w}s]))
+# - property: urn:kk:property:model-errors
+#   query: sum by (job) (increase(bifrost_error_requests_total[{w}s]))

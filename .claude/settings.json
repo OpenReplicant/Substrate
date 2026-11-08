@@ -22,6 +22,17 @@
             "command": "\"$CLAUDE_PROJECT_DIR/scripts/verdicts.sh\" --hook"
           }
         ]
+      },
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "async": true,
+            "timeout": 120,
+            "command": "\"$CLAUDE_PROJECT_DIR/scripts/map.sh\" --hook"
+          }
+        ]
       }
     ]
   }

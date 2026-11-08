@@ -43,7 +43,7 @@ variable "backstage_image" {
 }
 variable "serve_parts" {
   type        = string
-  description = "what kk serve runs; read from kernel's compose default so the two runtimes match"
+  description = "what kk serve runs; scripts/runtime/nomad.sh passes KK_SERVE_PARTS or substrate's compose default, so the two runtimes match"
 }
 variable "db_port" {
   type    = number
@@ -185,10 +185,13 @@ job "substrate" {
         network_mode = "host"
         command      = "kk"
         args         = ["serve", "--host", "127.0.0.1", "--port", "${var.kernel_port}", "--only", var.serve_parts]
-        volumes      = ["${var.root}/.state/artifacts:/store:ro"]
+        volumes      = ["${var.root}/.state/artifacts:/store:ro", "${var.root}/deploy/observer:/observer:ro"]
       }
       env {
         KK_ARTIFACTS = "/store"
+        # the metrics observer and map drift (kk serve parts observer, drift; S-33)
+        PROMETHEUS_URL = "http://127.0.0.1:${var.prometheus_port}"
+        KK_QUERIES     = "/observer/queries.yaml"
         # traces to the collector (kernel D-97, S-28)
         OTEL_SERVICE_NAME           = "kernel"
         OTEL_EXPORTER_OTLP_ENDPOINT = "http://127.0.0.1:${var.otel_http_port}"
