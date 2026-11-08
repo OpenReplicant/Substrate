@@ -1,114 +1,92 @@
 # Substrate
 
-A business, or any system, that keeps a cited model of itself, notices when practice drifts from intent,
-and improves only on evidence it cannot fake.
+A super-agent that adapts to any situation by changing its own architecture. It models a system as cited
+claims, acts on that model, and changes something (including itself) only on evidence it cannot fake.
 
-Substrate assembles projects that each do one part, and adds the glue between them:
+- **Modelling itself** makes it autopoietic.
+- **Modelling other systems** makes it an engineer.
+- **Adapting to model anything** makes it a generalist.
+
+## The loop
+
+Observe a system (code, running services, people in interviews) and write what is learned as claims, each
+attributed and quoting its evidence, typed by ontologies. The claims form a graph of the system, with an
+intended half (what people declare) and an observed half (what encoders measure). Where the two disagree,
+propose a response: a builder's change, an optimizer's tuning, a question to a person. The change lands only
+with a verdict from a judge the changer cannot game, and the verdict becomes claims too.
+
+Substrate's own architecture is in that graph, so changing itself is the same operation as changing anything
+else.
+
+It works like a scientist. Claims are hypotheses with a belief, a change is an experiment tested on cases the
+changer has not seen, and negative results are kept. Choices come from catalogs rather than best guesses:
+catalogs of components it can use, and catalogs of registries it can search (npm, PyPI, GitHub, apt and
+others). The design is open, so parts, code, content types and views can all change. The one hard restriction
+is the judge, which is built so a change cannot reward-hack its way through.
+
+## Parts
 
 | Part | Project | Does |
 | --- | --- | --- |
-| World model | [kernel](https://github.com/OpenReplicant/kernel), cloned to `repos/kernel` | an ontological content system in one Postgres: typed items with revisions and review; claims (attributed, quoted, belief-scored, scoped, bitemporal) as the assertion type and the index over the rest; encoders, verifiers, recall, the MAPE-K loop |
-| Judge | [Morphogen](https://github.com/OpenReplicant/Morphogen), cloned to `repos/morphogen` | a change lands only with a verdict the changer cannot reach: rules from the base, outside measurement, held-out cases |
-| Harness | Claude Code | the cognitive cycle, the builder, the mapper's hands |
-| Gateway | [Bifrost](https://github.com/maximhq/bifrost) v2.3.2 | Claude (API key or your subscription), OpenRouter and local models behind one virtual key; every call measured outside the agent |
-| Map | [Backstage](https://backstage.io) (`services/backstage`) | the catalog people browse, and an MCP endpoint agents query |
-| Telemetry | Prometheus v3.15.0 | the gateway's tokens, cost and errors, for kernel to record as observations |
-| Front door | [Caddy](https://caddyserver.com) 2.11.7 (`deploy/caddy`) | one address, 127.0.0.1:8080, for kernel's UI and MCP and the console; plugins by listing them |
-| Console | `services/console` | the owner's live page at `/console/`: review lane, verdicts, spend, stack, bus, the spec's progress; sign in with your kernel login |
-| Bus | [pgmq](https://github.com/pgmq/pgmq) 1.13.1, in kernel's Postgres | queues between the parts (`triggers`, `owner`, `events`), in a database of its own beside kernel's |
-| Secrets | a slot: `.env`, or [OpenBao](https://openbao.org) 2.7.1 | `SECRETS=openbao` keeps every secret in OpenBao (policies, audit, versions) instead of `.env`; scripts read them the same way either way |
-| Observation | [OpenTelemetry collector](https://opentelemetry.io/docs/collector/) 0.163.2 | traces from every part become the observed call graph; the console's Map compares it with the catalog |
-| Control plane | [Nomad](https://developer.hashicorp.com/nomad) 2.0.7, or compose | runs every service; one scheduler for containers, processes and clusters (`RUNTIME` in `.env`, S-16, S-17) |
+| Kernel | [kernel](https://github.com/OpenReplicant/kernel), cloned to `repos/kernel` | the store and the model: a content system on Postgres, with claims as the assertion type and ontologies and aliases as content and taxonomy |
+| Actor | Claude Code | explores, interviews, builds, maps |
+| Judge | [Morphogen](https://github.com/OpenReplicant/Morphogen), cloned to `repos/morphogen` | a change lands only with a verdict the changer cannot reach |
 
-Read as a mind, these are the Common Model of Cognition's modules: perception (briefings), declarative
-memory (kernel), procedural memory (skills), motor (actuators), the cycle (Claude Code), learning
-(Morphogen). Read as an organisation, they are the Viable System Model's five systems: operations
-(builder, actuators), coordination (dispatcher), control (MAPE-K loop, Morphogen), intelligence (mapper),
-policy (people, through clearance and review). Read as a product, they are a Foundry-shaped platform
-whose every value can say where it came from.
+This repository is the glue: scripts that bring the parts up and connect them, a tools container they run in,
+and `catalog-info.yaml`, substrate's map of itself.
 
-`catalog-info.yaml` is the map: every part with the intent it serves and how it is filled, most of them
-already built in kernel or Morphogen. Backstage shows it, Morphogen reads it as cells (`morphogen.yaml`).
+Production choices substrate stays compatible with but does not run (a model gateway, Prometheus,
+OpenTelemetry, Backstage, Nomad, OpenBao, a bus, a console) are options in its own catalog
+(`catalog-info.yaml`, system `options`; [`docs/spec.md`](docs/spec.md) section 8). Each says where it fits, the
+interface that keeps it possible, when to bring it back, and the commit to restore it from.
+
+> **In transition.** The cut to these three parts is build step 1. Until it lands, `deploy/` and `scripts/`
+> still carry the earlier, larger stack (S-41).
 
 ## Where it is going
 
-[`docs/spec.md`](docs/spec.md) is what substrate is meant to become (a mind in an organism), and
-[`docs/build.yaml`](docs/build.yaml) its build plan. Left in place, they make Claude Code sessions here build it
-out a step at a time once the stack runs (the `build-out` skill), asking you for the decisions that are yours.
-`python3 scripts/spec.py status` shows where it stands; deleting `docs/spec.md` stops it.
+[`docs/spec.md`](docs/spec.md) is what substrate is meant to become, and [`docs/build.yaml`](docs/build.yaml)
+its six-step build plan: cut to the core, one loop on itself, kernel as a content system, catalogs to choose
+from, another system, a second domain. Left in place, they make Claude Code sessions here build it out a step at a time (the `build-out`
+skill). `python3 scripts/spec.py status` shows where it stands; deleting `docs/spec.md` stops it.
 
 ## Start
 
-Clone this repository, open Claude Code in it, and ask it to set up. The `setup` skill
-(`.claude/skills/setup/SKILL.md`) walks through each step and checks it. By hand:
+Clone this repository, open Claude Code in it, and ask it to set up (the `setup` skill). By hand:
 
 ```sh
 git clone https://github.com/OpenReplicant/Substrate substrate && cd substrate
-scripts/bootstrap.sh          # tools, kernel and Morphogen cloned into repos/, kk and Morphogen installed
-cp .env.example .env          # optional: set CONTAINER_ENGINE, provider keys, ports (up.sh does it otherwise)
-scripts/up.sh                 # every service, then kernel connected to this repository
-scripts/check.sh              # then open http://127.0.0.1:8080/console/ and sign in as owner
-scripts/gateway.py on         # Claude Code through the gateway, from the next session
+scripts/bootstrap.sh          # host check, kernel and Morphogen cloned into repos/, the tools container
+scripts/up.sh                 # the stack, then kernel connected to this repository
+scripts/check.sh              # is everything up and wired
 ```
 
-On the host it needs only git, python3 (the scripts use its standard library), Podman (default) or Docker, and
-Claude Code. Everything else is built and run in containers (S-19): kernel, gitleaks, uv and Morphogen in the
-`substrate-tools` container, which the commands in `bin/` (`bin/kk`, `bin/morphogen`, kernel's MCP server and
-hooks) run inside; Backstage in a two-stage container build.
-
-## Runtimes
-
-`RUNTIME` in `.env` picks what runs the services; every script works the same either way (S-16).
-
-| `RUNTIME` | Runs on | Needs | Notes |
-| --- | --- | --- | --- |
-| `compose` (default) | Linux, macOS | `podman compose` or `docker compose` | kernel's own compose project plus `deploy/compose.yaml` |
-| `nomad` | Linux | nothing more: `scripts/bootstrap.sh` installs Nomad 2.0.7 and the Podman driver, checksums checked | a single-node agent on 127.0.0.1 runs one job (`deploy/nomad/`); secrets in Nomad Variables; Prometheus finds services through Nomad. Licence: BUSL-1.1 (S-18) |
-
-`CONTAINER_ENGINE` (podman or docker) is compose's engine or Nomad's task driver. Compose stays the default
-until the Nomad runtime passes `scripts/check.sh` on a real machine; then it becomes the default (S-17).
-
-| Service | Address (localhost only) |
-| --- | --- |
-| kernel UI and MCP | http://127.0.0.1:8080/ui/ (sign-in printed by `scripts/up.sh`) |
-| model gateway | http://127.0.0.1:8090/ (Claude Code: `/anthropic`) |
-| Backstage | http://127.0.0.1:7007/ (MCP: `/api/mcp-actions/v1`) |
-| Prometheus | http://127.0.0.1:9090/ |
+The host needs git, python3 (the scripts use its standard library), Podman (or Docker) with compose, and
+Claude Code. Everything else runs in containers (S-19).
 
 ## Layout
 
 ```
-CLAUDE.md                 instructions for the agent working here
-DECISIONS.md              the defaults and why (S-01...), open questions
-catalog-info.yaml         the map, as a Backstage catalog
-morphogen.yaml            the map as Morphogen cells
-repos.yaml                the upstream projects and the commits last checked
-deploy/                   compose overlay on kernel's stack; nomad/ (agent and job); Prometheus config; observer queries
-services/backstage/       the Backstage app (create-app 0.9.3) and substrate's config for it
-modules/                  the glue, as kernel modules: briefs first
-scripts/                  bootstrap, build, tools, up, down, logs, check, gateway, telemetry, bus, spec, render_bifrost, point_harness, install_hashicorp
-bin/                      kk, morphogen, gitleaks, kernel-mcp and its hooks: each runs inside the tools container
-deploy/tools/             the tools image (kernel's image plus git and uv)
-scripts/runtime/          one file per runtime: compose.sh, nomad.sh (rt_up, rt_down, rt_status, rt_logs)
-upstream/                 fixes prepared for kernel or Morphogen, not yet opened as PRs
-.claude/skills/           setup, upstream
-repos/                    kernel and Morphogen clones (gitignored; each its own git repository)
+CLAUDE.md            instructions for the agent working here
+DECISIONS.md         every default and why (S-01...), append-only
+catalog-info.yaml    the map: what runs (core), what it can choose (options), where to search (sources)
+morphogen.yaml       the same map as Morphogen cells
+repos.yaml           the upstream projects and the commits last checked
+docs/                the spec and its build plan
+deploy/              the compose overlay on kernel's stack; the tools image
+modules/             briefs for kernel modules that connect the parts
+scripts/             bootstrap, up, down, check, logs, tools, spec, verdicts, map
+bin/                 kk, morphogen, gitleaks, kernel-mcp: each runs inside the tools container
+upstream/            fixes prepared for kernel or Morphogen, not yet opened as PRs
+.claude/skills/      setup, build-out, upstream
+repos/               kernel and Morphogen clones (gitignored; each its own git repository)
 ```
 
 ## Working upstream
 
-Fixes found while running the substrate go to kernel or Morphogen by branch and pull request in
-`repos/<repo>` (the `upstream` skill). The first one is ready: `upstream/kernel/0001-*.patch` lets kernel's
-`kk up` run on Podman.
-
-## What to build next
-
-1. `encoder-backstage`: the substrate's own map into kernel, so kernel models the system it runs in.
-2. `encoder-morphogen`: verdicts into kernel, so what was judged is cited beside what was observed.
-3. Gateway metrics as observations (`deploy/observer/`), so model cost is a claim.
-
-Together they make the first distribution (S-10): the system minding itself.
+Fixes and improvements to kernel or Morphogen go to those repositories by branch and pull request (the
+`upstream` skill), never as patches left in a clone.
 
 ## Licence
 
-Apache-2.0, as kernel and Morphogen. `services/backstage` is generated from Backstage's template (Apache-2.0).
+Apache-2.0, as kernel and Morphogen.

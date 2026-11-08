@@ -1,393 +1,226 @@
-# Substrate spec: a mind in an organism
+# Substrate spec
 
 What substrate is meant to become. **While this file is in place, Claude Code sessions in this repository build
-it out**, one step of the build plan (section 10, tracked in [`build.yaml`](build.yaml)) at a time, with the
+it out**, one step of the build plan (section 9, tracked in [`build.yaml`](build.yaml)) at a time, with the
 `build-out` skill; each step ends with its check passing, and decisions that are the owner's wait for the owner.
-Delete this file (or set a step's status to `dropped`) to stop that. The editable copy for discussion is the
-Claude Doc "Substrate Spec: A Mind in an Organism"; this file is the one sessions follow, so changes agreed there
-are copied here.
+Delete this file (or set a step's status to `dropped`) to stop that. The previous spec ("a mind in an
+organism") is in git at `a00fb61`; this one replaces it (S-41).
 
-## 1. What substrate becomes
+## 1. What substrate is
 
-Substrate becomes a mind inside an organism, built only from its own stack. Each agent runs the Common Model of
-Cognition (CMC); the agents, people and services together form a Viable System Model (VSM) organism. There is
-one store (kernel's Postgres, an ontological content system: typed items with revisions and review, claims as the
-assertion type and the index over the rest, kernel D-101, proposed), one judge (Morphogen), one gateway (Bifrost), one control plane (compose or
-Nomad), one front door (Caddy), one bus (pgmq, in the same Postgres), and every tool runs in a container.
+A super-agent that adapts to any situation by changing its own architecture. It models a system as cited
+claims, acts on that model, and changes something (including itself) only on evidence it cannot fake.
 
-This spec adapts the design "Common Model of Cognition on Claude Code"
-(https://claude.ai/artifact/3P6yZSqSBGk8cJHsGH1XpV), which stays as the original design. Every place that
-design stood up its own store, server or judge now names the substrate part that does that job, so there is one
-way to build each thing.
+The same loop, pointed at three widening targets, gives three levels:
 
-The design's four principles carry over, with substrate's added:
-
-1. **Working memory is the only hub.** Modules exchange state only through the agent's working-memory scope;
-   only a filtered snapshot reaches Claude's context.
-2. **Symbols plus numbers.** Every claim and every skill carries numbers (belief, activation, utility, use
-   counts) that bias what is recalled and chosen.
-3. **Hooks are the architecture; prompts are the content.** Anything that must always happen runs as a hook.
-4. **Learning is online and gated.** Utilities and activations update on their own; new or changed skills land
-   only with a Morphogen verdict, and with the owner's approval when the automation level asks for it (section 9a).
-5. **One of each.** One store, one judge, one gateway, one control plane, one bus, one hook set per event. No
-   module keeps a private database; the bus is a database in the same Postgres, not a second server.
-6. **Nothing on the host but git, python3, the engine and Claude Code.** Every new command runs in
-   `substrate-tools` (S-19).
-7. **Organization is the owner's; structure is free to change under judgment.** What makes the system itself
-   (purpose, goals, policy, who decides what, kernel's invariants) changes only through the owner. What
-   currently realises it (code, config, skills, model routes, where services run) changes whenever a verdict
-   says the change fits better.
-8. **Small defaults, open slots.** Each slot (runtime, engine, secrets, map view, model provider) has one default
-   that is tested on a fresh machine; the others stay behind the same interface, marked untested until their own
-   check passes. A second default is added only when a goal needs it.
-9. **Automated by default, reversible always.** The automation level (section 9a) decides how much reaches the
-   owner; at every level each decision is attributed and can be undone. What principle 7 calls organization is
-   never automated.
-
-### Software as a process, not a product
-
-A software factory makes software the way a plant makes a car: built, checked at a gate, shipped, then someone
-else's concern. The factory and its product are separate things. Substrate has no product in that sense. The
-running system is the software, and its work is keeping itself fitted to its purpose; code is its current
-structure, not its output, and there is no "done", only the next adaptation. In Maturana and Varela's terms a
-factory is allopoietic (it produces something other than itself) and substrate is autopoietic (it produces and
-maintains itself), and principle 7 is their split between organization and structure. Substrate's first
-distribution being the system minding itself (S-10) follows from this: self-reference is the normal case.
-
-Self-reference is the core, not the limit. Agents today take actions to achieve goals; substrate changes its own
-structure to achieve goals (owner, 2026-11-08). The same organism can become an assistant, a business's brain or a
-player of a game by taking on different goals and growing the structure they need: new encoders for what it must
-perceive, new actuators for what it must change, new skills for how. Its first goal is keeping itself fitted, so
-the loops are proven on itself before they are pointed outward.
-
-### The self-model has two faces
-
-A self-maintaining system needs a model of itself in two halves, and the gap between them is where all of its
-work comes from:
-
-| | Intended (the blueprint) | Observed (the structure) |
-| --- | --- | --- |
-| Says | what the system is meant to be: parts, owners, relations, limits, the documented process | what it actually is: what runs, what calls what, what happened, what it cost |
-| Written by | people, as declarations they own | encoders and observers, as measurements |
-| In substrate | `catalog-info.yaml` (Backstage's format), owner claims, process models (BPMN) | code (self-encoder), Nomad and Prometheus (observers), event logs, episodes, Morphogen's measurements |
-| Trust (Morphogen's levels) | stated | measured |
-| Alone it becomes | documentation that rots | a system that only preserves whatever it happens to be |
-
-Runtime reconciliation, whether a declared job is actually running, is Nomad's and is not rebuilt here (S-27).
-The observed calls come from OpenTelemetry (S-28), with `service.name` equal to the catalog's component name, so
-the two halves join by name. The console's Map draws intended, observed and their difference (S-29).
-
-Both halves are claims in one store, attributed and scoped, which is what makes them comparable: a detector
-asks where they disagree (a dependency used but not declared, a declared owner who never acts, a process path
-taken that the model does not have). The same pattern already appears three times: Kubernetes-style
-controllers (spec against status), kernel's conformance checking (documented process against the event log,
-D-50), and Morphogen's structure (intended cells against observed traces).
-
-A gap can close in **either direction**, and choosing which is a decision, not a computation. Practice may be
-brought back to intent (a fix, judged by Morphogen), or intent may be revised to match practice that turned out
-better (kernel's process learner proposes this, D-76). The review lane is where that choice is made. A system
-that always enforced its blueprint would be rigid; one that always accepted what it observed would have no
-identity. Keeping both, and deciding between them on evidence, is what lets it change without ceasing to be
-itself.
-
-The blueprint is a **catalog of things**: what exists, who owns it, what it is for, how it relates. Backstage's
-catalog format was the first one used, because it is the most widely used way owners declare systems beside their
-code (`encoder-backstage` reads it into claims, kernel D-100). Backstage itself, the server, was not built for
-this: a catalog here is any kind of thing (a service, a customer, a process, a game's rules), and its home is
-kernel, where it is claims with provenance that recall and kernel's MCP already answer. So the catalog lives in
-kernel, as items of a content type (kernel's `docs/content.md`, D-101), a file is one way to write it, and a
-browsing view is an optional slot (step 13). The blueprint alone
-does not observe, so on its own it drifts from reality; substrate supplies the other half and the loop between
-them (encoders turn declarations into claims; observers supply what is; detectors, triage and the review lane
-close the gap).
-
-## 2. Module map
-
-Each module of the cognitive design maps to a part substrate already runs or to a kernel module it adds. Nothing
-gets its own store: every memory is claims in kernel's Postgres, written by change sets under a role. Work and
-notices between parts travel on the bus; facts never do.
-
-| Cognitive module | Substrate part | State today |
-| --- | --- | --- |
-| Cycle (decide, act, observe) | A Claude Code session, with hooks run through `bin/` in the `substrate-tools` container | Runs |
-| Working memory | Kernel's agent working-memory scope (M6-T2), read and written through the kernel MCP memory profile; proposed as one session-brief item (kernel D-101) | Planned in kernel |
-| Declarative memory | Kernel claims plus recall (BM25 and embeddings, D-60, D-61); a new `activation` module reranks recall | Claims run; activation new |
-| Associations (graph) | pgGraph over `kernel.current_edge`, in kernel's Postgres image | Extension in the image; the graph module new |
-| Episodic memory | Kernel's `encoder-interaction` turns session transcripts into episode claims; kernel's memory extractor proposes facts from them | Encoder in kernel; substrate wiring new |
-| Procedural memory | Claude Code skills (`.claude/skills/`), each with a utility claim | Skills run; utility new |
-| Utility and learning | DQV measurement claims written by `encoder-morphogen` from Morphogen verdicts, plus token and cost counts from Bifrost through Prometheus | Planned (S-08, S-05) |
-| Skill selection | Claude Code's own skill activation; utility is shown to it, it is not replaced | Runs |
-| Perception | Kernel encoders: self, `encoder-backstage`, `observer-prometheus`, `encoder-morphogen`, later `encoder-nomad` | Partly runs |
-| Motor | Actuators declared as ontology actions: git branch and PR, Nomad job changes, catalog edits by PR | New |
-| Judge and red team | Morphogen | Runs |
-| Model calls | Bifrost (Anthropic, OpenRouter, local) | Runs |
-| Identity resolution | Kernel M6-T9 resolver, judged by Morphogen (S-07) | Planned |
-| Goals and policy | Owner claims in kernel, under the owner role; proposed from the console onto the bus's `owner` queue | Proposal path runs; goal vocabulary new |
-| Interrupts and triggers | The bus (pgmq, S-21): `triggers` for what should start a session, `events` for the feed | Queues run; producers and the dispatcher new |
-| Coordination (triage) | A `triage` agent with its own reviewer login: settles review items at the automation level, each decision attributed and reversible (section 9a) | New (step 12) |
-| The owner's view | The console (S-22) behind the front door (S-20), signed in with a kernel login | Runs |
-| Secrets | The secrets slot (S-31): `.env`, or OpenBao with policies and an audit trail | Runs |
-
-Graph questions (what depends on what, who is near whom, paths and neighbourhoods) go to **pgGraph**, which
-kernel's Postgres image carries (kernel D-94, S-24): a rebuildable graph over `kernel.current_edge` (D-86),
-queried as the calling role so row-level security, and with it clearance, still applies. Storage stays SQL
-(kernel D-08).
-
-## 3. Working memory
-
-Working memory is a small, bounded set of claims in the agent's working-memory scope (kernel M6-T2), not a
-separate database. It holds what the current session is about:
-
-- the active goal, pointing at the owner claim it serves;
-- the entities in focus (at most a dozen), by kernel identifier;
-- open conflicts and review items touching those entities;
-- the latest Morphogen verdicts on work in progress;
-- the skills tried this session and how each went.
-
-**Reading.** At `SessionStart` the hook writes a short summary of the scope into context. Claude Code caps each
-injected string at 10,000 characters and replaces anything longer with a 2,000-character preview, so the
-summary targets 2,000 characters and links to the rest through recall. At `UserPromptSubmit`, `kernel-mcp-cue`
-adds cues for entities the prompt names.
-
-**Writing.** The agent changes focus and goal through the memory profile's tools. `PreCompact` and `SessionEnd`
-write the scope back so the next session starts where this one stopped.
-
-**Decay.** Items not touched for a set number of turns leave the scope; they stay in declarative memory as
-ordinary claims. The limit and the decay are parameters Morphogen tunes, starting from fixed defaults.
-
-**Goals from the owner.** A goal proposed in the console waits on the bus's `owner` queue. The next session
-reads it, writes it as an owner-attributed goal claim through the review lane (the owner approves it there), and
-deletes the message; until step 3 lands, the session states it at the start instead.
-
-## 4. Procedural memory
-
-Skills are the productions. A skill is a folder under `.claude/skills/` (or a plugin's), and Claude Code chooses
-one by its description. Substrate does not replace that choice; it gives it better evidence.
-
-**Utility.** Each skill has a utility claim: how often it finished the task, at what token cost (from Bifrost),
-and the verdicts Morphogen gave its output. `encoder-morphogen` and the Prometheus observer write these as DQV
-measurements with PROV lineage. Working memory lists the skills relevant to the active goal with their utility,
-so a poor skill is visible before it is chosen.
-
-**Chunking (new skills).** When the episode log shows the same sequence of steps succeeding several times, the
-agent drafts a skill for it on a branch. Morphogen judges the draft against the old way on held-out tasks (red
-team first, A/A checks), and the result goes to kernel's review lane. The skill lands only with a passing verdict,
-and with the owner's approval in review when the automation level asks for it.
-
-**Demotion.** A skill whose utility falls below its baseline over a window is flagged in review with its
-evidence. Removal is a change like any other: judged, then approved.
-
-## 5. Declarative and episodic memory
-
-**Facts are claims.** Every fact is a kernel claim: attributed to a source, quoting its evidence, belief-scored,
-scoped, valid-time and recorded-time stamped, written only through a change set. Conflicting claims stay side by
-side; fusion picks a current value by authority (owner policy) or by reliability (a learned cell Morphogen
-tunes).
-
-**Activation.** Recall today ranks by BM25 and embeddings. A new kernel module, `activation`, reranks recall
-results with three terms:
-
-- base level: how recently and how often the claim was recalled or cited (from kernel's recall log);
-- spreading: links from the entities in working memory, read as pgGraph neighbourhoods;
-- belief: the claim's fused belief score.
-
-The weights start fixed. The module lands only if Morphogen judges it better than plain recall on held-out
-questions about this repository and its stack; otherwise recall stays as it is.
-
-**Episodes.** `encoder-interaction` reads each finished session (prompts, tool calls, outcomes, cost) and
-writes one episode claim set with PROV lineage. Kernel's memory extractor proposes durable facts from episodes
-into the review lane; nothing an episode suggests becomes a fact without review or a verifier.
-
-## 6. Perception and motor
-
-**Perception is encoders.** Each source reaches kernel through an encoder that writes claims under its own
-role:
-
-| Encoder | Reads | Writes |
-| --- | --- | --- |
-| self-encoder (kernel) | this repository and the clones | code, config and docs as claims |
-| `encoder-backstage` | `catalog-info.yaml` (the first catalog format; others later, step 13) | the map as `kk-tosca` claims (S-09) |
-| `observer-prometheus` (kernel) | Bifrost metrics through Prometheus | cost, tokens and errors per window (S-05) |
-| `observer-prometheus` (kernel) | the OpenTelemetry collector's service graph through Prometheus | observed calls between parts per window (S-28) |
-| `encoder-morphogen` | Morphogen's evidence log | verdicts as DQV measurements (S-08) |
-| `encoder-nomad` (new) | Nomad's event stream | allocations, failures, restarts; a failure also goes on the `triggers` queue |
-| detectors (kernel M6-T0) | claims already in kernel | drift and conflict findings; each also goes on the `triggers` queue |
-
-**Motor is actuators.** An action is declared in the ontology (name, inputs, the entity it changes, who may run
-it) and every run is recorded as a claim. The first actuators:
-
-- git: branch, commit, and a pull or merge request on whichever forge the repository lives on (GitHub, Forgejo,
-  Gitea, GitLab; S-25), with the `upstream` skill for kernel and Morphogen. A forge's merge button is not an
-  approval path; approvals stay in the review lane and Morphogen's verdicts;
-- Nomad: update or restart a job through its API, with an ACL token limited to the substrate namespace;
-- the map: a catalog change as a pull request to `catalog-info.yaml`.
-
-An actuator that changes a running system needs a passing Morphogen verdict or the owner's approval in the review
-lane. Reads never do.
-
-## 7. Cycle and hooks
-
-The cycle is a Claude Code session. Hooks connect it to kernel; all of them run through `bin/` in the tools
-container, so the host needs nothing more. Substrate adds to kernel's existing `SessionStart` and `PreToolUse`
-hooks rather than defining a second set, and `kk up --commands-dir bin/` (kernel D-95) points the commands at `bin/`.
-The one hook substrate commits itself (`.claude/settings.json`) is the build-out's: at `SessionStart` it says
-which step of this spec is next (`scripts/spec.py hook`).
-
-| Hook | Command | What it does |
-| --- | --- | --- |
-| `SessionStart` | `kernel-mcp-hook` | injects the working-memory summary and the active goal |
-| `SessionStart` | `scripts/spec.py hook` | names the next build-plan step while this spec is in place |
-| `UserPromptSubmit` | `kernel-mcp-cue` | adds cues for entities the prompt names |
-| `PreToolUse` | `kernel-mcp-hook` | kernel's existing checks before a tool runs |
-| `PostToolUse` | `kernel-mcp-hook`, `async: true` | appends the step to the episode buffer without blocking |
-| `PostToolUseFailure` | `kernel-mcp-hook`, `async: true` | records the failure against the skill in use |
-| `PreCompact` | `kernel-mcp-hook` | writes working memory back before context is compacted |
-| `Stop`, `SubagentStop` | `kernel-mcp-hook` | closes the step; marks the goal done or open |
-| `SessionEnd` | `kernel-mcp-hook` | hands the episode to `encoder-interaction` |
-
-Notes from Claude Code's hooks reference (https://code.claude.com/docs/en/hooks.md, read 2026-11-07):
-
-- context goes in `hookSpecificOutput.additionalContext`, capped at 10,000 characters per string;
-- `async: true` runs a command hook in the background, and its timeout is not enforced, so async hooks must end
-  on their own;
-- `onFailure` (`continue` by default, or `block`) needs Claude Code 2.1.295 or later; substrate keeps
-  `continue` so a kernel outage never stops a session;
-- `PostToolBatch`, `FileChanged` and `UserPromptExpansion` exist too; substrate does not use them yet.
-
-## 8. Learning
-
-Substrate learns in four loops. Every one ends the same way: a change is proposed, Morphogen judges it against
-what runs now on evidence the changer cannot reach, and it lands only with a passing verdict (and the owner's
-approval where it touches policy).
-
-| Loop | What changes | Evidence |
-| --- | --- | --- |
-| Utility | skill and model-route preferences | task outcomes, verdicts, Bifrost cost |
-| Chunking | new skills from repeated episodes | held-out tasks, old way vs new skill |
-| Recall | activation weights, working-memory limits | held-out questions with known answers |
-| Trust | the reliability cell that weighs sources in fusion | claims later confirmed or contradicted by verifiers |
-
-Authority is not learned. Which source wins by policy is an owner claim; learning only adjusts reliability within
-it. Morphogen's A/A checks (the same candidate judged twice) run before any loop's results are trusted, so judge
-noise is measured rather than mistaken for improvement.
-
-## 9. The organism
-
-The mind above runs one session at a time. The organism is how many sessions, services and people work as one
-business, laid out on Beer's Viable System Model.
-
-| VSM system | Role | Substrate part |
-| --- | --- | --- |
-| 1 Operations | the work itself | skills and workflows acting on the business's systems |
-| 2 Coordination | keep operations from colliding | the review lane and the `triage` agent (section 9a), plus a `dispatcher` module that gives each entity one active session at a time |
-| 3 Control | resources and performance now | kernel's MAPE-K loop over claims; budgets read from Bifrost costs |
-| 3* Audit | check what operations report | Morphogen red team and kernel verifiers |
-| 4 Intelligence | the outside and the future | source encoders, drift detectors (M6-T0), the planner role |
-| 5 Identity | purpose and policy | owner claims: goals, policies, authority |
-
-**Goals** are owner claims in a small vocabulary: what outcome, for which entity, by when, under which budget. A
-goal is open until a verifier or the owner marks it met.
-
-**Triggers** start sessions without a person: a detector finding, a failed allocation from `encoder-nomad`, a
-goal past its date, or a schedule. Each is a message on the bus's `triggers` queue. The dispatcher reads that
-queue and turns a message into a headless Claude Code session (a Nomad batch job on that runtime, a scheduled
-task otherwise) with the goal and focus already in its working memory; a message is deleted only when its
-session has started, so a crash leaves it to be read again (pgmq's visibility timeout).
-
-**The owner** sees one console: the review lane, recent verdicts, spend, the stack and this spec's progress,
-signed in with their kernel login. Anything that needs their decision arrives in the review lane with its
-evidence, and what triage settled is listed beside it with an undo.
-
-### 9a. Triage and the automation level
-
-Beer's system 2 and 3 exist to absorb variety, so that system 5 sees only what needs its judgment. A review lane
-that sends every item to one person fails the way the first run did (2026-11-08): four of five gaps were
-telemetry noise, and they were approved without being read. Triage is the part that absorbs that variety.
-
-**Order.** Noise is fixed where it starts (an observer query, an encoder) rather than declined again and again;
-what still arrives goes to triage first; only what triage escalates reaches the owner.
-
-**The triage agent** is a kernel agent (`urn:kk:agent:triage`) with its own reviewer login. Kernel already
-refuses approval by a change set's submitter (KK025) and records who decided (`decided_by`), so triage never
-settles its own proposals, and every decision is attributed to it. For each item it writes a recommendation with
-its evidence (the claims, the code line, the observation) and a confidence.
-
-**The automation level** is a setting (`AUTOMATION` in `.env`, read through the console too):
-
-| Level | Triage settles | Reaches the owner |
-| --- | --- | --- |
-| `full` (default) | everything outside organization: approves or declines with its reason | escalations: low confidence, conflicting evidence, or an item it cannot classify |
-| `assisted` | nothing; it recommends | every item, with the recommendation and evidence first |
-| `manual` | nothing; it does not run | every item as it is |
-
-**Reversible always.** An approval triage gave is undone by retracting what it applied (kernel never deletes; a
-status records the retraction and who made it); a decline is undone by resubmitting. The console lists triage's
-recent decisions with an undo for each, and an undo is itself a recorded decision that triage learns from.
-
-**Never automated, at any level** (principle 7): owner claims (goals, policies, authority), clearance grants,
-kernel's invariants and schema, licences, and spending above the budget the owner set. These always reach the
-owner.
-
-**Learning.** Triage's recommendations are a cell Morphogen judges: the owner's undos and escalation answers are
-held-out evidence of where it was wrong. A rising undo rate lowers what it settles alone.
-
-## 10. Build plan
-
-Each step adds one new cause of failure, and ends with a check anyone can run. [`build.yaml`](build.yaml) holds
-the same steps with their status, checks and what each needs; the `build-out` skill works through it.
-
-| # | Step | Where | Done when |
+| Level | It models | Which makes it | Proven when |
 | --- | --- | --- | --- |
-| 0 | The stack runs | substrate | `scripts/check.sh` passes on compose with Podman (console and bus included), then on Nomad |
-| 1 | Verdicts become claims | `modules/encoder-morphogen` | each Morphogen verdict appears in kernel as a DQV measurement with lineage |
-| 2 | The map becomes claims | `modules/encoder-backstage` | recall answers "what depends on bifrost?" from catalog claims, and the first intended-against-observed gap reaches review |
-| 10 | A fresh-machine test | `scripts/fresh.sh` | a clean checkout in a throwaway container bootstraps and passes `scripts/check.sh` with no manual step |
-| 11 | One default per slot | substrate | the defaults (compose, Podman, `.env`) are the only tested path; the others keep their interfaces, marked untested |
-| 12 | Triage and the automation level | `modules/triage`, the console | at `full`, a noise gap is settled by triage, listed in the console with an undo, and the undo restores it |
-| 13 | The map without Backstage | substrate, kernel's MCP | catalog questions are answered from kernel claims with Backstage off; the view is an optional slot |
-| 3 | Working memory | kernel M6-T2, upstream PR (owner decides) | a new session states the active goal and focus without being told |
-| 4 | Episodes | kernel's `encoder-interaction`, wired by substrate | a finished session appears as an episode; the extractor's proposals reach review |
-| 5 | Activation | `modules/activation` | Morphogen verdict: better than plain recall on held-out questions, or the module is dropped |
-| 6 | Skill utility | `encoder-morphogen` plus the observer | working memory lists relevant skills with success rate and cost |
-| 7 | Skill promotion | chunking, judged | one skill drafted from repeated episodes passes judgment and lands through review |
-| 8 | Motor | actuators, `encoder-nomad` | a failed allocation is noticed, a fix is proposed, judged and applied through Nomad's API |
-| 9 | Organism | `modules/dispatcher`, triggers on the bus, goal vocabulary | a drift finding on `triggers` starts a headless session that closes it with a verdict, and the owner sees it in review |
+| **Autopoietic** | itself: its parts, skills and map | self-maintaining | it proposes a change to its own architecture, the change is judged, and the verdict lands as claims |
+| **Engineer** | another system, from observation, exploration and interviews | able to improve what it models | it builds a cited graph of a real system and makes one judged improvement to it |
+| **Generalist** | anything, by growing what a domain needs: content types, vocabularies, encoders, code, views | adaptable | a second, unlike domain is modelled and improved by the same loop, and everything it needed was added through that loop |
 
-Steps 1 and 2 need nothing from kernel's roadmap and come first. Steps 10 to 13 come next (owner, 2026-11-08):
-every step from 3 on adds a source of review items, so triage comes before them, and a fresh-machine test before
-anything is built on the stack again. Step 3 changes kernel and waits for the owner's decision.
+Each level depends on the one before. Self first, because the system is right here and every claim can be
+checked. Engineer is the same loop aimed outward. Generalist is the test of the foundation: a new domain may
+bring code and a view of its own, but it should not need a new store, a new judge or a different loop.
 
-## 11. Limitations
+## 2. How it works: science-minded
 
-- **One tested path.** The stack first ran on a real machine on 2026-11-08 (compose, Podman 4.9), after four fixes
-  no dry run had caught. Step 10 keeps it that way; other slot choices are untested until their checks pass.
-- **Full automation is a bet on triage.** At the default level most items are settled without the owner. Undo,
-  attribution and the never-automated list bound the damage; the undo rate measures it.
-- **Kernel changes are the owner's call.** Working memory (M6-T2), identity resolution (M6-T9) and detectors
-  (M6-T0) are kernel milestones; substrate proposes them upstream and waits.
-- **Skill choice stays Claude Code's.** Utility can inform the choice through working memory; it cannot force
-  one. If activation ignores it, the effect shows up as no change in verdicts.
-- **The context budget is small.** 10,000 characters per hook string, and less is better; working memory has to
-  be summarised hard.
-- **Judges are models.** Verdicts are noisy; A/A checks measure that noise, they do not remove it. Small
-  improvements may be indistinguishable from it.
-- **Cost.** Judged runs, episodes and extraction all spend tokens. Bifrost measures it; budgets in control (VSM
-  3) have to cap it.
-- **Nomad is BUSL-1.1** (S-18). The organism must keep working on compose, so triggers have a non-Nomad path.
-- **Single node.** Everything assumes one machine and one owner. Several owners or sites need federation with
-  receipts, which this spec does not cover.
+Substrate works the way a careful scientist does.
 
-## 12. Sources
+- **Claims are observations and hypotheses**, never facts by assertion. Each is attributed, quotes its
+  evidence and carries a belief that support and contradiction move.
+- **A change is an experiment.** It states what it should improve and how that will be measured, before it is
+  run. It is then tested against what runs now, on cases the changer has not seen.
+- **Negative results are results.** A rejected candidate, a dropped step or a change that did not help is
+  recorded with its evidence, so it is not tried blind again.
+- **Noise is measured.** Morphogen's A/A checks (the same candidate judged twice) put a number on how much a
+  verdict wobbles, so wobble is not mistaken for improvement.
+- **Choices come from catalogs, not best guesses** (section 5): look for candidates, test the shortlist,
+  record why one was picked.
 
-- The cognitive-architecture design this spec adapts: https://claude.ai/artifact/3P6yZSqSBGk8cJHsGH1XpV
-- This repository, especially `DECISIONS.md` and `catalog-info.yaml`
-- kernel (https://github.com/OpenReplicant/kernel): its decisions log and milestone 6
+**The design is open; the judge is not.** Architecture, code, content types, views and parts can all change,
+and new ones can be added whenever a step needs them. The one hard restriction is Morphogen. Substrate is
+expected to try to reward-hack sometimes: to pass a check by weakening it, to measure what is easy instead of
+what matters, or to tune on the test set. That is an ordinary pressure on any optimiser, not a failure of
+character. Morphogen is built so the changer cannot reach the rules, the measurement or the held-out cases,
+and its red team looks for exactly these moves first. Everything else stays adaptable.
+
+## 3. The loop
+
+```
+observe ─▶ claim ─▶ model ─▶ gap ─▶ propose ─▶ judge ─▶ apply ─▶ (observe)
+  encoders,   cited,    graph of    intended    builder,     Morphogen   branch, PR,
+  explorer,   typed by  the system  vs          optimizer,   verdict     config, a
+  interviews  ontology  (catalog)   observed    response                 notice
+```
+
+**Two halves of a model.** Every model has an intended half (what the system is meant to be: declared parts,
+owners, relations, process, stated by people) and an observed half (what it actually is: what runs, what calls
+what, what happened, measured by encoders). Both are claims in one store, so they can be compared. The gap
+between them is where all of substrate's work comes from.
+
+**A gap closes either way.** Practice can be brought back to intent (a fix), or intent revised to match
+practice that turned out better. Which way is a decision, made in kernel's review lane with the evidence beside
+it. Always enforcing the blueprint makes a system rigid; always accepting what it observes leaves it no
+identity.
+
+**Organization and structure.** What makes the system itself (purpose, goals, policy, who decides) changes
+only through the owner. What currently realises it (code, config, skills, parts, the map) changes whenever a
+verdict says the change fits better.
+
+**Architecture is content.** Substrate's own parts are entries in its own catalog. Changing its architecture is
+the same operation as changing anything else it models: propose an edit to the map and to what realises it,
+get it judged, and record the result as claims.
+
+## 4. Parts
+
+Three, plus the glue between them.
+
+| Part | Does | Where |
+| --- | --- | --- |
+| **Kernel** | the store and the model: a content system on Postgres with claims as its assertion type | `repos/kernel` |
+| **Claude Code** | the actor: explores, interviews, researches, builds, maps; its skills are substrate's procedures | you |
+| **Morphogen** | the judge: a change lands only with a verdict the changer cannot reach | `repos/morphogen` |
+
+The glue is this repository: scripts that bring the parts up and connect them, the tools container they run in
+(S-19), and the map (`catalog-info.yaml`). It runs one way for now: compose with Podman, secrets in `.env`.
+
+### Kernel as a content system
+
+Kernel is a claim log with ontologies, shaped as a content management system on Postgres (kernel D-101,
+`docs/content.md`, PR OpenReplicant/kernel#112):
+
+- **Content types** are pack classes with SHACL shapes; **items** are entities; **versions** are artifacts. A
+  content type can come with its own view.
+- **Claims** are the assertion type and the index over everything else: attributed, quoting their evidence,
+  belief-scored, scoped, bitemporal, written only by change sets. Claims are what substrate reasons over and
+  what verifiers check. Everything else (documents, transcripts, code, packages) is what claims cite.
+- **Ontologies and aliases are content and taxonomy.** A vocabulary is a pack; relations between vocabularies
+  are mapping claims (SKOS `exactMatch` and `closeMatch`, SSSOM-shaped when a mapping set needs its own
+  metadata). A domain keeps its own terms, and mappings relate them, rather than translating everything into
+  one schema (S-33).
+- **System graphs use the catalog's entity model.** Components, systems, resources, APIs, groups and their
+  relations, kept in Backstage's own names (kernel D-100) because that is the most widely used way owners
+  declare systems. No Backstage server is needed (S-38). A catalog can hold any kind of thing: a service, a
+  package, a customer, a process.
+- **Postgres does the rest.** Row-level security (clearance), full-text search and pgvector (recall), pgGraph
+  (neighbourhoods and paths), LISTEN/NOTIFY, pg_cron and pgmq are already in kernel's image. Each is used when a
+  step needs it, not before.
+
+## 5. Catalogs: choosing, not guessing
+
+Most of what substrate decides is a choice between things that already exist: a library, a service, a model, a
+vocabulary, a process. It keeps two kinds of catalog so those choices come from evidence rather than from what
+a model happens to remember.
+
+- **Catalogs of components**: things it can use, each with what it is for, where it fits, its licence and
+  versions, and the evidence gathered about it (tests run, verdicts, problems met). Substrate's own map is one
+  (`catalog-info.yaml`, system `core`). The parts removed in step 1 are its first options (system `options`):
+  each says where it fits, what interface keeps it possible, and the commit to restore it from.
+- **Catalogs of searchable catalogs**: registries it can search when no known component fits. Examples are npm,
+  PyPI, crates.io, the Go module proxy, GitHub, apt archives, container registries, the Hugging Face Hub, and
+  deps.dev across several of them (system `sources`). Each says how to search it and what metadata it gives.
+
+**A choice is curated, researched and tested.** Search the catalogs. Shortlist candidates as catalog entries
+with claims about each (licence, release age, maintenance, fit, quoted from the source). Test the shortlist
+against the need, judged by Morphogen where "better" is the question. Pick one and record why. The rejected
+candidates stay in the catalog with their evidence. The house rules apply to every candidate: a permissive or
+LGPL licence in the default stack (kernel D-11), and a release at least two weeks old, pinned exactly.
+
+## 6. Where claims come from
+
+| Source | How | Attributed to |
+| --- | --- | --- |
+| **Observation** | encoders read code, config, running containers, logs and metrics | the encoder's role, quoting what it read |
+| **Exploration** | Claude Code reads a system (repository, docs, an API, a registry) and records what it found | the agent, quoting the source |
+| **Interviews** | a person answers questions; each statement becomes a claim | the person, quoting the transcript |
+| **Verdicts** | `encoder-morphogen` reads Morphogen's evidence log (kernel D-99) | Morphogen, with PROV lineage to the record |
+
+Interviews matter as much as observation: most of the intended half of any real system lives only in people's
+heads. A person's statement is a claim like any other. It can conflict with an observed one, and the conflict
+is a gap.
+
+## 7. Acting
+
+Responses are how a gap closes. Each one is declared (name, inputs, what it changes, who may run it), and each
+run is recorded as a claim.
+
+- **Builders** change code, config, content types, views or the map: a branch and a pull request on whatever
+  forge the repository uses (S-25).
+- **Optimizers** tune a parameter (a threshold, a prompt, a skill) and keep it only if Morphogen judges it
+  better than what runs now.
+- **Other responses**: research a catalog, open a review item, ask a person (an interview), notify the owner.
+
+A response that changes a running system needs a passing verdict or the owner's approval in the review lane.
+Reads never do. Approval is never a forge's merge button.
+
+The owner sees kernel's UI: the review lane (gaps, proposals, verdicts, each with evidence) and recall over
+everything. Only decisions that are the owner's reach them: organization (section 3), kernel changes, licences,
+money. When the lane gets noisy, fix the noise where it starts (an encoder, a query).
+
+## 8. Options: what substrate stays compatible with
+
+These are good production choices that substrate does not run now. Each is a component in `catalog-info.yaml`,
+system `options`, with lifecycle `option`. Each entry says where it fits, the interface that keeps it
+possible, when to bring it back, and the commit to restore it from (`a00fb61`, where all of them ran on the
+owner's machine on 2026-11-08). The rule: don't build it now, don't close the door on it. One comes back
+through section 5, as a choice with evidence, when a step needs it.
+
+| Option | Fits where | Kept possible by | Bring back when |
+| --- | --- | --- | --- |
+| Model gateway (Bifrost v2.3.2) | between Claude Code and model providers | Claude Code reads `ANTHROPIC_BASE_URL`; nothing assumes direct access | cost must be measured outside the agent, or several providers routed |
+| Metrics (Prometheus v3.15.0) | observed half: rates, cost, errors | kernel's `observer-prometheus` reads PromQL | a gap needs numbers over time |
+| Traces (OpenTelemetry collector 0.163.2) | observed half: who calls whom | `service.name` = the catalog name | a gap needs observed calls, not just code |
+| Catalog browser (Backstage, create-app 0.9.3) | a view over the catalog | the catalog stays in Backstage's entity model | people want to browse, or a Backstage plugin is needed |
+| Scheduler (Nomad 2.0.7) | runs the services | scripts call only `rt_up`, `rt_down`, `rt_status`, `rt_logs` | many nodes, batch jobs, or an API an actuator drives |
+| Secrets store (OpenBao 2.7.1) | holds credentials | scripts read secrets only through `env_value` and `sec_*` | more than one person or machine, or audit needed |
+| Bus (pgmq 1.13.1) | work and notices between parts | pgmq is already an extension in kernel's image | triggers should start sessions without a person |
+| Owner console | one live page for the owner | kernel serves its own UI and MCP | kernel's UI is not enough to act from |
+| Front-door plugins (Caddy 2.11.7 with xcaddy) | the one address | kernel's Caddy stays the front door | a plugin (auth, HTTPS, rate limits) is needed |
+| Docker | the container engine | engine-specific code only in `scripts/lib.sh` | a machine without Podman |
+| TOSCA, RDF tools | other tools reading or writing the model | kernel's mappings pack; export as N-Quads (kernel D-45) | a tool needs the model in its own terms |
+| A forge (Forgejo, Gitea, GitLab) | where pull requests are reviewed | git remotes only (S-25) | a repository lives there |
+
+**Held ideas.** These come from the previous spec. Each can return as a step when a level needs it: working
+memory, episodes from sessions, recall reranked by activation, skill utility and promotion, triage at an
+automation level, a dispatcher that starts headless sessions.
+
+## 9. Build plan
+
+Each step ends with a check anyone can run. [`build.yaml`](build.yaml) holds the same steps with their status.
+
+| # | Step | Done when |
+| --- | --- | --- |
+| 1 | Cut to the core | the stack is kernel's Postgres, kernel and the tools container; each removed part is an option in the map (section 8); `scripts/check.sh` passes |
+| 2 | Autopoietic: one loop on itself | a gap between the self-map and the code is found, a change closing it is proposed and judged, and recall traces gap → change → verdict by claim ids |
+| 3 | Kernel as a content system | the catalog is a content type in kernel, read and edited as items, with its claims and drift checks unchanged (needs the owner: a kernel change) |
+| 4 | Catalogs to choose from | one real choice (a component a step needs) is made by searching the source catalogs, shortlisting candidates as entries with cited claims, testing them, and recording the pick and the rejections |
+| 5 | Engineer: another system | a real system the owner picks has a cited graph built from at least one interview and one observed source, and one improvement to it is judged and applied (needs the owner: which system) |
+| 6 | Generalist: a second domain | a domain unlike step 5's reaches the same check, and what it needed (content, encoders, code, a view) was added through the loop and judged where it claimed to improve something |
+
+## 10. Limitations
+
+- **One machine, one owner.** Several owners or sites need federation, which this spec does not cover.
+- **Judges are models.** Verdicts are noisy. A/A checks measure that noise but do not remove it, so small
+  improvements may not be distinguishable from it.
+- **The judge is the one wall.** If Morphogen's separation fails (the changer can see the held-out cases, or
+  edit the rules), nothing else stops a reward hack. Its red team and A/A checks run before any loop's results
+  are trusted.
+- **Kernel changes are the owner's call.** Step 3 is a kernel PR; substrate prepares it and waits.
+- **Interviews cost a person's time.** Step 5 depends on someone willing to answer, and on questions good enough
+  to be worth it.
+- **The observed half starts thin.** With metrics and traces as options (section 8), what is observed about
+  substrate comes from its code and its running containers. That is enough for step 2, but not for every kind
+  of gap.
+- **Registries differ.** Some have no search API (PyPI), and some limit unauthenticated requests (GitHub).
+  Research falls back to the web, and each claim says where it came from.
+
+## 11. Sources
+
+- This repository's `DECISIONS.md` (S-41 onwards for this spec) and `catalog-info.yaml`
+- kernel (https://github.com/OpenReplicant/kernel): `docs/decisions.md`, `docs/content.md` (PR #112)
 - Morphogen (https://github.com/OpenReplicant/Morphogen)
-- Claude Code hooks reference: https://code.claude.com/docs/en/hooks.md (read 2026-11-07)
-- pgmq v1.13.1: https://github.com/pgmq/pgmq (`INSTALLATION.md`)
-- pgGraph v1.2.1: https://github.com/evokoa/pggraph (installation, administration and security guides)
-- Caddy: the official image's docs on adding modules (docker-library/docs, `caddy/content.md`)
-- Laird, Lebiere and Rosenbloom, "A Standard Model of the Mind," *AI Magazine* 38(4), 2017
-- Beer, *The Heart of Enterprise*, Wiley, 1979 (the Viable System Model)
-- IBM, "An architectural blueprint for autonomic computing," 2005 (MAPE-K)
-- W3C Data Quality Vocabulary (https://www.w3.org/TR/vocab-dqv/) and PROV-O (https://www.w3.org/TR/prov-o/)
+- Maturana and Varela, *Autopoiesis and Cognition*, 1980 (organization and structure)
+- SSSOM: https://mapping-commons.github.io/sssom/ ; SKOS: https://www.w3.org/TR/skos-reference/
+- Backstage's catalog entity model: https://backstage.io/docs/features/software-catalog/descriptor-format
+- deps.dev API: https://docs.deps.dev/api/v3/

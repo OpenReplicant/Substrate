@@ -155,9 +155,8 @@ provider instead of the gateway.
 
 ## Afterwards
 
-If `docs/spec.md` is in place, this was step 0 of its build plan: when `scripts/check.sh` passes on compose,
-mark it (`python3 scripts/spec.py set 0 done` once Nomad passes too, or `blocked` with `--waiting-on` saying
-what Nomad needs) and continue with the build-out skill.
+If `docs/spec.md` is in place, continue with the build-out skill once `scripts/check.sh` passes. Until build
+step 1 (cut to the core) lands, this skill still sets up the earlier, larger stack (S-41); step 1 rewrites it.
 
 Record anything that differed from these steps (a flag that changed, a provider quirk) as a fix: in this
 skill or the scripts when it is substrate's, upstream when it is kernel's or Morphogen's.

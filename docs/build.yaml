@@ -1,5 +1,6 @@
-# The spec's build plan (docs/spec.md, section 10) and where it stands. The `build-out` skill works through it
-# while docs/spec.md is in place; scripts/spec.py reads it (status, next, set) and so does the console.
+# The spec's build plan (docs/spec.md, section 8) and where it stands. The `build-out` skill works through it
+# while docs/spec.md is in place; scripts/spec.py reads it (status, next, set). The previous plan (steps 0 to 13,
+# "a mind in an organism") is in git at a00fb61 (S-41).
 #
 # status: todo | doing | done | blocked | dropped
 #   blocked  waits on something outside the step (named in `waiting_on`); the skill moves to the next step
@@ -9,182 +10,106 @@
 #   prepares the case (a brief, a draft PR, the evidence) and asks; it does not decide.
 # check: what proves the step done; run it, and only then set status to done (with `done_on` and the commit).
 steps:
-  - id: 0
-    title: The stack runs
-    spec: "10, 11"
-    where: substrate
+  - id: 1
+    title: Cut to the core
+    spec: "4, 8"
+    where: substrate (deploy/, scripts/, services/, catalog-info.yaml, README.md)
     after: []
     status: todo
     check: >-
-      scripts/check.sh passes with RUNTIME=compose and CONTAINER_ENGINE=podman, and the setup skill's steps 4 to 6
-      (each provider answers, Claude Code through the gateway, the MCP connections) are done
+      scripts/up.sh starts only kernel's Postgres, kernel (with the Caddy its own stack runs) and substrate-tools;
+      scripts/check.sh passes on compose with Podman; Bifrost, Prometheus, the OpenTelemetry collector, Backstage,
+      OpenBao, Nomad, the console and the bus database are gone from deploy/, scripts/ and services/; each is a
+      component in catalog-info.yaml's `options` system (lifecycle option) saying where it fits, the interface
+      that keeps it possible, when to bring it back and the commit to restore it from (spec section 8); the
+      `sources` system lists the registries substrate can search; and
+      `bin/morphogen structure check morphogen.yaml` reports no errors
     notes: >-
-      The setup skill does this step. Includes the front door, the console (sign in as owner) and the bus. First run
-      on the owner's machine 2026-11-08: check.sh passes on compose with Podman 4.9 after four fixes (8e65f43,
-      kernel#111). Nomad is no longer part of this step (step 11: one default per slot).
-
-  - id: 1
-    title: Verdicts become claims
-    spec: "4, 6, 8"
-    where: modules/encoder-morphogen
-    after: [0]
-    status: doing
-    check: >-
-      after one judged run (Morphogen's status tool shows a verdict), kernel recall finds a DQV measurement for it
-      with PROV lineage back to the evidence record's hash
-    notes: >-
-      Built as kernel's encoder-morphogen (kernel D-99, merged as OpenReplicant/kernel#108, 1f70681), checked end to end on
-      Postgres with a log written by Morphogen itself. Runs as scripts/verdicts.sh, and after each Morphogen tool
-      call through the PostToolUse hook. Done when the check passes on the owner's machine after a real judged run
-      (it needs step 0's stack).
+      First, if Claude Code is routed through the gateway (`scripts/gateway.py status`), turn it off
+      (`scripts/gateway.py off`) and restart the session before removing Bifrost; otherwise the session loses its
+      model. Likewise `scripts/telemetry.py off` before removing the collector. Keep the interfaces section 7 names
+      (rt_* with compose only, sec_* with env only, spec section 8). Keep encoder-morphogen and encoder-backstage wiring
+      (scripts/verdicts.sh, scripts/map.sh); drop the observer and map-drift parts that read Prometheus, and note
+      that step 2 replaces their observed half. Ask the owner before deleting any data volume.
 
   - id: 2
-    title: The map becomes claims
-    spec: "2, 6"
-    where: modules/encoder-backstage
-    after: [0]
-    status: doing
-    check: >-
-      recall answers "what depends on bifrost?" from catalog claims, citing claim ids; and the first gap between
-      intended and observed (the console's Map, difference view) reaches the review lane as claims on both sides,
-      stated by the catalog and measured by the observers
-    notes: >-
-      Brief in modules/encoder-backstage/BRIEF.md. The observed side comes from the OpenTelemetry collector's
-      service graph through Prometheus (S-28), so the detector compares two sets of claims rather than running a
-      reconciler of its own (S-27). Owner, 2026-11-07: "it would be cool to render both views". Built in kernel
-      (D-100, PR OpenReplicant/kernel#110): the catalog in Backstage's own terms (owner: "left in its original form"),
-      mapped to kk-tosca; observed calls; map-drift's gaps in the review lane. Wired by S-33 (scripts/map.sh, kk serve
-      parts observer and drift). Checked end to end on Postgres with Substrate's catalog and a stand-in Prometheus;
-      done when the check passes on the owner's machine with the real stack (needs step 0).
-
-  - id: 10
-    title: A fresh-machine test
-    spec: "1 (principle 8), 11"
-    where: scripts/fresh.sh
-    after: [0]
+    title: "Autopoietic: one loop on itself"
+    spec: "1, 3, 6, 7"
+    where: substrate, kernel's encoders and map-drift
+    after: [1]
     status: todo
     check: >-
-      scripts/fresh.sh clones this repository into a throwaway container (Podman in Podman, or a VM where that
-      fails), runs scripts/bootstrap.sh and scripts/up.sh with no manual step, and scripts/check.sh passes there
+      with catalog-info.yaml as the intended half and the code plus running containers as the observed half
+      (kernel's self-encoder, `rt_status`), one real gap reaches the review lane; Claude Code proposes a change that
+      closes it (either way: fix the code or revise the map) on a branch; Morphogen judges it; encoder-morphogen
+      records the verdict; and recall, asked about the gap, returns gap, change and verdict by claim id
     notes: >-
-      Every bug of the first real run (2026-11-08) was in a path no dry run exercised: a missing optional file under
-      set -e, Podman short names, secrets generated after the build that needs them, Bifrost locking itself. Run it
-      before any change to scripts/, deploy/ or the images is called done.
-
-  - id: 11
-    title: One default per slot
-    spec: "1 (principle 8)"
-    where: substrate
-    after: [10]
-    status: todo
-    check: >-
-      README, .env.example and check.sh name one tested default per slot (compose, Podman, SECRETS=env, the map view
-      off); check.sh says "untested" when another is set instead of failing silently; the interfaces (rt_* verbs,
-      sec_* functions, the map-view slot) are unchanged
-    notes: >-
-      Owner, 2026-11-08: "reducing some defaults but keeping interfaces adaptable for later." Nomad, Docker and
-      OpenBao stay behind their interfaces, out of the tested path until a goal needs them. CLAUDE.md rule 3 (both
-      runtimes, both engines) becomes: the default is tested, the interface is kept.
-
-  - id: 12
-    title: Triage and the automation level
-    spec: "9a"
-    where: modules/triage, services/console
-    after: [10]
-    status: todo
-    check: >-
-      with AUTOMATION=full, a seeded noise gap is declined by urn:kk:agent:triage with its reason, appears in the
-      console's triage list, and its undo restores it to the lane; with AUTOMATION=assisted the same gap waits with
-      the recommendation; an owner claim is never settled by triage at any level
-    notes: >-
-      Owner, 2026-11-08: "I like your approval flow, but maybe allow a toggle on how automated things are with
-      full-auto default and reversible." Kernel needs no change: triage is an agent with a reviewer login, and kernel
-      refuses self-approval (KK025) and records decided_by. Brief first (modules/triage/BRIEF.md): how it classifies,
-      where its confidence comes from, what it escalates.
-
-  - id: 13
-    title: The map without Backstage
-    spec: "1, 6"
-    where: substrate, kernel's MCP
-    after: [11]
-    status: todo
-    needs_owner: true
-    check: >-
-      with the Backstage service off, recall over kernel's MCP answers "what depends on the model gateway?" and the
-      console's Map draws intended, observed and their difference from kernel claims; Backstage runs only when the
-      map-view slot asks for it
-    notes: >-
-      Owner, 2026-11-08: Backstage fits the idea of catalogs of things, "but it was not built for what we have in
-      mind, and only its MCP server helps to justify it"; the YAML "also looks bloated". The owner's decision: the
-      catalog's file format. Recommendation to prepare: keep catalog-info.yaml as the input for now (encoder-backstage
-      reads it, kernel D-100) and propose a leaner format as a second encoder, judged on the same check. This is
-      also the first proof of kernel as a content system (kernel docs/content.md, D-101, draft PR
-      OpenReplicant/kernel#112): a catalog entry is a content type, read and edited as an item through per-type views
-      and item tools, with its claims and drift checks unchanged. Off-the-shelf Postgres dashboards were set aside
-      (one shared login, edits in place); PostgREST plus react-admin stays possible as kernel's api-adapter slot.
+      Absorbs the previous plan's steps 1 (verdicts become claims, kernel D-99, built) and 2 (the map becomes
+      claims, kernel D-100, built). What is new is the observed half without telemetry, and the loop run once end
+      to end. If the observed side needs a kernel change (map-drift reading something other than the metrics
+      observer), that is an upstream PR and the owner's call.
 
   - id: 3
-    title: Working memory
-    spec: "3"
-    where: kernel M6-T2 (upstream pull request)
-    after: [0, 10, 11, 12, 13]
-    status: todo
-    needs_owner: true
-    check: a new session states the active goal and focus without being told
-    notes: >-
-      A kernel change: prepare the case against kernel's docs/milestone-6.md and ask the owner before opening
-      the PR (the upstream skill). Goals proposed in the console (bus queue `owner`) become goal claims here.
-
-  - id: 4
-    title: Episodes
-    spec: "5"
-    where: kernel's encoder-interaction, wired by substrate's SessionEnd hook
-    after: [0, 10, 11, 12, 13]
-    status: todo
-    check: a finished session appears as an episode in kernel; the memory extractor's proposals reach review
-
-  - id: 5
-    title: Activation
-    spec: "5"
-    where: modules/activation
-    after: [3, 4]
-    status: todo
-    check: a Morphogen verdict that activation beats plain recall on held-out questions; otherwise set dropped
-
-  - id: 6
-    title: Skill utility
-    spec: "4, 8"
-    where: encoder-morphogen plus observer-prometheus
-    after: [1, 3]
-    status: todo
-    check: working memory lists the skills relevant to the goal with success rate and cost
-
-  - id: 7
-    title: Skill promotion
-    spec: "4, 8"
-    where: chunking, judged by Morphogen
-    after: [4, 6]
-    status: todo
-    needs_owner: true
-    check: one skill drafted from repeated episodes passes judgment and lands through the review lane
-
-  - id: 8
-    title: Motor
-    spec: "6"
-    where: actuators, modules/encoder-nomad
-    after: [0, 10, 11, 12, 13]
-    status: todo
-    check: a failed allocation is noticed, a fix is proposed, judged and applied through Nomad's API
-    notes: Needs RUNTIME=nomad passing (step 0's second half).
-
-  - id: 9
-    title: Organism
-    spec: "9"
-    where: modules/dispatcher, the bus's triggers queue, the goal vocabulary
-    after: [3, 8]
+    title: Kernel as a content system
+    spec: "4"
+    where: kernel (PR OpenReplicant/kernel#112, D-101), upstream
+    after: [2]
     status: todo
     needs_owner: true
     check: >-
-      a drift finding put on the `triggers` queue starts a headless session that closes it with a verdict, and
-      the owner sees it in the review lane
-    notes: The goal vocabulary is a pack change in kernel (review lane); the owner decides on it.
+      a catalog entry is a kernel content type, read and edited as an item (with a view), with its claims and
+      drift checks unchanged; and a new kind of catalog entry (one a step-2 run did not have, such as a package
+      from a registry) can be added as a content type without changing kernel's store or loop
+    notes: >-
+      A kernel change: prepare the case against kernel's CLAUDE.md and docs/content.md, and ask the owner before
+      taking #112 out of draft. Ontologies and aliases as content: a vocabulary is a pack; mappings between
+      vocabularies are SKOS claims, SSSOM-shaped where a mapping set needs its own metadata.
+
+  - id: 4
+    title: Catalogs to choose from
+    spec: "2, 5"
+    where: substrate (catalog-info.yaml systems options and sources), a research skill, kernel content types
+    after: [3]
+    status: todo
+    check: >-
+      one real choice a later step needs (a component, library or service) is made this way: the source catalogs
+      are searched; at least three candidates become catalog entries with cited claims (licence, release age,
+      maintenance, fit, each quoting where it came from); the shortlist is tested against the need, with a
+      Morphogen verdict where the question is which is better; the pick and the rejections stay in kernel with
+      their evidence, and recall answers "why this one?" from them
+    notes: >-
+      Owner, 2026-11-08: "catalogs of components it could choose from rather than 'best guess' and sometimes
+      'catalogs of searchable-catalogs' (npm, pip, github, apt, etc) is the best way to go", with the agent
+      "curating and researching and testing". The first skill here is a research skill: search a registry, record
+      candidates as claims. If a registry needs an encoder of its own (deps.dev, say), build it as a kernel module
+      upstream.
+
+  - id: 5
+    title: "Engineer: another system"
+    spec: "1, 6, 7"
+    where: substrate, a new kernel project for the system
+    after: [4]
+    status: todo
+    needs_owner: true
+    check: >-
+      for a real system the owner names, kernel holds a cited graph built from at least one interview (a person's
+      statements as claims attributed to them, quoting the transcript) and one observed source; at least one gap
+      between the two reaches review; one improvement closing a gap is proposed, judged by Morphogen and applied
+    notes: >-
+      The owner picks the system and who is interviewed. An interview skill (questions drawn from the gaps and the
+      thin parts of the graph) is likely the first new skill.
+
+  - id: 6
+    title: "Generalist: a second domain"
+    spec: "1, 2, 4"
+    where: whatever the domain needs, added through the loop
+    after: [5]
+    status: todo
+    needs_owner: true
+    check: >-
+      a domain unlike step 5's reaches step 5's check; what it needed (content types, vocabularies, mappings,
+      encoders, code, a view) was added through the loop (proposed, judged where it claimed to improve something,
+      recorded as claims); and kernel's store, Morphogen and the loop itself did not change to fit it
+    notes: >-
+      The owner picks the domain. Owner, 2026-11-08: a new kind of system "may come with code and maybe even a
+      CMS/UI view"; the design stays open, and the only hard restriction is Morphogen's, against reward hacking.
