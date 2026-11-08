@@ -207,11 +207,28 @@ def _summary(cs: dict) -> dict:
     obj = first.get("object") or {}
     value = obj.get("value") if isinstance(obj, dict) else obj
     value = value if value is not None else (obj.get("entity") if isinstance(obj, dict) else None)
-    kind = ("drift" if "discrepancy" in subj else "vocabulary" if first.get("op") in ("add_term", "type")
-            else "change")
-    return {"id": cs["id"], "kind": kind, "by": cs.get("attributed_to"), "scope": cs.get("target_scope"),
-            "at": str(cs.get("submitted_at")), "ops": len(ops),
-            "title": " ".join(x for x in [short(subj), short(first.get("predicate", "")), short(value or "")] if x),
+    # A change set that says what it is in a sentence (oa:bodyValue, rdfs:comment; map-drift's gaps, D-100) is
+    # titled by it; otherwise by its first claim.
+    sentence, drift_kind = None, None
+    for op in ops:
+        pred, o = str(op.get("predicate", "")), op.get("object") or {}
+        if not isinstance(o, dict):
+            continue
+        if pred.endswith(("#bodyValue", "#comment")) and isinstance(o.get("value"), dict):
+            sentence = sentence or o["value"].get("@value")
+        if str(o.get("entity", "")).startswith("urn:kk:discrepancy-kind:"):
+            drift_kind = short(o["entity"]).split(":")[-1]
+    drift = drift_kind or "discrepancy" in subj or subj.startswith("urn:kk:drift:")
+    kind = ("drift" if drift else "vocabulary" if first.get("op") in ("add_term", "type") else "change")
+    hint = {"undeclared-call": "Approve if this call is real (then declare it in catalog-info.yaml and the gap "
+                               "closes); decline if it is telemetry noise.",
+            "unobserved-call": "Approve if the map is right and the call should happen; decline if the map is "
+                               "wrong (then remove the dependency from catalog-info.yaml)."}.get(drift_kind or "")
+    return {"id": cs["id"], "kind": (drift_kind.replace("-", " ") if drift_kind else kind), "stripe": kind,
+            "by": short(cs.get("attributed_to") or "?").split(":")[-1], "scope": cs.get("target_scope"),
+            "at": str(cs.get("submitted_at")), "ops": len(ops), "hint": hint,
+            "title": sentence or " ".join(x for x in [short(subj), short(first.get("predicate", "")),
+                                                      short(value or "")] if x),
             "evidence": (cs.get("validation_report") or {}).get("summary") if isinstance(cs.get("validation_report"), dict) else None}
 
 

@@ -212,11 +212,12 @@ td:first-child, th:first-child { padding-left: 0; }
         <p class="err" x-show="s && !s.review.ok" x-text="s && s.review.error"></p>
         <div class="items" x-show="s && s.review.ok">
           <template x-for="r in (s && s.review.ok ? s.review.items : [])" :key="r.id">
-            <article class="item" :data-kind="r.kind">
+            <article class="item" :data-kind="r.stripe || r.kind">
               <div class="stripe"></div>
               <div class="item-body">
                 <span class="kind" x-text="r.kind + ' · ' + r.ops + (r.ops === 1 ? ' claim' : ' claims') + ' · ' + when(r.at)"></span>
                 <span class="item-title" x-text="r.title || r.id"></span>
+                <span class="note" x-show="r.hint" x-text="r.hint"></span>
                 <span class="note" x-text="'from ' + (r.by || '?') + (r.scope ? ' in ' + r.scope : '')"></span>
                 <span class="note" x-show="r.evidence" x-text="r.evidence"></span>
               </div>
