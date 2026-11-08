@@ -39,7 +39,8 @@ say "Upstream clones (repos.yaml, repos.local.yaml)"
 mkdir -p "$ROOT/repos"
 clone() {   # name
   # repos.local.yaml (gitignored) may point a repository at another forge: a Forgejo, Gitea or GitLab mirror or fork
-  url=$(sed -n "/^$1:/,/^[a-z]/s/^  url: //p" "$ROOT/repos.local.yaml" 2>/dev/null)
+  url=""
+  [ -f "$ROOT/repos.local.yaml" ] && url=$(sed -n "/^$1:/,/^[a-z]/s/^  url: //p" "$ROOT/repos.local.yaml")
   [ -n "$url" ] || url=$(sed -n "/^$1:/,/^[a-z]/s/^  url: //p" "$ROOT/repos.yaml")
   branch=$(sed -n "/^$1:/,/^[a-z]/s/^  branch: //p" "$ROOT/repos.yaml")
   if [ -d "$ROOT/repos/$1/.git" ]; then
@@ -51,6 +52,7 @@ clone() {   # name
 clone kernel
 clone morphogen
 
+"$ROOT/scripts/settings.sh"
 "$ROOT/scripts/build.sh"
 
 if [ "$RUNTIME" = nomad ]; then

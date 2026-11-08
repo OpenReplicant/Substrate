@@ -63,7 +63,7 @@ for line in open(sys.argv[1]).read().splitlines():
 env.update({k: v for k, v in os.environ.items() if v})
 groups = {"db": ["POSTGRES_PASSWORD"],
           "kernel": ["POSTGRES_PASSWORD", "KK_AUTHENTICATOR_PASSWORD", "KK_JWT_SECRET"],
-          "gateway": ["BIFROST_VIRTUAL_KEY", "ANTHROPIC_API_KEY", "OPENROUTER_API_KEY"],
+          "gateway": ["BIFROST_VIRTUAL_KEY", "BIFROST_ADMIN_PASSWORD", "ANTHROPIC_API_KEY", "OPENROUTER_API_KEY"],
           "map": ["BACKSTAGE_MCP_TOKEN"],
           "console": ["SUBSTRATE_BUS_PASSWORD"]}
 for g, keys in groups.items():

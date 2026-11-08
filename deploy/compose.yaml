@@ -81,11 +81,12 @@ services:
   # persist there. Provider keys stay in the environment, referenced as env.NAME.
   bifrost:
     <<: *locked
-    image: ${BIFROST_IMAGE:-maximhq/bifrost:v2.3.2}
+    image: ${BIFROST_IMAGE:-docker.io/maximhq/bifrost:v2.3.2}
     environment:
       APP_HOST: 0.0.0.0
       APP_PORT: "8080"
       BIFROST_VIRTUAL_KEY: ${BIFROST_VIRTUAL_KEY:?set in .env}
+      BIFROST_ADMIN_PASSWORD: ${BIFROST_ADMIN_PASSWORD:?set in .env}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       OTEL_COLLECTOR_URL: http://otel-collector:4318/v1/traces     # Bifrost's otel plugin (render_bifrost.py)

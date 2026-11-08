@@ -46,7 +46,10 @@ def render(env: dict[str, str]) -> dict:
         providers["ollama"] = {"keys": [{"name": "ollama-local", "value": "", "models": ["*"], "weight": 1.0,
                                          "ollama_key_config": {"url": env.get("OLLAMA_URL") or ollama_default(env)}}]}
     return {
-        "client": {"enforce_auth_on_inference": True},
+        # Bifrost v2.3.2 locks /api and /metrics until an admin account exists, so one is seeded here (dashboard
+        # login: admin, BIFROST_ADMIN_PASSWORD). /metrics stays open for Prometheus: it carries counts and cost, no
+        # content, and the port is bound to 127.0.0.1. Keys: config.schema.json at transports/v2.3.2.
+        "client": {"enforce_auth_on_inference": True, "whitelisted_routes": ["/metrics"]},
         "providers": providers,
         # telemetry: the /metrics Prometheus scrapes (on by default; listed so it stays on beside otel).
         # otel: a span per model call to the collector (S-28), metadata only (tokens, cost, latency, status),
@@ -57,7 +60,9 @@ def render(env: dict[str, str]) -> dict:
                 "service_name": "model-gateway", "collector_url": "env.OTEL_COLLECTOR_URL",
                 "trace_type": "genai_extension", "protocol": "http", "disable_content_logging": True}},
         ],
-        "governance": {"virtual_keys": [{
+        "governance": {"auth_config": {"is_enabled": True, "admin_username": "admin",
+                                       "admin_password": "env.BIFROST_ADMIN_PASSWORD"},
+                       "virtual_keys": [{
             "id": "vk-substrate",
             "name": "substrate",
             "value": "env.BIFROST_VIRTUAL_KEY",

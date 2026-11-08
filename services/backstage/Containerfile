@@ -6,7 +6,7 @@
 #
 # node:24-trixie-slim is the base create-app 0.9.3 chose. Pin it by digest once pulled (setup skill, step 3).
 
-FROM node:24-trixie-slim AS build
+FROM docker.io/library/node:24-trixie-slim@sha256:0820eaa85e07d0490446dd01d14707e17e6108a36988cf374899cd057eb3812d AS build
 # better-sqlite3 compiles a native module
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
@@ -20,7 +20,7 @@ RUN --mount=type=cache,target=/home/node/.cache/yarn,sharing=locked,uid=1000,gid
     yarn install
 RUN yarn tsc && yarn build:backend
 
-FROM node:24-trixie-slim
+FROM docker.io/library/node:24-trixie-slim@sha256:0820eaa85e07d0490446dd01d14707e17e6108a36988cf374899cd057eb3812d
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
     apt-get update && \

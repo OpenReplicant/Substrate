@@ -22,8 +22,8 @@ starts the `substrate-tools` container that `bin/` runs in.
 - With Podman, `podman compose` needs a provider: `docker-compose` (preferred) or `podman-compose`. On macOS,
   `podman machine` must be running; the tools container uses host networking, which is untested there.
 - The first Backstage build takes several minutes. When it writes `services/backstage/yarn.lock`, commit it.
-  Record the digest of `node:24-trixie-slim` it pulled (`<engine> image inspect node:24-trixie-slim`) in
-  `services/backstage/Containerfile` as `node:24-trixie-slim@sha256:...`, so later builds use the same base.
+  Record the digest of `docker.io/library/node:24-trixie-slim` it pulled (`<engine> image inspect docker.io/library/node:24-trixie-slim`) in
+  `services/backstage/Containerfile` as `docker.io/library/node:24-trixie-slim@sha256:...`, so later builds use the same base.
 
 **Check:** bootstrap ends with "Done"; `bin/kk --help` and `bin/gitleaks version` answer; `git -C repos/kernel
 status` and `git -C repos/morphogen status` work.
@@ -116,9 +116,9 @@ into a shell variable; do not print it):
   model under 10B parameters (kernel's rule for evals; Oct 2026: `liquid/lfm-2.5-2.6b:free`).
 - Ollama: `ollama/<a model the owner has pulled>` (`ollama list` on the host).
 
-Look up the exact routes in Bifrost's docs before calling them. If the owner wants the dashboard
-password-protected, follow Bifrost's `setting-up.mdx` (setup token), then add `basic_auth` to
-`deploy/prometheus.yml` so scraping keeps working.
+Look up the exact routes in Bifrost's docs before calling them. The dashboard is password-protected from the
+first start (S-34): user `admin`, password `scripts/secrets.sh get BIFROST_ADMIN_PASSWORD`; `/metrics` is
+whitelisted so Prometheus scrapes without it.
 
 **Check:** each configured provider answered once; `scripts/check.sh` shows the gateway's metrics.
 
