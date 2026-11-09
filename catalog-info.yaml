@@ -594,6 +594,38 @@ spec:
   system: options
   dependsOn: [resource:postgres]
 ---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: external-vocabularies
+  description: Standard vocabularies for content types beyond substrate's own terms - PROV-O, SPDX, DOAP, SKOS - chosen from ontology registries.
+  annotations:
+    substrate.dev/fits: Terms on Workbench's content types and fields (x-term), loaded into wb.term, related by SSSOM mappings in wb.mapping.
+    substrate.dev/interface: x-term on JSON Schema types and fields; wb.term and wb.mapping; substrate's own vocabulary (step 7) maps to these when they come.
+    substrate.dev/when: Data is exchanged with other tools, or merged from another system's terms (S-61).
+    substrate.dev/candidates: "Registries to verify: Linked Open Vocabularies, EBI's Ontology Lookup Service, BioPortal, schema.org, Wikidata"
+spec:
+  type: library
+  lifecycle: option
+  owner: group:operator
+  system: options
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: remote-judge
+  description: Morphogen on another machine, so the changer cannot even reach the judge's host.
+  annotations:
+    substrate.dev/fits: In place of the local Morphogen behind judge-api.
+    substrate.dev/interface: judge-api (Morphogen's CLI and MCP tools); substrate:morphogen reads the evidence log, which would be shipped or served instead of read from this repository's git directory.
+    substrate.dev/when: Stronger separation is wanted, or several substrates share one judge (S-61).
+spec:
+  type: service
+  lifecycle: option
+  owner: group:operator
+  system: options
+  providesApis: [judge-api]
+---
 # ================================================================ SOURCES (spec 5): catalogs of catalogs
 apiVersion: backstage.io/v1alpha1
 kind: Resource

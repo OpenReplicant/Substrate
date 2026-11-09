@@ -104,29 +104,31 @@ steps:
       Recall: search "ontop sparql" finds choice rdf-endpoint and its candidates, each with its reason.
 
   - id: 5
-    title: "Engineer: a system beside itself, from an interview"
-    spec: "1, 6, 7"
-    where: substrate (an interview skill, an extractor for the other system's repository), Workbench (a second project)
+    title: "Autopoietic, observed: substrate as it actually runs"
+    spec: "1, 3, 6"
+    where: substrate (observing extractors in substrate's plugin, drift across every kind), Workbench (content types for what is observed)
     after: [4]
     status: todo
-    needs_owner: true
     check: >-
-      the owner, answering as a decision maker trying substrate for a business, is interviewed, each statement a
-      claim attributed to them that quotes the transcript and is marked as a scenario; a real open-source system,
-      picked through the research skill to stand for that business's existing system, is mined as the observed
-      half (its repository: services, configuration, dependencies, docs), and at least one round of questions is
-      drawn from the gaps between what was said and what was found; both halves are a second project beside
-      substrate in the same Workbench, the relations between the two systems are claims, at least one gap
-      reaches the review lane, and one change closing it is proposed, judged by Morphogen and applied by the
-      same loop that changed substrate in step 2
+      the observed half of substrate covers what runs it, read by extractors that would read any machine the same
+      way (nothing self-only): the host (OS, CPU, memory, the container engine and its version); each container
+      (image and digest, ports, mounts, volumes, health); settings by name, never value (compose environment,
+      .env keys, Caddy routes); the APIs actually served (Workbench's OpenAPI, its MCP tools, PostgREST's schema);
+      the UIs (the shell's apps and views); the plugins, content types and extractors loaded; Claude Code's
+      project wiring (settings, hooks, MCP servers); and Morphogen's cells. Each is an item with claims quoting
+      what was read, related to the parts it belongs to (runs, exposes, mounts, configures, serves). Drift
+      compares map and observation for every kind, not only skills and hooks; at least one real gap of a kind
+      step 2 could not see reaches the review lane and is decided; and scripts/trace.sh follows a chain from a
+      route to the container that serves it
     notes: >-
-      Rewritten 2026-11-09 (S-60). Owner: "i don't have access to any but we could try a demo interview with a
-      decision maker trying the software for their business/infra/proj, and how it might adaptively data-mine an
-      existing system." The owner plays the decision maker (a real person's answers, not a model's persona) and
-      decides when to sit for it; the agent proposes the open-source system and the business it stands for. The
-      interview skill is the first new skill (questions drawn from the gaps and the thin parts of the graph);
-      the repository extractor is the observed half, written to work on any repository (nothing self-only). Was
-      "a real system the owner names", which the owner does not have to hand.
+      Added 2026-11-09 (S-61). Owner: "is Substrate modeling itself as an agent-system? like does it have a map
+      of the machine its on, the processes/containers running it, and where they have settings/params, hooks,
+      APIs, UIs, etc? that might be the better place to start than a hypothetical scenario." At S-61 the observed
+      half was only skills and hooks from .claude/ (37 claims, substrate:claude-code); everything else in
+      Workbench was the map's intended half. Step 2's check named running containers, but nothing read them.
+      Secrets: settings are observed by name only, and gitleaks runs over anything an extractor stores as a
+      source. This step comes before the graph view so that view is built and tested on real paths (route, API,
+      service, container, image, volume) rather than on the map alone.
 
   - id: 6
     title: "Generalist: a second domain"
@@ -146,44 +148,46 @@ steps:
       generalist level stays a direction in the spec rather than a step.
 
   - id: 7
-    title: Vocabularies first-class
-    spec: "4, 5"
-    where: workbench/ (x-term on content types and fields, a vocabulary loader, a Vocabulary view), substrate (the choice, sources entries)
-    after: [4]
-    status: todo
-    check: >-
-      the vocabularies substrate's own content needs (provenance for claims, licences, software projects, concept
-      schemes; candidates PROV-O, SPDX, DOAP, SKOS) are chosen through the research skill from ontology
-      registries recorded as source catalogs; they are loaded into Workbench as terms, with at least one SSSOM
-      mapping between terms of two of them; every substrate content type and its fields carry a term (x-term),
-      shown in the shell; and search finds an item by a term's label or synonym. Nothing in Workbench knows
-      which vocabularies a plugin uses
-    notes: >-
-      Added 2026-11-09 (S-60). wb.term and wb.mapping exist from W1; nothing is loaded yet. The loader reads
-      SKOS, OWL and Turtle (RDFLib was the runner-up library in docs/choices/rdf-endpoint.yaml; choose the parser
-      through the research skill) and SSSOM TSV. Terms make content types classes, which step 8 generates its
-      mappings from.
-
-  - id: 8
     title: "A graph view: traversal, SPARQL, inference"
     spec: "4, 6"
-    where: deploy/ (Ontop behind Caddy), workbench/ (pgGraph over wb.relation, mappings generated from x-term), substrate (an inference extractor)
-    after: [7]
+    where: deploy/ (Ontop behind Caddy), workbench/ (pgGraph over wb.relation; terms on content types; mappings generated from them), substrate (its own small vocabulary, an inference extractor)
+    after: [5]
     status: todo
     check: >-
-      over the same tables and with no copy: pgGraph, enabled in Workbench's database, answers a transitive
-      dependsOn path as the caller; Ontop (graph-endpoint, moved from options to core) answers the step 4
-      trial's queries at /sparql as a read-only role, with its mapping generated from the terms rather than kept
-      by hand; and an inference extractor applies OWL 2 RL rules from the loaded vocabularies, writing each new
-      fact as a claim attributed to the reasoner that quotes the rule and its premises, which is retracted when a
-      premise is. scripts/trials/rdf-endpoint/run.sh ontop still passes against the live endpoint
+      over the same tables and with no copy, on step 5's observed data: content types and fields carry terms
+      (x-term) from substrate's own small vocabulary, generated from its content types and the catalog's kinds
+      and loaded into wb.term; pgGraph, enabled in Workbench's database, answers a transitive path (a route to the
+      volume its data lives on) as the caller; Ontop (graph-endpoint, moved from options to core) answers the
+      step 4 trial's queries at /sparql as a read-only role, its mapping generated from the terms rather than kept
+      by hand; and an inference extractor applies OWL 2 RL rules, writing each new fact as a claim attributed to
+      the reasoner that quotes the rule and its premises, retracted when a premise is.
+      scripts/trials/rdf-endpoint/run.sh ontop still passes against the live endpoint
     notes: >-
-      Added 2026-11-09 (S-60). Owner asked about OWL-RL "as an optional learning/inference structure over any
-      data gathered" and about running Ontop and pgGraph over the same data. Ontop reasons at query time (OWL 2
-      QL, no transitive properties); pgGraph covers traversal; OWL 2 RL materialises what is worth keeping and
-      citing. Learning rules (a miner proposing rules, each judged by Morphogen on held-out claims) is a held idea
-      in the spec until there is enough data to hold out. pgGraph is in the Postgres image (deploy/postgres) but
-      not yet created as an extension in the workbench database.
+      Added as step 8 in S-60; renumbered and narrowed in S-61, taking in what step 7 (vocabularies) needed:
+      substrate's own terms only. External vocabularies (PROV-O, SPDX, DOAP, SKOS, ontology registries) are an
+      option in the map, for when data is exchanged with other tools or merged from other systems. Owner on the
+      inference path: "a good symbolic place to start" for distilling fast, expert systems from what the LLM
+      does (spec section 1, direction).
+
+  - id: 8
+    title: "Engineer: the machine and its agents, a system beside substrate"
+    spec: "1, 6, 7"
+    where: substrate (an interview skill; step 5's extractors pointed wider), Workbench (a second project)
+    after: [5]
+    status: todo
+    needs_owner: true
+    check: >-
+      the owner's machine and its Claude Code setup beyond this repository (user settings, installed plugins,
+      MCP servers, other projects) is a second project in the same Workbench, observed by step 5's extractors
+      pointed at it; the owner is interviewed as its real owner about what it is for, each statement a claim
+      attributed to them quoting the transcript, with questions drawn from the gaps and thin parts of the graph;
+      the relations between the two systems are claims (substrate runs on it, uses its container engine and its
+      Claude Code); at least one gap reaches review; and one change closing it is proposed, judged by Morphogen
+      and applied by the same loop that changed substrate in step 2
+    notes: >-
+      S-61 replaces S-60's scenario interview (the owner as a decision maker for a business that is not theirs)
+      with a real second system the owner does have: the machine substrate runs on. The owner decides when to
+      sit for the interview and what of the machine is in scope; nothing outside what the owner names is read.
 
   - id: 9
     title: Slots enforced
@@ -193,7 +197,7 @@ steps:
     status: todo
     check: >-
       each core interface on the map (runtime-api, secrets-api, workbench-api, workbench-mcp-api, judge-api, and
-      the graph endpoint once it is core) has a contract test that any filler must pass, the map names the test
+      the graph endpoint once it is core (step 7)) has a contract test that any filler must pass, the map names the test
       for each, and bin/morphogen structure check morphogen.yaml reports no untested core interface; one option
       is run against its slot's test (a second answer to secrets-api or runtime-api, say) and the result is
       recorded as claims, pass or fail

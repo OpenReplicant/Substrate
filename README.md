@@ -56,8 +56,9 @@ choose or tune what judges it ([`docs/spec.md`](docs/spec.md) section 4).
 
 [`docs/spec.md`](docs/spec.md) is what substrate is meant to become, and [`docs/build.yaml`](docs/build.yaml)
 its build plan: cut to the core, one loop on itself, a content system for the model, catalogs to choose from
-(done), then a system beside itself from an interview, vocabularies, a graph view (traversal, SPARQL and
-inference over the same tables), and slots enforced by contract tests. Left in place, they make Claude Code sessions here build it out a step at a time (the `build-out`
+(done), then substrate observed as it actually runs (machine, containers, settings, APIs, UIs), a graph view
+over that (traversal, SPARQL and inference over the same tables), the machine and its agents as a second system,
+and slots enforced by contract tests. Left in place, they make Claude Code sessions here build it out a step at a time (the `build-out`
 skill). `python3 scripts/spec.py status` shows where it stands; deleting `docs/spec.md` stops it.
 
 ## Start

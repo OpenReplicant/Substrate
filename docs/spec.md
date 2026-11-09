@@ -29,8 +29,8 @@ The same loop, pointed at widening targets, gives three levels:
 
 | Level | It models | Which makes it | Proven when |
 | --- | --- | --- | --- |
-| **Autopoietic** | itself: its components (services, skills, hooks, parameters) and its map | self-modifying | a gap in its own model is found, a change closing it is judged, and the verdict lands as claims (step 2) |
-| **Engineer** | another system beside itself, from observation, exploration and interviews | able to manage what it models | both systems are in one world model, and one judged change is made to the other (step 5) |
+| **Autopoietic** | itself: its components (services, skills, hooks, parameters) and its map | self-modifying | a gap in its own model is found, a change closing it is judged, and the verdict lands as claims (step 2), with the observed half covering what actually runs it (step 5) |
+| **Engineer** | another system beside itself, from observation, exploration and interviews | able to manage what it models | both systems are in one world model, and one judged change is made to the other (step 8: the machine substrate runs on) |
 | **Generalist** | anything that can be described as components, by growing what a domain needs: content types, vocabularies, encoders, code, views | adaptable | a direction, not a build step: where Workbench's content model points |
 
 Each level depends on the one before. Self first, because the system is right here and every claim can be
@@ -38,6 +38,14 @@ checked. Engineer is the same loop aimed at a second system, with the first stil
 where the foundation leads: a new domain may bring code and a view of its own, but it should not need a new
 store, a new judge or a different loop. Managing systems of components is the scope; going further is left
 open (S-49).
+
+**Direction: from asking a model to knowing (S-61).** The owner's aim beyond the scope: once substrate knows
+itself and can adapt, it should learn, reason and act in general, with a range of learning methods to choose
+from as components (an AutoML catalog), tested on video games and on internet research. The path there is to
+distil what the language model does slowly into faster, checkable parts. Rules are the first: an OWL 2 RL
+reasoner applies them over claims (step 7), then rules are learned and judged (section 8, held ideas), then
+learned models. Each is a component like any other: chosen from a catalog, judged by Morphogen against what
+runs now, and kept only on evidence. Nothing in the build plan depends on it yet.
 
 ## 2. How it works: science-minded
 
@@ -171,10 +179,11 @@ reads the file into Workbench as a `choice` and its `candidate` items, with lice
 quoted from the registries' own answers. When the need alone decides (only one candidate meets it), no verdict
 is needed and the choice says so; when two meet it, "which is better" goes to Morphogen.
 
-**Vocabularies are chosen the same way.** Ontology registries are source catalogs too (candidates to verify:
-Linked Open Vocabularies, EBI's Ontology Lookup Service, BioPortal, schema.org, Wikidata). A vocabulary is a
-candidate with a licence, versions and fit like any library; the first ones substrate needs describe its own
-content (provenance for claims, licences, software projects, concept schemes).
+**Vocabularies are chosen the same way, when they are needed.** Substrate's own small vocabulary (its content
+types and the catalog's kinds as classes) is generated, not chosen (step 7). External vocabularies are an option
+(section 8): ontology registries become source catalogs (candidates to verify: Linked Open Vocabularies, EBI's
+Ontology Lookup Service, BioPortal, schema.org, Wikidata), and a vocabulary is a candidate with a licence,
+versions and fit like any library, once data is exchanged with other tools or merged from other systems.
 
 ## 6. Where claims come from
 
@@ -247,7 +256,9 @@ through section 5, as a choice with evidence, when a step needs it.
 | Owner console | one live page for the owner | Workbench's shell is that page now (S-55) | — |
 | Front-door plugins (Caddy 2.11.7 with xcaddy) | the one address | Caddy stays the front door (`CADDY_IMAGE`) | a plugin (auth, HTTPS, rate limits) is needed |
 | Docker | the container engine | engine-specific code only in `scripts/lib.sh` | a machine without Podman |
-| Graph endpoint (Ontop 5.5.0) | SPARQL with reasoning over Workbench's tables, beside PostgREST | a mapping generated from content types' terms; a read-only role | step 8 (picked in S-59, `docs/choices/rdf-endpoint.yaml`) |
+| Graph endpoint (Ontop 5.5.0) | SPARQL with reasoning over Workbench's tables, beside PostgREST | a mapping generated from content types' terms; a read-only role | step 7 (picked in S-59, `docs/choices/rdf-endpoint.yaml`) |
+| External vocabularies (PROV-O, SPDX, DOAP, SKOS; ontology registries) | terms for content types beyond substrate's own | `x-term` on types and fields, `wb.term`, `wb.mapping` (SSSOM) | data is exchanged with other tools, or merged from another system's terms |
+| Remote judge | Morphogen on another machine | `judge-api` (its CLI and MCP tools); the evidence log shipped or served instead of read from this repository's git directory | the changer should not even reach the judge's machine; several substrates share one judge |
 | TOSCA, other RDF tools | other tools reading or writing the model | Workbench's SSSOM mappings table; an export is a plugin (Morph-KGC reads the same R2RML) | a tool needs the model in its own terms |
 | A forge (Forgejo, Gitea, GitLab) | where pull requests are reviewed | git remotes only (S-25) | a repository lives there |
 
@@ -256,7 +267,9 @@ memory, episodes from sessions, recall reranked by activation, skill utility and
 automation level, a dispatcher that starts headless sessions. New with S-60: **learning rules**, not only
 applying them. A rule miner proposes rules from patterns in the claims (for example, components of this kind
 always depend on that); each proposed rule is a hypothesis, judged by Morphogen on held-out claims before any
-reasoner may use it. Deduction (step 8) comes first; induction waits until there is enough data to hold out.
+reasoner may use it. Deduction (step 7) comes first; induction waits until there is enough data to hold out.
+After rules, learned models: a catalog of learning methods (AutoML), each a component chosen and judged like
+any other, tested on video games and internet research (section 1, direction).
 
 ## 9. Build plan
 
@@ -268,12 +281,12 @@ Each step ends with a check anyone can run. [`build.yaml`](build.yaml) holds the
 | 2 | Autopoietic: one loop on itself | substrate is modelled as its own project at component level with nothing self-only; a gap between the map and what is observed is found, a change closing it is proposed and decided by whoever decides that kind of change (section 7), and Workbench traces gap, change and decision by id (done, S-58) |
 | 3 | A content system for the model | the catalog is a content type, read and edited as items, with its claims and drift checks unchanged; a new kind of entry is a new content type with no change to the store (done by Workbench, S-57) |
 | 4 | Catalogs to choose from | one real choice is made by searching the source catalogs, shortlisting candidates as entries with cited claims, testing them, and recording the pick and the rejections (done: the graph endpoint, S-59) |
-| 5 | Engineer: a system beside itself, from an interview | the owner, as a decision maker trying substrate for a business, is interviewed; a real open-source system stands for that business's existing system and is mined as the observed half, with the next questions drawn from the gaps between what was said and what was found; both are a second project beside substrate, the relations between them are claims, and one change closing a gap is judged and applied the same way step 2 changed substrate (S-60) |
-| 7 | Vocabularies first-class | content types and fields carry terms from vocabularies chosen through section 5 and loaded into Workbench (terms and SSSOM mappings), ontology registries are source catalogs, and search finds items by a term's labels |
-| 8 | A graph view: traversal, SPARQL, inference | over the same tables and with no copy: pgGraph answers a transitive path, Ontop answers SPARQL with reasoning behind Caddy as a read-only role, both mappings generated from the terms; OWL 2 RL inferences land as claims attributed to the reasoner and leave when a premise is retracted |
+| 5 | Autopoietic, observed: substrate as it actually runs | the observed half covers what runs substrate (the host, containers, settings by name, routes, the APIs and UIs served, plugins, Claude Code's wiring, Morphogen's cells) through extractors that would read any machine the same way; drift compares every kind; a gap step 2 could not see is decided; a route traces to the container that serves it (S-61) |
+| 7 | A graph view: traversal, SPARQL, inference | on step 5's data and over the same tables: substrate's own terms on its content types; pgGraph answers a transitive path; Ontop answers SPARQL with reasoning behind Caddy as a read-only role, its mapping generated from the terms; OWL 2 RL inferences land as claims attributed to the reasoner and leave when a premise is retracted |
+| 8 | Engineer: the machine and its agents | the owner's machine and its Claude Code setup beyond this repository is a second project, observed by step 5's extractors and with its owner interviewed; the relations between it and substrate are claims; one change closing a gap is judged and applied the same way step 2 changed substrate (needs the owner) |
 | 9 | Slots enforced | each core interface on the map has a contract test, the map names it, and an option enters a slot only by passing it; Morphogen's structure check reports no untested core interface |
 
-Step 6, a second unlike domain, was dropped (S-49): the generalist level stays a direction. Steps 7 to 9 were added with S-60; 7 and 9 need only step 4, 8 needs 7.
+Step 6, a second unlike domain, was dropped (S-49): the generalist level stays a direction. Steps 7 to 9 were added with S-60 and reordered with S-61: observe first, so the graph view is built on real data; 7 and 8 need 5, 9 needs only 4. External vocabularies became an option.
 
 ## 10. Limitations
 
@@ -285,10 +298,8 @@ Step 6, a second unlike domain, was dropped (S-49): the generalist level stays a
   are trusted.
 - **Interviews cost a person's time.** Step 5 depends on someone willing to answer, and on questions good enough
   to be worth it.
-- **Step 5 is a scenario.** The owner answers as a decision maker for a business that is not theirs, about a
-  system they do not run. The answers are real statements by a real person, recorded as such and marked as a
-  scenario, but they are not a client's knowledge; the observed half is real code. A true second system, with
-  its own people, is still the stronger test.
+- **Observing a machine is broad.** Step 5 reads what runs substrate; step 8 reads further, only as far as the
+  owner names. Settings are read by name, never by value, and anything stored as a source is scanned for secrets.
 - **Reasoning is only as good as the vocabulary.** Inferences follow from the terms and rules chosen; a careless
   subclass yields confident wrong claims. They are claims like any other, retractable and attributed, which is
   why the vocabulary is chosen through section 5.
