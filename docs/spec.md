@@ -31,7 +31,7 @@ The same loop, pointed at widening targets, gives three levels:
 | --- | --- | --- | --- |
 | **Autopoietic** | itself: its components (services, skills, hooks, parameters) and its map | self-modifying | a gap in its own model is found, a change closing it is judged, and the verdict lands as claims (step 2) |
 | **Engineer** | another system beside itself, from observation, exploration and interviews | able to manage what it models | both systems are in one world model, and one judged change is made to the other (step 5) |
-| **Generalist** | anything that can be described as components, by growing what a domain needs: content types, vocabularies, encoders, code, views | adaptable | a direction, not a build step: where kernel's content model points |
+| **Generalist** | anything that can be described as components, by growing what a domain needs: content types, vocabularies, encoders, code, views | adaptable | a direction, not a build step: where Workbench's content model points |
 
 Each level depends on the one before. Self first, because the system is right here and every claim can be
 checked. Engineer is the same loop aimed at a second system, with the first still in view. Generalist is
@@ -120,6 +120,30 @@ Ontologies serve as taxonomies; extraction, comparison and graph projection are 
   (live updates), pgmq (durable jobs), pg_cron. Each is used when a step needs it, not before.
 - **Extractors** (plugins) read sources into items, relations and claims; **the review lane** holds what a person
   decides; **agents** use the same API over MCP, as users with roles.
+- **Views over the same tables, never copies** (S-60): Postgres stays the one truth, and each way of asking is a
+  view. Full-text and vectors for recall; pgGraph for traversal (paths, neighbourhoods, what depends on X
+  transitively, as the caller, so row-level security holds); a SPARQL endpoint (Ontop, picked in S-59) for
+  meaning (classes, subproperties, queries across vocabularies), reasoning at query time; and inference that
+  is worth keeping (OWL 2 RL rules) written back as claims, attributed to the reasoner and quoting the rule and
+  the claims it fired on, so a retracted premise takes its conclusions with it. Content types carry terms
+  (`x-term` on each type and field), and the mappings for both pgGraph and Ontop are generated from them, so
+  the views cannot drift apart.
+
+### Slots and the judge: how substrate is pluggable
+
+Substrate is pluggable in two different senses, and the difference is the design.
+
+- **Slots.** Every part on the map sits in a slot named by an interface: the runtime's four verbs
+  (`runtime-api`), the secrets verbs (`secrets-api`), Workbench's API and MCP (`workbench-api`,
+  `workbench-mcp-api`), the model endpoint (`model-api`), the front door, the graph endpoint. Whatever answers an
+  interface can fill its slot: compose or a scheduler, `.env` or a secrets store, Ontop or another SPARQL engine.
+  The `options` system lists the known alternatives for each slot, and section 5 is how one is chosen. A slot
+  is real only when its interface has a contract test that any filler must pass, and the map says which test
+  that is; until then it is declared, not enforced (Morphogen's structure check reports each untested
+  interface). Step 9 closes that.
+- **The judge is plugged in, not slotted.** Morphogen is reached through `judge-api` like any part, but it is
+  not a slot substrate may fill: the loop cannot choose, swap, weaken or tune its own judge (section 7, "who
+  decides a change"). Everything else can be replaced by evidence; the judge is replaced only by the owner.
 
 ## 5. Catalogs: choosing, not guessing
 
@@ -141,6 +165,17 @@ against the need, judged by Morphogen where "better" is the question. Pick one a
 candidates stay in the catalog with their evidence. The house rules apply to every candidate: a permissive or
 LGPL licence in the default stack (kernel D-11), and a release at least two weeks old, pinned exactly.
 
+**How it is done** (S-59): the `research` skill. The need is written first, in `docs/choices/<slug>.yaml`; the
+shortlist is tried by a pinned script under `scripts/trials/<slug>/` on the same cases; `substrate:choices`
+reads the file into Workbench as a `choice` and its `candidate` items, with licence, releases and activity
+quoted from the registries' own answers. When the need alone decides (only one candidate meets it), no verdict
+is needed and the choice says so; when two meet it, "which is better" goes to Morphogen.
+
+**Vocabularies are chosen the same way.** Ontology registries are source catalogs too (candidates to verify:
+Linked Open Vocabularies, EBI's Ontology Lookup Service, BioPortal, schema.org, Wikidata). A vocabulary is a
+candidate with a licence, versions and fit like any library; the first ones substrate needs describe its own
+content (provenance for claims, licences, software projects, concept schemes).
+
 ## 6. Where claims come from
 
 | Source | How | Attributed to |
@@ -149,6 +184,8 @@ LGPL licence in the default stack (kernel D-11), and a release at least two week
 | **Exploration** | Claude Code reads a system (repository, docs, an API, a registry) and records what it found | the agent, quoting the source |
 | **Interviews** | a person answers questions; each statement becomes a claim | the person, quoting the transcript |
 | **Verdicts** | `substrate:morphogen` reads Morphogen's evidence log, checking its hash chain first | Morphogen, citing the record in the log |
+| **Registries** | `substrate:choices` reads GitHub's and deps.dev's answers about each candidate in a choice | the extractor, quoting the key in the registry's JSON |
+| **Inference** | a reasoner applies a vocabulary's rules (OWL 2 RL) to current claims | the reasoner, quoting the rule and the claims it fired on; retracted with its premises |
 
 Interviews matter as much as observation: most of the intended half of any real system lives only in people's
 heads. A person's statement is a claim like any other. It can conflict with an observed one, and the conflict
@@ -210,12 +247,16 @@ through section 5, as a choice with evidence, when a step needs it.
 | Owner console | one live page for the owner | Workbench's shell is that page now (S-55) | — |
 | Front-door plugins (Caddy 2.11.7 with xcaddy) | the one address | Caddy stays the front door (`CADDY_IMAGE`) | a plugin (auth, HTTPS, rate limits) is needed |
 | Docker | the container engine | engine-specific code only in `scripts/lib.sh` | a machine without Podman |
-| TOSCA, RDF tools | other tools reading or writing the model | Workbench's SSSOM mappings table; an export is a plugin | a tool needs the model in its own terms |
+| Graph endpoint (Ontop 5.5.0) | SPARQL with reasoning over Workbench's tables, beside PostgREST | a mapping generated from content types' terms; a read-only role | step 8 (picked in S-59, `docs/choices/rdf-endpoint.yaml`) |
+| TOSCA, other RDF tools | other tools reading or writing the model | Workbench's SSSOM mappings table; an export is a plugin (Morph-KGC reads the same R2RML) | a tool needs the model in its own terms |
 | A forge (Forgejo, Gitea, GitLab) | where pull requests are reviewed | git remotes only (S-25) | a repository lives there |
 
 **Held ideas.** These come from the previous spec. Each can return as a step when a level needs it: working
 memory, episodes from sessions, recall reranked by activation, skill utility and promotion, triage at an
-automation level, a dispatcher that starts headless sessions.
+automation level, a dispatcher that starts headless sessions. New with S-60: **learning rules**, not only
+applying them. A rule miner proposes rules from patterns in the claims (for example, components of this kind
+always depend on that); each proposed rule is a hypothesis, judged by Morphogen on held-out claims before any
+reasoner may use it. Deduction (step 8) comes first; induction waits until there is enough data to hold out.
 
 ## 9. Build plan
 
@@ -223,13 +264,16 @@ Each step ends with a check anyone can run. [`build.yaml`](build.yaml) holds the
 
 | # | Step | Done when |
 | --- | --- | --- |
-| 1 | Cut to the core | the stack is kernel's Postgres, kernel and the tools container; each removed part is an option in the map (section 8); `scripts/check.sh` passes |
-| 2 | Autopoietic: one loop on itself | substrate is modelled as its own project at component level (services, skills, hooks, parameters) with nothing self-only; a gap between the map and what is observed is found, a change closing it is proposed and decided by whoever decides that kind of change (section 7: a map revision by the owner in review, a component change by Morphogen), and kernel traces gap → change → decision by claim ids |
+| 1 | Cut to the core | the stack is kernel's Postgres, kernel and the tools container; each removed part is an option in the map (section 8); `scripts/check.sh` passes (done) |
+| 2 | Autopoietic: one loop on itself | substrate is modelled as its own project at component level with nothing self-only; a gap between the map and what is observed is found, a change closing it is proposed and decided by whoever decides that kind of change (section 7), and Workbench traces gap, change and decision by id (done, S-58) |
 | 3 | A content system for the model | the catalog is a content type, read and edited as items, with its claims and drift checks unchanged; a new kind of entry is a new content type with no change to the store (done by Workbench, S-57) |
-| 4 | Catalogs to choose from | one real choice (a component a step needs) is made by searching the source catalogs, shortlisting candidates as entries with cited claims, testing them, and recording the pick and the rejections |
-| 5 | Engineer: another system beside itself | a real system the owner picks is a second project in the same world model, its graph cited from at least one interview and one observed source; the relations between it and substrate are claims; and one change to it is judged and applied the same way step 2 changed substrate (needs the owner: which system) |
+| 4 | Catalogs to choose from | one real choice is made by searching the source catalogs, shortlisting candidates as entries with cited claims, testing them, and recording the pick and the rejections (done: the graph endpoint, S-59) |
+| 5 | Engineer: a system beside itself, from an interview | the owner, as a decision maker trying substrate for a business, is interviewed; a real open-source system stands for that business's existing system and is mined as the observed half, with the next questions drawn from the gaps between what was said and what was found; both are a second project beside substrate, the relations between them are claims, and one change closing a gap is judged and applied the same way step 2 changed substrate (S-60) |
+| 7 | Vocabularies first-class | content types and fields carry terms from vocabularies chosen through section 5 and loaded into Workbench (terms and SSSOM mappings), ontology registries are source catalogs, and search finds items by a term's labels |
+| 8 | A graph view: traversal, SPARQL, inference | over the same tables and with no copy: pgGraph answers a transitive path, Ontop answers SPARQL with reasoning behind Caddy as a read-only role, both mappings generated from the terms; OWL 2 RL inferences land as claims attributed to the reasoner and leave when a premise is retracted |
+| 9 | Slots enforced | each core interface on the map has a contract test, the map names it, and an option enters a slot only by passing it; Morphogen's structure check reports no untested core interface |
 
-A sixth step, a second unlike domain, was dropped (S-49): the generalist level stays a direction.
+Step 6, a second unlike domain, was dropped (S-49): the generalist level stays a direction. Steps 7 to 9 were added with S-60; 7 and 9 need only step 4, 8 needs 7.
 
 ## 10. Limitations
 
@@ -241,6 +285,13 @@ A sixth step, a second unlike domain, was dropped (S-49): the generalist level s
   are trusted.
 - **Interviews cost a person's time.** Step 5 depends on someone willing to answer, and on questions good enough
   to be worth it.
+- **Step 5 is a scenario.** The owner answers as a decision maker for a business that is not theirs, about a
+  system they do not run. The answers are real statements by a real person, recorded as such and marked as a
+  scenario, but they are not a client's knowledge; the observed half is real code. A true second system, with
+  its own people, is still the stronger test.
+- **Reasoning is only as good as the vocabulary.** Inferences follow from the terms and rules chosen; a careless
+  subclass yields confident wrong claims. They are claims like any other, retractable and attributed, which is
+  why the vocabulary is chosen through section 5.
 - **The observed half starts thin.** With metrics and traces as options (section 8), what is observed about
   substrate comes from its code and its running containers. That is enough for step 2, but not for every kind
   of gap.
@@ -256,3 +307,5 @@ A sixth step, a second unlike domain, was dropped (S-49): the generalist level s
 - SSSOM: https://mapping-commons.github.io/sssom/ ; SKOS: https://www.w3.org/TR/skos-reference/
 - Backstage's catalog entity model: https://backstage.io/docs/features/software-catalog/descriptor-format
 - deps.dev API: https://docs.deps.dev/api/v3/
+- Ontop: https://ontop-vkg.org/ ; OWL 2 profiles (QL, RL): https://www.w3.org/TR/owl2-profiles/ ; R2RML:
+  https://www.w3.org/TR/r2rml/ ; PROV-O: https://www.w3.org/TR/prov-o/

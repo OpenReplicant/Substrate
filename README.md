@@ -46,11 +46,18 @@ OpenTelemetry, Backstage, Nomad, OpenBao, a bus, a console) are options in its o
 (`catalog-info.yaml`, system `options`; [`docs/spec.md`](docs/spec.md) section 8). Each says where it fits, the
 interface that keeps it possible, when to bring it back, and the commit to restore it from.
 
+**Pluggable by slots, not by trust.** Each part on the map fills a slot named by an interface (the runtime's
+verbs, the secrets verbs, Workbench's API, the model endpoint, the graph endpoint), and anything that answers the
+interface can take its place once it passes that slot's contract test. Choosing a filler is research
+(`docs/choices/`). The judge is the exception: Morphogen is plugged in but not a slot, so the loop can never
+choose or tune what judges it ([`docs/spec.md`](docs/spec.md) section 4).
+
 ## Where it is going
 
 [`docs/spec.md`](docs/spec.md) is what substrate is meant to become, and [`docs/build.yaml`](docs/build.yaml)
-its build plan: cut to the core, one loop on itself, a content system for the model, catalogs to choose from,
-another system beside itself. Left in place, they make Claude Code sessions here build it out a step at a time (the `build-out`
+its build plan: cut to the core, one loop on itself, a content system for the model, catalogs to choose from
+(done), then a system beside itself from an interview, vocabularies, a graph view (traversal, SPARQL and
+inference over the same tables), and slots enforced by contract tests. Left in place, they make Claude Code sessions here build it out a step at a time (the `build-out`
 skill). `python3 scripts/spec.py status` shows where it stands; deleting `docs/spec.md` stops it.
 
 ## Start
