@@ -67,6 +67,13 @@ print(("FAIL " + ", ".join(bad)) if bad else f"{len(runs)} runs, all pass; oldes
 else note "contracts: none run yet (scripts/contract.sh all)"; fi
 fi
 
+say "Scripts"
+unparsed=""
+for f in "$ROOT"/scripts/*.sh "$ROOT"/scripts/*/*.sh "$ROOT"/scripts/trials/*/*.sh "$ROOT"/bin/*; do
+  [ -f "$f" ] && head -1 "$f" | grep -q '^#!/bin/sh' && { sh -n "$f" 2>/dev/null || unparsed="$unparsed ${f#"$ROOT"/}"; }
+done
+[ -z "$unparsed" ] && ok "every shell script parses (sh -n)" || bad "these do not parse:$unparsed"
+
 say "Upstream clones"
 for repo in $(sed -n 's/^\([a-z][a-z0-9_-]*\):$/\1/p' "$ROOT/repos.yaml"); do
   dir="$ROOT/repos/$repo"

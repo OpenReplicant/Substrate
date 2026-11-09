@@ -5,7 +5,7 @@ set -eu
 
 for a in "$@"; do
   if [ "$a" = "--volumes" ]; then
-    printf 'Delete all data (Workbench's database and every other volume)? Type yes: '
+    printf '%s' "Delete all data (Workbench's database and every other volume)? Type yes: "
     read -r answer
     [ "$answer" = "yes" ] || { echo "Kept."; exit 1; }
   fi
