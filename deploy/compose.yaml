@@ -111,4 +111,4 @@ services:
 
 volumes:
   db-data:
-    name: substrate_db-data                    # named, so a project-name change never orphans it
+    name: ${DB_VOLUME:-substrate_db-data}      # named, so a project-name change never orphans it
