@@ -11,10 +11,10 @@
       <button class="wb-btn" @click="review()">Review lane</button>
       <button class="wb-btn" @click="extractors()">Extractors</button>
     </header>
-    <p class="wb-lede">Each skill and hook as the catalog declares it (catalog-info.yaml, read by substrate:catalog) and as the repository has it (.claude/, read by substrate:claude-code). Where they differ, substrate:drift raises a gap in the review lane: revise the map, or change the repository.</p>
+    <p class="wb-lede">Each skill and hook as the catalog declares it (catalog-info.yaml, read by substrate:catalog) and as the repository has it (.claude/, read by substrate:claude-code). Where they differ, substrate:drift raises a gap: decide it here or in the review lane. Changing the map declares or removes the entry in catalog-info.yaml; changing the repository adds or removes the file. Either way the decision is recorded with your name.</p>
     <div class="wb-table-wrap">
       <table class="wb-table">
-        <thead><tr><th>Part</th><th>Type</th><th>Declared</th><th>Found</th><th>Where</th><th>State</th></tr></thead>
+        <thead><tr><th>Part</th><th>Type</th><th>Declared</th><th>Found</th><th>Where</th><th>State</th><th>Decide</th></tr></thead>
         <tbody>
           <template x-for="r in shown" :key="r.key">
             <tr>
@@ -24,6 +24,14 @@
               <td><button class="wb-link" @click="openObserved(r)" x-text="mark(r.observed)"></button></td>
               <td class="wb-faint wb-mono" x-text="where(r)"></td>
               <td><span :class="stateClass(r)" x-text="state(r)"></span></td>
+              <td>
+                <template x-if="r.decision && canDecide">
+                  <span class="wb-row-actions">
+                    <button class="wb-btn" @click="decide(r, true)" title="Approve the gap: the map is what changes">Change the map</button>
+                    <button class="wb-btn" @click="decide(r, false)" title="Decline the gap: the repository is what changes">Change the repository</button>
+                  </span>
+                </template>
+              </td>
             </tr>
           </template>
         </tbody>

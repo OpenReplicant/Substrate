@@ -76,6 +76,7 @@
             <template x-for="e in s.entries" :key="e.id">
               <button class="wb-nav-item" @click="go(e)" :title="e.title">
                 <svg><use :href="'#i-' + (e.icon || 'doc')"/></svg><span x-text="e.title"></span>
+                <span class="wb-count" x-show="badge(e)" x-text="badge(e)"></span>
               </button>
             </template>
           </div>

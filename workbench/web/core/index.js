@@ -57,8 +57,8 @@ export default function core(wb) {
 
   // ---------------------------------------------------------------- sidebar
   wb.menu({id: 'dashboard', section: 'Workspace', title: 'Dashboard', icon: 'home', open: ['dashboard'], order: 1});
-  wb.menu({id: 'review', section: 'Review', title: 'Decisions', icon: 'check', open: ['review'], order: 1});
-  wb.menu({id: 'claims', section: 'Review', title: 'Claims', icon: 'quote', open: ['claims'], order: 2});
+  wb.menu({id: 'review', section: 'Workspace', title: 'Review lane', icon: 'check', open: ['review'], order: 2, badge: 'review'});
+  wb.menu({id: 'claims', section: 'System', title: 'Claims', icon: 'quote', open: ['claims'], order: 3});
   wb.menu({id: 'types', section: 'System', title: 'Content types', icon: 'schema', open: ['types'], order: 1});
   wb.menu({id: 'extractors', section: 'System', title: 'Extractors', icon: 'refresh', open: ['extractors'], order: 2});
 
@@ -73,6 +73,11 @@ export default function core(wb) {
   wb.widget({id: 'recent', title: 'Recent changes', size: 'l', template: 'wb-tpl-w-recent', order: 2});
   wb.widget({id: 'decisions', title: 'Waiting for a decision', size: 'm', template: 'wb-tpl-w-decisions', order: 3});
   wb.widget({id: 'apps', title: 'Apps', size: 's', template: 'wb-tpl-w-apps', order: 4, when: () => wb.registry.list('app').length > 0});
+
+  // ---------------------------------------------------------------- the review lane's count, beside its menu entry
+  const countOpen = async () => { wb.state.badges.review = await wb.api.count('decisions', {status: 'eq.open'}).catch(() => 0); };
+  wb.on('signedin', countOpen);
+  wb.onChange((e) => e.kind === 'decision', countOpen);
 
   // ---------------------------------------------------------------- commands
   const cmd = (id, title, run, whenFn) => wb.command({id, title, run, when: whenFn});

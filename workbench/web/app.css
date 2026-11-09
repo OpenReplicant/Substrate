@@ -116,9 +116,12 @@ textarea.wb-input { resize: vertical; line-height: 1.5; }
 .wb-nav-section h3 { padding: 4px 10px; color: var(--text-faint); font-size: var(--fs-xs); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
 .wb-nav-item { display: flex; align-items: center; gap: 10px; width: 100%; height: 32px; padding: 0 10px; border: 0; border-radius: var(--radius-sm);
   background: none; color: var(--text-muted); font: inherit; text-align: left; cursor: pointer; }
-.wb-nav-item span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.wb-nav-item span:not(.wb-count) { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .wb-nav-item:hover { background: var(--surface-3); color: var(--text); }
-.wb-shell.nav-collapsed .wb-nav-section h3, .wb-shell.nav-collapsed .wb-nav-item span { display: none; }
+.wb-count { margin-left: auto; min-width: 20px; padding: 0 6px; border-radius: 999px; background: var(--accent); color: var(--on-accent); font-size: var(--fs-xs); font-weight: 600; text-align: center; }
+.wb-shell.nav-collapsed .wb-nav-item { position: relative; }
+.wb-shell.nav-collapsed .wb-count { display: block !important; position: absolute; top: 3px; right: 6px; min-width: 16px; padding: 0 4px; font-size: 10px; }
+.wb-shell.nav-collapsed .wb-nav-section h3, .wb-shell.nav-collapsed .wb-nav-item span:not(.wb-count) { display: none; }
 .wb-shell.nav-collapsed .wb-nav-item { justify-content: center; padding: 0; }
 .wb-shell.nav-collapsed .wb-nav-section { padding-bottom: 8px; border-bottom: 1px solid var(--border); }
 
@@ -212,6 +215,8 @@ textarea.wb-input { resize: vertical; line-height: 1.5; }
 .wb-decision-head { display: flex; gap: 10px; align-items: center; }
 .wb-decision-text { margin: 8px 0; font-size: var(--fs-md); }
 .wb-decision-actions { display: flex; gap: 8px; }
+.wb-row-actions { display: inline-flex; gap: 6px; }
+.wb-row-actions .wb-btn { height: 26px; padding: 0 8px; font-size: var(--fs-sm); }
 
 /* apps */
 .wb-app-frame { display: flex; flex-direction: column; height: 100%; }

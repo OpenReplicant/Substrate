@@ -114,7 +114,7 @@ export default function myPlugin(wb) {
   wb.inspector({id: 'my-section', title: 'Mine', applies: (sel) => sel?.type === 'component', template: 'my-insp'});
   wb.field({id: 'colour', match: (prop) => (prop.format === 'color' ? 3 : 0), mount(el, {value, set}) { ... }});
   wb.command({id: 'my-cmd', title: 'Do the thing', run: (wb) => wb.notify('done')});
-  wb.menu({id: 'my-menu', section: 'Workspace', title: 'Mine', icon: 'doc', open: ['my-view', {}]});
+  wb.menu({id: 'my-menu', section: 'Workspace', title: 'Mine', icon: 'doc', open: ['my-view', {}], badge: 'mine'});  // wb.state.badges.mine = 3
   wb.app({id: 'grafana', title: 'Grafana', url: '/apps/grafana/', embed: 'frame'});   // or embed: 'window'
   wb.data('myComponent', () => ({ /* an Alpine component for your templates */ }));
 }

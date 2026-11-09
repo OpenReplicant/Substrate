@@ -20,9 +20,9 @@ export default function substrate(wb) {
         wb.api.get('component', {kind: 'eq.AiResource', select: 'id,slug,title,type,lifecycle,description'}).catch(() => []),
         wb.api.get('skill', {select: 'id,slug,path,description'}).catch(() => []),
         wb.api.get('hook', {select: 'id,slug,path,event,matcher'}).catch(() => []),
-        wb.api.get('decisions', {status: 'eq.open', raised_by: 'eq.substrate:drift', select: 'key'}).catch(() => []),
+        wb.api.get('decisions', {status: 'eq.open', raised_by: 'eq.substrate:drift', select: 'id,key,subject'}).catch(() => []),
       ]);
-      const open = new Set(gaps.map((g) => g.key));
+      const open = new Map(gaps.map((g) => [g.key, g]));
       const by = new Map();
       for (const d of declared) by.set(`${d.type}:${d.slug}`, {key: `${d.type}:${d.slug}`, type: d.type, slug: d.slug, declared: d, observed: null});
       for (const [type, list] of [['skill', skills], ['hook', hooks]]) {
@@ -33,7 +33,7 @@ export default function substrate(wb) {
           by.set(k, row);
         }
       }
-      this.rows = [...by.values()].map((r) => ({...r, gap: open.has(`undeclared:${r.key}`) || open.has(`unobserved:${r.key}`)}))
+      this.rows = [...by.values()].map((r) => { const g = open.get(`undeclared:${r.key}`) || open.get(`unobserved:${r.key}`); return {...r, gap: Boolean(g), decision: g || null}; })
         .sort((a, b) => (b.gap - a.gap) || a.type.localeCompare(b.type) || a.slug.localeCompare(b.slug));
       this.gaps = this.rows.filter((r) => r.gap).length;
       this.loading = false;
@@ -46,6 +46,16 @@ export default function substrate(wb) {
     openDeclared(r) { if (r.declared) wb.open('item', {type: 'component', id: r.declared.id}); },
     openObserved(r) { if (r.observed) wb.open('item', {type: r.type, id: r.observed.id}); },
     review() { wb.open('review'); },
+    get canDecide() { return wb.canEdit(); },
+    // S-51: approving a gap changes the map; declining it changes the repository
+    async decide(r, approve) {
+      if (!r.decision) return;
+      try {
+        await wb.api.rpc('decide', {id: r.decision.id, approve,
+          note: approve ? 'change the map (decided on the Map)' : 'change the repository (decided on the Map)'});
+        wb.notify(approve ? `Decided: change the map for ${r.slug}` : `Decided: change the repository for ${r.slug}`);
+      } catch (e) { wb.notify(e.message, 'error'); }
+    },
     extractors() { wb.open('extractors'); },
     get summary() { return this.loading ? 'Loading…' : `${this.rows.length} parts · ${this.gaps} waiting for a decision`; },
   }));

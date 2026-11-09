@@ -14,7 +14,7 @@ const listeners = new Map();       // event -> Set(fn)
 let dock = null;
 let restoring = false;
 
-const SECTIONS = ['Workspace', 'Content', 'Review', 'Apps', 'System'];
+const SECTIONS = ['Workspace', 'Content', 'Apps', 'System'];
 
 function emit(event, detail) { (listeners.get(event) || []).forEach((fn) => { try { fn(detail); } catch (e) { console.error(e); } }); }
 function stored(key, fallback) { try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; } }
@@ -253,6 +253,7 @@ Alpine.store('wb', {
   inspectorOpen: stored('wb.inspector.open', true),
   paletteOpen: false,
   live: false,
+  badges: {},          // menu entry badge name -> a count (plugins set them)
 });
 
 Alpine.data('shell', () => ({
@@ -321,6 +322,8 @@ Alpine.data('shell', () => ({
     return SECTIONS.map((name) => ({name, entries: entries.filter((e) => e.section === name).sort((a, b) => (a.order ?? 50) - (b.order ?? 50))}))
       .filter((s) => s.entries.length);
   },
+
+  badge(e) { return e.badge ? (Alpine.store('wb').badges[e.badge] || 0) : 0; },
 
   go(entry) {
     if (entry.app) return launch(entry.app);
