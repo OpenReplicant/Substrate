@@ -73,7 +73,7 @@ apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
   name: front-door
-  description: Caddy at 127.0.0.1:8080 - Workbench's shell at /, its API at /api, its server at /wb/api; HTTPS when KK_SITE names a public host.
+  description: Caddy at 127.0.0.1:8080 - Workbench's shell at /, its API at /api, its server at /wb/api; HTTPS when PUBLIC_HOST names a public host.
   annotations:
     substrate.dev/intent: One address for people and agents.
     substrate.dev/fill: adopt

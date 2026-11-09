@@ -11,7 +11,7 @@ set -eu
 
 secrets_export
 exec "$ROOT/bin/in-tools" env PYTHONPATH="$ROOT/workbench" \
-  WORKBENCH_ADMIN_URL="postgresql://postgres:$(env_value POSTGRES_PASSWORD)@127.0.0.1:$(env_value KK_DB_PORT)/postgres" \
+  WORKBENCH_ADMIN_URL="postgresql://postgres:$(env_value POSTGRES_PASSWORD)@127.0.0.1:$(env_value DB_PORT)/postgres" \
   WORKBENCH_AUTHENTICATOR_PASSWORD="$(env_value WORKBENCH_AUTHENTICATOR_PASSWORD)" \
   WORKBENCH_JWT_SECRET="$(env_value WORKBENCH_JWT_SECRET)" \
   WORKBENCH_SERVER_PASSWORD="$(env_value WORKBENCH_SERVER_PASSWORD)" \

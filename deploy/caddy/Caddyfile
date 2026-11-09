@@ -4,8 +4,8 @@
 #   /sparql           the graph endpoint (Ontop), read-only SPARQL over the same tables
 #   /plugins/*/web/*  each installed plugin's browser files; nothing else in a plugin folder is served
 #   everything else   Workbench's shell from workbench/web; / is index.html, a template that finds the plugins
-# With KK_SITE set to a public host name, Caddy gets and renews a certificate, as in kernel's file.
-{$KK_SITE::80} {
+# With PUBLIC_HOST set to a public host name, Caddy gets and renews a certificate.
+{$PUBLIC_HOST::80} {
 	encode zstd gzip
 
 	redir /api /api/

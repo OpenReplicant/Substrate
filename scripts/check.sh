@@ -64,9 +64,9 @@ else note "contracts: none run yet (scripts/contract.sh all)"; fi
 fi
 
 say "Upstream clones"
-for repo in kernel morphogen; do
+for repo in morphogen kernel; do
   dir="$ROOT/repos/$repo"
-  [ -d "$dir/.git" ] || { bad "repos/$repo missing (scripts/bootstrap.sh)"; continue; }
+  [ -d "$dir/.git" ] || { [ $repo = kernel ] || bad "repos/$repo missing (scripts/bootstrap.sh)"; continue; }   # kernel: an option, cloned on request
   checked=$(sed -n "/^$repo:/,/^[a-z]/s/^  checked: \([0-9a-f]*\).*/\1/p" "$ROOT/repos.yaml")
   head=$(git -C "$dir" rev-parse HEAD); branch=$(git -C "$dir" rev-parse --abbrev-ref HEAD)
   dirty=$(git -C "$dir" status --porcelain | wc -l | tr -d ' ')

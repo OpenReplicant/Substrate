@@ -1,7 +1,7 @@
 #!/bin/sh
 # A service's recent logs, by the runtime in .env.
 #
-#   scripts/logs.sh SERVICE     # db, init, kernel, caddy
+#   scripts/logs.sh SERVICE     # db, postgrest, workbench, graph, caddy
 set -eu
 . "$(dirname "$0")/lib.sh"
 

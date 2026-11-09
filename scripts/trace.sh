@@ -6,6 +6,6 @@ set -eu
 . "$(dirname "$0")/lib.sh"
 
 secrets_export
-WORKBENCH_ADMIN_URL="postgresql://postgres:$(env_value POSTGRES_PASSWORD)@127.0.0.1:$(env_value KK_DB_PORT)/postgres" \
-  exec "$ROOT/bin/in-tools" env WORKBENCH_ADMIN_URL="postgresql://postgres:$(env_value POSTGRES_PASSWORD)@127.0.0.1:$(env_value KK_DB_PORT)/postgres" \
+WORKBENCH_ADMIN_URL="postgresql://postgres:$(env_value POSTGRES_PASSWORD)@127.0.0.1:$(env_value DB_PORT)/postgres" \
+  exec "$ROOT/bin/in-tools" env WORKBENCH_ADMIN_URL="postgresql://postgres:$(env_value POSTGRES_PASSWORD)@127.0.0.1:$(env_value DB_PORT)/postgres" \
   python3 "$ROOT/scripts/trace.py" "${1:?usage: scripts/trace.sh NAME [DEPTH]}" ${2:+"$2"}

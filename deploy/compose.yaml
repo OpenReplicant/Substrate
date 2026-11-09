@@ -3,7 +3,7 @@
 #   $CONTAINER_ENGINE compose -f deploy/compose.yaml --env-file .env up -d
 #
 # Everything is published on 127.0.0.1 only: the front door at :8080 (the shell at /, the API at /api, the server
-# at /wb/api, SPARQL at /sparql), Postgres at :${KK_DB_PORT}. Kernel, which this stack used to be built on, is an option now
+# at /wb/api, SPARQL at /sparql), Postgres at :${DB_PORT}. Kernel, which this stack used to be built on, is an option now
 # (catalog-info.yaml, system options); its database `kk` stays in the same Postgres volume, untouched.
 
 name: substrate
@@ -29,7 +29,7 @@ services:
     volumes:
       - db-data:/var/lib/postgresql/data
     ports:
-      - "127.0.0.1:${KK_DB_PORT:-5432}:5432"
+      - "127.0.0.1:${DB_PORT:-5432}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -104,6 +104,7 @@ services:
       - ../plugins:/srv/plugins:ro               # installed plugins; only each one's web/ is served
     environment:
       WB_FRAME_SRC: ${WB_FRAME_SRC:-}            # origins apps may be framed from, beyond this one
+      PUBLIC_HOST: ${PUBLIC_HOST:-:80}           # a public host name for HTTPS (then also publish ports 80 and 443)
     ports:
       - "127.0.0.1:8080:80"
     depends_on: [postgrest, workbench, graph]

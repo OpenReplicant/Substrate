@@ -1,6 +1,6 @@
 #!/bin/sh
 # Run a command inside the substrate-tools container (S-19). The other files in bin/ call this; Claude Code
-# calls them for kernel's MCP server and hooks, so it stays small and fast (no .env parsing beyond one line).
+# calls them from hooks, so it stays small and fast (no .env parsing beyond one line).
 #
 #   bin/in-tools COMMAND [ARGS...]
 root=$(cd "$(dirname "$0")/.." && pwd)
@@ -17,10 +17,9 @@ flags="-i"; [ -t 0 ] && [ -t 1 ] && flags="-it"
 workdir=$root
 case "$PWD" in "$root"|"$root"/*) workdir=$PWD ;; esac
 grep -qx "$PWD" "$root/.state/projects" 2>/dev/null && workdir=$PWD
-# what kernel's commands and Claude Code pass through the environment
+# what the scripts and Claude Code pass through the environment
 envs=""
-for v in KK_LOGIN_FILE KK_PROFILE KK_ADMIN_URL KK_JWT_SECRET KK_ROLE KK_DATABASE_URL DATABASE_URL \
-         CLAUDE_PROJECT_DIR CLAUDE_SESSION_ID; do
+for v in DATABASE_URL CLAUDE_PROJECT_DIR CLAUDE_SESSION_ID; do
   eval "isset=\${$v+x}"; [ -n "$isset" ] && envs="$envs -e $v"
 done
 # shellcheck disable=SC2086

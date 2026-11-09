@@ -344,8 +344,7 @@ def register(wb):
             for slug, path in q(f"select i.slug, i.path from api.{typ} i where {current('substrate:claude-code')}").fetchall():
                 observed[(typ, slug)] = path
         if not declared and not observed:
-            ctx.log("nothing declared or observed yet: run substrate:catalog and substrate:claude-code first")
-            return
+            ctx.log("no skills or hooks declared or found (substrate:catalog, substrate:claude-code)")
         for (typ, slug), path in sorted(observed.items()):
             if (typ, slug) not in declared:
                 ctx.decision("gap", f"undeclared:{typ}:{slug}", {
@@ -365,6 +364,7 @@ def register(wb):
         claimed, refs = {}, 0
         for cid, slug, kind, ann in q(f"""select i.id, i.slug, i.kind, i.annotations from api.component i
                                           where i.annotations ? 'substrate.dev/observed-as' and {current('substrate:catalog')}""").fetchall():
+            ctx.speaks_for("component", str(cid))   # so its observedAs go when the last thing it ran as is gone
             for ref in str(ann["substrate.dev/observed-as"]).split(","):
                 typ, _, pattern = ref.strip().partition(":")
                 if typ not in OBSERVED_KINDS or not pattern:

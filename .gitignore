@@ -7,7 +7,6 @@ repos/
 # Python
 .venv/
 __pycache__/
-# written by kk up for this machine (kernel logins live in ~/.config/knowledge-kernel)
+# this machine's Claude Code wiring (scripts/harness.py)
 .mcp.json
 .claude/settings.local.json
-.claude/skills/knowledge-kernel/
