@@ -5,63 +5,84 @@
   "properties": {
     "name": {
       "type": "string",
-      "description": "the engine's name for it"
+      "description": "the engine's name for it",
+      "x-term": "sub:name"
     },
     "project": {
       "type": "string",
-      "description": "the compose project, from its label"
+      "description": "the compose project, from its label",
+      "x-term": "sub:project"
     },
     "service": {
       "type": "string",
-      "description": "the compose service, from its label"
+      "description": "the compose service, from its label",
+      "x-term": "sub:service"
     },
     "image": {
       "type": "string",
-      "description": "the image reference it was started from"
+      "description": "the image reference it was started from",
+      "x-term": "sub:image"
     },
     "digest": {
       "type": "string",
-      "description": "the image digest it runs"
+      "description": "the image digest it runs",
+      "x-term": "sub:digest"
     },
     "state": {
       "type": "string",
-      "description": "running, exited, ..."
+      "description": "running, exited, ...",
+      "x-term": "sub:state"
     },
     "health": {
       "type": "string",
-      "description": "its health check's status, if it has one"
+      "description": "its health check's status, if it has one",
+      "x-term": "sub:health"
     },
     "started_at": {
       "type": "string",
-      "description": "when it last started"
+      "description": "when it last started",
+      "x-term": "sub:startedAt"
     },
     "user": {
       "type": "string",
-      "description": "the user it runs as"
+      "description": "the user it runs as",
+      "x-term": "sub:user"
     },
     "read_only": {
       "type": "boolean",
-      "description": "whether its root filesystem is read-only"
+      "description": "whether its root filesystem is read-only",
+      "x-term": "sub:readOnly"
     },
     "restart_policy": {
       "type": "string",
-      "description": "the engine's restart policy"
+      "description": "the engine's restart policy",
+      "x-term": "sub:restartPolicy"
     },
     "ports": {
       "type": "array",
-      "description": "published ports: container port, host address and port"
+      "description": "published ports: container port, host address and port",
+      "x-term": "sub:ports"
     },
     "mounts": {
       "type": "array",
-      "description": "binds and volumes: type, name, source, destination, rw"
+      "description": "binds and volumes: type, name, source, destination, rw",
+      "x-term": "sub:mounts"
     },
     "networks": {
       "type": "object",
-      "description": "each network and the aliases it answers to there"
+      "description": "each network and the aliases it answers to there",
+      "x-term": "sub:networks"
     },
     "env_names": {
       "type": "array",
-      "description": "the names of its environment settings (never values)"
+      "description": "the names of its environment settings (never values)",
+      "x-term": "sub:envNames"
+    },
+    "dials": {
+      "type": "array",
+      "description": "where its URL-valued settings point: the setting's name, scheme, host and port only",
+      "x-term": "sub:dials"
     }
-  }
+  },
+  "x-term": "sub:Container"
 }

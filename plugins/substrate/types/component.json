@@ -5,30 +5,47 @@
   "properties": {
     "kind": {
       "type": "string",
-      "description": "Backstage kind: Component, Resource, AiResource, System, API"
+      "description": "Backstage kind: Component, Resource, AiResource, System, API",
+      "x-term": "sub:kind",
+      "x-class-of-value": {
+        "API": "sub:API",
+        "AiResource": "sub:AiResource",
+        "Component": "sub:Component",
+        "Domain": "sub:Domain",
+        "Group": "sub:Group",
+        "Resource": "sub:Resource",
+        "System": "sub:System"
+      }
     },
     "type": {
       "type": "string",
-      "description": "spec.type: service, library, website, skill, hook, database, ..."
+      "description": "spec.type: service, library, website, skill, hook, database, ...",
+      "x-term": "sub:type"
     },
     "lifecycle": {
       "type": "string",
-      "description": "spec.lifecycle: production, experimental, option, listed, deprecated"
+      "description": "spec.lifecycle: production, experimental, option, listed, deprecated",
+      "x-term": "sub:lifecycle"
     },
     "description": {
-      "type": "string"
+      "type": "string",
+      "x-term": "sub:description"
     },
     "owner": {
       "type": "string",
-      "description": "an entity ref, e.g. group:operator"
+      "description": "an entity ref, e.g. group:operator",
+      "x-term": "sub:owner"
     },
     "system": {
       "type": "string",
-      "description": "the system it belongs to: core, options, sources"
+      "description": "the system it belongs to: core, options, sources",
+      "x-term": "sub:system"
     },
     "annotations": {
       "type": "object",
-      "description": "metadata.annotations as written"
+      "description": "metadata.annotations as written",
+      "x-term": "sub:annotations"
     }
-  }
+  },
+  "x-term": "sub:Entity"
 }

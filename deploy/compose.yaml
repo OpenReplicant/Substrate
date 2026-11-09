@@ -3,7 +3,7 @@
 #   $CONTAINER_ENGINE compose -f deploy/compose.yaml --env-file .env up -d
 #
 # Everything is published on 127.0.0.1 only: the front door at :8080 (the shell at /, the API at /api, the server
-# at /wb/api), Postgres at :${KK_DB_PORT}. Kernel, which this stack used to be built on, is an option now
+# at /wb/api, SPARQL at /sparql), Postgres at :${KK_DB_PORT}. Kernel, which this stack used to be built on, is an option now
 # (catalog-info.yaml, system options); its database `kk` stays in the same Postgres volume, untouched.
 
 name: substrate
@@ -71,6 +71,29 @@ services:
     depends_on:
       db: {condition: service_healthy}
 
+  # The graph endpoint (spec step 7; Ontop, picked in S-59): SPARQL over Workbench's live tables, read-only as
+  # wb_reader, reasoning over the vocabulary at query time. Its mapping and ontology are generated from Workbench's
+  # terms (scripts/graph.sh, into .state/graph); dev mode reloads them when they change. Caddy serves it at /sparql.
+  graph:
+    <<: *locked
+    build: {context: ./ontop, dockerfile: Containerfile}
+    image: localhost/substrate-graph:local
+    tmpfs: [/tmp]
+    environment:
+      ONTOP_MAPPING_FILE: /graph/mapping.obda
+      ONTOP_ONTOLOGY_FILE: /graph/ontology.ttl
+      ONTOP_DB_URL: jdbc:postgresql://db:5432/workbench
+      ONTOP_DB_USER: wb_reader
+      ONTOP_DB_PASSWORD: ${WORKBENCH_READER_PASSWORD:?set in .env}
+      ONTOP_DB_DRIVER: org.postgresql.Driver
+      ONTOP_DEV_MODE: "true"
+      ONTOP_WAIT_FOR: db:5432
+      ONTOP_LOG_LEVEL: warn
+    volumes:
+      - ../.state/graph:/graph:ro
+    depends_on:
+      db: {condition: service_healthy}
+
   # The front door (deploy/caddy/Caddyfile): the shell at /, plugins' web files, /api to PostgREST, /wb/api to the
   # server. The stock Caddy image; the shell's page is a Caddy template that finds the installed plugins.
   caddy:
@@ -83,7 +106,7 @@ services:
       WB_FRAME_SRC: ${WB_FRAME_SRC:-}            # origins apps may be framed from, beyond this one
     ports:
       - "127.0.0.1:8080:80"
-    depends_on: [postgrest, workbench]
+    depends_on: [postgrest, workbench, graph]
     restart: unless-stopped
 
 volumes:

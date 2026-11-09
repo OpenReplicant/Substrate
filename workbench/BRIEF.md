@@ -45,11 +45,11 @@ for the system's own tables; schema `content` for one table per content type.
 | --- | --- |
 | `wb.content_type` | each type a plugin registers: id, plugin, label, field schema (JSON Schema), version |
 | `content.<type>` | the items of one type, with real columns: `id`, `slug`, `title`, the type's fields, `created_at`, `updated_at` |
-| `wb.relation` | typed links between items: (from type, from id, predicate, to type, to id); the graph pgGraph projects |
+| `wb.relation` | typed links between items: (from type, from id, predicate, to type, to id), who stated it (author, run, source); each also a claim in `wb.claim`; the graph pgGraph projects |
 | `wb.source` | what was read: URI, sha256, media type, when, where the bytes are kept |
 | `wb.run` | one extractor run: extractor, plugin, version, inputs, started and ended, outcome |
 | `wb.claim` | the evidence layer: subject (type, id), field or predicate, value or object, source, quote and span, run, observed at, valid from and to, status (`current`, `superseded`, `retracted`, `disputed`), superseded by, confidence |
-| `wb.term` | vocabulary terms: IRI, label, kind (class, property, value), vocabulary |
+| `wb.term` | vocabulary terms: IRI, label, kind (class, property, datatype-property, value, prefix), vocabulary, parents, characteristics (transitive, symmetric, ...), inverse, domain, range, the relation predicate a property names, the plugin that loaded it |
 | `wb.mapping` | SSSOM mappings between terms: subject, predicate (`skos:exactMatch`, `closeMatch`, ...), object, `mapping_justification`, confidence, author, mapping set |
 | `wb.decision` | the review lane: what was decided (a gap, a dispute, a merge, a proposal), the evidence, status, decided by, note |
 | `wb.embedding` | vectors for items, claims or sources (pgvector), per model |
@@ -65,8 +65,21 @@ conflict between sources marks the claims `disputed` and opens a decision. Claim
 justification and confidence; a confirmed one merges them, keeping both ids and every claim. Splink (MIT) is a
 candidate resolver plugin.
 
-**Projections.** pgGraph over `wb.relation` for neighbourhoods and paths; pgvector over `wb.embedding`;
-Postgres full-text over titles, fields and quotes. Each is a query or view, rebuildable, never the truth.
+**Terms.** Workbench's own vocabulary (`workbench/vocabulary.yaml`: wb:Item, wb:Claim, wb:relatedTo, ...) and each
+plugin's (`vocabulary:` in plugin.yaml) are loaded into `wb.term`. A content type and each field name their term
+with `x-term` (a CURIE or IRI), a field may say which class each of its values names (`x-class-of-value`), and
+whatever names none gets a default under `https://workbench.local/`. A relation's term is the property whose
+`predicate` names it, else wb:relatedTo.
+
+**A relation is a claim**, like a value: an extractor's run states its relations (`wb.replace_relations`) and
+what it stated before and no longer does is retracted. A claim may name its premises (`span.premises`); when a
+claim is retracted, everything resting on it is retracted too, and a retracted relation claim takes its row.
+
+**Projections, generated from the terms** (`workbench graph mapping DIR`, `workbench graph project`): pgGraph over
+every content type with `wb.relation` between them, so a path follows relations in their direction
+(`api.graph_path`); an Ontop mapping and OWL ontology for SPARQL over the live tables; pgvector over
+`wb.embedding`; Postgres full-text over titles, fields and quotes. Each is a query or view, rebuildable, never
+the truth.
 
 **Rules live in Postgres**, so every client gets them, whether that's the UI, a plugin, an agent or curl.
 Triggers record a claim for every insert and update, attributed to the signed-in user from the request's JWT or

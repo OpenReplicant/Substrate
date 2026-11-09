@@ -149,11 +149,12 @@ steps:
       generalist level stays a direction in the spec rather than a step.
 
   - id: 7
+    status: blocked
+    waiting_on: "owner: pgGraph 1.2.1's graph.path needs SELECT on its internal graph._graphs for a non-superuser caller, against its docs. Grant read on pgGraph's metadata tables to wb_viewer in a migration (recommended; they hold graph names and grants only), and open an issue upstream?"
     title: "A graph view: traversal, SPARQL, inference"
     spec: "4, 6"
     where: deploy/ (Ontop behind Caddy), workbench/ (pgGraph over wb.relation; terms on content types; mappings generated from them), substrate (its own small vocabulary, an inference extractor)
     after: [5]
-    status: todo
     check: >-
       over the same tables and with no copy, on step 5's observed data: content types and fields carry terms
       (x-term) from substrate's own small vocabulary, generated from its content types and the catalog's kinds

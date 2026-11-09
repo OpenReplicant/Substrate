@@ -21,6 +21,7 @@ until "$ROOT/scripts/workbench.sh" migrate >/dev/null 2>&1; do
 done
 echo "  migrated"
 "$ROOT/scripts/workbench.sh" plugin load "$ROOT/plugins/substrate" | python3 -c 'import json, sys; d = json.load(sys.stdin); print("  plugin", d["plugin"], d["version"], "types:", ", ".join(t["type"] for t in d["types"]))'
+"$ROOT/scripts/graph.sh"                                  # the graph views, from the terms the plugin just loaded
 wait_for() {   # what url logs
   i=0
   until curl -fsS -o /dev/null "$2" 2>/dev/null; do
@@ -35,7 +36,7 @@ wait_for shell "http://127.0.0.1:8080/" caddy
 for x in catalog claude-code morphogen choices; do   # the map, what the repository has, verdicts, choices
   "$ROOT/scripts/workbench.sh" extract "substrate:$x" | python3 -c 'import json, sys; d = json.load(sys.stdin); print("  substrate:'"$x"'", "ok" if d.get("ok") else "FAILED: " + str(d.get("error")), *(d.get("log") or []))'
 done
-"$ROOT/scripts/observe.sh" || echo "  observing stopped (above); the gaps are as they were"   # what runs, then the gaps
+"$ROOT/scripts/observe.sh" || echo "  observing stopped (above); the gaps are as they were"   # what runs, the gaps, inferences
 
 say "Agents and this project's Claude Code"
 "$ROOT/scripts/workbench.sh" user list | python3 -c 'import json, sys; sys.exit(0 if any(u["name"] == "claude-code" for u in json.load(sys.stdin)) else 1)' \

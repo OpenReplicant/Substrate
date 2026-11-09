@@ -5,23 +5,29 @@
   "properties": {
     "ref": {
       "type": "string",
-      "description": "the cell's entity ref"
+      "description": "the cell's entity ref",
+      "x-term": "sub:ref"
     },
     "role": {
       "type": "string",
-      "description": "its role: container, text, code, ..."
+      "description": "its role: container, text, code, ...",
+      "x-term": "sub:role"
     },
     "owner": {
       "type": "string",
-      "description": "its owner"
+      "description": "its owner",
+      "x-term": "sub:owner"
     },
     "ready": {
       "type": "boolean",
-      "description": "whether it has what a judged run needs"
+      "description": "whether it has what a judged run needs",
+      "x-term": "sub:ready"
     },
     "cell_source": {
       "type": "string",
-      "description": "where Morphogen read it from"
+      "description": "where Morphogen read it from",
+      "x-term": "sub:cellSource"
     }
-  }
+  },
+  "x-term": "sub:Cell"
 }

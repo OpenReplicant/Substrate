@@ -5,7 +5,7 @@ with item(t, cls, id, slug, title) as (
   union all select 'skill', 'Skill', id, slug, title from content.skill
   union all select 'hook', 'Hook', id, slug, title from content.hook
 )
-select format('<https://workbench.local/item/%s/%s> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://workbench.local/ns#%s> .', t, id, cls) from item
+select format('<https://workbench.local/item/%s/%s> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://substrate.local/ns#%s> .', t, id, cls) from item
 union all
 select format('<https://workbench.local/item/%s/%s> <https://workbench.local/ns#slug> %s .', t, id, to_json(slug)) from item where slug is not null
 union all
@@ -20,6 +20,6 @@ select format('<https://workbench.local/claim/%s> <https://workbench.local/ns#%s
        lateral (values ('field', c.field), ('quote', c.quote), ('author', c.author), ('sourceUri', s.uri)) x(p, v)
  where c.status = 'current' and c.subject_type in ('component', 'skill', 'hook') and v is not null
 union all
-select format('<https://workbench.local/item/%s/%s> <https://workbench.local/ns#%s> <https://workbench.local/item/%s/%s> .',
+select format('<https://workbench.local/item/%s/%s> <https://substrate.local/ns#%s> <https://workbench.local/item/%s/%s> .',
               from_type, from_id, predicate, to_type, to_id)
   from wb.relation where predicate in ('dependsOn', 'partOf');

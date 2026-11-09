@@ -28,7 +28,9 @@ def links(ctx, inputs):
     """Another author relating the same items: a>b pairs, as `mentions`."""
     for pair in inputs["link"].split(","):
         a, b = (ctx.conn.execute("select id from api.note where slug = %s", (s,)).fetchone()[0] for s in pair.split(">"))
-        ctx.relate("note", a, "mentions", "note", b)
+        premises = inputs.get("premises")
+        ctx.relate("note", a, "mentions", "note", b, quote=inputs.get("quote"),
+                   span={"premises": premises} if premises else None)
 
 
 def register(wb):

@@ -1,7 +1,8 @@
 # "Why does the setup skill say this?": its claims, with field, quote, author and source.
 PREFIX wb: <https://workbench.local/ns#>
+PREFIX sub: <https://substrate.local/ns#>
 SELECT ?field ?quote ?author ?source WHERE {
-  ?s a wb:Skill ; wb:slug "setup" .
+  ?s a sub:Skill ; wb:slug "setup" .
   ?c wb:about ?s ; wb:field ?field ; wb:author ?author ; wb:sourceUri ?source .
   OPTIONAL { ?c wb:quote ?quote }
 } ORDER BY ?field

@@ -157,6 +157,23 @@ spec:
 apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
+  name: reasoner
+  description: Draws what follows from stated relations by OWL 2 RL rules (transitive, inverse and symmetric properties in the vocabulary) and writes each conclusion back as a claim citing its premises.
+  annotations:
+    substrate.dev/intent: Rules applied, the first symbolic inference engine (spec section 1, direction); a conclusion lasts only as long as its premises.
+    substrate.dev/fill: build
+    substrate.dev/basis: substrate:reasoner (plugins/substrate/substrate_plugin.py); its terms from plugins/substrate/vocabulary.yaml (vocab.py, vocabulary.axioms.yaml); premises retract conclusions by Workbench's trigger (migration 009)
+    substrate.dev/step: "7"
+spec:
+  type: library
+  lifecycle: experimental
+  owner: group:agents
+  system: core
+  dependsOn: [component:workbench]
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
   name: observer
   description: Reads a system as it runs - the host, its containers, images and volumes, setting names, routes, APIs, UIs, plugins, connections and Morphogen's cells - into claims, so drift can compare every kind with the map.
   annotations:
@@ -606,18 +623,20 @@ metadata:
   name: graph-endpoint
   description: A SPARQL endpoint over Workbench's items, claims and relations, with reasoning - Ontop, a virtual knowledge graph over the live tables.
   annotations:
-    substrate.dev/fits: A service beside PostgREST, behind Caddy (for example at /sparql), reading Workbench's database as a read-only role.
-    substrate.dev/interface: Workbench's tables stay the one truth; a mapping from content types to RDF (R2RML or .obda) and a vocabulary are all it needs, so the endpoint can change without the store changing.
-    substrate.dev/when: Search or a reasoner needs graph queries across types, once content types carry terms (x-term) so the mapping can be generated rather than kept by hand.
+    substrate.dev/intent: Ask the store by meaning (classes, sub-properties, claims and their premises) without a copy of it.
+    substrate.dev/fill: adopt
+    substrate.dev/basis: deploy/ontop/Containerfile (Ontop 5.5.0 with PgJDBC 42.7.14), compose service graph, Caddy /sparql; its mapping and ontology generated from Workbench's terms (workbench/workbench/graph.py, scripts/graph.sh, .state/graph); reads as wb_reader
+    substrate.dev/observed-as: "container:substrate-graph"
     substrate.dev/candidates: "Picked Ontop 5.5.0 (Apache-2.0) over Jena Fuseki, Oxigraph, RDFLib with OWL-RL, QLever, Virtuoso, Blazegraph and Morph-KGC: docs/choices/rdf-endpoint.yaml, in Workbench as choice rdf-endpoint"
-    substrate.dev/evidence: "Trial 2026-11-09 (scripts/trials/rdf-endpoint/run.sh): the only candidate with right answers to the reasoning queries and current data; about 430 MB."
-    substrate.dev/step: "4"
+    substrate.dev/evidence: "Trial 2026-11-09 (scripts/trials/rdf-endpoint/run.sh): the only candidate with right answers to the reasoning queries and current data; about 430 MB. Live since step 7: run.sh live passes (q1 92/92, q2 5, q3 311/311, fresh)."
+    substrate.dev/step: "7"
 spec:
   type: service
-  lifecycle: option
+  lifecycle: experimental
   owner: group:operator
-  system: options
-  dependsOn: [resource:postgres]
+  system: core
+  providesApis: [graph-api]
+  dependsOn: [resource:postgres, component:workbench]
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Component
@@ -833,3 +852,8 @@ apiVersion: backstage.io/v1alpha1
 kind: API
 metadata: {name: workbench-server-api, annotations: {substrate.dev/observed-as: "api:workbench-server-openapi"}, description: "The Workbench server's own HTTP API at /wb/api - health, live events, extractors, queueing a run, and its OpenAPI document (decided from a step 5 gap)."}
 spec: {type: openapi, lifecycle: experimental, owner: group:operator, system: core, definition: "OpenAPI 3.1, generated from the routes it serves, at http://127.0.0.1:8080/wb/api/openapi.json."}
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata: {name: graph-api, description: "SPARQL 1.1 at /sparql over Workbench's tables, read-only, with OWL 2 QL reasoning at query time (spec step 7)."}
+spec: {type: sparql, lifecycle: experimental, owner: group:operator, system: core, definition: "SPARQL 1.1 Protocol, query only; vocabulary from wb.term (Workbench's wb: terms and each plugin's, e.g. substrate's sub:)."}

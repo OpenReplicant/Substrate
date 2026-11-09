@@ -22,12 +22,16 @@ if h=$(curl -fsS "http://127.0.0.1:8080/wb/api/health" 2>/dev/null); then
 else bad "the Workbench server does not answer (scripts/logs.sh workbench)"; fi
 code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "http://127.0.0.1:8080/wb/api/mcp" -H 'Content-Type: application/json' -d '{}')
 [ "$code" = "401" ] && ok "mcp         http://127.0.0.1:8080/wb/api/mcp (asks for a token)" || bad "the MCP endpoint returned $code without a token"
+if n=$(curl -fsS --max-time 30 -H 'Accept: application/sparql-results+json' --data-urlencode 'query=SELECT (COUNT(?x) AS ?n) WHERE { ?x a <https://workbench.local/ns#Item> }' "http://127.0.0.1:8080/sparql" 2>/dev/null \
+     | python3 -c 'import json, sys; print(json.load(sys.stdin)["results"]["bindings"][0]["n"]["value"])' 2>/dev/null); then
+  ok "sparql      http://127.0.0.1:8080/sparql (Ontop, read-only; $n items, by reasoning over their classes)"
+else bad "the graph endpoint does not answer at /sparql (scripts/logs.sh graph; scripts/graph.sh)"; fi
 running=$(rt_status 2>/dev/null | awk 'NR > 1 {print $1}' | tr '\n' ' ')
-for s in db caddy postgrest workbench; do
+for s in db caddy postgrest workbench graph; do
   case "$running" in *"-$s-"*) ;; *) bad "service $s is not running (scripts/logs.sh $s)" ;; esac
 done
-extra=$(printf '%s\n' $running | grep -v -e '-db-' -e '-caddy-' -e '-postgrest-' -e '-workbench-' || true)
-[ -z "$extra" ] && ok "only the core runs (db, caddy, postgrest, workbench)" || note "also running, outside the core: $(echo $extra)"
+extra=$(printf '%s\n' $running | grep -v -e '-db-' -e '-caddy-' -e '-postgrest-' -e '-workbench-' -e '-graph-' || true)
+[ -z "$extra" ] && ok "only the core runs (db, caddy, postgrest, workbench, graph)" || note "also running, outside the core: $(echo $extra)"
 
 say "Wiring"
 if st=$(sec_status 2>&1); then ok "secrets ($SECRETS): $st"; else bad "secrets ($SECRETS): $st"; fi

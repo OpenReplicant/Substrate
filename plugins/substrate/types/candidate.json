@@ -3,19 +3,73 @@
   "description": "Something that could fill a need, found in a source catalog: its licence, releases and activity as the registry gives them, and its fit and outcome as a choice records them.",
   "type": "object",
   "properties": {
-    "registry": {"type": "string", "description": "the source catalog it came from (a component in system sources): github, deps-dev, ..."},
-    "repository": {"type": "string", "description": "its source repository, owner/name"},
-    "licence": {"type": "string", "description": "SPDX identifier as the registry reports it"},
-    "latest_release": {"type": "string", "description": "the newest release that is not a pre-release"},
-    "released_on": {"type": "string", "description": "when that release was published (YYYY-MM-DD)"},
-    "last_push": {"type": "string", "description": "the last push to its repository (YYYY-MM-DD)"},
-    "stars": {"type": "integer"},
-    "archived": {"type": "boolean"},
-    "image": {"type": "string", "description": "the container image tried, pinned"},
-    "fit": {"type": "string", "description": "what it does, against the need"},
-    "trial": {"type": "string", "description": "what it did in the trial"},
-    "shortlisted": {"type": "boolean"},
-    "outcome": {"type": "string", "description": "picked, rejected or open"},
-    "reason": {"type": "string", "description": "why it was picked or rejected"}
-  }
+    "registry": {
+      "type": "string",
+      "description": "the source catalog it came from (a component in system sources): github, deps-dev, ...",
+      "x-term": "sub:registry"
+    },
+    "repository": {
+      "type": "string",
+      "description": "its source repository, owner/name",
+      "x-term": "sub:repository"
+    },
+    "licence": {
+      "type": "string",
+      "description": "SPDX identifier as the registry reports it",
+      "x-term": "sub:licence"
+    },
+    "latest_release": {
+      "type": "string",
+      "description": "the newest release that is not a pre-release",
+      "x-term": "sub:latestRelease"
+    },
+    "released_on": {
+      "type": "string",
+      "description": "when that release was published (YYYY-MM-DD)",
+      "x-term": "sub:releasedOn"
+    },
+    "last_push": {
+      "type": "string",
+      "description": "the last push to its repository (YYYY-MM-DD)",
+      "x-term": "sub:lastPush"
+    },
+    "stars": {
+      "type": "integer",
+      "x-term": "sub:stars"
+    },
+    "archived": {
+      "type": "boolean",
+      "x-term": "sub:archived"
+    },
+    "image": {
+      "type": "string",
+      "description": "the container image tried, pinned",
+      "x-term": "sub:image"
+    },
+    "fit": {
+      "type": "string",
+      "description": "what it does, against the need",
+      "x-term": "sub:fit"
+    },
+    "trial": {
+      "type": "string",
+      "description": "what it did in the trial",
+      "x-term": "sub:trial"
+    },
+    "shortlisted": {
+      "type": "boolean",
+      "x-term": "sub:shortlisted"
+    },
+    "outcome": {
+      "type": "string",
+      "description": "picked, rejected or open",
+      "x-term": "sub:outcome"
+    },
+    "reason": {
+      "type": "string",
+      "description": "why it was picked or rejected",
+      "x-term": "sub:reason"
+    }
+  },
+  "x-term": "sub:Candidate"
 }

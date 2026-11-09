@@ -18,7 +18,7 @@ SECRET = "hunter2-not-for-files"
 INSPECT = [{
     "Id": "abc", "Name": "/shop-web-1", "Image": "sha256:img", "ImageName": "docker.io/library/nginx:1.27", "ImageDigest": "sha256:d",
     "State": {"Status": "running", "Health": {"Status": "healthy"}},
-    "Config": {"User": "", "Env": [f"DB_PASSWORD={SECRET}", "PATH=/usr/bin"], "CreateCommand": ["run", "-e", f"DB_PASSWORD={SECRET}"],
+    "Config": {"User": "", "Env": [f"DB_PASSWORD={SECRET}", "PATH=/usr/bin", f"DB_URL=postgresql://app:{SECRET}@db:5432/shop?sslmode={SECRET}"], "CreateCommand": ["run", "-e", f"DB_PASSWORD={SECRET}"],
                "Labels": {"com.docker.compose.project": "shop", "com.docker.compose.service": "web", "vendor.api_token": SECRET}},
     "HostConfig": {"ReadonlyRootfs": True, "RestartPolicy": {"Name": "always"}},
     "NetworkSettings": {"Ports": {"80/tcp": [{"HostIp": "0.0.0.0", "HostPort": "8000"}]},
@@ -30,7 +30,8 @@ containers = observe.read_containers("docker")
 dumped = json.dumps(containers)
 assert SECRET not in dumped, "no environment value, create command or secret-sounding label is kept"
 c = containers[0]
-assert c["env_names"] == ["DB_PASSWORD", "PATH"], c["env_names"]
+assert c["env_names"] == ["DB_PASSWORD", "DB_URL", "PATH"], c["env_names"]
+assert c["dials"] == [{"setting": "DB_URL", "scheme": "postgresql", "host": "db", "port": 5432}], "a URL setting keeps its host, not its password"
 assert (c["project"], c["service"], c["health"], c["read_only"]) == ("shop", "web", "healthy", True)
 assert c["networks"] == {"shop_default": {"aliases": ["web", "shop-web-1"]}}
 assert c["ports"] == [{"container": "80/tcp", "host_ip": "0.0.0.0", "host_port": "8000"}]

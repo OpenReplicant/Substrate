@@ -1,7 +1,7 @@
 """The workbench command.
 
     workbench migrate                       create the database, roles and core schema; apply what is new
-    workbench plugin load DIR               register a plugin: its content types (and, later, its code)
+    workbench plugin load DIR               register a plugin: its content types, its vocabulary and their terms
     workbench type add SCHEMA.json [--plugin ID]
     workbench user add NAME [--role owner|editor|viewer]    prints a new password once
     workbench user reset NAME                               prints a new password once
@@ -10,6 +10,8 @@
     workbench token NAME [--hours H] [--header]             a token for a person or an agent (for MCP's headersHelper)
     workbench serve [--port 8100]                           the server: plugins, extractors, live events
     workbench extract PLUGIN:NAME [--input KEY=VALUE ...] [--queue]   run an extractor now, or queue it
+    workbench graph mapping DIR             write an Ontop mapping and ontology generated from the terms (graph.py)
+    workbench graph project                 register and build pgGraph's projection of every content type
 
 Settings (environment):
     WORKBENCH_ADMIN_URL              a Postgres superuser URL for the server (its database part is ignored)
@@ -17,6 +19,7 @@ Settings (environment):
     WORKBENCH_AUTHENTICATOR_PASSWORD the password PostgREST's login, wb_authenticator, gets
     WORKBENCH_JWT_SECRET             signs sign-in tokens; PostgREST verifies them with the same value (32+ chars)
     WORKBENCH_SERVER_PASSWORD        the password the server's login, wb_server, gets
+    WORKBENCH_READER_PASSWORD        the password the read-only login, wb_reader, gets (e.g. for a SPARQL endpoint)
     WB_PLUGINS_DIR                   where installed plugins are (serve, extract)
 """
 from __future__ import annotations
@@ -33,7 +36,7 @@ import psycopg
 import yaml
 from psycopg import sql
 
-from . import types
+from . import types, vocab
 
 HERE = Path(__file__).resolve().parent
 ROLES = {"owner": "wb_owner", "editor": "wb_editor", "viewer": "wb_viewer"}
@@ -68,6 +71,12 @@ def migrate() -> dict:
         if server_pw:
             conn.execute(sql.SQL("alter role wb_server password {}").format(sql.Literal(server_pw)))
         conn.execute("grant wb_editor to wb_server")
+        if not conn.execute("select 1 from pg_roles where rolname = 'wb_reader'").fetchone():
+            conn.execute("create role wb_reader login")      # read-only views over the store (a SPARQL endpoint)
+        reader_pw = os.environ.get("WORKBENCH_READER_PASSWORD")
+        if reader_pw:
+            conn.execute(sql.SQL("alter role wb_reader password {}").format(sql.Literal(reader_pw)))
+        conn.execute("grant wb_viewer to wb_reader")
         password = os.environ.get("WORKBENCH_AUTHENTICATOR_PASSWORD")
         if password:
             conn.execute(sql.SQL("alter role wb_authenticator password {}").format(sql.Literal(password)))
@@ -89,7 +98,10 @@ def migrate() -> dict:
             conn.execute(body)
             conn.execute("insert into public.wb_migration (id, sha256) values (%s, %s)", (f.name, sha))
             out["applied"].append(f.name)
-        conn.execute("grant connect on database " + sql.Identifier(db).as_string(conn) + " to wb_authenticator, wb_server")
+        if any(f >= "009" for f in done) or any(f >= "009" for f in out["applied"]):
+            with conn.cursor() as cur:
+                vocab.load_core(cur)                     # Workbench's own terms (vocabulary.yaml)
+        conn.execute("grant connect on database " + sql.Identifier(db).as_string(conn) + " to wb_authenticator, wb_server, wb_reader")
         # every content type registered before migration 004 gains its live-event trigger
         if any(f.startswith("004") for f in out["applied"]):
             with conn.cursor() as cur:
@@ -133,8 +145,15 @@ def load_plugin(folder: Path) -> dict:
             for f in sorted(folder.glob(pattern)):
                 schema = json.loads(f.read_text())
                 registered.append(types.register(cur, schema.get("x-workbench-type") or f.stem, schema, pid))
+        vocab.load_core(cur)
+        listed = vocab.load(cur, yaml.safe_load((folder / manifest["vocabulary"]).read_text()), pid) if manifest.get("vocabulary") else []
+        terms = vocab.for_types(cur, pid, listed)
         reload(conn)
-    return {"plugin": pid, "version": version, "types": registered}
+    if (folder / "plugin.yaml").is_file():          # new types are new node tables: project the graph again
+        from . import graph
+        with connect() as conn:
+            graph.project(conn)
+    return {"plugin": pid, "version": version, "types": registered, "terms": len(terms)}
 
 
 def new_password() -> str:
@@ -192,7 +211,29 @@ def main(argv=None) -> int:
     s = sub.add_parser("serve"); s.add_argument("--port", type=int, default=8100); s.add_argument("--host", default="0.0.0.0")
     e = sub.add_parser("extract"); e.add_argument("extractor"); e.add_argument("--input", action="append", default=[])
     e.add_argument("--queue", action="store_true", help="put it on the server's queue instead of running it here")
+    g = sub.add_parser("graph", help="graph views generated from the terms: an Ontop mapping, pgGraph's projection")
+    g.add_argument("action", choices=["mapping", "project"]); g.add_argument("dir", type=Path, nargs="?")
     a = ap.parse_args(argv)
+    if a.cmd == "graph":
+        from . import graph
+        with connect() as conn:
+            if a.action == "project":
+                result = graph.project(conn)
+            else:
+                if not a.dir:
+                    ap.error("graph mapping needs a DIR to write mapping.obda and ontology.ttl to")
+                a.dir.mkdir(parents=True, exist_ok=True)
+                obda, ttl = graph.mapping(conn), graph.ontology(conn)
+                changed = []
+                for name, text in (("mapping.obda", obda), ("ontology.ttl", ttl)):
+                    f = a.dir / name
+                    if not f.is_file() or f.read_text() != text:
+                        f.write_text(text)
+                        changed.append(name)
+                result = {"dir": str(a.dir), "changed": changed, "mappings": obda.count("mappingId"),
+                          "terms": ttl.count(" a owl:")}
+        print(json.dumps(result, indent=2))
+        return 0
     if a.cmd == "token":
         tok = token(a.name, a.hours)
         print(json.dumps({"Authorization": f"Bearer {tok}"}) if a.header else tok)

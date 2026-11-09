@@ -3,9 +3,26 @@
   "description": "A Claude Code hook: a command run at an event (.claude/settings.json), named <event>-<script>.",
   "type": "object",
   "properties": {
-    "event": {"type": "string", "description": "SessionStart, PostToolUse, ..."},
-    "matcher": {"type": "string", "description": "which tool calls it runs after, when the event has one"},
-    "command": {"type": "string", "description": "the command as written"},
-    "path": {"type": "string", "description": "the settings file it is in"}
-  }
+    "event": {
+      "type": "string",
+      "description": "SessionStart, PostToolUse, ...",
+      "x-term": "sub:event"
+    },
+    "matcher": {
+      "type": "string",
+      "description": "which tool calls it runs after, when the event has one",
+      "x-term": "sub:matcher"
+    },
+    "command": {
+      "type": "string",
+      "description": "the command as written",
+      "x-term": "sub:command"
+    },
+    "path": {
+      "type": "string",
+      "description": "the settings file it is in",
+      "x-term": "sub:path"
+    }
+  },
+  "x-term": "sub:Hook"
 }

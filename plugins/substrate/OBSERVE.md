@@ -21,7 +21,7 @@ snapshot folder before the extractor may read it. A token needed to read an endp
 | Type | From | Fields | Relations |
 | --- | --- | --- | --- |
 | `host` | `/etc/os-release`, `uname`, `/proc/cpuinfo`, `/proc/meminfo`, the engine's version | os, kernel, arch, cpus, cpu_model, memory_bytes, engine, engine_version | runs container |
-| `container` | the engine's `ps` and `inspect` | name, project, service, image, digest, state, health, started_at, ports, mounts, networks (with aliases), read_only, user, restart_policy, env_names | the host runs it; runsImage, mounts volume |
+| `container` | the engine's `ps` and `inspect` | name, project, service, image, digest, state, health, started_at, ports, mounts, networks (with aliases), read_only, user, restart_policy, env_names, dials (a URL setting's scheme, host and port only) | the host runs it; runsImage, mounts volume, dialsTo the container its URL settings name |
 | `image` | the engine's `image inspect` | tags, digest, repo_digests, created, size, labels | |
 | `volume` | the engine's `volume inspect` | driver, mountpoint, labels, used_by | |
 | `setting` | container environment (names), `.env` keys, Claude Code's settings keys and env names | name, where, of, line | configures container |

@@ -5,23 +5,29 @@
   "properties": {
     "url": {
       "type": "string",
-      "description": "where the description was fetched"
+      "description": "where the description was fetched",
+      "x-term": "sub:url"
     },
     "kind": {
       "type": "string",
-      "description": "openapi or mcp"
+      "description": "openapi or mcp",
+      "x-term": "sub:kind"
     },
     "api_title": {
       "type": "string",
-      "description": "the title it gives itself"
+      "description": "the title it gives itself",
+      "x-term": "sub:apiTitle"
     },
     "version": {
       "type": "string",
-      "description": "the version it states"
+      "description": "the version it states",
+      "x-term": "sub:version"
     },
     "operations": {
       "type": "array",
-      "description": "its paths and methods, or its tools"
+      "description": "its paths and methods, or its tools",
+      "x-term": "sub:operations"
     }
-  }
+  },
+  "x-term": "sub:ObservedAPI"
 }

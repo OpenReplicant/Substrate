@@ -1,0 +1,24 @@
+# Workbench's own vocabulary: the frame every content type shares (BRIEF.md section 4). A plugin's vocabulary
+# (plugin.yaml `vocabulary:`) adds its classes and properties beside these; a content type or field names its
+# term with `x-term`. Ones that name none get a default: <base>type/<type>, <base>field/<type>/<field>, and a
+# relation predicate without a term is <base>rel/<predicate>, a sub-property of wb:relatedTo.
+vocabulary: workbench
+base: https://workbench.local/
+prefixes:
+  wb: https://workbench.local/ns#
+  rdfs: http://www.w3.org/2000/01/rdf-schema#
+  owl: http://www.w3.org/2002/07/owl#
+  xsd: http://www.w3.org/2001/XMLSchema#
+terms:
+  - {iri: wb:Item, kind: class, label: Item, comment: "A row of any content type."}
+  - {iri: wb:Claim, kind: class, label: Claim, comment: "A statement about an item's value or relation: who said it, from what, quoting it."}
+  - {iri: wb:relatedTo, kind: property, label: related to, comment: "Any relation between two items; every relation predicate is a sub-property.", domain: wb:Item, range: wb:Item}
+  - {iri: wb:about, kind: property, label: about, comment: "The item a claim is about.", domain: wb:Claim, range: wb:Item}
+  - {iri: wb:object, kind: property, label: object, comment: "For a claim about a relation, the item it points at.", domain: wb:Claim, range: wb:Item}
+  - {iri: wb:premise, kind: property, label: premise, comment: "A claim an inferred claim rests on.", domain: wb:Claim, range: wb:Claim}
+  - {iri: wb:slug, kind: datatype-property, label: slug, domain: wb:Item}
+  - {iri: wb:title, kind: datatype-property, label: title, domain: wb:Item}
+  - {iri: wb:field, kind: datatype-property, label: field, comment: "The field or relation predicate a claim is about.", domain: wb:Claim}
+  - {iri: wb:quote, kind: datatype-property, label: quote, domain: wb:Claim}
+  - {iri: wb:author, kind: datatype-property, label: author, domain: wb:Claim}
+  - {iri: wb:sourceUri, kind: datatype-property, label: source, domain: wb:Claim}

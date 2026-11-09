@@ -5,31 +5,39 @@
   "properties": {
     "client": {
       "type": "string",
-      "description": "the client: claude-code"
+      "description": "the client: claude-code",
+      "x-term": "sub:client"
     },
     "file": {
       "type": "string",
-      "description": "the file it is configured in"
+      "description": "the file it is configured in",
+      "x-term": "sub:file"
     },
     "transport": {
       "type": "string",
-      "description": "http, stdio, ..."
+      "description": "http, stdio, ...",
+      "x-term": "sub:transport"
     },
     "url": {
       "type": "string",
-      "description": "where it connects (without query)"
+      "description": "where it connects (without query)",
+      "x-term": "sub:url"
     },
     "command": {
       "type": "string",
-      "description": "the command it starts, for stdio"
+      "description": "the command it starts, for stdio",
+      "x-term": "sub:command"
     },
     "auth": {
       "type": "string",
-      "description": "how it authenticates: headersHelper, headers, none"
+      "description": "how it authenticates: headersHelper, headers, none",
+      "x-term": "sub:auth"
     },
     "env_names": {
       "type": "array",
-      "description": "names of the environment it is given"
+      "description": "names of the environment it is given",
+      "x-term": "sub:envNames"
     }
-  }
+  },
+  "x-term": "sub:Connection"
 }

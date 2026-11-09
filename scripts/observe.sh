@@ -1,8 +1,8 @@
 #!/bin/sh
 # Observe this system as it runs (plugins/substrate/OBSERVE.md): the collector reads the host, the container engine
 # and what observe.yaml lists into snapshots in .state/observed/<host>/; gitleaks checks them for anything secret
-# (a hit stops here, before Workbench reads them); substrate:observed turns them into items, and substrate:drift
-# compares them with the map.
+# (a hit stops here, before Workbench reads them); substrate:observed turns them into items, substrate:drift
+# compares them with the map, and substrate:reasoner draws what follows from the relations.
 #
 #   scripts/observe.sh            # collect, check, extract, drift
 #   scripts/observe.sh --collect  # only the snapshots
@@ -17,6 +17,6 @@ CONTAINER_ENGINE=$ENGINE python3 "$ROOT/plugins/substrate/observe.py" "$ROOT" | 
 }
 echo "  gitleaks: nothing secret in the snapshots"
 [ "${1:-}" = --collect ] && exit 0
-for x in observed drift; do
+for x in observed drift reasoner; do
   "$ROOT/scripts/workbench.sh" extract "substrate:$x" | python3 -c 'import json, sys; d = json.load(sys.stdin); print("  substrate:'"$x"'", "ok" if d.get("ok") else "FAILED: " + str(d.get("error")), *(d.get("log") or [])); sys.exit(0 if d.get("ok") else 1)'
 done

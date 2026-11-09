@@ -1,0 +1,10 @@
+# The graph endpoint (S-59's pick, spec step 7): Ontop 5.5.0, SPARQL over Workbench's live tables through a mapping
+# generated from the terms (scripts/graph.sh writes it to .state/graph). The stock image has no database driver, so
+# PgJDBC 42.7.14 (BSD-2-Clause) is added from Maven Central and checked against the sha256 of the jar whose sha1
+# matched Maven Central's in the step 4 trial.
+FROM docker.io/ontop/ontop:5.5.0@sha256:6cdf44a6126b026a9a7a0846a7c93bfc60af01afc52503563beb6a8e0b7b7fb7
+USER root
+ADD https://repo1.maven.org/maven2/org/postgresql/postgresql/42.7.14/postgresql-42.7.14.jar /opt/ontop/jdbc/postgresql-42.7.14.jar
+RUN echo "73914527305a40cce504b0d3d90b23caf565136912d607ae8ae7c5895512332c  /opt/ontop/jdbc/postgresql-42.7.14.jar" | sha256sum -c - \
+ && chmod 0644 /opt/ontop/jdbc/postgresql-42.7.14.jar
+USER ontop

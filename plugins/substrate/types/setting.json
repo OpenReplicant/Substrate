@@ -5,19 +5,24 @@
   "properties": {
     "name": {
       "type": "string",
-      "description": "the setting's name"
+      "description": "the setting's name",
+      "x-term": "sub:name"
     },
     "where": {
       "type": "string",
-      "description": "what it was read from: container env, env file, settings file"
+      "description": "what it was read from: container env, env file, settings file",
+      "x-term": "sub:where"
     },
     "of": {
       "type": "string",
-      "description": "the container or file that has it"
+      "description": "the container or file that has it",
+      "x-term": "sub:of"
     },
     "line": {
       "type": "integer",
-      "description": "its line, for a file"
+      "description": "its line, for a file",
+      "x-term": "sub:line"
     }
-  }
+  },
+  "x-term": "sub:Setting"
 }

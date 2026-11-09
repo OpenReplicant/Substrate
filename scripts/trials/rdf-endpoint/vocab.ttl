@@ -1,20 +1,21 @@
 # A small vocabulary for the trial (spec step 4, docs/choices/rdf-endpoint.md): enough classes and properties to
-# test whether a candidate reasons over subclasses and subproperties. Not Workbench's vocabulary; that comes
-# with the vocabulary work (x-term on content types).
+# test whether a candidate reasons over subclasses and subproperties. Workbench's frame terms are wb:, substrate's
+# sub:, as in the vocabulary step 7 generates (plugins/substrate/vocabulary.yaml); the live endpoint uses that one.
 @prefix wb:   <https://workbench.local/ns#> .
+@prefix sub:  <https://substrate.local/ns#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix owl:  <http://www.w3.org/2002/07/owl#> .
 
 wb:Item      a owl:Class .
-wb:Part      a owl:Class ; rdfs:subClassOf wb:Item .
-wb:Component a owl:Class ; rdfs:subClassOf wb:Part .
-wb:Skill     a owl:Class ; rdfs:subClassOf wb:Part .
-wb:Hook      a owl:Class ; rdfs:subClassOf wb:Part .
+sub:Part      a owl:Class ; rdfs:subClassOf wb:Item .
+sub:Component a owl:Class ; rdfs:subClassOf sub:Part .
+sub:Skill     a owl:Class ; rdfs:subClassOf sub:Part .
+sub:Hook      a owl:Class ; rdfs:subClassOf sub:Part .
 wb:Claim     a owl:Class .
 
 wb:relatedTo a owl:ObjectProperty .
-wb:dependsOn a owl:ObjectProperty ; rdfs:subPropertyOf wb:relatedTo .
-wb:partOf    a owl:ObjectProperty ; rdfs:subPropertyOf wb:relatedTo .
+sub:dependsOn a owl:ObjectProperty ; rdfs:subPropertyOf wb:relatedTo .
+sub:partOf    a owl:ObjectProperty ; rdfs:subPropertyOf wb:relatedTo .
 wb:about     a owl:ObjectProperty .
 
 wb:slug      a owl:DatatypeProperty .

@@ -5,23 +5,29 @@
   "properties": {
     "driver": {
       "type": "string",
-      "description": "the volume driver"
+      "description": "the volume driver",
+      "x-term": "sub:driver"
     },
     "mountpoint": {
       "type": "string",
-      "description": "where it lives on the host"
+      "description": "where it lives on the host",
+      "x-term": "sub:mountpoint"
     },
     "created": {
       "type": "string",
-      "description": "when it was created"
+      "description": "when it was created",
+      "x-term": "sub:created"
     },
     "labels": {
       "type": "object",
-      "description": "its labels, e.g. the compose project that made it"
+      "description": "its labels, e.g. the compose project that made it",
+      "x-term": "sub:labels"
     },
     "used_by": {
       "type": "array",
-      "description": "the containers that mount it, when it was read"
+      "description": "the containers that mount it, when it was read",
+      "x-term": "sub:usedBy"
     }
-  }
+  },
+  "x-term": "sub:Volume"
 }

@@ -6,7 +6,9 @@ extractor called `<plugin>:<name>`. An extractor is `fn(ctx, inputs)`: it reads 
 
     ctx.source(uri, data, media_type)            a source it read (deduplicated by content), its id
     ctx.upsert(type, slug, fields, title=, source=, evidence={field: {quote, span}})   an item, its id
-    ctx.relate(from_type, from_id, predicate, to_type, to_id, source=)   a relation, stated by this extractor
+    ctx.relate(from_type, from_id, predicate, to_type, to_id, source=, quote=, span=)   a relation, a claim of this
+                                                 extractor's (span.premises: the claims an inference rests on)
+    ctx.speaks_for(type, id)                     this run states all its relations from that item, even none
     ctx.done(type)                               it read the whole source: retract what it no longer found, and
                                                  drop its relations from items it no longer found
     ctx.decision(kind, key, subject, evidence)   raise something for a person (the review lane)
@@ -145,9 +147,17 @@ class Context:
         self.counts["items"] += 1
         return item
 
-    def relate(self, from_type: str, from_id: str, predicate: str, to_type: str, to_id: str, *, source: str | None = None):
-        self.related_from.add((from_type, from_id))
-        self.relations.append((from_type, from_id, predicate, to_type, to_id, source))
+    def relate(self, from_type: str, from_id: str, predicate: str, to_type: str, to_id: str, *, source: str | None = None,
+               quote: str | None = None, span: dict | None = None):
+        """A relation, recorded as a claim of this extractor's (span.premises: the claim ids it rests on, if inferred)."""
+        self.related_from.add((from_type, str(from_id)))
+        self.relations.append({"from_type": from_type, "from_id": str(from_id), "predicate": predicate, "to_type": to_type,
+                               "to_id": str(to_id), "source": source, "quote": quote, "span": span})
+
+    def speaks_for(self, from_type: str, from_id: str):
+        """This run states every relation it has from this item: what it stated before and not now is retracted, even if
+        it relates nothing from it this time (an inference no longer drawn, a link no longer observed)."""
+        self.related_from.add((from_type, str(from_id)))
 
     def done(self, type_id: str) -> int:
         n = self.conn.execute("select wb.retract_missing(%s, %s, %s::uuid[])",
@@ -171,15 +181,13 @@ class Context:
         self.counts["decisions"] += 1
 
     def finish(self, withdraw: bool = True) -> dict:
-        # relations: what this run read replaces what this extractor stated before, from every item it read or related
-        # from; other authors' relations from the same items stay (unattributed ones, from before migration 008, go)
-        for from_type, from_id in self.related_from | {(t, i) for t, ids in self.seen.items() for i in ids}:
-            self.conn.execute("delete from wb.relation where from_type = %s and from_id = %s"
-                              " and (author = %s or author is null)", (from_type, from_id, self.author))
-        for *rel, source in self.relations:
-            self.conn.execute("insert into wb.relation (from_type, from_id, predicate, to_type, to_id, author, run, source)"
-                              " values (%s, %s, %s, %s, %s, %s, %s, %s) on conflict do nothing",
-                              (*rel, self.author, self.run, source))
+        # relations: what this run states replaces what this extractor stated before, from every item it read or
+        # related from; other authors' relations from the same items stay (wb.replace_relations, migration 009)
+        scope = [{"type": t, "id": str(i)} for t, i in self.related_from | {(t, str(i)) for t, ids in self.seen.items() for i in ids}]
+        if scope or self.relations:
+            retracted = self.conn.execute("select wb.replace_relations(%s, %s)", (Jsonb(scope), Jsonb(self.relations))).fetchone()[0]
+            if retracted:
+                self.log(f"{retracted} relations no longer stated, retracted")
         self.counts["relations"] = len(self.relations)
         withdrawn = 0
         if withdraw:

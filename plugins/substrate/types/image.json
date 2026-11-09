@@ -5,27 +5,34 @@
   "properties": {
     "tags": {
       "type": "array",
-      "description": "its repository tags"
+      "description": "its repository tags",
+      "x-term": "sub:tags"
     },
     "digest": {
       "type": "string",
-      "description": "its digest"
+      "description": "its digest",
+      "x-term": "sub:digest"
     },
     "repo_digests": {
       "type": "array",
-      "description": "repository@digest references"
+      "description": "repository@digest references",
+      "x-term": "sub:repoDigests"
     },
     "created": {
       "type": "string",
-      "description": "when it was built"
+      "description": "when it was built",
+      "x-term": "sub:created"
     },
     "size": {
       "type": "integer",
-      "description": "bytes"
+      "description": "bytes",
+      "x-term": "sub:size"
     },
     "labels": {
       "type": "object",
-      "description": "its org.opencontainers.image.* labels"
+      "description": "its org.opencontainers.image.* labels",
+      "x-term": "sub:labels"
     }
-  }
+  },
+  "x-term": "sub:Image"
 }

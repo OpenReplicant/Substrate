@@ -5,35 +5,44 @@
   "properties": {
     "os": {
       "type": "string",
-      "description": "the OS's PRETTY_NAME in /etc/os-release"
+      "description": "the OS's PRETTY_NAME in /etc/os-release",
+      "x-term": "sub:os"
     },
     "kernel": {
       "type": "string",
-      "description": "uname -r"
+      "description": "uname -r",
+      "x-term": "sub:kernel"
     },
     "arch": {
       "type": "string",
-      "description": "uname -m"
+      "description": "uname -m",
+      "x-term": "sub:arch"
     },
     "cpus": {
       "type": "integer",
-      "description": "logical CPUs"
+      "description": "logical CPUs",
+      "x-term": "sub:cpus"
     },
     "cpu_model": {
       "type": "string",
-      "description": "from /proc/cpuinfo"
+      "description": "from /proc/cpuinfo",
+      "x-term": "sub:cpuModel"
     },
     "memory_bytes": {
       "type": "integer",
-      "description": "MemTotal in /proc/meminfo"
+      "description": "MemTotal in /proc/meminfo",
+      "x-term": "sub:memoryBytes"
     },
     "engine": {
       "type": "string",
-      "description": "the container engine: podman or docker"
+      "description": "the container engine: podman or docker",
+      "x-term": "sub:engine"
     },
     "engine_version": {
       "type": "string",
-      "description": "the engine's own version"
+      "description": "the engine's own version",
+      "x-term": "sub:engineVersion"
     }
-  }
+  },
+  "x-term": "sub:Host"
 }

@@ -96,6 +96,24 @@ def read_host(engine: str) -> dict:
 
 
 # ------------------------------------------------------------------ the engine: containers, images, volumes
+def dials(env: list[str]) -> list[dict]:
+    """Where a container's URL-valued settings point: the setting's name, the scheme, host and port only (never the
+    user, password, path or query), so a container can be related to the ones it talks to."""
+    out = []
+    for e in env:
+        name, _, value = e.partition("=")
+        if "://" not in value:
+            continue
+        try:
+            u = urllib.parse.urlsplit(value)
+            host, port = u.hostname, u.port
+        except ValueError:
+            continue
+        if host:
+            out.append({"setting": name, "scheme": u.scheme, "host": host, "port": port})
+    return out
+
+
 def read_containers(engine: str) -> list[dict]:
     listed = engine_json(engine, "ps", "-a", "--format", "json") or []
     ids = [c.get("Id") or c.get("ID") for c in listed]
@@ -121,6 +139,7 @@ def read_containers(engine: str) -> list[dict]:
                         "destination": m.get("Destination"), "rw": m.get("RW")} for m in d.get("Mounts") or []],
             "networks": {n: {"aliases": v.get("Aliases") or []} for n, v in nets.items()},
             "env_names": sorted({e.split("=", 1)[0] for e in cfg.get("Env") or []}),
+            "dials": dials(cfg.get("Env") or []),
             "labels": {k: v for k, v in labels.items() if not SECRETISH.search(k)},
             "compose_working_dir": labels.get("com.docker.compose.project.working_dir"),
             "compose_files": labels.get("com.docker.compose.project.config_files"),

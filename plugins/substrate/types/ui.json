@@ -5,31 +5,39 @@
   "properties": {
     "module": {
       "type": "string",
-      "description": "the module's path as the page loads it"
+      "description": "the module's path as the page loads it",
+      "x-term": "sub:module"
     },
     "plugin": {
       "type": "string",
-      "description": "the plugin it belongs to, from its path"
+      "description": "the plugin it belongs to, from its path",
+      "x-term": "sub:plugin"
     },
     "views": {
       "type": "array",
-      "description": "views it registers"
+      "description": "views it registers",
+      "x-term": "sub:views"
     },
     "menus": {
       "type": "array",
-      "description": "menu entries"
+      "description": "menu entries",
+      "x-term": "sub:menus"
     },
     "commands": {
       "type": "array",
-      "description": "palette commands"
+      "description": "palette commands",
+      "x-term": "sub:commands"
     },
     "widgets": {
       "type": "array",
-      "description": "dashboard widgets"
+      "description": "dashboard widgets",
+      "x-term": "sub:widgets"
     },
     "sha256": {
       "type": "string",
-      "description": "the module as served"
+      "description": "the module as served",
+      "x-term": "sub:sha256"
     }
-  }
+  },
+  "x-term": "sub:UI"
 }

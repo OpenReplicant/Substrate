@@ -3,13 +3,52 @@
   "description": "A choice made from the catalogs (spec section 5): the question, what the need is, what was searched and tried, the pick and why. Read from docs/choices/*.yaml; its candidates are candidate items.",
   "type": "object",
   "properties": {
-    "question": {"type": "string", "description": "what was being chosen"},
-    "asked_by": {"type": "string", "description": "who asked for it"},
-    "need": {"type": "array", "items": {"type": "string"}, "description": "what the pick must do: each candidate is tried against these"},
-    "searched": {"type": "array", "items": {"type": "string"}, "description": "the source catalogs searched, and how"},
-    "trial": {"type": "object", "description": "how the shortlist was tested: script, queries, when, what was expected"},
-    "verdict": {"type": "string", "description": "the Morphogen verdict that decided it, or why none was needed"},
-    "pick": {"type": "string", "description": "the candidate chosen"},
-    "reason": {"type": "string", "description": "why this one"}
-  }
+    "question": {
+      "type": "string",
+      "description": "what was being chosen",
+      "x-term": "sub:question"
+    },
+    "asked_by": {
+      "type": "string",
+      "description": "who asked for it",
+      "x-term": "sub:askedBy"
+    },
+    "need": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "what the pick must do: each candidate is tried against these",
+      "x-term": "sub:need"
+    },
+    "searched": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "the source catalogs searched, and how",
+      "x-term": "sub:searched"
+    },
+    "trial": {
+      "type": "object",
+      "description": "how the shortlist was tested: script, queries, when, what was expected",
+      "x-term": "sub:trial"
+    },
+    "verdict": {
+      "type": "string",
+      "description": "the Morphogen verdict that decided it, or why none was needed",
+      "x-term": "sub:verdict"
+    },
+    "pick": {
+      "type": "string",
+      "description": "the candidate chosen",
+      "x-term": "sub:pick"
+    },
+    "reason": {
+      "type": "string",
+      "description": "why this one",
+      "x-term": "sub:reason"
+    }
+  },
+  "x-term": "sub:Choice"
 }

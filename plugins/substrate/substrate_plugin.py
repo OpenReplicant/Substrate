@@ -8,6 +8,8 @@
     substrate:observed     the snapshots plugins/substrate/observe.py wrote in .state/observed/<host>/ -> host,
                            container, image, volume, setting, route, api, plugin, ui, connection and cell items, each
                            value quoting its snapshot by JSON pointer, and how they relate (OBSERVE.md)
+    substrate:reasoner     OWL 2 RL rules (prp-trp, prp-inv, prp-symp) over the relations other extractors stated, from the
+                           terms in wb.term; each conclusion a claim quoting the rule and its premises
     substrate:morphogen    Morphogen's evidence log (<git common dir>/morphogen/evidence.db) -> verdict items, after
                            checking the whole hash chain independently of Morphogen; a broken chain records nothing
 
@@ -444,7 +446,8 @@ def register(wb):
                 slug = slugify(f"{c['project']}-{c['service']}" if c.get("project") and c.get("service") else c["name"])
                 p = f"/data/{n}"
                 fields = {k: c.get(k) for k in ("name", "project", "service", "image", "digest", "state", "health", "started_at",
-                                                 "user", "read_only", "restart_policy", "ports", "mounts", "networks", "env_names")}
+                                                 "user", "read_only", "restart_policy", "ports", "mounts", "networks", "env_names",
+                                                 "dials")}
                 ev = {k: at(f"{p}/{k}", c.get(k)) for k in fields}
                 ev["title"] = at(f"{p}/name", c.get("name"))
                 cid = put("container", slug, fields, c["name"], sources["containers"], ev)
@@ -477,6 +480,12 @@ def register(wb):
                 for m in c.get("mounts") or []:
                     if m.get("type") == "volume" and m.get("name") in vids:
                         ctx.relate("container", cids[c["name"]], "mounts", "volume", vids[m["name"]], source=sources["containers"])
+                for dn, d in enumerate(c.get("dials") or []):     # a URL setting naming another container's alias
+                    target = next((by_alias[(net, d["host"])] for net in (c.get("networks") or {}) if (net, d["host"]) in by_alias), None)
+                    if target and target != c["name"]:
+                        ctx.relate("container", cids[c["name"]], "dialsTo", "container", cids[target], source=sources["containers"],
+                                   quote=f'{d["setting"]} -> {d["scheme"]}://{d["host"]}:{d.get("port") or ""}',
+                                   span={"pointer": f"/data/{n}/dials/{dn}"})
 
             # setting names in env files and in Claude Code's settings
             for fn, f in enumerate(snaps.get("env-files", {}).get("data") or []):
@@ -623,6 +632,85 @@ def register(wb):
             ctx.done(typ)
         ctx.log(", ".join(f"{n} {t}" for t, n in sorted(counts.items())) + f" from {len(hosts)} host(s)")
 
+    def reasoner(ctx, inputs):
+        """OWL 2 RL over the relations others stated, for what a SPARQL endpoint on OWL 2 QL cannot do at query time:
+        prp-trp (a transitive property, through its sub-properties: prp-spo1), prp-inv1/2 (inverses) and prp-symp
+        (symmetric). Each conclusion is a relation claim of substrate:reasoner quoting the rule and the chain it
+        fired on, its premises the stated claims it rests on (span.premises), so retracting any premise retracts it
+        (Workbench's trigger). Terms come from wb.term; nothing here names a property."""
+        q = ctx.conn.execute
+        me = ctx.author
+        terms = {iri: (pred, list(parents or []), list(chars or []), inv) for iri, pred, parents, chars, inv in q(
+            "select iri, predicate, parents, characteristics, inverse_of from wb.term where kind = 'property'").fetchall()}
+        by_pred = {t[0]: iri for iri, t in terms.items() if t[0]}
+
+        def ancestors(iri, seen=None):
+            seen = seen if seen is not None else set()
+            for p in terms.get(iri, (None, [], [], None))[1]:
+                if p not in seen:
+                    seen.add(p)
+                    ancestors(p, seen)
+            return seen
+
+        # every stated relation (not this reasoner's), with one current claim that states it
+        edges = q("""select distinct on (r.from_id, r.predicate, r.to_id) r.from_type, r.from_id::text, r.predicate, r.to_type,
+                            r.to_id::text, c.id::text, c.author
+                       from wb.relation r join wb.claim c on c.subject_id = r.from_id and c.field = r.predicate
+                        and c.object_id = r.to_id and c.status = 'current' and c.author is not distinct from r.author
+                      where r.author is distinct from %s order by r.from_id, r.predicate, r.to_id, c.observed_at""", (me,)).fetchall()
+        titles = {}
+        for t in {e[0] for e in edges} | {e[3] for e in edges}:
+            titles.update({str(i): ti for i, ti in q(f"select id, title from content.{t}").fetchall()} if re.match(r"^[a-z_]+$", t) else {})
+        prior = q("select distinct subject_type, subject_id::text from wb.claim where author = %s and status = 'current' and object_id is not null", (me,)).fetchall()
+        for t, i in prior:
+            ctx.speaks_for(t, i)                      # what it no longer concludes from these items is retracted
+        stated = {(e[1], e[2], e[4]) for e in edges}
+        drawn, counts = set(), {"prp-trp": 0, "prp-inv": 0, "prp-symp": 0}
+
+        def draw(rule, ftype, a, pred, ttype, b, chain):
+            if a == b or (a, pred, b) in stated or (a, pred, b) in drawn:
+                return
+            drawn.add((a, pred, b))
+            words = "; ".join(f"{titles.get(x[1], x[1])} {x[2]} {titles.get(x[4], x[4])} ({x[6]})" for x in chain)
+            ctx.relate(ftype, a, pred, ttype, b, quote=f"{rule}: {words}"[:1000],
+                       span={"rule": rule, "property": by_pred.get(pred), "premises": [x[5] for x in chain]})
+            counts[rule] += 1
+
+        for iri, (pred, parents, chars, inv) in sorted(terms.items()):
+            if not pred:
+                continue
+            members = {p for p, i in by_pred.items() if i == iri or iri in ancestors(i)}      # prp-spo1
+            if "transitive" in chars:                                                     # prp-trp, by search
+                out = {}
+                for e in edges:
+                    if e[2] in members:
+                        out.setdefault(e[1], []).append(e)
+                for start, first in out.items():
+                    seen, frontier = {start}, [(e, [e]) for e in first]
+                    while frontier:
+                        nxt = []
+                        for e, chain in frontier:
+                            node = e[4]
+                            if node in seen:
+                                continue
+                            seen.add(node)
+                            if len(chain) > 1 and not any((start, m, node) in stated for m in members):
+                                draw("prp-trp", chain[0][0], start, pred, e[3], node, chain)
+                            nxt += [(f, chain + [f]) for f in out.get(node, [])]
+                        frontier = nxt
+            if "symmetric" in chars:                                                      # prp-symp
+                for e in edges:
+                    if e[2] in members:
+                        draw("prp-symp", e[3], e[4], pred, e[0], e[1], [e])
+            if inv and terms.get(inv, (None,))[0]:                                        # prp-inv1, prp-inv2
+                for e in edges:
+                    if e[2] in members:
+                        draw("prp-inv", e[3], e[4], terms[inv][0], e[0], e[1], [e])
+                for e in edges:
+                    if by_pred.get(e[2]) == inv:
+                        draw("prp-inv", e[3], e[4], pred, e[0], e[1], [e])
+        ctx.log(f"{len(edges)} stated relations; drawn: " + ", ".join(f"{n} by {r}" for r, n in counts.items()))
+
     def morphogen(ctx, inputs):
         path = Path(inputs.get("log") or wb.setting("evidence") or git_common_dir(root) / "morphogen" / "evidence.db")
         if not path.is_file():
@@ -701,4 +789,6 @@ def register(wb):
     wb.extractor("morphogen", morphogen, "Morphogen's evidence log: each verdict, after checking the whole hash chain")
     wb.extractor("observed", observed, "the snapshots observe.py wrote (.state/observed): the host, its containers, images, volumes, "
                  "setting names, routes, APIs, plugins, UIs, connections and Morphogen's cells")
+    wb.extractor("reasoner", reasoner, "OWL 2 RL over stated relations (transitive, inverse, symmetric properties in wb.term); "
+                 "each conclusion a claim quoting the rule and its premises, retracted with them")
     wb.extractor("drift", drift, "what the map declares against what the repository has; each difference to the review lane")

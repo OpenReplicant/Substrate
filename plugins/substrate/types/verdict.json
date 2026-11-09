@@ -3,16 +3,61 @@
   "description": "A Morphogen verdict: whether a candidate change to a cell is better than its base, on evidence the changer could not reach. Read from Morphogen's hash-chained evidence log.",
   "type": "object",
   "properties": {
-    "claim": {"type": "string", "description": "the judge's sentence, e.g. 'cell: abc is better than def'"},
-    "verdict": {"type": "string", "description": "pass or fail"},
-    "gate": {"type": "string", "description": "who may act on it: merge (an agent may), review (a person decides), none"},
-    "cell": {"type": "string", "description": "the cell or system judged"},
-    "base": {"type": "string", "description": "the base commit"},
-    "candidate": {"type": "string", "description": "the candidate commit"},
-    "trust": {"type": "string", "description": "measured (on the real system) or simulated (on a model of it)"},
-    "metrics": {"type": "object", "description": "per metric: gain, 95% interval, sign test p, base and candidate medians"},
-    "reasons": {"type": "object", "description": "what the judge checked: forbidden files, tests, interfaces, equivalence"},
-    "seq": {"type": "integer", "description": "its place in the evidence log"},
-    "hash": {"type": "string", "description": "its hash in the evidence log's chain"}
-  }
+    "claim": {
+      "type": "string",
+      "description": "the judge's sentence, e.g. 'cell: abc is better than def'",
+      "x-term": "sub:claim"
+    },
+    "verdict": {
+      "type": "string",
+      "description": "pass or fail",
+      "x-term": "sub:verdict"
+    },
+    "gate": {
+      "type": "string",
+      "description": "who may act on it: merge (an agent may), review (a person decides), none",
+      "x-term": "sub:gate"
+    },
+    "cell": {
+      "type": "string",
+      "description": "the cell or system judged",
+      "x-term": "sub:cell"
+    },
+    "base": {
+      "type": "string",
+      "description": "the base commit",
+      "x-term": "sub:base"
+    },
+    "candidate": {
+      "type": "string",
+      "description": "the candidate commit",
+      "x-term": "sub:candidate"
+    },
+    "trust": {
+      "type": "string",
+      "description": "measured (on the real system) or simulated (on a model of it)",
+      "x-term": "sub:trust"
+    },
+    "metrics": {
+      "type": "object",
+      "description": "per metric: gain, 95% interval, sign test p, base and candidate medians",
+      "x-term": "sub:metrics"
+    },
+    "reasons": {
+      "type": "object",
+      "description": "what the judge checked: forbidden files, tests, interfaces, equivalence",
+      "x-term": "sub:reasons"
+    },
+    "seq": {
+      "type": "integer",
+      "description": "its place in the evidence log",
+      "x-term": "sub:seq"
+    },
+    "hash": {
+      "type": "string",
+      "description": "its hash in the evidence log's chain",
+      "x-term": "sub:hash"
+    }
+  },
+  "x-term": "sub:Verdict"
 }

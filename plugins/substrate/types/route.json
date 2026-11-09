@@ -5,27 +5,34 @@
   "properties": {
     "server": {
       "type": "string",
-      "description": "the web server and its server block"
+      "description": "the web server and its server block",
+      "x-term": "sub:server"
     },
     "listen": {
       "type": "array",
-      "description": "addresses it listens on"
+      "description": "addresses it listens on",
+      "x-term": "sub:listen"
     },
     "order": {
       "type": "integer",
-      "description": "its place among the server's routes"
+      "description": "its place among the server's routes",
+      "x-term": "sub:order"
     },
     "match": {
       "type": "array",
-      "description": "what requests it matches (paths, regexps, hosts)"
+      "description": "what requests it matches (paths, regexps, hosts)",
+      "x-term": "sub:match"
     },
     "handlers": {
       "type": "array",
-      "description": "the handlers it runs, in order"
+      "description": "the handlers it runs, in order",
+      "x-term": "sub:handlers"
     },
     "upstreams": {
       "type": "array",
-      "description": "where it proxies to (host:port)"
+      "description": "where it proxies to (host:port)",
+      "x-term": "sub:upstreams"
     }
-  }
+  },
+  "x-term": "sub:Route"
 }

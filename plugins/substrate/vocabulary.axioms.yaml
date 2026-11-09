@@ -1,0 +1,34 @@
+# What the generated vocabulary cannot read from the types, the catalog or the extractors: how its classes and
+# properties relate. plugins/substrate/vocab.py merges this into vocabulary.yaml (the file plugin.yaml loads).
+# Keep it small: a parent, a characteristic or an inverse here is a claim about meaning, applied by Ontop at query
+# time (classes, sub-properties) and by substrate:reasoner as written-back claims (transitive, inverse, symmetric).
+classes:
+  Part: {parents: ["wb:Item"], comment: "Anything on a system's map or found in its repository: a catalog entity, a skill, a hook."}
+  Observed: {parents: ["wb:Item"], comment: "Something read from a system as it runs."}
+  Choice: {parents: ["wb:Item"]}
+  Candidate: {parents: ["wb:Item"]}
+  Verdict: {parents: ["wb:Item"]}
+  Entity: {parents: ["sub:Part"]}
+  Skill: {parents: ["sub:Part"]}
+  Hook: {parents: ["sub:Part"]}
+observed: [Host, Container, Image, Volume, Setting, Route, API, Plugin, UI, Connection, Cell]
+properties:
+  mapRelation: {parents: ["wb:relatedTo"], comment: "A relation the map states between its parts."}
+  observedRelation: {parents: ["wb:relatedTo"], comment: "A relation read from a system as it runs."}
+  reaches: {parents: ["sub:observedRelation"], characteristics: [transitive],
+            comment: "A request or its data gets from one to the other: a route proxies to a container, which dials another, which mounts a volume."}
+  partOf: {parents: ["sub:mapRelation"], characteristics: [transitive]}
+  dependsOn: {parents: ["sub:mapRelation"], characteristics: [transitive]}
+  providesApi: {parents: ["sub:mapRelation"]}
+  consumesApi: {parents: ["sub:mapRelation"]}
+  ownedBy: {parents: ["sub:mapRelation"]}
+  proxiesTo: {parents: ["sub:reaches"]}
+  dialsTo: {parents: ["sub:reaches"]}
+  mounts: {parents: ["sub:reaches"]}
+  runs: {parents: ["sub:observedRelation"]}
+  runsImage: {parents: ["sub:observedRelation"]}
+  configures: {parents: ["sub:observedRelation"]}
+  serves: {parents: ["sub:observedRelation"]}
+  servedBy: {parents: ["sub:observedRelation"]}
+  connectsTo: {parents: ["sub:observedRelation"]}
+  observedAs: {parents: ["wb:relatedTo"], comment: "A part on the map is recognised running as this observed item (drift)."}

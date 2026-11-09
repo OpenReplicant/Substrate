@@ -13,4 +13,4 @@ dependencies = [
 workbench = "workbench.cli:main"
 
 [tool.setuptools.package-data]
-workbench = ["sql/*.sql"]
+workbench = ["sql/*.sql", "vocabulary.yaml"]

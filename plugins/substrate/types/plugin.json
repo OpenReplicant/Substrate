@@ -5,23 +5,29 @@
   "properties": {
     "version": {
       "type": "string",
-      "description": "the version it states"
+      "description": "the version it states",
+      "x-term": "sub:version"
     },
     "server": {
       "type": "string",
-      "description": "its server module"
+      "description": "its server module",
+      "x-term": "sub:server"
     },
     "content_types": {
       "type": "array",
-      "description": "the content types it registers"
+      "description": "the content types it registers",
+      "x-term": "sub:contentTypes"
     },
     "extractors": {
       "type": "array",
-      "description": "the extractors it adds"
+      "description": "the extractors it adds",
+      "x-term": "sub:extractors"
     },
     "error": {
       "type": "string",
-      "description": "why it failed to load, if it did"
+      "description": "why it failed to load, if it did",
+      "x-term": "sub:error"
     }
-  }
+  },
+  "x-term": "sub:Plugin"
 }

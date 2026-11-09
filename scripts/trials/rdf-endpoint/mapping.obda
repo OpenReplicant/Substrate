@@ -1,18 +1,19 @@
 [PrefixDeclaration]
 wb:		https://workbench.local/ns#
+sub:		https://substrate.local/ns#
 rdf:		http://www.w3.org/1999/02/22-rdf-syntax-ns#
 
 [MappingDeclaration] @collection [[
 mappingId	component
-target		<https://workbench.local/item/component/{id}> a wb:Component ; wb:slug {slug}^^xsd:string .
+target		<https://workbench.local/item/component/{id}> a sub:Component ; wb:slug {slug}^^xsd:string .
 source		SELECT id, slug FROM content.component
 
 mappingId	skill
-target		<https://workbench.local/item/skill/{id}> a wb:Skill ; wb:slug {slug}^^xsd:string .
+target		<https://workbench.local/item/skill/{id}> a sub:Skill ; wb:slug {slug}^^xsd:string .
 source		SELECT id, slug FROM content.skill
 
 mappingId	hook
-target		<https://workbench.local/item/hook/{id}> a wb:Hook ; wb:slug {slug}^^xsd:string .
+target		<https://workbench.local/item/hook/{id}> a sub:Hook ; wb:slug {slug}^^xsd:string .
 source		SELECT id, slug FROM content.hook
 
 mappingId	claim
@@ -20,10 +21,10 @@ target		<https://workbench.local/claim/{id}> a wb:Claim ; wb:about <https://work
 source		SELECT c.id, c.subject_type, c.subject_id, c.field, c.quote, c.author, s.uri FROM wb.claim c LEFT JOIN wb.source s ON s.id = c.source_id WHERE c.status = 'current' AND c.subject_type IN ('component', 'skill', 'hook')
 
 mappingId	dependsOn
-target		<https://workbench.local/item/{from_type}/{from_id}> wb:dependsOn <https://workbench.local/item/{to_type}/{to_id}> .
+target		<https://workbench.local/item/{from_type}/{from_id}> sub:dependsOn <https://workbench.local/item/{to_type}/{to_id}> .
 source		SELECT from_type, from_id, to_type, to_id FROM wb.relation WHERE predicate = 'dependsOn'
 
 mappingId	partOf
-target		<https://workbench.local/item/{from_type}/{from_id}> wb:partOf <https://workbench.local/item/{to_type}/{to_id}> .
+target		<https://workbench.local/item/{from_type}/{from_id}> sub:partOf <https://workbench.local/item/{to_type}/{to_id}> .
 source		SELECT from_type, from_id, to_type, to_id FROM wb.relation WHERE predicate = 'partOf'
 ]]

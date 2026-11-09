@@ -114,6 +114,28 @@ try:
     check("an item gone from the source loses its extractor's relations, not another's",
           rel() == {("a>b", "mentions", "fixture:links")}, rel())
 
+    claim_of = lambda pair, pred, author: cli.connect().execute(  # noqa: E731
+        "select c.id::text, c.status from wb.claim c join content.note f on f.id = c.subject_id join content.note t on t.id = c.object_id"
+        " where f.slug || '>' || t.slug = %s and c.field = %s and c.author = %s order by c.observed_at desc limit 1",
+        (pair, pred, author)).fetchone()
+    run_extractor(cli.connect, plugins, "fixture:notes", {"text": "a: one\nb: two", "link": "a>b"})
+    premise = claim_of("a>b", "linksTo", "fixture:notes")
+    check("a relation is recorded as a claim of its extractor's", premise and premise[1] == "current", premise)
+    run_extractor(cli.connect, plugins, "fixture:links", {"link": "b>a", "premises": [premise[0]], "quote": "b>a because a>b"})
+    check("a relation may rest on premises", claim_of("b>a", "mentions", "fixture:links")[1] == "current")
+    run_extractor(cli.connect, plugins, "fixture:notes", {"text": "a: one\nb: two", "link": ""})
+    check("a premise no longer stated is retracted", claim_of("a>b", "linksTo", "fixture:notes")[1] == "retracted")
+    check("a retracted premise retracts what rests on it, and its relation goes",
+          claim_of("b>a", "mentions", "fixture:links")[1] == "retracted" and ("b>a", "mentions", "fixture:links") not in rel(), rel())
+
+    with cli.connect() as conn:
+        terms = dict(conn.execute("select iri, kind from wb.term").fetchall())
+        parents = conn.execute("select parents from wb.term where iri = 'https://workbench.local/type/note'").fetchone()
+    check("Workbench's own terms are loaded", terms.get("https://workbench.local/ns#Claim") == "class"
+          and terms.get("https://workbench.local/ns#relatedTo") == "property", sorted(terms)[:5])
+    check("a type and field without x-term get default terms", parents == (["https://workbench.local/ns#Item"],)
+          and terms.get("https://workbench.local/field/note/body") == "datatype-property", parents)
+
     now = time.time()
     good = token({"role": "wb_viewer", "name": "vi", "exp": int(now) + 60})
     check("the server accepts a token PostgREST would", verify(good, os.environ["WORKBENCH_JWT_SECRET"]) is not None)

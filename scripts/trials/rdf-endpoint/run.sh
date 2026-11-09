@@ -4,6 +4,8 @@
 # added for a moment (and removed) to see who answers from current data. Output: one line per candidate and query,
 # and .state/trials/rdf-endpoint/results.jsonl.
 #   scripts/trials/rdf-endpoint/run.sh [ontop fuseki oxigraph rdflib]
+#   scripts/trials/rdf-endpoint/run.sh live     # the same queries against the stack's own endpoint (step 7): passes
+#                                               # when each answer is what the live tables say and it sees a new row
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
 root="$(cd "$here/../../.." && pwd)"
@@ -141,6 +143,23 @@ trial_rdflib() {
   record "{\"candidate\":\"rdflib+owlrl\",\"fresh\":false,\"note\":\"in-process graph from an export; current data means rebuilding it\"}"
 }
 
+# The stack's endpoint, its mapping generated from the terms (spec step 7). Every relation is a sub-property of
+# wb:relatedTo there, so q3 expects every distinct related pair, not only dependsOn and partOf. Exits 1 on a miss.
+trial_live() {
+  local url=http://127.0.0.1:8080/sparql parts pairs a1 a2 a3 before after
+  wait_for "$url?query=ASK%7B%7D" 60 || { echo "  no endpoint at $url (scripts/up.sh)" >&2; return 1; }
+  parts="$(psql_wb -c "select (select count(*) from content.component) + (select count(*) from content.skill) + (select count(*) from content.hook)")"
+  pairs="$(psql_wb -c "select count(*) from (select distinct from_id, to_id from wb.relation) x")"
+  a1="$(sparql "$url" "$here/q1-parts.rq" | summary)"
+  a2="$(sparql "$url" "$here/q2-why.rq" | summary)"
+  a3="$(sparql "$url" "$here/q3-related.rq" | summary)"
+  before="$a3"; probe_add; after="$(sparql "$url" "$here/q3-related.rq" | summary)"; probe_remove
+  record "{\"candidate\":\"live\",\"q1\":\"$a1/$parts\",\"q2\":\"$a2\",\"q3\":\"$a3/$pairs\",\"fresh\":\"$before->$after\"}"
+  [ "$a1" = "$parts" ] && [ "$a2" -gt 0 ] && [ "$a3" = "$pairs" ] && [ "$after" -gt "$before" ] \
+    && echo "  live: passes" || { echo "  live: FAILS" >&2; return 1; }
+}
+
+if [ "${1:-}" = live ]; then echo "== live"; trial_live; exit $?; fi
 expected
 export_data
 for c in "${@:-ontop fuseki oxigraph rdflib}"; do
