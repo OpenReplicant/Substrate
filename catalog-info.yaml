@@ -147,8 +147,8 @@ metadata:
   annotations:
     substrate.dev/intent: Fill the intended half of a system from the people who hold it (S-43).
     substrate.dev/fill: build
-    substrate.dev/basis: to rebuild on Workbench (kernel's skill-interview and map-gaps are the reference, kernel being an option now)
-    substrate.dev/step: "5"
+    substrate.dev/basis: to build as a skill on Workbench's MCP (questions from the gaps and thin parts of the graph)
+    substrate.dev/step: "8"
 spec:
   type: library
   lifecycle: experimental
@@ -209,9 +209,9 @@ spec:
   subcomponentOf: claude-code
   consumesApis: [workbench-mcp-api, judge-api]
 ---
-# ================================================================ CORE: skills and hooks (AiResource, Backstage 1.51; kernel D-102)
-# Each is a part the self-encoder reads from .claude/ (skills by their frontmatter name, hooks as <event>-<script>),
-# so map-drift can tell when one exists that the map does not declare, or the other way round.
+# ================================================================ CORE: skills and hooks (AiResource, Backstage 1.51)
+# Each is a part substrate:claude-code reads from .claude/ (skills by their frontmatter name, hooks as <event>-<script>),
+# so substrate:drift can tell when one exists that the map does not declare, or the other way round.
 apiVersion: backstage.io/v1alpha1
 kind: AiResource
 metadata:
@@ -256,7 +256,7 @@ apiVersion: backstage.io/v1alpha1
 kind: AiResource
 metadata:
   name: upstream
-  description: Take a fix or improvement to kernel or Morphogen upstream, by branch and pull request in that repository.
+  description: Take a fix or improvement to Morphogen upstream, by branch and pull request in that repository.
   annotations:
     substrate.dev/basis: .claude/skills/upstream/SKILL.md
 spec:
@@ -448,7 +448,7 @@ metadata:
     substrate.dev/interface: Claude Code reads ANTHROPIC_BASE_URL (and ANTHROPIC_CUSTOM_HEADERS for the virtual key); nothing in substrate assumes direct access.
     substrate.dev/when: Cost must be measured outside the agent (Morphogen judging cost, budgets), or several providers routed behind one key.
     substrate.dev/restore: "a00fb61 - deploy/compose.yaml service bifrost, scripts/render_bifrost.py, scripts/gateway.py, .env.example's gateway block (S-04, S-14, S-34, S-40)"
-    substrate.dev/evidence: "Ran on the owner's machine 2026-11-08. v2.3.2 locks /api and /metrics until an admin account exists (S-34); its data volume kept providers after .env removed them until source_of_truth was set (S-40). Volume knowledge-kernel_bifrost-data kept."
+    substrate.dev/evidence: "Ran on the owner's machine 2026-11-08. v2.3.2 locks /api and /metrics until an admin account exists (S-34); its data volume kept providers after .env removed them until source_of_truth was set (S-40). Its volume was removed (S-63)."
     substrate.dev/candidates: Bifrost v2.3.2 (Apache-2.0); LiteLLM proxy (MIT core) not tried
 spec:
   type: service
@@ -460,34 +460,15 @@ spec:
 apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
-  name: knowledge-kernel
-  description: Kernel - the claims-first world model substrate was built on until S-57 (claims, change sets, review lane, encoders, MCP).
-  annotations:
-    substrate.dev/fits: The store and model, in place of Workbench, where every fact as a claim, per-scope clearance and kernel's reasoning (truth maintenance, belief) are needed.
-    substrate.dev/interface: Workbench keeps what kernel was for - provenance on every value, supersede never overwrite, mappings, decisions - so a kernel plugin could read or write the same items.
-    substrate.dev/when: Several organisations share one store with per-scope clearance, or kernel's reasoning modules are wanted.
-    substrate.dev/restore: "a0dd2fd and earlier - deploy/compose.yaml as an overlay on repos/kernel/deploy/compose.yaml, bin/kk and bin/kernel-mcp*, scripts/map.sh and verdicts.sh on kernel's encoders, kk up in scripts/up.sh; .state/harness-backup/ has this project's Claude Code wiring for it"
-    substrate.dev/evidence: "Ran 2026-11-06 to 2026-11-09. Its database kk is kept in the Postgres volume (6399 claims). Typed records fit it badly, and its ceremony came before work (S-52). Open: kernel#111, #112 (content framing), #113 (components beyond services)."
-    substrate.dev/candidates: repos/kernel (Apache-2.0)
-spec:
-  type: service
-  lifecycle: option
-  owner: group:operator
-  system: options
-
----
-apiVersion: backstage.io/v1alpha1
-kind: Component
-metadata:
   name: metrics
-  description: Prometheus - counters over time (gateway cost, allocations, service rates) for kernel's observer to record as claims.
+  description: Prometheus - counters over time (gateway cost, allocations, service rates) for the observer to record as claims.
   annotations:
-    substrate.dev/fits: The observed half - kernel's observer-prometheus records each window as observed claims (kernel D-52).
-    substrate.dev/interface: kernel's observer-prometheus reads PromQL from PROMETHEUS_URL with queries in a queries.yaml; nothing else depends on it.
+    substrate.dev/fits: The observed half - each query window recorded as observed claims.
+    substrate.dev/interface: The observer reads HTTP endpoints named in observe.yaml, so a probe over Prometheus's query API needs no new code path; nothing depends on it now.
     substrate.dev/when: A gap needs numbers over time - cost, error rates, latency.
     substrate.dev/restore: "a00fb61 - deploy/compose.yaml service prometheus, deploy/prometheus.yml, deploy/observer/queries.yaml (S-05, S-33, S-35)"
-    substrate.dev/evidence: "Ran 2026-11-08. Telemetry placeholder nodes (client=user, server=unknown) reached the review lane as gaps, 4 of 5 noise (S-35). Volume knowledge-kernel_prometheus-data kept."
-    substrate.dev/candidates: Prometheus v3.15.0 (Apache-2.0) at the digest kernel's devops demo pins
+    substrate.dev/evidence: "Ran 2026-11-08. Telemetry placeholder nodes (client=user, server=unknown) reached the review lane as gaps, 4 of 5 noise (S-35). Its volume was removed (S-63)."
+    substrate.dev/candidates: Prometheus v3.15.0 (Apache-2.0)
 spec:
   type: service
   lifecycle: option
@@ -501,8 +482,8 @@ metadata:
   name: traces
   description: The OpenTelemetry collector - traces from every part become the observed call graph.
   annotations:
-    substrate.dev/fits: The observed half - who actually calls whom, to compare with the declared map (map-drift).
-    substrate.dev/interface: A part's OpenTelemetry service.name is its catalog name; kernel's kk serve already traces when the SDK is present (kernel D-97).
+    substrate.dev/fits: The observed half - who actually calls whom, to compare with the declared map (substrate:drift).
+    substrate.dev/interface: A part's OpenTelemetry service.name is its catalog name.
     substrate.dev/when: A gap needs observed calls rather than what the code and containers say.
     substrate.dev/restore: "a00fb61 - deploy/compose.yaml service otel-collector, deploy/otel/collector.yaml, scripts/telemetry.py (S-28, S-30)"
     substrate.dev/evidence: Ran 2026-11-08 with the servicegraph connector (alpha); Caddy, Bifrost, Backstage and Claude Code sent spans; a part that sends none shows as an unnamed peer.
@@ -523,7 +504,7 @@ metadata:
   annotations:
     substrate.dev/fits: A view over the catalog for people who want to browse it, or when a Backstage plugin is the right tool.
     substrate.dev/interface: catalog-info.yaml stays in Backstage's entity model, so a Backstage install reads it unchanged.
-    substrate.dev/when: People need to browse the catalog beyond kernel's UI, or a Backstage plugin is chosen for a job.
+    substrate.dev/when: People need to browse the catalog beyond Workbench's shell, or a Backstage plugin is chosen for a job.
     substrate.dev/restore: "a00fb61 - services/backstage (create-app 0.9.3, two-stage Containerfile), deploy/compose.yaml service backstage, scripts/build.sh build_backstage (S-12)"
     substrate.dev/evidence: "Owner, 2026-11-08: fits catalogs of things but was not built for this, and only its MCP server justified it (S-38). The idea it served - catalogs of components to choose from - lives on in this file (S-47)."
     substrate.dev/candidates: Backstage via @backstage/create-app 0.9.3 (Apache-2.0)
@@ -544,7 +525,7 @@ metadata:
     substrate.dev/interface: Scripts call only rt_up, rt_down, rt_status, rt_logs; a scheduler is a new file in scripts/runtime/.
     substrate.dev/when: Several nodes, batch jobs started by triggers, or an actuator that restarts and scales through an API.
     substrate.dev/restore: "a00fb61 - scripts/runtime/nomad.sh, deploy/nomad/, scripts/install_hashicorp.py (S-16, S-17, S-27)"
-    substrate.dev/evidence: "Never passed check.sh on the owner's machine. Licence BUSL-1.1, outside kernel D-11; the owner must decide on use before shipping it (S-18). Linux only with the Podman driver."
+    substrate.dev/evidence: "Never passed check.sh on the owner's machine. Licence BUSL-1.1, outside the default stack's licence rule; the owner must decide on use before shipping it (S-18). Linux only with the Podman driver."
     substrate.dev/candidates: Nomad 2.0.7 (BUSL-1.1) with nomad-driver-podman 0.6.5 (MPL-2.0); k3s (Apache-2.0) considered
 spec:
   type: service
@@ -577,13 +558,13 @@ apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
   name: bus
-  description: pgmq queues in a database beside kernel's - work and notices between parts, never facts.
+  description: pgmq queues for work and notices between parts, never facts, beyond Workbench's own job queue.
   annotations:
-    substrate.dev/fits: Between kernel's detectors and whatever starts work - triggers that start headless sessions, notices for the owner.
-    substrate.dev/interface: pgmq is already an extension in kernel's Postgres image (kernel D-94); kernel's own LISTEN/NOTIFY is unchanged.
+    substrate.dev/fits: Between drift, verdicts and whatever starts work - triggers that start headless sessions, notices for the owner.
+    substrate.dev/interface: pgmq is already in substrate's Postgres image and Workbench queues its jobs on it (wb_jobs); its LISTEN/NOTIFY events are unchanged.
     substrate.dev/when: Something should start a session without a person - a detector finding, a goal past its date.
     substrate.dev/restore: "a00fb61 - scripts/bus.sh, scripts/bus.py, deploy/bus/queues.txt, modules/dispatcher/BRIEF.md (S-21, S-24)"
-    substrate.dev/evidence: "Ran 2026-11-08 (queues triggers, owner, events). Database substrate and login substrate_bus are still in the Postgres volume, unused. Workbench uses pgmq for its jobs (wb_jobs)."
+    substrate.dev/evidence: "Ran 2026-11-08 (queues triggers, owner, events). Its database and login were removed (S-68). Workbench uses pgmq for its jobs (wb_jobs)."
     substrate.dev/candidates: pgmq v1.13.1 (PostgreSQL License)
 spec:
   type: service
@@ -595,11 +576,11 @@ apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
   name: console
-  description: The owner's live page - review lane, verdicts, spend, stack, the spec's progress - signed in with a kernel login.
+  description: The owner's live page - review lane, verdicts, spend, stack, the spec's progress - on one page.
   annotations:
-    substrate.dev/fits: A view for the owner beside kernel's UI, behind the front door.
-    substrate.dev/interface: Kernel's UI and MCP give the same data; kernel's sign-in (/ui/login) is the login.
-    substrate.dev/when: Kernel's UI is not enough to act from - several sources on one page, or a view kernel should not own.
+    substrate.dev/fits: A view for the owner in Workbench's shell, or beside it behind the front door.
+    substrate.dev/interface: Workbench's API, events and sign-in give the same data; its shell can show another UI as an app.
+    substrate.dev/when: Workbench's views are not enough to act from - several sources on one page.
     substrate.dev/restore: "a00fb61 - services/console, deploy/caddy/Caddyfile's /console route (S-22, S-29)"
     substrate.dev/evidence: Ran 2026-11-08; its Map drew intended, observed and the difference with Cytoscape.js.
 spec:
@@ -615,8 +596,8 @@ metadata:
   name: front-door-plugins
   description: Caddy built with plugins (xcaddy) - auth, rate limits, other modules on the one address.
   annotations:
-    substrate.dev/fits: In place of kernel's stock Caddy image.
-    substrate.dev/interface: Kernel's caddy service takes any image through CADDY_IMAGE.
+    substrate.dev/fits: In place of the stock Caddy image.
+    substrate.dev/interface: The compose caddy service takes any image through CADDY_IMAGE.
     substrate.dev/when: The front door needs a module the stock image lacks.
     substrate.dev/restore: "a00fb61 - deploy/caddy/ (Containerfile, plugins.txt), scripts/build.sh build_caddy (S-20)"
     substrate.dev/candidates: Caddy 2.11.7 on caddy:2.11.7-builder-alpine (Apache-2.0)
@@ -792,10 +773,10 @@ apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
   name: postgres
-  description: Postgres 17 with pgvector, pg_cron, pgmq, pgGraph (deploy/postgres, vendored from kernel; S-24, S-57); databases workbench, and kk kept.
+  description: Postgres 17 with pgvector, pg_cron, pgmq, pgGraph (deploy/postgres; S-24, S-57); database workbench.
   annotations:
     substrate.dev/filler: postgres
-    substrate.dev/observed-as: "container:substrate-db, volume:knowledge-kernel-db-data"
+    substrate.dev/observed-as: "container:substrate-db, volume:substrate-db-data"
 spec: {type: database, owner: group:operator, system: core, lifecycle: production, providesApis: [database-api]}
 ---
 apiVersion: backstage.io/v1alpha1
@@ -847,7 +828,7 @@ spec: {type: http, lifecycle: option, owner: group:operator, system: options, de
 ---
 apiVersion: backstage.io/v1alpha1
 kind: API
-metadata: {name: metrics-api, description: "Prometheus's HTTP query API, as kernel's observer reads it."}
+metadata: {name: metrics-api, description: "Prometheus's HTTP query API, as an observer probe would read it."}
 spec: {type: http, lifecycle: option, owner: group:operator, system: options, definition: "GET /api/v1/query - queries in the observer's queries.yaml."}
 ---
 apiVersion: backstage.io/v1alpha1

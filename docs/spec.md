@@ -108,12 +108,12 @@ Three, plus the glue between them.
 
 The glue is this repository: scripts that bring the parts up and connect them, the tools container they run in
 (S-19), substrate's Workbench plugin (`plugins/substrate`), and the map (`catalog-info.yaml`). It runs one way for
-now: compose with Podman, secrets in `.env`. Kernel, which substrate was built on until S-57, is an option.
+now: compose with Podman, secrets in `.env`.
 
 ### The store: Workbench
 
 Workbench (`workbench/BRIEF.md`) is a general-purpose, AI-first content system on Postgres, and substrate is one
-plugin on it (S-52 to S-57). It keeps what the knowledge kernel was for and drops what got in the way: claims,
+plugin on it (S-52 to S-57). It keeps what kernel, its predecessor, was for and drops what got in the way: claims,
 structure and ontologies sit together at the centre, and everything that works on them is a plugin around it.
 Ontologies serve as taxonomies; extraction, comparison and graph projection are plugins and queries.
 
@@ -173,7 +173,7 @@ a model happens to remember.
 with claims about each (licence, release age, maintenance, fit, quoted from the source). Test the shortlist
 against the need, judged by Morphogen where "better" is the question. Pick one and record why. The rejected
 candidates stay in the catalog with their evidence. The house rules apply to every candidate: a permissive or
-LGPL licence in the default stack (kernel D-11), and a release at least two weeks old, pinned exactly.
+LGPL licence in the default stack, and a release at least two weeks old, pinned exactly.
 
 **How it is done** (S-59): the `research` skill. The need is written first, in `docs/choices/<slug>.yaml`; the
 shortlist is tried by a pinned script under `scripts/trials/<slug>/` on the same cases; `substrate:choices`
@@ -249,7 +249,7 @@ through section 5, as a choice with evidence, when a step needs it.
 | Option | Fits where | Kept possible by | Bring back when |
 | --- | --- | --- | --- |
 | Model gateway (Bifrost v2.3.2) | between Claude Code and model providers | Claude Code reads `ANTHROPIC_BASE_URL`; nothing assumes direct access | cost must be measured outside the agent, or several providers routed |
-| Metrics (Prometheus v3.15.0) | observed half: rates, cost, errors | an extractor reads PromQL (kernel's `observer-prometheus` is the reference) | a gap needs numbers over time |
+| Metrics (Prometheus v3.15.0) | observed half: rates, cost, errors | an observer probe reads PromQL over HTTP (observe.yaml) | a gap needs numbers over time |
 | Traces (OpenTelemetry collector 0.163.2) | observed half: who calls whom | `service.name` = the catalog name | a gap needs observed calls, not just code |
 | Catalog browser (Backstage, create-app 0.9.3) | a view over the catalog | the catalog stays in Backstage's entity model | people want to browse, or a Backstage plugin is needed |
 | Scheduler (Nomad 2.0.7) | runs the services | scripts call only `rt_up`, `rt_down`, `rt_status`, `rt_logs` | many nodes, batch jobs, or an API an actuator drives |
@@ -314,7 +314,7 @@ Step 6, a second unlike domain, was dropped (S-49): the generalist level stays a
 ## 11. Sources
 
 - This repository's `DECISIONS.md` (S-41 onwards for this spec) and `catalog-info.yaml`
-- Workbench: `workbench/BRIEF.md`; kernel (https://github.com/OpenReplicant/kernel), its predecessor, now an option
+- Workbench: `workbench/BRIEF.md`; kernel (https://github.com/OpenReplicant/kernel), its predecessor, retired (S-68)
 - Morphogen (https://github.com/OpenReplicant/Morphogen)
 - Maturana and Varela, *Autopoiesis and Cognition*, 1980 (organization and structure)
 - SSSOM: https://mapping-commons.github.io/sssom/ ; SKOS: https://www.w3.org/TR/skos-reference/

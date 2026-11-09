@@ -1,13 +1,12 @@
 ---
 name: upstream
-description: Contribute a fix or improvement found while running the substrate back to kernel or Morphogen, by branch and pull request in that repository; also applies prepared patches from upstream/. Use when a problem's cause is in repos/kernel or repos/morphogen, or when the owner asks to open, update or land an upstream PR.
+description: Contribute a fix or improvement found while running the substrate back to Morphogen (or another project in repos.yaml), by branch and pull request in that repository; also applies prepared patches from upstream/. Use when a problem's cause is in repos/morphogen, or when the owner asks to open, update or land an upstream PR.
 ---
 
 # Contribute upstream
 
-`repos/morphogen` and `repos/kernel` are full clones (`repos.yaml`, or `repos.local.yaml` when the owner
-points one at another forge). A fix to either belongs there, not in substrate. Kernel is an option since S-57: it no
-longer runs here, and its open PRs (#111, #112, #113) wait for the owner.
+Each project in `repos.yaml` is a full clone in `repos/` (`repos.local.yaml` when the owner points one at
+another forge); today that is `repos/morphogen`. A fix to one belongs there, not in substrate.
 
 **Any forge** (S-25). The canonical repositories are on GitHub, but a clone's `origin` may be a Forgejo, Gitea
 or GitLab mirror or fork. Work out which from `git -C repos/<repo> remote get-url origin` and use that forge's
@@ -18,9 +17,7 @@ the canonical repository; say where it landed and what is left.
 
 ## Before changing anything
 
-1. Read that repository's `CLAUDE.md` and follow it there. Kernel: the invariants, "kernel changes are
-   off-limits without the owner's decision" (a change to `kernel/schema/` needs the owner; most fixes are
-   in `kk/` or `modules/` and do not), its test list, decisions appended to `docs/decisions.md`. Morphogen:
+1. Read that repository's `CLAUDE.md` and follow it there. Morphogen:
    red team first for any change to the judge, an A/A check after statistics changes, the plugin installed
    from GitHub.
 2. `git -C repos/<repo> status`: start from a clean tree. Stash or branch anything there, and say so.
@@ -53,9 +50,4 @@ Update `repos.yaml`'s `checked` commit to the main commit substrate was tested a
 
 ## Prepared now
 
-Nothing waits in `upstream/`. Open upstream work (2026-11-07): kernel#103 (one Postgres image, D-94),
-kernel#104 (`kk up --commands-dir`, D-95), kernel#105 (`KK_CONTAINER_ENGINE`, D-96). 2026-11-08: kernel#111 (registry-qualified base images, so Podman
-without search registries can build); `repos/kernel` stays on `fix/qualified-image-names` until it merges. kernel#112 (draft: `docs/content.md`, kernel
-as an ontological content system, D-101 proposed; the owner's review). kernel#113 (draft, stacked on #111: skills and hooks
-as components, map-drift's component gaps, D-102; substrate step 2 runs on it, so `repos/kernel` stays on
-`components-beyond-services`).
+Nothing waits in `upstream/`, and no upstream PR is open from here.

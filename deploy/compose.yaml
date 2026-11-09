@@ -3,8 +3,7 @@
 #   $CONTAINER_ENGINE compose -f deploy/compose.yaml --env-file .env up -d
 #
 # Everything is published on 127.0.0.1 only: the front door at :8080 (the shell at /, the API at /api, the server
-# at /wb/api, SPARQL at /sparql), Postgres at :${DB_PORT}. Kernel, which this stack used to be built on, is an option now
-# (catalog-info.yaml, system options); its database `kk` stays in the same Postgres volume, untouched.
+# at /wb/api, SPARQL at /sparql), Postgres at :${DB_PORT}.
 
 name: substrate
 
@@ -16,8 +15,8 @@ x-locked: &locked
 
 services:
 
-  # Postgres 17 with pgvector, pg_cron, pgmq and pgGraph (deploy/postgres/Dockerfile, vendored from kernel).
-  # Databases: workbench (Workbench's store), kk (kernel's, kept), substrate (the old bus's, kept).
+  # Postgres 17 with pgvector, pg_cron, pgmq and pgGraph (deploy/postgres/Dockerfile).
+  # Database: workbench (Workbench's store).
   db:
     build: ./postgres
     image: localhost/substrate-db:local
@@ -112,4 +111,4 @@ services:
 
 volumes:
   db-data:
-    name: knowledge-kernel_db-data             # the volume the stack has always used: its data carries over
+    name: substrate_db-data                    # named, so a project-name change never orphans it

@@ -1,8 +1,8 @@
 #!/bin/sh
-# Once per machine: check the few host tools, clone Morphogen into repos/ (a full clone you can push
-# from; kernel, an option now, only with `scripts/bootstrap.sh kernel`), and build every image. Everything else (Python packages, gitleaks, uv) lives in containers (S-19). Safe to run again: existing clones are left as they are.
+# Once per machine: check the few host tools, clone the projects in repos.yaml into repos/ (full clones you can push
+# from), and build every image. Everything else (Python packages, gitleaks, uv) lives in containers (S-19). Safe to run again: existing clones are left as they are.
 #
-#   scripts/bootstrap.sh [REPO...]     # REPO: another clone from repos.yaml, e.g. kernel
+#   scripts/bootstrap.sh
 set -eu
 . "$(dirname "$0")/lib.sh"
 
@@ -41,8 +41,7 @@ clone() {   # name
     git clone --branch "$branch" "$url" "$ROOT/repos/$1"
   fi
 }
-clone morphogen
-for r in "$@"; do clone "$r"; done
+for r in $(sed -n 's/^\([a-z][a-z0-9_-]*\):$/\1/p' "$ROOT/repos.yaml"); do clone "$r"; done
 
 "$ROOT/scripts/settings.sh"
 "$ROOT/scripts/build.sh"

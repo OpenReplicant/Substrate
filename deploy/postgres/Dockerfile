@@ -1,13 +1,12 @@
 # Vendored from kernel (repos/kernel/deploy/postgres/Dockerfile at d9e800b, Apache-2.0, kernel D-94) when kernel left
 # the stack (S-57): the same Postgres 17 image with pgvector, pg_cron, pgmq and pgGraph, unchanged below this line.
 #
-# Postgres for the Knowledge Kernel: one image with every extension the kernel's modules and distributions use
-# (D-94). The kernel schema needs nothing beyond core Postgres 16+; each extension below is only installed here,
-# and only CREATEd by the module that uses it:
-#   pgvector 0.8.7   recall-dense (D-61)
-#   pg_cron 1.6.8    scheduled modules (needs shared_preload_libraries=pg_cron)
-#   pgmq 1.13.1      durable queues between modules and harnesses (PostgreSQL License)
-#   pgGraph 1.2.1    graph queries over tables, kernel.current_edge first (D-86; Apache-2.0); row-level
+# One image with every extension Workbench uses or may; each is only installed here, and only CREATEd by the
+# migration that uses it:
+#   pgvector 0.8.7   vectors, for recall once an embedding model is chosen
+#   pg_cron 1.6.8    scheduled jobs (needs shared_preload_libraries=pg_cron)
+#   pgmq 1.13.1      durable queues: Workbench's jobs (wb_jobs) (PostgreSQL License)
+#   pgGraph 1.2.1    graph queries over tables: Workbench's projection, api.graph_path (Apache-2.0); row-level
 #                    security applies as the calling role. shared_preload_libraries=graph is optional
 #                    (pre-warms a built graph at start)
 ARG PG_IMAGE=docker.io/library/postgres:17.11-bookworm

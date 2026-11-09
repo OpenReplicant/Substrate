@@ -129,7 +129,7 @@ changes, debounced; `fn` gets the events) and `api.server(method, path, body)` (
 
 Apps: a web UI that allows framing from Workbench's origin opens as a tab (`embed: 'frame'`; another origin must
 be listed in `WB_FRAME_SRC`); one that refuses (`X-Frame-Options`, `frame-ancestors`) opens in its own window
-(`embed: 'window'`). Kernel's UI is the second kind.
+(`embed: 'window'`).
 
 ## Tests
 

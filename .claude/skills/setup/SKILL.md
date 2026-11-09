@@ -17,7 +17,7 @@ build step needs it.
 ## 1. Host tools, clones and images
 
 Run `scripts/bootstrap.sh`. On the host it needs only git, python3 (standard library), the engine and its
-compose; everything else is built in containers (S-19). It clones Morphogen (and kernel, kept as an option) into
+compose; everything else is built in containers (S-19). It clones Morphogen into
 `repos/`, builds the images (`scripts/build.sh`: db, workbench, tools) and starts the `substrate-tools`
 container that `bin/` runs in.
 
@@ -52,9 +52,8 @@ the cause, fix it in this repository (or upstream, with the `upstream` skill, wh
 `scripts/up.sh` again. Known places to look:
 
 - **tools** container: `scripts/tools.sh status`. If a hook fails in Claude Code, run the same command by hand.
-- **db**: the image carries pgvector, pg_cron, pgmq and pgGraph (`deploy/postgres/Dockerfile`, vendored from
-  kernel). Its volume is `knowledge-kernel_db-data`, the one the stack has always used; kernel's database `kk` is
-  kept in it.
+- **db**: the image carries pgvector, pg_cron, pgmq and pgGraph (`deploy/postgres/Dockerfile`). Its volume
+  is `substrate_db-data`.
 - **workbench**: `scripts/logs.sh workbench`; `http://127.0.0.1:8080/wb/api/health` says whether it relays events,
   takes jobs, and which plugins loaded (a plugin's error is shown there).
 

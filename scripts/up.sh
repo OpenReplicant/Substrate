@@ -42,8 +42,8 @@ say "Agents and this project's Claude Code"
 "$ROOT/scripts/workbench.sh" user list | python3 -c 'import json, sys; sys.exit(0 if any(u["name"] == "claude-code" for u in json.load(sys.stdin)) else 1)' \
   || "$ROOT/scripts/workbench.sh" user add claude-code --role editor --agent >/dev/null
 echo "  agent claude-code (editor): it signs in by token"
-python3 "$ROOT/scripts/harness.py" status | python3 -c 'import json, sys; d = json.load(sys.stdin); sys.exit(0 if "workbench" in d["mcp_servers"] and not d["kernel_hooks"] and "kernel" not in d["mcp_servers"] else 1)' \
-  || python3 "$ROOT/scripts/harness.py" apply | python3 -c 'import json, sys; d = json.load(sys.stdin); print("  wired: Workbench MCP added; removed", d["mcp_removed"] or "nothing", "and", d["hooks_removed"], "kernel hooks; backup in", d["backup"])'
+python3 "$ROOT/scripts/harness.py" status | python3 -c 'import json, sys; d = json.load(sys.stdin); sys.exit(0 if d["workbench_current"] else 1)' \
+  || python3 "$ROOT/scripts/harness.py" apply | python3 -c 'import json, sys; d = json.load(sys.stdin); print("  wired: Workbench MCP in .mcp.json; backup in", d["backup"] or "(none: new file)")'
 
 say "Up"
 "$ROOT/scripts/check.sh" || true

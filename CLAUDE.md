@@ -16,7 +16,7 @@ so nothing you build here may work only on itself. Read `README.md` for the pict
 | Tools | `bin/`, container `substrate-tools` | Workbench's command, Morphogen, gitleaks, run in a container as you |
 | Glue | `scripts/`, `deploy/`, `modules/`, `catalog-info.yaml` | brings the parts up, connects them, and keeps the map: what runs, what could, where to search |
 
-Everything else (kernel, a model gateway, Prometheus, OpenTelemetry, Backstage, Nomad, OpenBao, a console) is an
+Everything else (a model gateway, Prometheus, OpenTelemetry, Backstage, Nomad, OpenBao, a console) is an
 option in `catalog-info.yaml` (system `options`, spec section 8): don't build it now, don't close the door on it.
 
 The design is open and science-minded (spec section 2). Parts, code, content types and views can all change.
@@ -49,11 +49,10 @@ deleting `docs/spec.md` or marking steps `dropped`.
   `catalog-info.yaml` (the map), `docs/` (the spec).
 - **Workbench** (`workbench/`): a general-purpose CMS that substrate is one plugin on. Nothing in it may know about
   substrate; it is built to leave as its own project.
-- **Fixes and improvements to Morphogen (or kernel, now an option)** go upstream, in their own repositories, by pull request:
+- **Fixes and improvements to Morphogen** go upstream, in their own repositories, by pull request:
   the `upstream` skill (`.claude/skills/upstream/SKILL.md`). Never patch a clone and leave it: a change in
   `repos/` that is not on a branch with a PR is lost work. Each clone has its own `CLAUDE.md`; read it before
-  changing that repository, and follow its rules there (kernel's invariants and "kernel changes are
-  off-limits without the owner"; Morphogen's red team first and A/A checks).
+  changing that repository, and follow its rules there (Morphogen's red team first and A/A checks).
 - `upstream/<repo>/*.patch` holds changes prepared elsewhere and not yet opened as PRs. Apply one with the
   `upstream` skill, then delete the patch file once its PR is open.
 
@@ -101,7 +100,7 @@ scripts/contract.sh INTERFACE [FILLER]|all   # a slot's contract test against a 
 scripts/graph.sh                # the graph views (Ontop mapping, pgGraph projection) regenerated from Workbench's terms
 scripts/trace.sh NAME [DEPTH]   # an item's chain in Workbench: claims, relations followed out, the part that runs as it, each gap and its decision
 scripts/workbench.sh migrate|plugin load DIR|extract PLUGIN:NAME|user add NAME|user reset NAME|user list|token NAME   # Workbench (prints passwords once: the owner runs user add)
-python3 scripts/harness.py status|apply   # this project's Claude Code wiring: Workbench's MCP server, no kernel hooks
+python3 scripts/harness.py status|apply   # this project's Claude Code wiring: Workbench's MCP server in .mcp.json
 scripts/tools.sh start|stop|status   # the tools container that bin/ runs in
 scripts/logs.sh SERVICE         # a service's recent logs
 scripts/down.sh [--volumes]     # stop (delete data after asking)

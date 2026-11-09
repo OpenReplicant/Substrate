@@ -34,7 +34,7 @@ What is worth keeping is small, and Workbench keeps it:
 - **entity resolution and claim deduplication**;
 - **a record of each decision**.
 
-None of these needs everything to be a claim. Kernel is parked, not deleted (S-52).
+None of these needs everything to be a claim. Kernel was parked (S-52), then retired.
 
 ## 2. The store
 
@@ -175,8 +175,8 @@ for a release.
   option, source registry), extractors (the catalog file, Claude Code's project files, Morphogen's evidence
   log), panels (the map, drift between declared and observed, trace).
 - The Postgres image stays Substrate's for now; on leaving, Workbench takes a copy of its Containerfile.
-- Breaking out means moving `workbench/` to its own repository and cloning it into `repos/`, as kernel and
-  Morphogen are.
+- Breaking out means moving `workbench/` to its own repository and cloning it into `repos/`, as Morphogen
+  is.
 
 ## 7. Services
 
@@ -191,7 +191,7 @@ browser ──▶ Caddy (front door) ──┬─ /            the shell: static
 - **PostgREST** turns that schema into the API: tables and views as endpoints, functions as `/rpc/<name>`, the
   JWT's `role` claim as the Postgres role for each request, and an OpenAPI description. There is no hand-written
   data API. After a migration, `NOTIFY pgrst, 'reload schema'` refreshes it.
-- **Caddy** is the one address: TLS when public, static files, routing. It is the same Caddy kernel's stack
+- **Caddy** is the one address: TLS when public, static files, routing. It is the same Caddy the stack
   runs now.
 - **The workbench server** (Python) does what SQL cannot do. It loads plugins: it runs their migrations, turns
   their JSON Schema types into tables, and serves their client modules. It also runs extractors (they write
@@ -206,7 +206,7 @@ its `pgjwt--0.2.0.sql` with its MIT licence. The JWT secret is a setting in `.en
 | Part | Licence | Pin (two weeks or older) |
 | --- | --- | --- |
 | PostgREST | MIT | `docker.io/postgrest/postgrest:v16.5` (2026-10-20) |
-| Caddy | Apache-2.0 | 2.11.7, as kernel pins |
+| Caddy | Apache-2.0 | 2.11.7 |
 | pgjwt | MIT | 0.2.0 (SQL, vendored) |
 | Alpine.js | MIT | 3.17.5 (2026-10-20) |
 | dockview-core | MIT | 8.6.2 (2026-10-25) |
@@ -215,7 +215,7 @@ its `pgjwt--0.2.0.sql` with its MIT licence. The JWT secret is a setting in `.en
 | psycopg | LGPL-3.0 (library) | 3.3.6 (2026-09-18) |
 | jsonschema | MIT | 4.26.0 (2026-01-07) |
 
-All of them are allowed by kernel D-11's posture (permissive, or LGPL as a library).
+All of them are permissive, or LGPL as a library.
 
 ## 8. Alternatives considered (GitHub, 2026-11-08)
 
@@ -242,5 +242,4 @@ All of them are allowed by kernel D-11's posture (permissive, or LGPL as a libra
 1. **The name.** Workbench is a placeholder.
 2. **Roles.** One owner, plus optional editors and viewers, without per-scope clearance. Kernel's clearance
    could return as a plugin if more than one organisation shares a store.
-3. **Kernel.** Parked from now on. It leaves the stack at W4, once Workbench does everything Substrate used it
-   for. kernel#113 stays a draft.
+3. **Kernel.** Retired: it left the stack at W4, and its data with it later.

@@ -22,6 +22,8 @@ if h=$(curl -fsS "http://127.0.0.1:8080/wb/api/health" 2>/dev/null); then
 else bad "the Workbench server does not answer (scripts/logs.sh workbench)"; fi
 code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "http://127.0.0.1:8080/wb/api/mcp" -H 'Content-Type: application/json' -d '{}')
 [ "$code" = "401" ] && ok "mcp         http://127.0.0.1:8080/wb/api/mcp (asks for a token)" || bad "the MCP endpoint returned $code without a token"
+# Ontop retries its database connection on a cold start, so give it up to a minute before calling it down
+for _ in 1 2 3 4 5 6 7 8 9 10 11 12; do curl -fs -o /dev/null --max-time 5 "http://127.0.0.1:8080/sparql?query=ASK%7B%7D" && break; sleep 5; done
 if n=$(curl -fsS --max-time 30 -H 'Accept: application/sparql-results+json' --data-urlencode 'query=SELECT (COUNT(?x) AS ?n) WHERE { ?x a <https://workbench.local/ns#Item> }' "http://127.0.0.1:8080/sparql" 2>/dev/null \
      | python3 -c 'import json, sys; print(json.load(sys.stdin)["results"]["bindings"][0]["n"]["value"])' 2>/dev/null); then
   ok "sparql      http://127.0.0.1:8080/sparql (Ontop, read-only; $n items, by reasoning over their classes)"
@@ -42,7 +44,7 @@ hs=$(python3 "$ROOT/scripts/harness.py" status)
 printf '%s' "$hs" | python3 -c 'import json, sys; d = json.load(sys.stdin); sys.exit(0 if "workbench" in d["mcp_servers"] else 1)' \
   && ok "Claude Code here: MCP servers $(printf '%s' "$hs" | python3 -c 'import json, sys; print(", ".join(json.load(sys.stdin)["mcp_servers"]))')" \
   || bad "Claude Code here has no Workbench MCP entry: python3 scripts/harness.py apply"
-printf '%s' "$hs" | python3 -c 'import json, sys; sys.exit(0 if not json.load(sys.stdin)["kernel_hooks"] else 1)' || note "kernel's hooks are still in .claude/settings.local.json: python3 scripts/harness.py apply"
+printf '%s' "$hs" | python3 -c 'import json, sys; sys.exit(0 if json.load(sys.stdin)["workbench_current"] else 1)' || note "Workbench's MCP entry in .mcp.json is out of date: python3 scripts/harness.py apply"
 gaps=$("$ROOT/bin/in-tools" true >/dev/null 2>&1 && curl -s "http://127.0.0.1:8080/api/decisions?status=eq.open&select=id" -H "Authorization: Bearer $("$ROOT/scripts/workbench.sh" token claude-code --hours 0.02 2>/dev/null)" | python3 -c 'import json, sys; print(len(json.load(sys.stdin)))' 2>/dev/null || echo "?")
 note "review lane: $gaps open"
 
@@ -64,9 +66,9 @@ else note "contracts: none run yet (scripts/contract.sh all)"; fi
 fi
 
 say "Upstream clones"
-for repo in morphogen kernel; do
+for repo in $(sed -n 's/^\([a-z][a-z0-9_-]*\):$/\1/p' "$ROOT/repos.yaml"); do
   dir="$ROOT/repos/$repo"
-  [ -d "$dir/.git" ] || { [ $repo = kernel ] || bad "repos/$repo missing (scripts/bootstrap.sh)"; continue; }   # kernel: an option, cloned on request
+  [ -d "$dir/.git" ] || { bad "repos/$repo missing (scripts/bootstrap.sh)"; continue; }
   checked=$(sed -n "/^$repo:/,/^[a-z]/s/^  checked: \([0-9a-f]*\).*/\1/p" "$ROOT/repos.yaml")
   head=$(git -C "$dir" rev-parse HEAD); branch=$(git -C "$dir" rev-parse --abbrev-ref HEAD)
   dirty=$(git -C "$dir" status --porcelain | wc -l | tr -d ' ')
