@@ -24,7 +24,7 @@
         ]
       },
       {
-        "matcher": "Edit|Write|MultiEdit",
+        "matcher": "mcp__workbench__(save_item|retire_item|restore_item)",
         "hooks": [
           {
             "type": "command",

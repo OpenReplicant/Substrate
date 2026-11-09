@@ -11,7 +11,7 @@
       <button class="wb-btn" @click="review()">Review lane</button>
       <button class="wb-btn" @click="extractors()">Extractors</button>
     </header>
-    <p class="wb-lede">Each skill and hook as the catalog declares it (catalog-info.yaml, read by substrate:catalog) and as the repository has it (.claude/, read by substrate:claude-code). Where they differ, substrate:drift raises a gap: decide it here or in the review lane. Changing the map declares or removes the entry in catalog-info.yaml; changing the repository adds or removes the file. Either way the decision is recorded with your name.</p>
+    <p class="wb-lede">Each skill and hook as the map declares it (its entries in Workbench) and as the repository has it (.claude/, read by substrate:claude-code). Where they differ, substrate:drift raises a gap: decide it here or in the review lane. Changing the map declares or retires its entry in Workbench; changing the repository adds or removes the file. Either way the decision is recorded with your name.</p>
     <div class="wb-table-wrap">
       <table class="wb-table">
         <thead><tr><th>Part</th><th>Type</th><th>Declared</th><th>Found</th><th>Where</th><th>State</th><th>Decide</th></tr></thead>
@@ -36,7 +36,7 @@
           </template>
         </tbody>
       </table>
-      <p class="wb-empty" x-show="!loading && !rows.length">Nothing read yet. Run substrate:catalog and substrate:claude-code from Extractors.</p>
+      <p class="wb-empty" x-show="!loading && !rows.length">Nothing read yet. Run scripts/map.sh import, then substrate:claude-code from Extractors.</p>
     </div>
   </div>
 </template>

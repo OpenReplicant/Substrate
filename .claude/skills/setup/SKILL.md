@@ -10,8 +10,8 @@ has decided to skip it. Tell the owner, in a line, what each step did. Use the c
 `.env` (`CONTAINER_ENGINE`, podman by default).
 
 The stack is the core only (S-41, S-57): Postgres (`deploy/postgres`), PostgREST, the Workbench server and Caddy
-at http://127.0.0.1:8080, plus the `substrate-tools` container. Anything else is an option in
-`catalog-info.yaml`, system `options`; each entry says how to bring it back. Do not set one up here unless a
+at http://127.0.0.1:8080, plus the `substrate-tools` container. Anything else is an option on the
+map, system `options`; each entry says how to bring it back. Do not set one up here unless a
 build step needs it.
 
 ## 1. Host tools, clones and images
@@ -69,7 +69,7 @@ the cause, fix it in this repository (or upstream, with the `upstream` skill, wh
 - **Morphogen:** the plugin, from GitHub so the judge is never the code being judged (it runs on the host, with
   uv, because Claude Code starts it; the one host tool beyond the basics, and only for judged runs):
   `/plugin marketplace add OpenReplicant/Morphogen`, then `/plugin install morphogen@morphogen`. Check: its
-  `status` tool on this repository (`morphogen.yaml` reads `catalog-info.yaml`).
+  `status` tool on this repository (`morphogen.yaml` reads `catalog-info.yaml`, the map's export).
 
 **Check:** `scripts/check.sh` passes; the owner has signed in, and has seen Workbench's MCP and Morphogen answer.
 

@@ -88,7 +88,8 @@ an embedding model is chosen.
 ## Agents (MCP)
 
 `POST /wb/api/mcp`: MCP over streamable HTTP with plain JSON responses. Tools: `search`, `list_types`,
-`list_items`, `get_item` (an item with the claims behind each value), `save_item`, `claims`, `open_decisions`,
+`list_items`, `get_item` (an item with the claims behind each value), `save_item`, `retire_item` and `restore_item`
+(nothing is deleted: retiring retracts the claims behind an item, with a note, and can be undone), `claims`, `open_decisions`,
 `decide`, `list_extractors`, `run_extractor`. Every call forwards the agent's own token to PostgREST, so an agent
 is a user like any other: its role limits it, and the triggers record its writes as claims under its name.
 An agent is a person row with a role (`workbench user add NAME --role editor --agent`) that signs in by token:

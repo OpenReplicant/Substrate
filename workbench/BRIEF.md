@@ -84,7 +84,9 @@ the truth.
 **Rules live in Postgres**, so every client gets them, whether that's the UI, a plugin, an agent or curl.
 Triggers record a claim for every insert and update, attributed to the signed-in user from the request's JWT or
 to the extractor's run. Row-level security applies each role's rights. Content tables are written only through
-the API (PostgREST, section 7); nothing writes around it. Nothing is deleted except by an explicit redaction, which is itself a recorded decision.
+the API (PostgREST, section 7); nothing writes around it. Nothing is deleted except by an explicit redaction, which is itself a recorded decision. An item can be retired
+(`api.retire`, migration 011): the claims behind it are retracted, the retirement is a claim with its note, and
+`api.restore` undoes it; `wb.live` says whether an item stands.
 A content type's schema changes additively by default; a destructive change is a migration the owner runs.
 
 ## 3. Extractors

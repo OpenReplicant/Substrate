@@ -18,7 +18,8 @@ candidates, so the candidates are tested against it rather than the need bent to
 
 ## 2. Search the source catalogs
 
-`catalog-info.yaml`, system `sources`: each registry says how to search it (`substrate.dev/search`), what it
+The map's system `sources` (in Workbench: MCP `list_items` type `component`, then `get_item`; or the export,
+`catalog-info.yaml`): each registry says how to search it (`substrate.dev/search`), what it
 gives and its limits. Also look in the `options` system: a part already known may fit. Search more than one
 registry, by topic and by need rather than by the name you expect. Record each search in `searched` (registry,
 query, date). Useful starts:
@@ -57,8 +58,8 @@ what would make it the pick, so a later need starts from evidence. Then:
 
 - `scripts/workbench.sh extract substrate:choices` (also run by `scripts/up.sh`), and check the candidate items
   carry registry quotes (MCP `get_item` type `candidate`)
-- the pick goes on the map: an entry in `options` (fits, interface, when, candidates) until a step needs it
-  running, then into `core`; `bin/morphogen structure check morphogen.yaml`
+- the pick goes on the map: a `component` item in `options` (fits, interface, when, candidates) until a step
+  needs it running, then into `core`; `scripts/map.sh export`, then `bin/morphogen structure check morphogen.yaml`
 - a `DECISIONS.md` row when the pick becomes a default
 
 Recall answers "why this one?" from the choice item and its candidates (MCP `search`, then `get_item`).

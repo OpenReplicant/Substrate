@@ -74,7 +74,7 @@ export default function substrate(wb) {
         const counts = {};
         for (const r of rows) counts[r.lifecycle || 'unset'] = (counts[r.lifecycle || 'unset'] || 0) + 1;
         const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
-        if (!entries.length) list.innerHTML = '<li class="wb-faint">No components yet. Step W3 reads them from catalog-info.yaml.</li>';
+        if (!entries.length) list.innerHTML = '<li class="wb-faint">No map entries yet: scripts/map.sh import.</li>';
         for (const [lc, n] of entries) {
           const li = document.createElement('li');
           const name = Object.assign(document.createElement('span'), {textContent: lc});

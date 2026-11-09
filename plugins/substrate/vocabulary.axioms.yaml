@@ -11,6 +11,10 @@ classes:
   Entity: {parents: ["sub:Part"]}
   Skill: {parents: ["sub:Part"]}
   Hook: {parents: ["sub:Part"]}
+# a field whose camelCase name is also a relation's: its term gets its own name (vocab.py refuses the clash)
+field_terms:
+  component.depends_on: dependsOnRefs
+  container.mounts: mountEntries
 observed: [Host, Container, Image, Volume, Setting, Route, API, Plugin, UI, Connection, Cell]
 properties:
   mapRelation: {parents: ["wb:relatedTo"], comment: "A relation the map states between its parts."}

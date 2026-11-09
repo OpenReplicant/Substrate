@@ -12,12 +12,12 @@ so nothing you build here may work only on itself. Read `README.md` for the pict
 | Morphogen | `repos/morphogen` (its own git repo) | the judge: a change lands only with a verdict the changer cannot reach |
 | Claude Code | you | the actor: explorer, interviewer, builder, mapper |
 | Workbench | `workbench/` (built to leave), containers `db`, `postgrest`, `workbench`, `caddy` | the store and the model: typed tables, claims beside every value, vocabularies and SSSOM mappings; its shell at `/`, PostgREST at `/api`, its server at `/wb/api` (extractors, live events, MCP for you); `workbench/BRIEF.md` |
-| Substrate's plugin | `plugins/substrate/` | the content types (component, skill, hook, verdict), extractors (catalog, claude-code, morphogen, drift) and the Map view |
+| Substrate's plugin | `plugins/substrate/` | the content types (component, skill, hook, verdict, what is observed running), extractors (map, claude-code, observed, drift, reasoner, contracts, morphogen) and the Map view; `MAP.md` says how the map is held |
 | Tools | `bin/`, container `substrate-tools` | Workbench's command, Morphogen, gitleaks, run in a container as you |
-| Glue | `scripts/`, `deploy/`, `modules/`, `catalog-info.yaml` | brings the parts up, connects them, and keeps the map: what runs, what could, where to search |
+| Glue | `scripts/`, `deploy/`, `catalog-info.yaml` (the map's export) | brings the parts up and connects them; the map itself (what runs, what could, where to search) lives in Workbench |
 
 Everything else (a model gateway, Prometheus, OpenTelemetry, Backstage, Nomad, OpenBao, a console) is an
-option in `catalog-info.yaml` (system `options`, spec section 8): don't build it now, don't close the door on it.
+option on the map (system `options`, spec section 8): don't build it now, don't close the door on it.
 
 The design is open and science-minded (spec section 2). Parts, code, content types and views can all change.
 Claims are hypotheses, and a change is an experiment judged on cases you have not seen. The one hard
@@ -46,7 +46,7 @@ deleting `docs/spec.md` or marking steps `dropped`.
 ## Where work goes
 
 - **Glue** (this repository): `scripts/`, `deploy/`, `plugins/substrate/` (substrate's Workbench plugin),
-  `catalog-info.yaml` (the map), `docs/` (the spec).
+  `catalog-info.yaml` (the map's committed export), `docs/` (the spec).
 - **Workbench** (`workbench/`): a general-purpose CMS that substrate is one plugin on. Nothing in it may know about
   substrate; it is built to leave as its own project.
 - **Fixes and improvements to Morphogen** go upstream, in their own repositories, by pull request:
@@ -74,8 +74,11 @@ deleting `docs/spec.md` or marking steps `dropped`.
    or another runtime stays possible without being tested.
 6. **Licences:** permissive or LGPL libraries in the default stack. Check before adding.
 7. **Every change ends with `scripts/check.sh` passing**, or with the failure named and explained.
-8. **The map is the source.** When a part is added, removed or changes how it is filled, update
-   `catalog-info.yaml`, then confirm `bin/morphogen structure check morphogen.yaml` reports no errors.
+8. **The map is the source, and it lives in Workbench** (`plugins/substrate/MAP.md`). When a part is added,
+   removed or changes how it is filled, change its `component` item (MCP `save_item`, `retire_item` to take one
+   off), then `scripts/map.sh export` and confirm `bin/morphogen structure check morphogen.yaml` reports no errors.
+   Commit the export with the change: Morphogen reads the map from that file at the base commit, never from
+   Workbench. Never hand-edit `catalog-info.yaml`; the next export overwrites it.
 
 ## Working with the owner
 
@@ -91,10 +94,11 @@ deleting `docs/spec.md` or marking steps `dropped`.
 scripts/bootstrap.sh            # once per machine: host tools, clones, images, the tools container
 scripts/up.sh                   # the stack, Workbench's schema, substrate's plugin and extractors, Claude Code's wiring
 scripts/check.sh                # is everything up and wired
+scripts/test.sh [FILE...]       # every test suite, each in a throwaway database
 scripts/build.sh [db|workbench|tools]   # images, built in containers
 python3 scripts/spec.py status|next|set ID STATUS   # where the spec's build plan stands
 scripts/verdicts.sh             # Morphogen's verdicts into Workbench (also run by a hook after judged runs)
-scripts/map.sh                  # catalog-info.yaml into Workbench, then drift (also run by a hook after edits to it)
+scripts/map.sh [export|check|import]   # the map's relations, drift, inferences; or the map to and from catalog-info.yaml (MAP.md)
 scripts/observe.sh              # what runs on this machine (observe.yaml) into Workbench, gitleaks first, then drift
 scripts/contract.sh INTERFACE [FILLER]|all   # a slot's contract test against a filler (e.g. secrets-api openbao); results into Workbench
 scripts/graph.sh                # the graph views (Ontop mapping, pgGraph projection) regenerated from Workbench's terms

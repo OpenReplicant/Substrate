@@ -151,6 +151,26 @@ try:
             check("nobody reads the password table", False, "read")
         except psycopg.errors.InsufficientPrivilege:
             check("nobody reads the password table", True)
+    with cli.connect() as conn:                      # retiring: nothing deleted, every claim behind it retracted
+        conn.autocommit = True
+        nid = as_user(conn, "wb_editor", "ed", "insert into api.note (slug, title, body, stars) values ('gone', 'Gone', 'x', 2) returning id")[0][0]
+        live = lambda: conn.execute("select wb.live(%s)", (nid,)).fetchone()[0]  # noqa: E731
+        try:
+            as_user(conn, "wb_viewer", "vi", "select api.retire('note', %s, 'no')", (nid,))
+            check("a viewer may not retire", False, "allowed")
+        except psycopg.errors.InsufficientPrivilege:
+            check("a viewer may not retire", True)
+        r = as_user(conn, "wb_editor", "ed", "select api.retire('note', %s, 'duplicate of another')", (nid,))[0][0]
+        rows = conn.execute("select field, status, author, value from wb.claim where subject_id = %s order by field", (nid,)).fetchall()
+        check("retiring retracts every claim and records who and why, the row stays",
+              r["retracted"] >= 3 and not live() and ("_retired", "current", "ed", "duplicate of another") in rows
+              and all(st == "retracted" for f, st, _, _ in rows if f != "_retired")
+              and conn.execute("select count(*) from content.note where id = %s", (nid,)).fetchone()[0] == 1, (r, rows))
+        as_user(conn, "wb_editor", "ed", "update api.note set stars = 5 where id = %s returning id", (nid,))
+        r = as_user(conn, "wb_editor", "ed", "select api.restore('note', %s)", (nid,))[0][0]
+        cur = dict(conn.execute("select field, value from wb.claim where subject_id = %s and status = 'current'", (nid,)).fetchall())
+        check("restoring brings the claims back, except a field written since", live() and cur.get("stars") == 5
+              and cur.get("body") == "x" and "_retired" not in cur, (r, cur))
     new = cli.user("reset", "ed", "editor")["password"]
     with cli.connect() as conn:
         conn.autocommit = True

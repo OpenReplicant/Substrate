@@ -1,7 +1,9 @@
 """Substrate's extractors for Workbench (workbench/workbench/extract.py has the contract).
 
-    substrate:catalog      catalog-info.yaml -> component items (every entity, its kind in `kind`), each value citing
-                           its line, and the relations between them (partOf, dependsOn, providesApi, consumesApi)
+    substrate:catalog      imports a catalog file (catalog-info.yaml) into the map: component items, each value citing
+                           its line; refused over edits made in Workbench unless forced (MAP.md: Workbench holds the map)
+    substrate:map          the map's relations (partOf, dependsOn, providesApi, consumesApi, ownedBy) from its entries'
+                           fields as Workbench holds them
     substrate:claude-code  .claude/skills/*/SKILL.md -> skill items; .claude/settings.json hooks -> hook items
     substrate:drift        what the map declares (AiResource entries of type skill or hook) against what the
                            repository has: each difference is a gap in the review lane, withdrawn once it closes
@@ -34,17 +36,12 @@ from pathlib import Path, PurePosixPath
 
 import yaml
 
-NODE_KINDS = {"component", "resource", "airesource"}
+from substrate_map import SPEC_FIELDS, doc_fields, name_for, slug_for  # noqa: E402
+
 RELATIONS = {"system": "partOf", "domain": "partOf", "subcomponentOf": "partOf", "dependsOn": "dependsOn",
              "providesApis": "providesApi", "consumesApis": "consumesApi", "owner": "ownedBy"}
 DEFAULT_KIND = {"system": "system", "domain": "domain", "subcomponentOf": "component", "providesApis": "api",
                 "consumesApis": "api", "owner": "group"}
-
-
-def slug_for(kind: str, name: str) -> str:
-    """Components, resources and AI resources keep their name (so a skill's entry and the skill meet); other
-    kinds are prefixed, since a system and a component may share a name."""
-    return name if kind.lower() in NODE_KINDS else f"{kind.lower()}-{name}"
 
 
 def parse_ref(ref: str, field: str) -> tuple[str | None, str]:
@@ -243,46 +240,63 @@ def register(wb):
     root = Path(wb.setting("root") or wb.folder.parents[1])
 
     def catalog(ctx, inputs):
+        """Import a catalog file into the map (MAP.md): each entity a component item, each value citing its line.
+        Workbench holds the map from then on, so an import that would overwrite changes made there is refused
+        unless asked for (inputs: file, force)."""
         rel = inputs.get("file", "catalog-info.yaml")
         path = root / rel
         data = path.read_bytes()
         text = data.decode()
         lines = text.splitlines()
+        edited = ctx.conn.execute("""select count(distinct c.subject_id) from wb.claim c
+                                       where c.subject_type = 'component' and c.status = 'current'
+                                         and c.object_id is null and c.author is distinct from 'substrate:catalog'""").fetchone()[0]
+        if edited and not inputs.get("force"):
+            raise RuntimeError(f"{edited} map entries were changed in Workbench since the last import; importing {rel} "
+                               "would overwrite them. Export first (scripts/map.sh export), or import with force=1")
         src = ctx.source(f"file:{rel}", data, "application/yaml")
-        entries = []
+        where = {"kind": ("kind",), "description": ("metadata", "description"), "annotations": ("metadata", "annotations"),
+                 "title": ("metadata", "name"), **{f: ("spec", k) for k, f in SPEC_FIELDS.items()}}
+        n = 0
         for node in yaml.compose_all(text):
             if node is None:
                 continue
             doc = yaml.safe_load(yaml.serialize(node))
             spans = line_spans(node)
-            kind, md, spec = str(doc.get("kind", "")), doc.get("metadata") or {}, doc.get("spec") or {}
-            if not md.get("name") or kind.lower() == "location":
+            md = doc.get("metadata") or {}
+            if not md.get("name") or str(doc.get("kind", "")).lower() == "location":
                 continue
-            fields = {"kind": kind, "type": spec.get("type"), "lifecycle": spec.get("lifecycle"),
-                      "description": md.get("description"), "owner": spec.get("owner"), "system": spec.get("system"),
-                      "annotations": md.get("annotations")}
-            where = {"kind": ("kind",), "type": ("spec", "type"), "lifecycle": ("spec", "lifecycle"),
-                     "description": ("metadata", "description"), "owner": ("spec", "owner"), "system": ("spec", "system"),
-                     "annotations": ("metadata", "annotations"), "title": ("metadata", "name")}
+            fields = doc_fields(doc)
             ev = {f: e for f, p in where.items() if (e := evidence(lines, spans, p))}
-            item = ctx.upsert("component", slug_for(kind, md["name"]), {k: v for k, v in fields.items() if v is not None},
-                              title=md.get("title") or md["name"], source=src, evidence=ev)
-            entries.append((kind.lower(), md["name"], item, spec))
-        ids = {(k, n): i for k, n, i, _ in entries}
-        missing = set()
-        for kind, name, item, spec in entries:
-            for field, predicate in RELATIONS.items():
-                refs = spec.get(field)
-                for ref in (refs if isinstance(refs, list) else [refs] if refs else []):
-                    k, n = parse_ref(ref, field)
-                    target = ids.get((k or "component", n))
-                    if target:
-                        ctx.relate("component", item, predicate, "component", target)
-                    else:
-                        missing.add(f"{field}: {ref}")
+            ctx.upsert("component", slug_for(fields["kind"], md["name"]), {k: v for k, v in fields.items() if v is not None},
+                       title=md.get("title") or md["name"], source=src, evidence=ev)
+            n += 1
         ctx.done("component")
-        if missing:
-            ctx.log(f"{len(missing)} refs to entities this file does not define: {', '.join(sorted(missing)[:8])}")
+        ctx.log(f"{n} entities from {rel}")
+
+    def map_relations(ctx, inputs):
+        """The relations a map states, from its entries' fields as Workbench holds them now: partOf, dependsOn,
+        providesApi, consumesApi, ownedBy. Only entries that stand (wb.live); a ref to nothing standing is logged."""
+        rows = ctx.conn.execute(f"""select id, slug, kind, {', '.join(SPEC_FIELDS.values())} from api.component c
+                                    where wb.live(c.id)""").fetchall()
+        cols = ["id", "slug", "kind", *SPEC_FIELDS.values()]
+        items = [dict(zip(cols, r)) for r in rows]
+        ids = {(it["kind"].lower(), name_for(it["kind"], it["slug"])): str(it["id"]) for it in items}
+        missing, n = set(), 0
+        for it in items:
+            ctx.speaks_for("component", str(it["id"]))
+            for key, predicate in RELATIONS.items():
+                refs = it[SPEC_FIELDS[key]]
+                for ref in (refs if isinstance(refs, list) else [refs] if refs else []):
+                    k, name = parse_ref(ref, key)
+                    target = ids.get((k or "component", name))
+                    if target:
+                        ctx.relate("component", str(it["id"]), predicate, "component", target, quote=f"{key}: {ref}")
+                        n += 1
+                    else:
+                        missing.add(f"{it['slug']} {key}: {ref}")
+        ctx.log(f"{n} relations from {len(items)} entries" + (f"; {len(missing)} refs to nothing on the map: "
+                                                              + ", ".join(sorted(missing)[:8]) if missing else ""))
 
     def claude_code(ctx, inputs):
         found_skills, found_hooks = 0, 0
@@ -337,7 +351,7 @@ def register(wb):
                                        and cl.author = '{author}')"""  # noqa: E731
         declared = {}
         for slug, typ, title in q(f"""select i.slug, i.type, i.title from api.component i
-                                      where i.kind = 'AiResource' and i.type in ('skill', 'hook') and {current('substrate:catalog')}""").fetchall():
+                                      where i.kind = 'AiResource' and i.type in ('skill', 'hook') and wb.live(i.id)""").fetchall():
             declared[(typ, slug)] = title
         observed = {}
         for typ in ("skill", "hook"):
@@ -363,7 +377,7 @@ def register(wb):
                 running[(typ, slug)] = (str(iid), title)
         claimed, refs = {}, 0
         for cid, slug, kind, ann in q(f"""select i.id, i.slug, i.kind, i.annotations from api.component i
-                                          where i.annotations ? 'substrate.dev/observed-as' and {current('substrate:catalog')}""").fetchall():
+                                          where i.annotations ? 'substrate.dev/observed-as' and wb.live(i.id)""").fetchall():
             ctx.speaks_for("component", str(cid))   # so its observedAs go when the last thing it ran as is gone
             for ref in str(ann["substrate.dev/observed-as"]).split(","):
                 typ, _, pattern = ref.strip().partition(":")
@@ -722,12 +736,12 @@ def register(wb):
         if not files:
             ctx.log("no contract runs yet: scripts/contract.sh all")
             return
-        comps = {slug: (str(i), ann or {}) for i, slug, ann in ctx.conn.execute("select id, slug, annotations from api.component").fetchall()}
-        provides = {}
-        for (f_id, f_slug, to_slug) in ctx.conn.execute(
-                """select r.from_id::text, f.slug, t.slug from wb.relation r join content.component f on f.id = r.from_id
-                   join content.component t on t.id = r.to_id where r.predicate = 'providesApi'""").fetchall():
-            provides.setdefault(to_slug, []).append(f_slug)
+        comps, provides = {}, {}          # the map as it stands: each part, and who provides each API (its fields)
+        for i, slug, ann, apis in ctx.conn.execute(
+                "select id, slug, annotations, provides_apis from api.component c where wb.live(c.id)").fetchall():
+            comps[slug] = (str(i), ann or {})
+            for ref in apis or []:
+                provides.setdefault(slug_for("API", parse_ref(ref, "providesApis")[1]), []).append(slug)
         passed = failed = 0
         for f in files:
             raw = f.read_bytes()
@@ -825,7 +839,10 @@ def register(wb):
                 + (f"; {counts['unreached']} candidates' registries did not answer (their earlier claims stand)" if counts["unreached"] else ""))
 
     wb.extractor("choices", choices, "docs/choices/*.yaml: each choice and its candidates, licence and releases quoted from the registry")
-    wb.extractor("catalog", catalog, "catalog-info.yaml: every entity as a component item, citing its line, with its relations")
+    wb.extractor("catalog", catalog, "import a catalog file (catalog-info.yaml) into the map: every entity a component item, "
+                 "citing its line; refused if it would overwrite changes made in Workbench (force=1 to)")
+    wb.extractor("map", map_relations, "the map's relations (partOf, dependsOn, providesApi, consumesApi, ownedBy) from its "
+                 "entries' fields as Workbench holds them")
     wb.extractor("claude-code", claude_code, "Claude Code's .claude/: skills and hooks as items")
     wb.extractor("morphogen", morphogen, "Morphogen's evidence log: each verdict, after checking the whole hash chain")
     wb.extractor("observed", observed, "the snapshots observe.py wrote (.state/observed): the host, its containers, images, volumes, "

@@ -1,6 +1,6 @@
 {
   "title": "Component",
-  "description": "An entry in a system's catalog: a Component, Resource, AiResource (a skill or hook), API, System, Domain or Group, as its kind says. Read from catalog-info.yaml in Backstage's entity model.",
+  "description": "An entry in a system's map: a Component, Resource, AiResource (a skill or hook), API, System, Domain or Group, as its kind says, in Backstage's entity model. Workbench holds the map; catalog-info.yaml is its export (scripts/map.sh export), and the first import on a new machine (MAP.md).",
   "type": "object",
   "properties": {
     "kind": {
@@ -38,13 +38,60 @@
     },
     "system": {
       "type": "string",
-      "description": "the system it belongs to: core, options, sources",
+      "description": "spec.system: the system it belongs to (core, options, sources, or another system's)",
       "x-term": "sub:system"
     },
     "annotations": {
       "type": "object",
       "description": "metadata.annotations as written",
       "x-term": "sub:annotations"
+    },
+    "domain": {
+      "type": "string",
+      "description": "spec.domain (a System's): the domain it belongs to, e.g. substrate",
+      "x-term": "sub:domain"
+    },
+    "subcomponent_of": {
+      "type": "string",
+      "description": "spec.subcomponentOf: the component it is part of",
+      "x-term": "sub:subcomponentOf"
+    },
+    "depends_on": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "spec.dependsOn: entity refs it needs (component:x, resource:y)",
+      "x-term": "sub:dependsOnRefs"
+    },
+    "provides_apis": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "spec.providesApis: the APIs it provides (its slots)",
+      "x-term": "sub:providesApis"
+    },
+    "consumes_apis": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "spec.consumesApis: the APIs it uses",
+      "x-term": "sub:consumesApis"
+    },
+    "definition": {
+      "type": "string",
+      "description": "spec.definition (an API's): what the interface is",
+      "x-term": "sub:definition"
+    },
+    "children": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "spec.children (a Group's)",
+      "x-term": "sub:children"
     }
   },
   "x-term": "sub:Entity"

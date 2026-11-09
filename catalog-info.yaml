@@ -1,35 +1,7 @@
-# Substrate's map, in Backstage's catalog entity model; Workbench reads it (substrate:catalog). Three systems
-# (S-47):
-#   core     what runs: Workbench, Morphogen, Claude Code, and the glue
-#   options  components substrate can choose when a step needs one (lifecycle: option); none of them runs now
-#   sources  catalogs of catalogs: registries to search when no known component fits (lifecycle: listed)
-# One file, so every ref resolves within it (scripts/map.sh reads it into Workbench; a
-# PostToolUse hook does it after each edit). Morphogen reads it as cells (morphogen.yaml).
-#
-# Annotations:
-#   substrate.dev/intent      what the part is for
-#   substrate.dev/fill        existing (built, in Workbench, Morphogen or Claude Code), adopt (open source as is),
-#                             build (to write: a Workbench plugin, a skill, or glue here)
-#   substrate.dev/basis       where an existing part lives
-#   substrate.dev/step        the build step (docs/build.yaml) it belongs to
-#   substrate.dev/filler     which filler of its slot it is, as scripts/contract.sh names it (compose, env, openbao, ...)
-#   substrate.dev/observed-as how it is recognised running: <type>:<slug> items substrate:observed reads (a slug may
-#                             be a glob), comma-separated; substrate:drift raises what no part accounts for (OBSERVE.md)
-#   APIs:     morphogen.dev/tests (the slot's contract test, which any filler must pass; Morphogen runs it)
-#   options:  substrate.dev/fits (where it would sit), substrate.dev/interface (what keeps it possible now),
-#             substrate.dev/when (what would bring it back), substrate.dev/restore (the commit and paths to
-#             restore it from), substrate.dev/evidence (what was learned running it), substrate.dev/candidates
-#   sources:  substrate.dev/search (how to search it), substrate.dev/gives (what metadata it returns),
-#             substrate.dev/limits (what to know first), substrate.dev/checked (when the endpoint last answered)
-
-apiVersion: backstage.io/v1alpha1
-kind: Group
-metadata:
-  name: operator
-  description: The human owner. Holds organization (purpose, goals, policy, who decides) and approves in the review lane.
-spec:
-  type: team
-  children: []
+# substrate's map, in Backstage's catalog entity model. Generated from Workbench by `scripts/map.sh export`:
+# edit the map in Workbench (its shell, or MCP's save_item and retire_item), not here. Morphogen reads this file
+# from the base commit as its rules (morphogen.yaml), and a new machine's first `scripts/up.sh` imports it.
+# What each annotation means: plugins/substrate/MAP.md.
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Group
@@ -41,10 +13,20 @@ spec:
   children: []
 ---
 apiVersion: backstage.io/v1alpha1
+kind: Group
+metadata:
+  name: operator
+  description: The human owner. Holds organization (purpose, goals, policy, who decides) and approves in the review lane.
+spec:
+  type: team
+  children: []
+---
+apiVersion: backstage.io/v1alpha1
 kind: Domain
 metadata:
   name: substrate
-  description: A super-agent that models systems as cited claims, acts on them, and changes (itself included) only on evidence it cannot fake.
+  description: A super-agent that models systems as cited claims, acts on them, and changes (itself included) only on evidence
+    it cannot fake.
 spec:
   owner: group:operator
 ---
@@ -53,57 +35,28 @@ kind: System
 metadata:
   name: core
   description: What runs - Workbench (store and model), Morphogen (judge), Claude Code (actor), and the glue.
-spec: {owner: group:operator, domain: substrate}
+spec:
+  owner: group:operator
+  domain: substrate
 ---
 apiVersion: backstage.io/v1alpha1
 kind: System
 metadata:
   name: options
-  description: Components substrate can choose when a step needs one; each says where it fits and how to bring it back (spec 8).
-spec: {owner: group:operator, domain: substrate}
+  description: Components substrate can choose when a step needs one; each says where it fits and how to bring it back (spec
+    8).
+spec:
+  owner: group:operator
+  domain: substrate
 ---
 apiVersion: backstage.io/v1alpha1
 kind: System
 metadata:
   name: sources
   description: Registries to search for candidates when no known component fits - catalogs of catalogs (spec 5).
-spec: {owner: group:operator, domain: substrate}
----
-apiVersion: backstage.io/v1alpha1
-kind: Component
-metadata:
-  name: front-door
-  description: Caddy at 127.0.0.1:8080 - Workbench's shell at /, its API at /api, its server at /wb/api; HTTPS when PUBLIC_HOST names a public host.
-  annotations:
-    substrate.dev/intent: One address for people and agents.
-    substrate.dev/fill: adopt
-    substrate.dev/basis: deploy/compose.yaml service caddy, deploy/caddy/Caddyfile (the shell's page is a Caddy template); CADDY_IMAGE pins docker.io/library/caddy:2.11.7-alpine
-    substrate.dev/observed-as: "container:substrate-caddy, route:substrate-caddy-*"
 spec:
-  type: service
-  lifecycle: production
   owner: group:operator
-  system: core
-  consumesApis: [workbench-api]
----
-# ================================================================ CORE: judge and actor
-apiVersion: backstage.io/v1alpha1
-kind: Component
-metadata:
-  name: morphogen
-  description: The judge - rules from the base, outside measurement, held-out cases, A/A checks, the red team, the evidence log.
-  annotations:
-    substrate.dev/filler: morphogen
-    substrate.dev/intent: Accept a change only on evidence the changer cannot reach. The one hard restriction (S-46) - it exists because the changer is expected to try to reward-hack sometimes.
-    substrate.dev/fill: existing
-    substrate.dev/basis: repos/morphogen; its Claude Code plugin, installed from GitHub so the judge is never the candidate
-spec:
-  type: service
-  lifecycle: production
-  owner: group:operator
-  system: core
-  providesApis: [judge-api]
-  consumesApis: [evidence-api, sandbox-api, repository-api]
+  domain: substrate
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Component
@@ -111,33 +64,101 @@ metadata:
   name: claude-code
   description: The actor - explores, interviews, researches, builds and maps; one session is one turn of the loop.
   annotations:
-    substrate.dev/intent: Close gaps between the intended and the observed, through responses that are judged and recorded.
+    substrate.dev/basis: Claude Code, with Workbench's MCP server (scripts/harness.py, a token per connection from scripts/workbench-mcp-headers.sh)
+      and Morphogen's plugin (S-03, S-57)
     substrate.dev/fill: existing
-    substrate.dev/basis: Claude Code, with Workbench's MCP server (scripts/harness.py, a token per connection from scripts/workbench-mcp-headers.sh) and Morphogen's plugin (S-03, S-57)
-    substrate.dev/observed-as: "connection:claude-code-workbench"
+    substrate.dev/intent: Close gaps between the intended and the observed, through responses that are judged and recorded.
+    substrate.dev/observed-as: connection:claude-code-workbench
 spec:
   type: service
   lifecycle: production
   owner: group:operator
   system: core
-  consumesApis: [workbench-mcp-api, judge-api]
+  consumesApis:
+  - workbench-mcp-api
+  - judge-api
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
-  name: skills
-  description: Substrate's procedures - Claude Code skills, here and in Morphogen.
+  name: evidence-log
+  description: Morphogen's hash-chained verdict log, in git's own directory.
   annotations:
-    substrate.dev/intent: Hold how to do each kind of work; a skill is a text cell Morphogen can judge and improve.
-    substrate.dev/fill: existing
-    substrate.dev/basis: .claude/skills (setup, build-out, upstream, research); Morphogen's skills (morphogen, map)
+    substrate.dev/filler: morphogen-evidence
 spec:
-  type: library
+  type: database
   lifecycle: production
-  owner: group:agents
+  owner: group:operator
   system: core
-  subcomponentOf: claude-code
-  consumesApis: [judge-api]
+  providesApis:
+  - evidence-api
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: front-door
+  description: Caddy at 127.0.0.1:8080 - Workbench's shell at /, its API at /api, its server at /wb/api; HTTPS when PUBLIC_HOST
+    names a public host.
+  annotations:
+    substrate.dev/basis: deploy/compose.yaml service caddy, deploy/caddy/Caddyfile (the shell's page is a Caddy template);
+      CADDY_IMAGE pins docker.io/library/caddy:2.11.7-alpine
+    substrate.dev/fill: adopt
+    substrate.dev/intent: One address for people and agents.
+    substrate.dev/observed-as: container:substrate-caddy, route:substrate-caddy-*
+spec:
+  type: service
+  lifecycle: production
+  owner: group:operator
+  system: core
+  consumesApis:
+  - workbench-api
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: git-repo
+  description: Code, the map, the cells, and history.
+  annotations:
+    substrate.dev/filler: git
+spec:
+  type: repository
+  lifecycle: production
+  owner: group:operator
+  system: core
+  providesApis:
+  - repository-api
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: graph-endpoint
+  description: A SPARQL endpoint over Workbench's items, claims and relations, with reasoning - Ontop, a virtual knowledge
+    graph over the live tables.
+  annotations:
+    substrate.dev/basis: deploy/ontop/Containerfile (Ontop 5.5.0 with PgJDBC 42.7.14), compose service graph, Caddy /sparql;
+      its mapping and ontology generated from Workbench's terms (workbench/workbench/graph.py, scripts/graph.sh, .state/graph);
+      reads as wb_reader
+    substrate.dev/candidates: 'Picked Ontop 5.5.0 (Apache-2.0) over Jena Fuseki, Oxigraph, RDFLib with OWL-RL, QLever, Virtuoso,
+      Blazegraph and Morph-KGC: docs/choices/rdf-endpoint.yaml, in Workbench as choice rdf-endpoint'
+    substrate.dev/evidence: 'Trial 2026-11-09 (scripts/trials/rdf-endpoint/run.sh): the only candidate with right answers
+      to the reasoning queries and current data; about 430 MB. Live since step 7: run.sh live passes (q1 92/92, q2 5, q3 311/311,
+      fresh).'
+    substrate.dev/fill: adopt
+    substrate.dev/filler: ontop
+    substrate.dev/intent: Ask the store by meaning (classes, sub-properties, claims and their premises) without a copy of
+      it.
+    substrate.dev/observed-as: container:substrate-graph
+    substrate.dev/step: '7'
+spec:
+  type: service
+  lifecycle: experimental
+  owner: group:operator
+  system: core
+  providesApis:
+  - graph-api
+  consumesApis:
+  - workbench-api
+  - database-api
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Component
@@ -145,51 +166,102 @@ metadata:
   name: interviewer
   description: Asks people what the map cannot see, and records each answer as a claim attributed to them.
   annotations:
-    substrate.dev/intent: Fill the intended half of a system from the people who hold it (S-43).
-    substrate.dev/fill: build
     substrate.dev/basis: to build as a skill on Workbench's MCP (questions from the gaps and thin parts of the graph)
-    substrate.dev/step: "8"
+    substrate.dev/fill: build
+    substrate.dev/intent: Fill the intended half of a system from the people who hold it (S-43).
+    substrate.dev/step: '8'
 spec:
   type: library
   lifecycle: experimental
   owner: group:agents
   system: core
   subcomponentOf: claude-code
-  consumesApis: [workbench-mcp-api]
+  consumesApis:
+  - workbench-mcp-api
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
-  name: reasoner
-  description: Draws what follows from stated relations by OWL 2 RL rules (transitive, inverse and symmetric properties in the vocabulary) and writes each conclusion back as a claim citing its premises.
+  name: morphogen
+  description: The judge - rules from the base, outside measurement, held-out cases, A/A checks, the red team, the evidence
+    log.
   annotations:
-    substrate.dev/intent: Rules applied, the first symbolic inference engine (spec section 1, direction); a conclusion lasts only as long as its premises.
-    substrate.dev/fill: build
-    substrate.dev/basis: substrate:reasoner (plugins/substrate/substrate_plugin.py); its terms from plugins/substrate/vocabulary.yaml (vocab.py, vocabulary.axioms.yaml); premises retract conclusions by Workbench's trigger (migration 009)
-    substrate.dev/step: "7"
+    substrate.dev/basis: repos/morphogen; its Claude Code plugin, installed from GitHub so the judge is never the candidate
+    substrate.dev/fill: existing
+    substrate.dev/filler: morphogen
+    substrate.dev/intent: Accept a change only on evidence the changer cannot reach. The one hard restriction (S-46) - it
+      exists because the changer is expected to try to reward-hack sometimes.
 spec:
-  type: library
-  lifecycle: experimental
-  owner: group:agents
+  type: service
+  lifecycle: production
+  owner: group:operator
   system: core
-  consumesApis: [workbench-api, workbench-server-api]
+  providesApis:
+  - judge-api
+  consumesApis:
+  - evidence-api
+  - sandbox-api
+  - repository-api
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
   name: observer
-  description: Reads a system as it runs - the host, its containers, images and volumes, setting names, routes, APIs, UIs, plugins, connections and Morphogen's cells - into claims, so drift can compare every kind with the map.
+  description: Reads a system as it runs - the host, its containers, images and volumes, setting names, routes, APIs, UIs,
+    plugins, connections and Morphogen's cells - into claims, so drift can compare every kind with the map.
   annotations:
-    substrate.dev/intent: Fill the observed half of a model from the machine itself, the same way on any machine (S-62).
+    substrate.dev/basis: plugins/substrate/observe.py (the collector, on the host, as observe.yaml says), substrate:observed
+      and substrate:drift (plugins/substrate/substrate_plugin.py), scripts/observe.sh; plugins/substrate/OBSERVE.md
     substrate.dev/fill: build
-    substrate.dev/basis: plugins/substrate/observe.py (the collector, on the host, as observe.yaml says), substrate:observed and substrate:drift (plugins/substrate/substrate_plugin.py), scripts/observe.sh; plugins/substrate/OBSERVE.md
-    substrate.dev/step: "5"
+    substrate.dev/intent: Fill the observed half of a model from the machine itself, the same way on any machine (S-62).
+    substrate.dev/step: '5'
 spec:
   type: library
   lifecycle: experimental
   owner: group:agents
   system: core
-  consumesApis: [workbench-api, workbench-server-api, tools-api]
+  consumesApis:
+  - workbench-api
+  - workbench-server-api
+  - tools-api
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: postgres
+  description: Postgres 17 with pgvector, pg_cron, pgmq, pgGraph (deploy/postgres; S-24, S-57); database workbench.
+  annotations:
+    substrate.dev/filler: postgres
+    substrate.dev/observed-as: container:substrate-db, volume:substrate-db-data
+spec:
+  type: database
+  lifecycle: production
+  owner: group:operator
+  system: core
+  providesApis:
+  - database-api
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: reasoner
+  description: Draws what follows from stated relations by OWL 2 RL rules (transitive, inverse and symmetric properties in
+    the vocabulary) and writes each conclusion back as a claim citing its premises.
+  annotations:
+    substrate.dev/basis: substrate:reasoner (plugins/substrate/substrate_plugin.py); its terms from plugins/substrate/vocabulary.yaml
+      (vocab.py, vocabulary.axioms.yaml); premises retract conclusions by Workbench's trigger (migration 009)
+    substrate.dev/fill: build
+    substrate.dev/intent: Rules applied, the first symbolic inference engine (spec section 1, direction); a conclusion lasts
+      only as long as its premises.
+    substrate.dev/step: '7'
+spec:
+  type: library
+  lifecycle: experimental
+  owner: group:agents
+  system: core
+  consumesApis:
+  - workbench-api
+  - workbench-server-api
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Component
@@ -197,33 +269,596 @@ metadata:
   name: researcher
   description: Searches the source catalogs, shortlists candidates as cited entries, and tests them.
   annotations:
-    substrate.dev/intent: Make choices from catalogs, not best guesses (S-47).
+    substrate.dev/basis: .claude/skills/research (the skill), docs/choices/*.yaml (each choice), scripts/trials/ (shortlist
+      tests), substrate:choices (into Workbench with registry quotes)
     substrate.dev/fill: existing
-    substrate.dev/basis: .claude/skills/research (the skill), docs/choices/*.yaml (each choice), scripts/trials/ (shortlist tests), substrate:choices (into Workbench with registry quotes)
-    substrate.dev/step: "4"
+    substrate.dev/intent: Make choices from catalogs, not best guesses (S-47).
+    substrate.dev/step: '4'
 spec:
   type: library
   lifecycle: experimental
   owner: group:agents
   system: core
   subcomponentOf: claude-code
-  consumesApis: [workbench-mcp-api, judge-api]
+  consumesApis:
+  - workbench-mcp-api
+  - judge-api
 ---
-# ================================================================ CORE: skills and hooks (AiResource, Backstage 1.51)
-# Each is a part substrate:claude-code reads from .claude/ (skills by their frontmatter name, hooks as <event>-<script>),
-# so substrate:drift can tell when one exists that the map does not declare, or the other way round.
 apiVersion: backstage.io/v1alpha1
-kind: AiResource
+kind: Component
 metadata:
-  name: setup
-  description: Bring the stack up on a machine and wire it, checking each step before the next.
+  name: runtime
+  description: What runs the services - compose, through four verbs.
   annotations:
-    substrate.dev/basis: .claude/skills/setup/SKILL.md
+    substrate.dev/basis: scripts/runtime/compose.sh (rt_up, rt_down, rt_status, rt_logs) on Podman (S-13, S-16, S-41)
+    substrate.dev/fill: adopt
+    substrate.dev/filler: compose
+    substrate.dev/intent: Start, stop, list and read the services; nothing else in the scripts knows how.
 spec:
-  type: skill
+  type: service
+  lifecycle: production
+  owner: group:operator
+  system: core
+  providesApis:
+  - runtime-api
+  consumesApis:
+  - sandbox-api
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: sandbox
+  description: Containers for judged runs, modules and the tools (Podman).
+  annotations:
+    substrate.dev/filler: podman
+spec:
+  type: container-runtime
+  lifecycle: production
+  owner: group:operator
+  system: core
+  providesApis:
+  - sandbox-api
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: scripts
+  description: The glue - bootstrap, up, down, check, map, verdicts, spec - calling only the runtime and secrets verbs.
+  annotations:
+    substrate.dev/basis: scripts/ and scripts/lib.sh (S-16, S-31, S-41)
+    substrate.dev/fill: build
+    substrate.dev/intent: Bring the parts up and connect them, without knowing what runs them or where secrets live.
+spec:
+  type: library
+  lifecycle: production
+  owner: group:operator
+  system: core
+  consumesApis:
+  - runtime-api
+  - secrets-api
+  - workbench-api
+  - tools-api
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: secrets
+  description: Credentials in .env (mode 600), read through env_value and the sec_* verbs.
+  annotations:
+    substrate.dev/basis: scripts/secrets/env.sh, deploy/secrets.txt, scripts/settings.sh (S-31, S-41)
+    substrate.dev/fill: existing
+    substrate.dev/filler: env
+    substrate.dev/intent: Keep credentials out of files people read, behind calls another store can answer later.
+spec:
+  type: library
+  lifecycle: production
+  owner: group:operator
+  system: core
+  providesApis:
+  - secrets-api
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: skills
+  description: Substrate's procedures - Claude Code skills, here and in Morphogen.
+  annotations:
+    substrate.dev/basis: .claude/skills (setup, build-out, upstream, research); Morphogen's skills (morphogen, map)
+    substrate.dev/fill: existing
+    substrate.dev/intent: Hold how to do each kind of work; a skill is a text cell Morphogen can judge and improve.
+spec:
+  type: library
   lifecycle: production
   owner: group:agents
   system: core
+  subcomponentOf: claude-code
+  consumesApis:
+  - judge-api
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: tools
+  description: The commands people, scripts and Claude Code run, inside one container (bin/).
+  annotations:
+    substrate.dev/basis: deploy/tools/Containerfile (its own image since S-57), scripts/tools.sh, bin/ (S-19)
+    substrate.dev/fill: build
+    substrate.dev/filler: substrate-tools
+    substrate.dev/intent: Keep the host bare - Workbench's command, Morphogen and gitleaks run in a container as the host
+      user.
+    substrate.dev/observed-as: container:substrate-tools
+spec:
+  type: service
+  lifecycle: production
+  owner: group:operator
+  system: core
+  providesApis:
+  - tools-api
+  consumesApis:
+  - sandbox-api
+  - repository-api
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: workbench
+  description: A content system on Postgres - typed tables per content type, claims beside every value, vocabularies and SSSOM
+    mappings, plugins.
+  annotations:
+    substrate.dev/basis: workbench/ (BRIEF.md; W1 to W4 done), plugins/substrate
+    substrate.dev/fill: build
+    substrate.dev/intent: Hold what substrate knows about any system as typed items whose every value can say where it came
+      from; the store and the model since S-57.
+    substrate.dev/observed-as: ui:wb-core, plugin:substrate, ui:plugin-substrate
+    substrate.dev/step: W4
+spec:
+  type: service
+  lifecycle: experimental
+  owner: group:operator
+  system: core
+  providesApis:
+  - workbench-api
+  - workbench-mcp-api
+  consumesApis:
+  - database-api
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: workbench-rest
+  description: PostgREST v16.5 at /api - the Workbench schema as a JSON API with an OpenAPI description; roles from the sign-in
+    JWT.
+  annotations:
+    substrate.dev/basis: deploy/compose.yaml service postgrest, deploy/caddy/Caddyfile (/api)
+    substrate.dev/candidates: docker.io/postgrest/postgrest:v16.5 (MIT, 2026-10-20)
+    substrate.dev/fill: adopt
+    substrate.dev/filler: postgrest
+    substrate.dev/intent: Serve the store without a hand-written data API, so every client gets the rules Postgres enforces.
+    substrate.dev/observed-as: container:substrate-postgrest
+spec:
+  type: service
+  lifecycle: experimental
+  owner: group:operator
+  system: core
+  subcomponentOf: workbench
+  providesApis:
+  - workbench-api
+  consumesApis:
+  - database-api
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: workbench-server
+  description: The Workbench server at /wb/api - plugins' Python, extractors off a pgmq queue, NOTIFY relayed as Server-Sent
+    Events, MCP for agents.
+  annotations:
+    substrate.dev/basis: workbench/workbench/server.py, extract.py, mcp.py; compose service workbench (workbench/Containerfile)
+    substrate.dev/fill: build
+    substrate.dev/filler: workbench-server
+    substrate.dev/intent: Do what SQL cannot - run extractors and relay live changes - behind the same token check as the
+      API.
+    substrate.dev/observed-as: container:substrate-workbench
+    substrate.dev/step: W3
+spec:
+  type: service
+  lifecycle: experimental
+  owner: group:operator
+  system: core
+  subcomponentOf: workbench
+  providesApis:
+  - workbench-mcp-api
+  - workbench-server-api
+  consumesApis:
+  - workbench-api
+  - database-api
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: bus
+  description: pgmq queues for work and notices between parts, never facts, beyond Workbench's own job queue.
+  annotations:
+    substrate.dev/candidates: pgmq v1.13.1 (PostgreSQL License)
+    substrate.dev/evidence: Ran 2026-11-08 (queues triggers, owner, events). Its database and login were removed (S-68). Workbench
+      uses pgmq for its jobs (wb_jobs).
+    substrate.dev/fits: Between drift, verdicts and whatever starts work - triggers that start headless sessions, notices
+      for the owner.
+    substrate.dev/interface: pgmq is already in substrate's Postgres image and Workbench queues its jobs on it (wb_jobs);
+      its LISTEN/NOTIFY events are unchanged.
+    substrate.dev/restore: a00fb61 - scripts/bus.sh, scripts/bus.py, deploy/bus/queues.txt, modules/dispatcher/BRIEF.md (S-21,
+      S-24)
+    substrate.dev/when: Something should start a session without a person - a detector finding, a goal past its date.
+spec:
+  type: service
+  lifecycle: option
+  owner: group:operator
+  system: options
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: catalog-browser
+  description: Backstage - a browsable view over the same catalog files, plugins, and an MCP endpoint.
+  annotations:
+    substrate.dev/candidates: Backstage via @backstage/create-app 0.9.3 (Apache-2.0)
+    substrate.dev/evidence: 'Owner, 2026-11-08: fits catalogs of things but was not built for this, and only its MCP server
+      justified it (S-38). The idea it served - catalogs of components to choose from - lives on in this file (S-47).'
+    substrate.dev/fits: A view over the catalog for people who want to browse it, or when a Backstage plugin is the right
+      tool.
+    substrate.dev/interface: catalog-info.yaml stays in Backstage's entity model, so a Backstage install reads it unchanged.
+    substrate.dev/restore: a00fb61 - services/backstage (create-app 0.9.3, two-stage Containerfile), deploy/compose.yaml service
+      backstage, scripts/build.sh build_backstage (S-12)
+    substrate.dev/when: People need to browse the catalog beyond Workbench's shell, or a Backstage plugin is chosen for a
+      job.
+spec:
+  type: website
+  lifecycle: option
+  owner: group:operator
+  system: options
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: console
+  description: The owner's live page - review lane, verdicts, spend, stack, the spec's progress - on one page.
+  annotations:
+    substrate.dev/evidence: Ran 2026-11-08; its Map drew intended, observed and the difference with Cytoscape.js.
+    substrate.dev/fits: A view for the owner in Workbench's shell, or beside it behind the front door.
+    substrate.dev/interface: Workbench's API, events and sign-in give the same data; its shell can show another UI as an app.
+    substrate.dev/restore: a00fb61 - services/console, deploy/caddy/Caddyfile's /console route (S-22, S-29)
+    substrate.dev/when: Workbench's views are not enough to act from - several sources on one page.
+spec:
+  type: website
+  lifecycle: option
+  owner: group:operator
+  system: options
+  consumesApis:
+  - workbench-api
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: external-vocabularies
+  description: Standard vocabularies for content types beyond substrate's own terms - PROV-O, SPDX, DOAP, SKOS - chosen from
+    ontology registries.
+  annotations:
+    substrate.dev/candidates: 'Registries to verify: Linked Open Vocabularies, EBI''s Ontology Lookup Service, BioPortal,
+      schema.org, Wikidata'
+    substrate.dev/fits: Terms on Workbench's content types and fields (x-term), loaded into wb.term, related by SSSOM mappings
+      in wb.mapping.
+    substrate.dev/interface: x-term on JSON Schema types and fields; wb.term and wb.mapping; substrate's own vocabulary (step
+      7) maps to these when they come.
+    substrate.dev/when: Data is exchanged with other tools, or merged from another system's terms (S-61).
+spec:
+  type: library
+  lifecycle: option
+  owner: group:operator
+  system: options
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: front-door-plugins
+  description: Caddy built with plugins (xcaddy) - auth, rate limits, other modules on the one address.
+  annotations:
+    substrate.dev/candidates: Caddy 2.11.7 on caddy:2.11.7-builder-alpine (Apache-2.0)
+    substrate.dev/fits: In place of the stock Caddy image.
+    substrate.dev/interface: The compose caddy service takes any image through CADDY_IMAGE.
+    substrate.dev/restore: a00fb61 - deploy/caddy/ (Containerfile, plugins.txt), scripts/build.sh build_caddy (S-20)
+    substrate.dev/when: The front door needs a module the stock image lacks.
+spec:
+  type: service
+  lifecycle: option
+  owner: group:operator
+  system: options
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: metrics
+  description: Prometheus - counters over time (gateway cost, allocations, service rates) for the observer to record as claims.
+  annotations:
+    substrate.dev/candidates: Prometheus v3.15.0 (Apache-2.0)
+    substrate.dev/evidence: Ran 2026-11-08. Telemetry placeholder nodes (client=user, server=unknown) reached the review lane
+      as gaps, 4 of 5 noise (S-35). Its volume was removed (S-63).
+    substrate.dev/fits: The observed half - each query window recorded as observed claims.
+    substrate.dev/interface: The observer reads HTTP endpoints named in observe.yaml, so a probe over Prometheus's query API
+      needs no new code path; nothing depends on it now.
+    substrate.dev/restore: a00fb61 - deploy/compose.yaml service prometheus, deploy/prometheus.yml, deploy/observer/queries.yaml
+      (S-05, S-33, S-35)
+    substrate.dev/when: A gap needs numbers over time - cost, error rates, latency.
+spec:
+  type: service
+  lifecycle: option
+  owner: group:operator
+  system: options
+  providesApis:
+  - metrics-api
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: model-gateway
+  description: Bifrost - every model call through one gateway, so tokens and cost are measured outside the agent.
+  annotations:
+    substrate.dev/candidates: Bifrost v2.3.2 (Apache-2.0); LiteLLM proxy (MIT core) not tried
+    substrate.dev/evidence: Ran on the owner's machine 2026-11-08. v2.3.2 locks /api and /metrics until an admin account exists
+      (S-34); its data volume kept providers after .env removed them until source_of_truth was set (S-40). Its volume was
+      removed (S-63).
+    substrate.dev/fits: Between Claude Code (and anything else that calls models) and the model providers - Anthropic, OpenRouter,
+      local models.
+    substrate.dev/interface: Claude Code reads ANTHROPIC_BASE_URL (and ANTHROPIC_CUSTOM_HEADERS for the virtual key); nothing
+      in substrate assumes direct access.
+    substrate.dev/restore: a00fb61 - deploy/compose.yaml service bifrost, scripts/render_bifrost.py, scripts/gateway.py, .env.example's
+      gateway block (S-04, S-14, S-34, S-40)
+    substrate.dev/when: Cost must be measured outside the agent (Morphogen judging cost, budgets), or several providers routed
+      behind one key.
+spec:
+  type: service
+  lifecycle: option
+  owner: group:operator
+  system: options
+  providesApis:
+  - model-api
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: remote-judge
+  description: Morphogen on another machine, so the changer cannot even reach the judge's host.
+  annotations:
+    substrate.dev/filler: remote-morphogen
+    substrate.dev/fits: In place of the local Morphogen behind judge-api.
+    substrate.dev/interface: judge-api (Morphogen's CLI and MCP tools); substrate:morphogen reads the evidence log, which
+      would be shipped or served instead of read from this repository's git directory.
+    substrate.dev/when: Stronger separation is wanted, or several substrates share one judge (S-61).
+spec:
+  type: service
+  lifecycle: option
+  owner: group:operator
+  system: options
+  providesApis:
+  - judge-api
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: scheduler
+  description: Nomad - one control plane for containers, processes and clusters, with an ACL'd API an actuator can drive.
+  annotations:
+    substrate.dev/candidates: Nomad 2.0.7 (BUSL-1.1) with nomad-driver-podman 0.6.5 (MPL-2.0); k3s (Apache-2.0) considered
+    substrate.dev/evidence: Never passed check.sh on the owner's machine. Licence BUSL-1.1, outside the default stack's licence
+      rule; the owner must decide on use before shipping it (S-18). Linux only with the Podman driver.
+    substrate.dev/filler: nomad
+    substrate.dev/fits: Behind the runtime verbs, in place of compose.
+    substrate.dev/interface: Scripts call only rt_up, rt_down, rt_status, rt_logs; a scheduler is a new file in scripts/runtime/.
+    substrate.dev/restore: a00fb61 - scripts/runtime/nomad.sh, deploy/nomad/, scripts/install_hashicorp.py (S-16, S-17, S-27)
+    substrate.dev/when: Several nodes, batch jobs started by triggers, or an actuator that restarts and scales through an
+      API.
+spec:
+  type: service
+  lifecycle: option
+  owner: group:operator
+  system: options
+  providesApis:
+  - runtime-api
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: secrets-store
+  description: OpenBao - one API for secrets with policies, audit and versions.
+  annotations:
+    substrate.dev/candidates: OpenBao 2.7.1 (MPL-2.0); SOPS, Infisical or a cloud KMS not tried
+    substrate.dev/evidence: Checked with the 2.7.1 binary (self-initialising, static seal, audit without values, migrate from
+      .env); never the default on the owner's machine.
+    substrate.dev/filler: openbao
+    substrate.dev/fits: Behind the secrets verbs, in place of .env.
+    substrate.dev/interface: Scripts read secrets only through env_value and sec_start, sec_stop, sec_get, sec_put, sec_status;
+      a store is a new file in scripts/secrets/.
+    substrate.dev/restore: a00fb61 - scripts/secrets/openbao.sh, scripts/secrets/bao.py, scripts/secrets.sh (migrate), deploy/openbao/config.hcl
+      (S-31)
+    substrate.dev/when: More than one person or machine, credentials handed to services one by one, or an audit trail needed.
+spec:
+  type: service
+  lifecycle: option
+  owner: group:operator
+  system: options
+  providesApis:
+  - secrets-api
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: traces
+  description: The OpenTelemetry collector - traces from every part become the observed call graph.
+  annotations:
+    substrate.dev/candidates: otelcol-contrib 0.163.2 (Apache-2.0)
+    substrate.dev/evidence: Ran 2026-11-08 with the servicegraph connector (alpha); Caddy, Bifrost, Backstage and Claude Code
+      sent spans; a part that sends none shows as an unnamed peer.
+    substrate.dev/fits: The observed half - who actually calls whom, to compare with the declared map (substrate:drift).
+    substrate.dev/interface: A part's OpenTelemetry service.name is its catalog name.
+    substrate.dev/restore: a00fb61 - deploy/compose.yaml service otel-collector, deploy/otel/collector.yaml, scripts/telemetry.py
+      (S-28, S-30)
+    substrate.dev/when: A gap needs observed calls rather than what the code and containers say.
+spec:
+  type: service
+  lifecycle: option
+  owner: group:operator
+  system: options
+  providesApis:
+  - otlp-api
+  consumesApis:
+  - metrics-api
+---
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: apt
+  description: Debian and Ubuntu package archives - system packages for images.
+  annotations:
+    substrate.dev/checked: 2026-11-08 (sources.debian.org search answered 200, JSON)
+    substrate.dev/gives: versions per release and suite, sections, dependencies; licences in each package's copyright file
+    substrate.dev/limits: What is available depends on the base image's release; search in that image, not on the host.
+    substrate.dev/search: 'apt-cache search QUERY and apt-cache policy NAME inside a container of the target release; source
+      search: GET https://sources.debian.org/api/search/QUERY/'
+spec:
+  type: registry
+  lifecycle: listed
+  owner: group:operator
+  system: sources
+---
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: container-images
+  description: OCI registries - Docker Hub, Quay, GHCR.
+  annotations:
+    substrate.dev/checked: 2026-11-08 (podman search --list-tags and Docker Hub search answered)
+    substrate.dev/gives: names, tags, digests (pin by digest), official or verified flags on Docker Hub
+    substrate.dev/limits: Always name the registry (Podman refuses short names, S-34); a licence comes from the image's source,
+      not the registry.
+    substrate.dev/search: 'podman search QUERY; tags: podman search --list-tags REGISTRY/NAME; Docker Hub also GET https://hub.docker.com/v2/search/repositories/?query=QUERY'
+spec:
+  type: registry
+  lifecycle: listed
+  owner: group:operator
+  system: sources
+---
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: crates-io
+  description: crates.io - Rust crates.
+  annotations:
+    substrate.dev/checked: 2026-11-08 (search answered 200, JSON)
+    substrate.dev/gives: versions with dates, licence, downloads, repository
+    substrate.dev/limits: Its crawler policy asks for a User-Agent that identifies the client, and about one request a second.
+    substrate.dev/search: GET https://crates.io/api/v1/crates?q=QUERY&per_page=N
+spec:
+  type: registry
+  lifecycle: listed
+  owner: group:operator
+  system: sources
+---
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: deps-dev
+  description: deps.dev (Open Source Insights) - one API over npm, PyPI, Go, Maven, Cargo and NuGet.
+  annotations:
+    substrate.dev/checked: 2026-11-08 (npm package lookup answered 200, JSON)
+    substrate.dev/gives: versions with publish times, licences, dependency graphs, security advisories, OpenSSF Scorecard
+      for source projects
+    substrate.dev/limits: Looks up known names; it is not a free-text search.
+    substrate.dev/search: GET https://api.deps.dev/v3/systems/SYSTEM/packages/NAME (and .../versions/VERSION, ...:dependencies);
+      docs https://docs.deps.dev/api/v3/
+spec:
+  type: registry
+  lifecycle: listed
+  owner: group:operator
+  system: sources
+---
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: github
+  description: GitHub - repositories, releases, licences, activity.
+  annotations:
+    substrate.dev/checked: 2026-11-08 (search answered 200, JSON)
+    substrate.dev/gives: licence, stars, last push, open issues, releases with dates, topics
+    substrate.dev/limits: Search is rate-limited, tightly without a token; use gh, which carries the owner's login.
+    substrate.dev/search: gh search repos QUERY, or GET https://api.github.com/search/repositories?q=QUERY
+spec:
+  type: registry
+  lifecycle: listed
+  owner: group:operator
+  system: sources
+---
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: go-modules
+  description: The Go module proxy, with pkg.go.dev for discovery.
+  annotations:
+    substrate.dev/checked: 2026-11-08 (version list answered 200)
+    substrate.dev/gives: versions and their times; licence through deps.dev or pkg.go.dev
+    substrate.dev/search: 'No search API on the proxy; discover on pkg.go.dev (HTML) or deps.dev. Versions: GET https://proxy.golang.org/MODULE/@v/list;
+      one version: .../@v/VERSION.info'
+spec:
+  type: registry
+  lifecycle: listed
+  owner: group:operator
+  system: sources
+---
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: huggingface
+  description: The Hugging Face Hub - models, datasets, spaces.
+  annotations:
+    substrate.dev/checked: 2026-11-08 (model search answered 200, JSON)
+    substrate.dev/gives: licence tag, downloads, likes, last modified, pipeline tag, model card
+    substrate.dev/search: GET https://huggingface.co/api/models?search=QUERY&limit=N (also /api/datasets)
+spec:
+  type: registry
+  lifecycle: listed
+  owner: group:operator
+  system: sources
+---
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: npm
+  description: The npm registry - JavaScript and TypeScript packages.
+  annotations:
+    substrate.dev/checked: 2026-11-08 (search answered 200, JSON)
+    substrate.dev/gives: versions with publish times, licence, repository, maintainers, search scores (quality, popularity,
+      maintenance)
+    substrate.dev/search: 'GET https://registry.npmjs.org/-/v1/search?text=QUERY&size=N; a package: GET https://registry.npmjs.org/NAME'
+spec:
+  type: registry
+  lifecycle: listed
+  owner: group:operator
+  system: sources
+---
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: pypi
+  description: The Python Package Index.
+  annotations:
+    substrate.dev/checked: 2026-11-08 (package JSON answered 200)
+    substrate.dev/gives: per package - licence and classifiers, releases with upload times, requires_python, project URLs
+    substrate.dev/limits: Searching means parsing HTML or going through deps.dev.
+    substrate.dev/search: 'No search API (XML-RPC search is disabled); search through deps.dev or the website (https://pypi.org/search/?q=QUERY,
+      HTML). A package: GET https://pypi.org/pypi/NAME/json'
+spec:
+  type: registry
+  lifecycle: listed
+  owner: group:operator
+  system: sources
 ---
 apiVersion: backstage.io/v1alpha1
 kind: AiResource
@@ -241,37 +876,11 @@ spec:
 apiVersion: backstage.io/v1alpha1
 kind: AiResource
 metadata:
-  name: research
-  description: Choose from the catalogs - write the need, search the sources, record candidates with registry quotes, test the shortlist, record the pick and the rejections.
+  name: posttooluse-map
+  description: After a map edit through Workbench's MCP (save_item, retire_item or restore_item on a component), derives the
+    map's relations, drift and inferences again (scripts/map.sh --hook).
   annotations:
-    substrate.dev/basis: .claude/skills/research/SKILL.md
-spec:
-  type: skill
-  lifecycle: experimental
-  owner: group:agents
-  system: core
-  subcomponentOf: researcher
----
-apiVersion: backstage.io/v1alpha1
-kind: AiResource
-metadata:
-  name: upstream
-  description: Take a fix or improvement to Morphogen upstream, by branch and pull request in that repository.
-  annotations:
-    substrate.dev/basis: .claude/skills/upstream/SKILL.md
-spec:
-  type: skill
-  lifecycle: production
-  owner: group:agents
-  system: core
----
-apiVersion: backstage.io/v1alpha1
-kind: AiResource
-metadata:
-  name: sessionstart-spec
-  description: At session start, names the build plan's next step while docs/spec.md is in place (scripts/spec.py hook).
-  annotations:
-    substrate.dev/basis: .claude/settings.json hooks.SessionStart
+    substrate.dev/basis: .claude/settings.json hooks.PostToolUse (matcher mcp__workbench__(save_item|retire_item|restore_item))
 spec:
   type: hook
   lifecycle: production
@@ -294,590 +903,263 @@ spec:
 apiVersion: backstage.io/v1alpha1
 kind: AiResource
 metadata:
-  name: posttooluse-map
-  description: After an edit to a catalog-info.yaml, reads the map into Workbench again and checks drift (scripts/map.sh --hook).
+  name: research
+  description: Choose from the catalogs - write the need, search the sources, record candidates with registry quotes, test
+    the shortlist, record the pick and the rejections.
   annotations:
-    substrate.dev/basis: .claude/settings.json hooks.PostToolUse (matcher Edit|Write|MultiEdit)
+    substrate.dev/basis: .claude/skills/research/SKILL.md
+spec:
+  type: skill
+  lifecycle: experimental
+  owner: group:agents
+  system: core
+  subcomponentOf: researcher
+---
+apiVersion: backstage.io/v1alpha1
+kind: AiResource
+metadata:
+  name: sessionstart-spec
+  description: At session start, names the build plan's next step while docs/spec.md is in place (scripts/spec.py hook).
+  annotations:
+    substrate.dev/basis: .claude/settings.json hooks.SessionStart
 spec:
   type: hook
   lifecycle: production
   owner: group:operator
   system: core
 ---
-# ================================================================ CORE: Workbench (S-52, S-53, S-54)
 apiVersion: backstage.io/v1alpha1
-kind: Component
+kind: AiResource
 metadata:
-  name: workbench
-  description: A content system on Postgres - typed tables per content type, claims beside every value, vocabularies and SSSOM mappings, plugins.
+  name: setup
+  description: Bring the stack up on a machine and wire it, checking each step before the next.
   annotations:
-    substrate.dev/intent: Hold what substrate knows about any system as typed items whose every value can say where it came from; the store and the model since S-57.
-    substrate.dev/fill: build
-    substrate.dev/basis: workbench/ (BRIEF.md; W1 to W4 done), plugins/substrate
-    substrate.dev/observed-as: "ui:wb-core, plugin:substrate, ui:plugin-substrate"
-    substrate.dev/step: "W4"
+    substrate.dev/basis: .claude/skills/setup/SKILL.md
 spec:
-  type: service
-  lifecycle: experimental
-  owner: group:operator
+  type: skill
+  lifecycle: production
+  owner: group:agents
   system: core
-  providesApis: [workbench-api, workbench-mcp-api]
-  consumesApis: [database-api]
 ---
 apiVersion: backstage.io/v1alpha1
-kind: Component
+kind: AiResource
 metadata:
-  name: workbench-rest
-  description: PostgREST v16.5 at /api - the Workbench schema as a JSON API with an OpenAPI description; roles from the sign-in JWT.
+  name: upstream
+  description: Take a fix or improvement to Morphogen upstream, by branch and pull request in that repository.
   annotations:
-    substrate.dev/filler: postgrest
-    substrate.dev/intent: Serve the store without a hand-written data API, so every client gets the rules Postgres enforces.
-    substrate.dev/fill: adopt
-    substrate.dev/basis: deploy/compose.yaml service postgrest, deploy/caddy/Caddyfile (/api)
-    substrate.dev/observed-as: "container:substrate-postgrest"
-    substrate.dev/candidates: docker.io/postgrest/postgrest:v16.5 (MIT, 2026-10-20)
+    substrate.dev/basis: .claude/skills/upstream/SKILL.md
 spec:
-  type: service
-  lifecycle: experimental
-  owner: group:operator
+  type: skill
+  lifecycle: production
+  owner: group:agents
   system: core
-  subcomponentOf: workbench
-  providesApis: [workbench-api]
-  consumesApis: [database-api]
 ---
 apiVersion: backstage.io/v1alpha1
-kind: Component
+kind: API
 metadata:
-  name: workbench-server
-  description: The Workbench server at /wb/api - plugins' Python, extractors off a pgmq queue, NOTIFY relayed as Server-Sent Events, MCP for agents.
+  name: database-api
+  description: 'Postgres as the stack needs it: version 17, pgvector, pg_cron, pgmq and pgGraph available, Workbench''s roles.'
   annotations:
-    substrate.dev/filler: workbench-server
-    substrate.dev/intent: Do what SQL cannot - run extractors and relay live changes - behind the same token check as the API.
-    substrate.dev/fill: build
-    substrate.dev/basis: workbench/workbench/server.py, extract.py, mcp.py; compose service workbench (workbench/Containerfile)
-    substrate.dev/observed-as: "container:substrate-workbench"
-    substrate.dev/step: "W3"
+    morphogen.dev/tests: scripts/contract.sh database-api
 spec:
-  type: service
-  lifecycle: experimental
-  owner: group:operator
-  system: core
-  subcomponentOf: workbench
-  providesApis: [workbench-mcp-api, workbench-server-api]
-  consumesApis: [workbench-api, database-api]
----
-# ================================================================ CORE: glue
-apiVersion: backstage.io/v1alpha1
-kind: Component
-metadata:
-  name: tools
-  description: The commands people, scripts and Claude Code run, inside one container (bin/).
-  annotations:
-    substrate.dev/filler: substrate-tools
-    substrate.dev/intent: Keep the host bare - Workbench's command, Morphogen and gitleaks run in a container as the host user.
-    substrate.dev/fill: build
-    substrate.dev/basis: deploy/tools/Containerfile (its own image since S-57), scripts/tools.sh, bin/ (S-19)
-    substrate.dev/observed-as: "container:substrate-tools"
-spec:
-  type: service
+  type: contract
   lifecycle: production
   owner: group:operator
   system: core
-  providesApis: [tools-api]
-  consumesApis: [sandbox-api, repository-api]
+  definition: SQL over the workbench database; resource postgres (deploy/postgres) fills it.
 ---
 apiVersion: backstage.io/v1alpha1
-kind: Component
+kind: API
 metadata:
-  name: runtime
-  description: What runs the services - compose, through four verbs.
+  name: evidence-api
+  description: Morphogen's evidence log, its hash chain verifiable by Morphogen and independently.
   annotations:
-    substrate.dev/filler: compose
-    substrate.dev/intent: Start, stop, list and read the services; nothing else in the scripts knows how.
-    substrate.dev/fill: adopt
-    substrate.dev/basis: scripts/runtime/compose.sh (rt_up, rt_down, rt_status, rt_logs) on Podman (S-13, S-16, S-41)
+    morphogen.dev/tests: scripts/contract.sh evidence-api
 spec:
-  type: service
+  type: contract
   lifecycle: production
   owner: group:operator
   system: core
-  providesApis: [runtime-api]
-  consumesApis: [sandbox-api]
+  definition: SQLite at <git common dir>/morphogen/evidence.db; resource evidence-log fills it.
 ---
 apiVersion: backstage.io/v1alpha1
-kind: Component
+kind: API
 metadata:
-  name: secrets
-  description: Credentials in .env (mode 600), read through env_value and the sec_* verbs.
+  name: graph-api
+  description: SPARQL 1.1 at /sparql over Workbench's tables, read-only, with OWL 2 QL reasoning at query time (spec step
+    7).
   annotations:
-    substrate.dev/filler: env
-    substrate.dev/intent: Keep credentials out of files people read, behind calls another store can answer later.
-    substrate.dev/fill: existing
-    substrate.dev/basis: scripts/secrets/env.sh, deploy/secrets.txt, scripts/settings.sh (S-31, S-41)
+    morphogen.dev/tests: scripts/contract.sh graph-api
 spec:
-  type: library
-  lifecycle: production
-  owner: group:operator
-  system: core
-  providesApis: [secrets-api]
----
-apiVersion: backstage.io/v1alpha1
-kind: Component
-metadata:
-  name: scripts
-  description: The glue - bootstrap, up, down, check, map, verdicts, spec - calling only the runtime and secrets verbs.
-  annotations:
-    substrate.dev/intent: Bring the parts up and connect them, without knowing what runs them or where secrets live.
-    substrate.dev/fill: build
-    substrate.dev/basis: scripts/ and scripts/lib.sh (S-16, S-31, S-41)
-spec:
-  type: library
-  lifecycle: production
-  owner: group:operator
-  system: core
-  consumesApis: [runtime-api, secrets-api, workbench-api, tools-api]
----
-# ================================================================ OPTIONS (spec 8): none of these runs now
-apiVersion: backstage.io/v1alpha1
-kind: Component
-metadata:
-  name: model-gateway
-  description: Bifrost - every model call through one gateway, so tokens and cost are measured outside the agent.
-  annotations:
-    substrate.dev/fits: Between Claude Code (and anything else that calls models) and the model providers - Anthropic, OpenRouter, local models.
-    substrate.dev/interface: Claude Code reads ANTHROPIC_BASE_URL (and ANTHROPIC_CUSTOM_HEADERS for the virtual key); nothing in substrate assumes direct access.
-    substrate.dev/when: Cost must be measured outside the agent (Morphogen judging cost, budgets), or several providers routed behind one key.
-    substrate.dev/restore: "a00fb61 - deploy/compose.yaml service bifrost, scripts/render_bifrost.py, scripts/gateway.py, .env.example's gateway block (S-04, S-14, S-34, S-40)"
-    substrate.dev/evidence: "Ran on the owner's machine 2026-11-08. v2.3.2 locks /api and /metrics until an admin account exists (S-34); its data volume kept providers after .env removed them until source_of_truth was set (S-40). Its volume was removed (S-63)."
-    substrate.dev/candidates: Bifrost v2.3.2 (Apache-2.0); LiteLLM proxy (MIT core) not tried
-spec:
-  type: service
-  lifecycle: option
-  owner: group:operator
-  system: options
-  providesApis: [model-api]
----
-apiVersion: backstage.io/v1alpha1
-kind: Component
-metadata:
-  name: metrics
-  description: Prometheus - counters over time (gateway cost, allocations, service rates) for the observer to record as claims.
-  annotations:
-    substrate.dev/fits: The observed half - each query window recorded as observed claims.
-    substrate.dev/interface: The observer reads HTTP endpoints named in observe.yaml, so a probe over Prometheus's query API needs no new code path; nothing depends on it now.
-    substrate.dev/when: A gap needs numbers over time - cost, error rates, latency.
-    substrate.dev/restore: "a00fb61 - deploy/compose.yaml service prometheus, deploy/prometheus.yml, deploy/observer/queries.yaml (S-05, S-33, S-35)"
-    substrate.dev/evidence: "Ran 2026-11-08. Telemetry placeholder nodes (client=user, server=unknown) reached the review lane as gaps, 4 of 5 noise (S-35). Its volume was removed (S-63)."
-    substrate.dev/candidates: Prometheus v3.15.0 (Apache-2.0)
-spec:
-  type: service
-  lifecycle: option
-  owner: group:operator
-  system: options
-  providesApis: [metrics-api]
----
-apiVersion: backstage.io/v1alpha1
-kind: Component
-metadata:
-  name: traces
-  description: The OpenTelemetry collector - traces from every part become the observed call graph.
-  annotations:
-    substrate.dev/fits: The observed half - who actually calls whom, to compare with the declared map (substrate:drift).
-    substrate.dev/interface: A part's OpenTelemetry service.name is its catalog name.
-    substrate.dev/when: A gap needs observed calls rather than what the code and containers say.
-    substrate.dev/restore: "a00fb61 - deploy/compose.yaml service otel-collector, deploy/otel/collector.yaml, scripts/telemetry.py (S-28, S-30)"
-    substrate.dev/evidence: Ran 2026-11-08 with the servicegraph connector (alpha); Caddy, Bifrost, Backstage and Claude Code sent spans; a part that sends none shows as an unnamed peer.
-    substrate.dev/candidates: otelcol-contrib 0.163.2 (Apache-2.0)
-spec:
-  type: service
-  lifecycle: option
-  owner: group:operator
-  system: options
-  providesApis: [otlp-api]
-  consumesApis: [metrics-api]
----
-apiVersion: backstage.io/v1alpha1
-kind: Component
-metadata:
-  name: catalog-browser
-  description: Backstage - a browsable view over the same catalog files, plugins, and an MCP endpoint.
-  annotations:
-    substrate.dev/fits: A view over the catalog for people who want to browse it, or when a Backstage plugin is the right tool.
-    substrate.dev/interface: catalog-info.yaml stays in Backstage's entity model, so a Backstage install reads it unchanged.
-    substrate.dev/when: People need to browse the catalog beyond Workbench's shell, or a Backstage plugin is chosen for a job.
-    substrate.dev/restore: "a00fb61 - services/backstage (create-app 0.9.3, two-stage Containerfile), deploy/compose.yaml service backstage, scripts/build.sh build_backstage (S-12)"
-    substrate.dev/evidence: "Owner, 2026-11-08: fits catalogs of things but was not built for this, and only its MCP server justified it (S-38). The idea it served - catalogs of components to choose from - lives on in this file (S-47)."
-    substrate.dev/candidates: Backstage via @backstage/create-app 0.9.3 (Apache-2.0)
-spec:
-  type: website
-  lifecycle: option
-  owner: group:operator
-  system: options
----
-apiVersion: backstage.io/v1alpha1
-kind: Component
-metadata:
-  name: scheduler
-  description: Nomad - one control plane for containers, processes and clusters, with an ACL'd API an actuator can drive.
-  annotations:
-    substrate.dev/filler: nomad
-    substrate.dev/fits: Behind the runtime verbs, in place of compose.
-    substrate.dev/interface: Scripts call only rt_up, rt_down, rt_status, rt_logs; a scheduler is a new file in scripts/runtime/.
-    substrate.dev/when: Several nodes, batch jobs started by triggers, or an actuator that restarts and scales through an API.
-    substrate.dev/restore: "a00fb61 - scripts/runtime/nomad.sh, deploy/nomad/, scripts/install_hashicorp.py (S-16, S-17, S-27)"
-    substrate.dev/evidence: "Never passed check.sh on the owner's machine. Licence BUSL-1.1, outside the default stack's licence rule; the owner must decide on use before shipping it (S-18). Linux only with the Podman driver."
-    substrate.dev/candidates: Nomad 2.0.7 (BUSL-1.1) with nomad-driver-podman 0.6.5 (MPL-2.0); k3s (Apache-2.0) considered
-spec:
-  type: service
-  lifecycle: option
-  owner: group:operator
-  system: options
-  providesApis: [runtime-api]
----
-apiVersion: backstage.io/v1alpha1
-kind: Component
-metadata:
-  name: secrets-store
-  description: OpenBao - one API for secrets with policies, audit and versions.
-  annotations:
-    substrate.dev/filler: openbao
-    substrate.dev/fits: Behind the secrets verbs, in place of .env.
-    substrate.dev/interface: Scripts read secrets only through env_value and sec_start, sec_stop, sec_get, sec_put, sec_status; a store is a new file in scripts/secrets/.
-    substrate.dev/when: More than one person or machine, credentials handed to services one by one, or an audit trail needed.
-    substrate.dev/restore: "a00fb61 - scripts/secrets/openbao.sh, scripts/secrets/bao.py, scripts/secrets.sh (migrate), deploy/openbao/config.hcl (S-31)"
-    substrate.dev/evidence: Checked with the 2.7.1 binary (self-initialising, static seal, audit without values, migrate from .env); never the default on the owner's machine.
-    substrate.dev/candidates: OpenBao 2.7.1 (MPL-2.0); SOPS, Infisical or a cloud KMS not tried
-spec:
-  type: service
-  lifecycle: option
-  owner: group:operator
-  system: options
-  providesApis: [secrets-api]
----
-apiVersion: backstage.io/v1alpha1
-kind: Component
-metadata:
-  name: bus
-  description: pgmq queues for work and notices between parts, never facts, beyond Workbench's own job queue.
-  annotations:
-    substrate.dev/fits: Between drift, verdicts and whatever starts work - triggers that start headless sessions, notices for the owner.
-    substrate.dev/interface: pgmq is already in substrate's Postgres image and Workbench queues its jobs on it (wb_jobs); its LISTEN/NOTIFY events are unchanged.
-    substrate.dev/when: Something should start a session without a person - a detector finding, a goal past its date.
-    substrate.dev/restore: "a00fb61 - scripts/bus.sh, scripts/bus.py, deploy/bus/queues.txt, modules/dispatcher/BRIEF.md (S-21, S-24)"
-    substrate.dev/evidence: "Ran 2026-11-08 (queues triggers, owner, events). Its database and login were removed (S-68). Workbench uses pgmq for its jobs (wb_jobs)."
-    substrate.dev/candidates: pgmq v1.13.1 (PostgreSQL License)
-spec:
-  type: service
-  lifecycle: option
-  owner: group:operator
-  system: options
----
-apiVersion: backstage.io/v1alpha1
-kind: Component
-metadata:
-  name: console
-  description: The owner's live page - review lane, verdicts, spend, stack, the spec's progress - on one page.
-  annotations:
-    substrate.dev/fits: A view for the owner in Workbench's shell, or beside it behind the front door.
-    substrate.dev/interface: Workbench's API, events and sign-in give the same data; its shell can show another UI as an app.
-    substrate.dev/when: Workbench's views are not enough to act from - several sources on one page.
-    substrate.dev/restore: "a00fb61 - services/console, deploy/caddy/Caddyfile's /console route (S-22, S-29)"
-    substrate.dev/evidence: Ran 2026-11-08; its Map drew intended, observed and the difference with Cytoscape.js.
-spec:
-  type: website
-  lifecycle: option
-  owner: group:operator
-  system: options
-  consumesApis: [workbench-api]
----
-apiVersion: backstage.io/v1alpha1
-kind: Component
-metadata:
-  name: front-door-plugins
-  description: Caddy built with plugins (xcaddy) - auth, rate limits, other modules on the one address.
-  annotations:
-    substrate.dev/fits: In place of the stock Caddy image.
-    substrate.dev/interface: The compose caddy service takes any image through CADDY_IMAGE.
-    substrate.dev/when: The front door needs a module the stock image lacks.
-    substrate.dev/restore: "a00fb61 - deploy/caddy/ (Containerfile, plugins.txt), scripts/build.sh build_caddy (S-20)"
-    substrate.dev/candidates: Caddy 2.11.7 on caddy:2.11.7-builder-alpine (Apache-2.0)
-spec:
-  type: service
-  lifecycle: option
-  owner: group:operator
-  system: options
----
-apiVersion: backstage.io/v1alpha1
-kind: Component
-metadata:
-  name: graph-endpoint
-  description: A SPARQL endpoint over Workbench's items, claims and relations, with reasoning - Ontop, a virtual knowledge graph over the live tables.
-  annotations:
-    substrate.dev/filler: ontop
-    substrate.dev/intent: Ask the store by meaning (classes, sub-properties, claims and their premises) without a copy of it.
-    substrate.dev/fill: adopt
-    substrate.dev/basis: deploy/ontop/Containerfile (Ontop 5.5.0 with PgJDBC 42.7.14), compose service graph, Caddy /sparql; its mapping and ontology generated from Workbench's terms (workbench/workbench/graph.py, scripts/graph.sh, .state/graph); reads as wb_reader
-    substrate.dev/observed-as: "container:substrate-graph"
-    substrate.dev/candidates: "Picked Ontop 5.5.0 (Apache-2.0) over Jena Fuseki, Oxigraph, RDFLib with OWL-RL, QLever, Virtuoso, Blazegraph and Morph-KGC: docs/choices/rdf-endpoint.yaml, in Workbench as choice rdf-endpoint"
-    substrate.dev/evidence: "Trial 2026-11-09 (scripts/trials/rdf-endpoint/run.sh): the only candidate with right answers to the reasoning queries and current data; about 430 MB. Live since step 7: run.sh live passes (q1 92/92, q2 5, q3 311/311, fresh)."
-    substrate.dev/step: "7"
-spec:
-  type: service
+  type: sparql
   lifecycle: experimental
   owner: group:operator
   system: core
-  providesApis: [graph-api]
-  consumesApis: [workbench-api, database-api]
+  definition: 'SPARQL 1.1 Protocol, query only; vocabulary from wb.term (Workbench''s wb: terms and each plugin''s, e.g. substrate''s
+    sub:).'
 ---
 apiVersion: backstage.io/v1alpha1
-kind: Component
+kind: API
 metadata:
-  name: external-vocabularies
-  description: Standard vocabularies for content types beyond substrate's own terms - PROV-O, SPDX, DOAP, SKOS - chosen from ontology registries.
+  name: judge-api
+  description: Morphogen's MCP tools and CLI - status, measure, probe, judge, tune, evidence.
   annotations:
-    substrate.dev/fits: Terms on Workbench's content types and fields (x-term), loaded into wb.term, related by SSSOM mappings in wb.mapping.
-    substrate.dev/interface: x-term on JSON Schema types and fields; wb.term and wb.mapping; substrate's own vocabulary (step 7) maps to these when they come.
-    substrate.dev/when: Data is exchanged with other tools, or merged from another system's terms (S-61).
-    substrate.dev/candidates: "Registries to verify: Linked Open Vocabularies, EBI's Ontology Lookup Service, BioPortal, schema.org, Wikidata"
+    morphogen.dev/tests: scripts/contract.sh judge-api
 spec:
-  type: library
+  type: mcp-server
+  lifecycle: production
+  owner: group:operator
+  system: core
+  definition: Morphogen's MCP tools; rules from the base commit.
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: repository-api
+  description: 'A git repository Morphogen can judge in: a resolvable HEAD, history, its own git directory.'
+  annotations:
+    morphogen.dev/tests: scripts/contract.sh repository-api
+spec:
+  type: contract
+  lifecycle: production
+  owner: group:operator
+  system: core
+  definition: git; resource git-repo fills it.
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: runtime-api
+  description: The runtime's four verbs; compose answers them now, a scheduler could.
+  annotations:
+    morphogen.dev/tests: scripts/contract.sh runtime-api
+spec:
+  type: shell
+  lifecycle: production
+  owner: group:operator
+  system: core
+  definition: rt_up, rt_down [--volumes], rt_status, rt_logs SERVICE (scripts/runtime/<name>.sh).
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: sandbox-api
+  description: 'The container engine starts a locked-down container: no network, a read-only root, no capabilities.'
+  annotations:
+    morphogen.dev/tests: scripts/contract.sh sandbox-api
+spec:
+  type: contract
+  lifecycle: production
+  owner: group:operator
+  system: core
+  definition: ENGINE run with those flags; resource sandbox (Podman) fills it.
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: secrets-api
+  description: The secrets verbs; .env answers them now, a store could.
+  annotations:
+    morphogen.dev/tests: scripts/contract.sh secrets-api
+spec:
+  type: shell
+  lifecycle: production
+  owner: group:operator
+  system: core
+  definition: env_value NAME; sec_start, sec_stop, sec_get NAME, sec_put NAME (stdin), sec_status (scripts/secrets/<name>.sh).
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: tools-api
+  description: The tools container runs bin/ (Morphogen, gitleaks, Workbench's command) as the user, with the checkout mounted.
+  annotations:
+    morphogen.dev/tests: scripts/contract.sh tools-api
+spec:
+  type: contract
+  lifecycle: production
+  owner: group:operator
+  system: core
+  definition: bin/in-tools COMMAND; component tools fills it.
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: workbench-api
+  description: Workbench's JSON API at /api - a view per content type, claims, content_types, rpc/login, rpc/whoami.
+  annotations:
+    morphogen.dev/tests: scripts/contract.sh workbench-api
+    substrate.dev/observed-as: api:workbench-rest-openapi
+spec:
+  type: openapi
+  lifecycle: experimental
+  owner: group:operator
+  system: core
+  definition: PostgREST's OpenAPI 2.0 description at http://127.0.0.1:8080/api/ (filtered by the caller's role).
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: workbench-mcp-api
+  description: Workbench over MCP for agents at /wb/api/mcp - search, items with their claims, save, decisions, extractors.
+  annotations:
+    morphogen.dev/tests: scripts/contract.sh workbench-mcp-api
+    substrate.dev/observed-as: api:workbench-mcp-tools
+spec:
+  type: mcp-server
+  lifecycle: experimental
+  owner: group:operator
+  system: core
+  definition: Streamable HTTP, JSON responses; each tool call forwards the agent's own token to PostgREST.
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: workbench-server-api
+  description: The Workbench server's own HTTP API at /wb/api - health, live events, extractors, queueing a run, and its OpenAPI
+    document (decided from a step 5 gap).
+  annotations:
+    morphogen.dev/tests: scripts/contract.sh workbench-server-api
+    substrate.dev/observed-as: api:workbench-server-openapi
+spec:
+  type: openapi
+  lifecycle: experimental
+  owner: group:operator
+  system: core
+  definition: OpenAPI 3.1, generated from the routes it serves, at http://127.0.0.1:8080/wb/api/openapi.json.
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: metrics-api
+  description: Prometheus's HTTP query API, as an observer probe would read it.
+spec:
+  type: http
   lifecycle: option
   owner: group:operator
   system: options
+  definition: GET /api/v1/query - queries in the observer's queries.yaml.
 ---
 apiVersion: backstage.io/v1alpha1
-kind: Component
+kind: API
 metadata:
-  name: remote-judge
-  description: Morphogen on another machine, so the changer cannot even reach the judge's host.
-  annotations:
-    substrate.dev/filler: remote-morphogen
-    substrate.dev/fits: In place of the local Morphogen behind judge-api.
-    substrate.dev/interface: judge-api (Morphogen's CLI and MCP tools); substrate:morphogen reads the evidence log, which would be shipped or served instead of read from this repository's git directory.
-    substrate.dev/when: Stronger separation is wanted, or several substrates share one judge (S-61).
+  name: model-api
+  description: An Anthropic-compatible endpoint Claude Code can be pointed at (ANTHROPIC_BASE_URL).
 spec:
-  type: service
+  type: http
   lifecycle: option
   owner: group:operator
   system: options
-  providesApis: [judge-api]
+  definition: 'POST /anthropic/v1/messages (Bifrost: with a virtual key in x-bf-vk).'
 ---
-# ================================================================ SOURCES (spec 5): catalogs of catalogs
 apiVersion: backstage.io/v1alpha1
-kind: Resource
+kind: API
 metadata:
-  name: npm
-  description: The npm registry - JavaScript and TypeScript packages.
-  annotations:
-    substrate.dev/search: "GET https://registry.npmjs.org/-/v1/search?text=QUERY&size=N; a package: GET https://registry.npmjs.org/NAME"
-    substrate.dev/gives: versions with publish times, licence, repository, maintainers, search scores (quality, popularity, maintenance)
-    substrate.dev/checked: "2026-11-08 (search answered 200, JSON)"
-spec: {type: registry, lifecycle: listed, owner: group:operator, system: sources}
----
-apiVersion: backstage.io/v1alpha1
-kind: Resource
-metadata:
-  name: pypi
-  description: The Python Package Index.
-  annotations:
-    substrate.dev/search: "No search API (XML-RPC search is disabled); search through deps.dev or the website (https://pypi.org/search/?q=QUERY, HTML). A package: GET https://pypi.org/pypi/NAME/json"
-    substrate.dev/gives: per package - licence and classifiers, releases with upload times, requires_python, project URLs
-    substrate.dev/limits: Searching means parsing HTML or going through deps.dev.
-    substrate.dev/checked: "2026-11-08 (package JSON answered 200)"
-spec: {type: registry, lifecycle: listed, owner: group:operator, system: sources}
----
-apiVersion: backstage.io/v1alpha1
-kind: Resource
-metadata:
-  name: crates-io
-  description: crates.io - Rust crates.
-  annotations:
-    substrate.dev/search: "GET https://crates.io/api/v1/crates?q=QUERY&per_page=N"
-    substrate.dev/gives: versions with dates, licence, downloads, repository
-    substrate.dev/limits: Its crawler policy asks for a User-Agent that identifies the client, and about one request a second.
-    substrate.dev/checked: "2026-11-08 (search answered 200, JSON)"
-spec: {type: registry, lifecycle: listed, owner: group:operator, system: sources}
----
-apiVersion: backstage.io/v1alpha1
-kind: Resource
-metadata:
-  name: go-modules
-  description: The Go module proxy, with pkg.go.dev for discovery.
-  annotations:
-    substrate.dev/search: "No search API on the proxy; discover on pkg.go.dev (HTML) or deps.dev. Versions: GET https://proxy.golang.org/MODULE/@v/list; one version: .../@v/VERSION.info"
-    substrate.dev/gives: versions and their times; licence through deps.dev or pkg.go.dev
-    substrate.dev/checked: "2026-11-08 (version list answered 200)"
-spec: {type: registry, lifecycle: listed, owner: group:operator, system: sources}
----
-apiVersion: backstage.io/v1alpha1
-kind: Resource
-metadata:
-  name: github
-  description: GitHub - repositories, releases, licences, activity.
-  annotations:
-    substrate.dev/search: "gh search repos QUERY, or GET https://api.github.com/search/repositories?q=QUERY"
-    substrate.dev/gives: licence, stars, last push, open issues, releases with dates, topics
-    substrate.dev/limits: Search is rate-limited, tightly without a token; use gh, which carries the owner's login.
-    substrate.dev/checked: "2026-11-08 (search answered 200, JSON)"
-spec: {type: registry, lifecycle: listed, owner: group:operator, system: sources}
----
-apiVersion: backstage.io/v1alpha1
-kind: Resource
-metadata:
-  name: apt
-  description: Debian and Ubuntu package archives - system packages for images.
-  annotations:
-    substrate.dev/search: "apt-cache search QUERY and apt-cache policy NAME inside a container of the target release; source search: GET https://sources.debian.org/api/search/QUERY/"
-    substrate.dev/gives: versions per release and suite, sections, dependencies; licences in each package's copyright file
-    substrate.dev/limits: What is available depends on the base image's release; search in that image, not on the host.
-    substrate.dev/checked: "2026-11-08 (sources.debian.org search answered 200, JSON)"
-spec: {type: registry, lifecycle: listed, owner: group:operator, system: sources}
----
-apiVersion: backstage.io/v1alpha1
-kind: Resource
-metadata:
-  name: container-images
-  description: OCI registries - Docker Hub, Quay, GHCR.
-  annotations:
-    substrate.dev/search: "podman search QUERY; tags: podman search --list-tags REGISTRY/NAME; Docker Hub also GET https://hub.docker.com/v2/search/repositories/?query=QUERY"
-    substrate.dev/gives: names, tags, digests (pin by digest), official or verified flags on Docker Hub
-    substrate.dev/limits: Always name the registry (Podman refuses short names, S-34); a licence comes from the image's source, not the registry.
-    substrate.dev/checked: "2026-11-08 (podman search --list-tags and Docker Hub search answered)"
-spec: {type: registry, lifecycle: listed, owner: group:operator, system: sources}
----
-apiVersion: backstage.io/v1alpha1
-kind: Resource
-metadata:
-  name: huggingface
-  description: The Hugging Face Hub - models, datasets, spaces.
-  annotations:
-    substrate.dev/search: "GET https://huggingface.co/api/models?search=QUERY&limit=N (also /api/datasets)"
-    substrate.dev/gives: licence tag, downloads, likes, last modified, pipeline tag, model card
-    substrate.dev/checked: "2026-11-08 (model search answered 200, JSON)"
-spec: {type: registry, lifecycle: listed, owner: group:operator, system: sources}
----
-apiVersion: backstage.io/v1alpha1
-kind: Resource
-metadata:
-  name: deps-dev
-  description: deps.dev (Open Source Insights) - one API over npm, PyPI, Go, Maven, Cargo and NuGet.
-  annotations:
-    substrate.dev/search: "GET https://api.deps.dev/v3/systems/SYSTEM/packages/NAME (and .../versions/VERSION, ...:dependencies); docs https://docs.deps.dev/api/v3/"
-    substrate.dev/gives: versions with publish times, licences, dependency graphs, security advisories, OpenSSF Scorecard for source projects
-    substrate.dev/limits: Looks up known names; it is not a free-text search.
-    substrate.dev/checked: "2026-11-08 (npm package lookup answered 200, JSON)"
-spec: {type: registry, lifecycle: listed, owner: group:operator, system: sources}
----
-# ================================================================ RESOURCES
-apiVersion: backstage.io/v1alpha1
-kind: Component
-metadata:
-  name: postgres
-  description: Postgres 17 with pgvector, pg_cron, pgmq, pgGraph (deploy/postgres; S-24, S-57); database workbench.
-  annotations:
-    substrate.dev/filler: postgres
-    substrate.dev/observed-as: "container:substrate-db, volume:substrate-db-data"
-spec: {type: database, owner: group:operator, system: core, lifecycle: production, providesApis: [database-api]}
----
-apiVersion: backstage.io/v1alpha1
-kind: Component
-metadata:
-  name: evidence-log
-  description: Morphogen's hash-chained verdict log, in git's own directory.
-  annotations:
-    substrate.dev/filler: morphogen-evidence
-spec: {type: database, owner: group:operator, system: core, lifecycle: production, providesApis: [evidence-api]}
----
-apiVersion: backstage.io/v1alpha1
-kind: Component
-metadata:
-  name: git-repo
-  description: Code, the map, the cells, and history.
-  annotations:
-    substrate.dev/filler: git
-spec: {type: repository, owner: group:operator, system: core, lifecycle: production, providesApis: [repository-api]}
----
-apiVersion: backstage.io/v1alpha1
-kind: Component
-metadata:
-  name: sandbox
-  description: Containers for judged runs, modules and the tools (Podman).
-  annotations:
-    substrate.dev/filler: podman
-spec: {type: container-runtime, owner: group:operator, system: core, lifecycle: production, providesApis: [sandbox-api]}
----
-apiVersion: backstage.io/v1alpha1
-kind: API
-metadata: {name: judge-api, annotations: {morphogen.dev/tests: "scripts/contract.sh judge-api"}, description: "Morphogen's MCP tools and CLI - status, measure, probe, judge, tune, evidence."}
-spec: {type: mcp-server, lifecycle: production, owner: group:operator, system: core, definition: "Morphogen's MCP tools; rules from the base commit."}
----
-apiVersion: backstage.io/v1alpha1
-kind: API
-metadata: {name: runtime-api, annotations: {morphogen.dev/tests: "scripts/contract.sh runtime-api"}, description: "The runtime's four verbs; compose answers them now, a scheduler could."}
-spec: {type: shell, lifecycle: production, owner: group:operator, system: core, definition: "rt_up, rt_down [--volumes], rt_status, rt_logs SERVICE (scripts/runtime/<name>.sh)."}
----
-apiVersion: backstage.io/v1alpha1
-kind: API
-metadata: {name: secrets-api, annotations: {morphogen.dev/tests: "scripts/contract.sh secrets-api"}, description: "The secrets verbs; .env answers them now, a store could."}
-spec: {type: shell, lifecycle: production, owner: group:operator, system: core, definition: "env_value NAME; sec_start, sec_stop, sec_get NAME, sec_put NAME (stdin), sec_status (scripts/secrets/<name>.sh)."}
----
-apiVersion: backstage.io/v1alpha1
-kind: API
-metadata: {name: model-api, description: "An Anthropic-compatible endpoint Claude Code can be pointed at (ANTHROPIC_BASE_URL)."}
-spec: {type: http, lifecycle: option, owner: group:operator, system: options, definition: "POST /anthropic/v1/messages (Bifrost: with a virtual key in x-bf-vk)."}
----
-apiVersion: backstage.io/v1alpha1
-kind: API
-metadata: {name: metrics-api, description: "Prometheus's HTTP query API, as an observer probe would read it."}
-spec: {type: http, lifecycle: option, owner: group:operator, system: options, definition: "GET /api/v1/query - queries in the observer's queries.yaml."}
----
-apiVersion: backstage.io/v1alpha1
-kind: API
-metadata: {name: otlp-api, description: "OTLP over gRPC (4317) and HTTP (4318)."}
-spec: {type: grpc, lifecycle: option, owner: group:operator, system: options, definition: "OpenTelemetry protocol; service.name is the catalog name."}
----
-apiVersion: backstage.io/v1alpha1
-kind: API
-metadata: {name: workbench-api, annotations: {morphogen.dev/tests: "scripts/contract.sh workbench-api", substrate.dev/observed-as: "api:workbench-rest-openapi"}, description: "Workbench's JSON API at /api - a view per content type, claims, content_types, rpc/login, rpc/whoami."}
-spec: {type: openapi, lifecycle: experimental, owner: group:operator, system: core, definition: "PostgREST's OpenAPI 2.0 description at http://127.0.0.1:8080/api/ (filtered by the caller's role)."}
-
----
-apiVersion: backstage.io/v1alpha1
-kind: API
-metadata: {name: workbench-mcp-api, annotations: {morphogen.dev/tests: "scripts/contract.sh workbench-mcp-api", substrate.dev/observed-as: "api:workbench-mcp-tools"}, description: "Workbench over MCP for agents at /wb/api/mcp - search, items with their claims, save, decisions, extractors."}
-spec: {type: mcp-server, lifecycle: experimental, owner: group:operator, system: core, definition: "Streamable HTTP, JSON responses; each tool call forwards the agent's own token to PostgREST."}
----
-apiVersion: backstage.io/v1alpha1
-kind: API
-metadata: {name: workbench-server-api, annotations: {morphogen.dev/tests: "scripts/contract.sh workbench-server-api", substrate.dev/observed-as: "api:workbench-server-openapi"}, description: "The Workbench server's own HTTP API at /wb/api - health, live events, extractors, queueing a run, and its OpenAPI document (decided from a step 5 gap)."}
-spec: {type: openapi, lifecycle: experimental, owner: group:operator, system: core, definition: "OpenAPI 3.1, generated from the routes it serves, at http://127.0.0.1:8080/wb/api/openapi.json."}
----
-apiVersion: backstage.io/v1alpha1
-kind: API
-metadata: {name: graph-api, annotations: {morphogen.dev/tests: "scripts/contract.sh graph-api"}, description: "SPARQL 1.1 at /sparql over Workbench's tables, read-only, with OWL 2 QL reasoning at query time (spec step 7)."}
-spec: {type: sparql, lifecycle: experimental, owner: group:operator, system: core, definition: "SPARQL 1.1 Protocol, query only; vocabulary from wb.term (Workbench's wb: terms and each plugin's, e.g. substrate's sub:)."}
----
-apiVersion: backstage.io/v1alpha1
-kind: API
-metadata: {name: database-api, annotations: {morphogen.dev/tests: "scripts/contract.sh database-api"}, description: "Postgres as the stack needs it: version 17, pgvector, pg_cron, pgmq and pgGraph available, Workbench's roles."}
-spec: {type: contract, lifecycle: production, owner: group:operator, system: core, definition: "SQL over the workbench database; resource postgres (deploy/postgres) fills it."}
----
-apiVersion: backstage.io/v1alpha1
-kind: API
-metadata: {name: tools-api, annotations: {morphogen.dev/tests: "scripts/contract.sh tools-api"}, description: "The tools container runs bin/ (Morphogen, gitleaks, Workbench's command) as the user, with the checkout mounted."}
-spec: {type: contract, lifecycle: production, owner: group:operator, system: core, definition: "bin/in-tools COMMAND; component tools fills it."}
----
-apiVersion: backstage.io/v1alpha1
-kind: API
-metadata: {name: sandbox-api, annotations: {morphogen.dev/tests: "scripts/contract.sh sandbox-api"}, description: "The container engine starts a locked-down container: no network, a read-only root, no capabilities."}
-spec: {type: contract, lifecycle: production, owner: group:operator, system: core, definition: "ENGINE run with those flags; resource sandbox (Podman) fills it."}
----
-apiVersion: backstage.io/v1alpha1
-kind: API
-metadata: {name: repository-api, annotations: {morphogen.dev/tests: "scripts/contract.sh repository-api"}, description: "A git repository Morphogen can judge in: a resolvable HEAD, history, its own git directory."}
-spec: {type: contract, lifecycle: production, owner: group:operator, system: core, definition: "git; resource git-repo fills it."}
----
-apiVersion: backstage.io/v1alpha1
-kind: API
-metadata: {name: evidence-api, annotations: {morphogen.dev/tests: "scripts/contract.sh evidence-api"}, description: "Morphogen's evidence log, its hash chain verifiable by Morphogen and independently."}
-spec: {type: contract, lifecycle: production, owner: group:operator, system: core, definition: "SQLite at <git common dir>/morphogen/evidence.db; resource evidence-log fills it."}
+  name: otlp-api
+  description: OTLP over gRPC (4317) and HTTP (4318).
+spec:
+  type: grpc
+  lifecycle: option
+  owner: group:operator
+  system: options
+  definition: OpenTelemetry protocol; service.name is the catalog name.

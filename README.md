@@ -92,9 +92,11 @@ Each of these is small and uses only what is already here:
 | Actor | Claude Code | explores, interviews, builds, maps |
 | Judge | [Morphogen](https://github.com/OpenReplicant/Morphogen), cloned to `repos/morphogen` | a change lands only with a verdict the changer cannot reach |
 
-This repository is the glue: scripts that bring the parts up and connect them, a tools container they run in,
-and `catalog-info.yaml`, substrate's map of itself. Production choices it stays compatible with but does not
-run are options in that map (system `options`; [`docs/spec.md`](docs/spec.md) section 8).
+This repository is the glue: scripts that bring the parts up and connect them, and a tools container they run
+in. Substrate's map of itself lives in Workbench, where you or the agent edit it, and `catalog-info.yaml` is its
+committed export: the copy the judge reads, and the one a new machine starts from
+([`plugins/substrate/MAP.md`](plugins/substrate/MAP.md)). Production choices it stays compatible with but does not
+run are options on that map (system `options`; [`docs/spec.md`](docs/spec.md) section 8).
 
 **Pluggable by slots, not by trust.** Each part fills a slot named by an interface, and anything that answers
 the interface can take its place once it passes that slot's contract test. The judge is the exception: the
@@ -127,7 +129,7 @@ Every default and the reason for it is in [`DECISIONS.md`](DECISIONS.md).
 ```
 CLAUDE.md            instructions for the agent working here
 DECISIONS.md         every default and why (S-01...), append-only
-catalog-info.yaml    the map: what runs (core), what it can choose (options), where to search (sources)
+catalog-info.yaml    the map's export (edit it in Workbench): what runs, what it can choose, where to search
 morphogen.yaml       the same map as Morphogen cells
 observe.yaml         what the observer reads on this machine, and how to read each kind of software
 repos.yaml           the upstream projects and the commits last checked
@@ -135,7 +137,7 @@ docs/                the spec, its build plan, recorded choices
 deploy/              the stack (compose.yaml), the Postgres image, the Caddyfile, the secrets list, the tools image
 workbench/           Workbench: the store, its shell, server and MCP (its own README, licence and tests)
 plugins/substrate/   substrate's Workbench plugin: content types, extractors, the observer, the reasoner, the Map
-scripts/             bootstrap, up, down, check, observe, map, contract, trace, graph, spec, verdicts
+scripts/             bootstrap, up, down, check, test, observe, map, contract, trace, graph, spec, verdicts
 bin/                 morphogen, gitleaks: each runs inside the tools container (in-tools runs anything else there)
 .claude/skills/      setup, build-out, research, upstream
 repos/               the Morphogen clone, gitignored, its own git repository

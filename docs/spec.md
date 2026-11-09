@@ -107,7 +107,8 @@ Three, plus the glue between them.
 | **Morphogen** | the judge: a change lands only with a verdict the changer cannot reach | `repos/morphogen` |
 
 The glue is this repository: scripts that bring the parts up and connect them, the tools container they run in
-(S-19), substrate's Workbench plugin (`plugins/substrate`), and the map (`catalog-info.yaml`). It runs one way for
+(S-19), substrate's Workbench plugin (`plugins/substrate`), and the map's committed export (`catalog-info.yaml`; the map
+itself lives in Workbench, `plugins/substrate/MAP.md`). It runs one way for
 now: compose with Podman, secrets in `.env`.
 
 ### The store: Workbench
@@ -163,7 +164,7 @@ a model happens to remember.
 
 - **Catalogs of components**: things it can use, each with what it is for, where it fits, its licence and
   versions, and the evidence gathered about it (tests run, verdicts, problems met). Substrate's own map is one
-  (`catalog-info.yaml`, system `core`). The parts removed in step 1 are its first options (system `options`):
+  (system `core`). The parts removed in step 1 are its first options (system `options`):
   each says where it fits, what interface keeps it possible, and the commit to restore it from.
 - **Catalogs of searchable catalogs**: registries it can search when no known component fits. Examples are npm,
   PyPI, crates.io, the Go module proxy, GitHub, apt archives, container registries, the Hugging Face Hub, and
@@ -240,7 +241,7 @@ money. When the lane gets noisy, fix the noise where it starts (an encoder, a qu
 
 ## 8. Options: what substrate stays compatible with
 
-These are good production choices that substrate does not run now. Each is a component in `catalog-info.yaml`,
+These are good production choices that substrate does not run now. Each is a component on the map,
 system `options`, with lifecycle `option`. Each entry says where it fits, the interface that keeps it
 possible, when to bring it back, and the commit to restore it from (`a00fb61`, where all of them ran on the
 owner's machine on 2026-11-08). The rule: don't build it now, don't close the door on it. One comes back

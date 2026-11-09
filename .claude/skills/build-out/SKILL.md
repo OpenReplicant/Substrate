@@ -29,7 +29,8 @@ instead; this skill is the default, not an override.
    quality, a skill, a threshold) lands only with a Morphogen verdict; a change that only adds a part needs its
    check to pass.
 7. **Check, then record.** Run the step's `check`. Only when it passes: `python3 scripts/spec.py set ID done`,
-   update `catalog-info.yaml` if a part was added (and `bin/morphogen structure check morphogen.yaml`), add a
+   update the map in Workbench if a part was added, `scripts/map.sh export` (and `bin/morphogen structure check
+   morphogen.yaml`), add a
    `DECISIONS.md` row for any default chosen, run `scripts/check.sh`, and commit with the step in the message
    ("spec step 1: ...").
 8. **One step per session**, unless a step is small and the owner is watching and wants the next. Stop with a

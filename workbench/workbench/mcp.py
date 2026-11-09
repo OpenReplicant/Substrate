@@ -90,6 +90,14 @@ class Tools:
             out = self.rest("POST", type, None, {"slug": slug, **body}, "return=representation")
         return out[0] if out else None
 
+    def retire_item(self, type: str, ref: str, note: str = ""):
+        item = self._find(type, ref)
+        return self.rest("POST", "rpc/retire", body={"type": type, "id": item["id"], "note": note or None})
+
+    def restore_item(self, type: str, ref: str):
+        item = self._find(type, ref)
+        return self.rest("POST", "rpc/restore", body={"type": type, "id": item["id"]})
+
     def claims(self, type: str, ref: str, field: str = ""):
         item = self._find(type, ref)
         q = {"subject_id": f"eq.{item['id']}", "order": "observed_at.desc", "limit": "100",
@@ -126,6 +134,11 @@ TOOLS = [
      {"type": S, "ref": S}, ["type", "ref"]),
     ("save_item", "Create or change an item by slug. Every value written becomes a claim attributed to you. Needs the editor role.",
      {"type": S, "slug": S, "fields": {"type": "object"}, "title": S}, ["type", "slug", "fields"]),
+    ("retire_item", "Retire an item (nothing is deleted): every current claim behind it is retracted, and the retirement, "
+     "with your note, is a claim of yours. restore_item undoes it. Needs the editor role.",
+     {"type": S, "ref": S, "note": S}, ["type", "ref"]),
+    ("restore_item", "Undo a retirement: the claims it retracted are current again, except where something newer was written.",
+     {"type": S, "ref": S}, ["type", "ref"]),
     ("claims", "Every claim about an item (current, superseded, retracted), newest first; optionally one field.",
      {"type": S, "ref": S, "field": S}, ["type", "ref"]),
     ("open_decisions", "Decisions waiting for a person or an agent with the right role: gaps, disputes, proposals.",

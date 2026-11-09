@@ -33,7 +33,11 @@ wait_for() {   # what url logs
 wait_for API "http://127.0.0.1:8080/api/" postgrest
 wait_for server "http://127.0.0.1:8080/wb/api/health" workbench
 wait_for shell "http://127.0.0.1:8080/" caddy
-for x in catalog claude-code morphogen choices; do   # the map, what the repository has, verdicts, choices
+# the map lives in Workbench (plugins/substrate/MAP.md); an empty one starts from the committed export
+if [ "$("$ROOT/scripts/map.sh" count 2>/dev/null || echo 0)" = 0 ]; then
+  "$ROOT/scripts/map.sh" import | head -1
+fi
+for x in map claude-code morphogen choices; do   # the map's relations, what the repository has, verdicts, choices
   "$ROOT/scripts/workbench.sh" extract "substrate:$x" | python3 -c 'import json, sys; d = json.load(sys.stdin); print("  substrate:'"$x"'", "ok" if d.get("ok") else "FAILED: " + str(d.get("error")), *(d.get("log") or []))'
 done
 "$ROOT/scripts/observe.sh" || echo "  observing stopped (above); the gaps are as they were"   # what runs, the gaps, inferences
