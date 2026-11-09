@@ -104,11 +104,12 @@ steps:
       Recall: search "ontop sparql" finds choice rdf-endpoint and its candidates, each with its reason.
 
   - id: 5
+    status: done
+    done_on: 2026-11-09
     title: "Autopoietic, observed: substrate as it actually runs"
     spec: "1, 3, 6"
     where: substrate (observing extractors in substrate's plugin, drift across every kind), Workbench (content types for what is observed)
     after: [4]
-    status: todo
     check: >-
       the observed half of substrate covers what runs it, read by extractors that would read any machine the same
       way (nothing self-only): the host (OS, CPU, memory, the container engine and its version); each container
@@ -120,7 +121,7 @@ steps:
       compares map and observation for every kind, not only skills and hooks; at least one real gap of a kind
       step 2 could not see reaches the review lane and is decided; and scripts/trace.sh follows a chain from a
       route to the container that serves it
-    notes: >-
+    notes: >- Done 2026-11-09 (S-62): observe.py on the host and substrate:observed, eleven observed types, observed-as on the map and drift for every kind; the Workbench server's API gap decided (declared as workbench-server-api); five old volumes left open for the owner.
       Added 2026-11-09 (S-61). Owner: "is Substrate modeling itself as an agent-system? like does it have a map
       of the machine its on, the processes/containers running it, and where they have settings/params, hooks,
       APIs, UIs, etc? that might be the better place to start than a hypothetical scenario." At S-61 the observed

@@ -12,6 +12,8 @@
 #                             build (to write: a Workbench plugin, a skill, or glue here)
 #   substrate.dev/basis       where an existing part lives
 #   substrate.dev/step        the build step (docs/build.yaml) it belongs to
+#   substrate.dev/observed-as how it is recognised running: <type>:<slug> items substrate:observed reads (a slug may
+#                             be a glob), comma-separated; substrate:drift raises what no part accounts for (OBSERVE.md)
 #   options:  substrate.dev/fits (where it would sit), substrate.dev/interface (what keeps it possible now),
 #             substrate.dev/when (what would bring it back), substrate.dev/restore (the commit and paths to
 #             restore it from), substrate.dev/evidence (what was learned running it), substrate.dev/candidates
@@ -74,6 +76,7 @@ metadata:
     substrate.dev/intent: One address for people and agents.
     substrate.dev/fill: adopt
     substrate.dev/basis: deploy/compose.yaml service caddy, deploy/caddy/Caddyfile (the shell's page is a Caddy template); CADDY_IMAGE pins docker.io/library/caddy:2.11.7-alpine
+    substrate.dev/observed-as: "container:substrate-caddy, route:substrate-caddy-*"
 spec:
   type: service
   lifecycle: production
@@ -108,6 +111,7 @@ metadata:
     substrate.dev/intent: Close gaps between the intended and the observed, through responses that are judged and recorded.
     substrate.dev/fill: existing
     substrate.dev/basis: Claude Code, with Workbench's MCP server (scripts/harness.py, a token per connection from scripts/workbench-mcp-headers.sh) and Morphogen's plugin (S-03, S-57)
+    substrate.dev/observed-as: "connection:claude-code-workbench"
 spec:
   type: service
   lifecycle: production
@@ -149,6 +153,23 @@ spec:
   system: core
   subcomponentOf: claude-code
   consumesApis: [workbench-mcp-api]
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: observer
+  description: Reads a system as it runs - the host, its containers, images and volumes, setting names, routes, APIs, UIs, plugins, connections and Morphogen's cells - into claims, so drift can compare every kind with the map.
+  annotations:
+    substrate.dev/intent: Fill the observed half of a model from the machine itself, the same way on any machine (S-62).
+    substrate.dev/fill: build
+    substrate.dev/basis: plugins/substrate/observe.py (the collector, on the host, as observe.yaml says), substrate:observed and substrate:drift (plugins/substrate/substrate_plugin.py), scripts/observe.sh; plugins/substrate/OBSERVE.md
+    substrate.dev/step: "5"
+spec:
+  type: library
+  lifecycle: experimental
+  owner: group:agents
+  system: core
+  dependsOn: [component:workbench, component:tools]
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Component
@@ -273,6 +294,7 @@ metadata:
     substrate.dev/intent: Hold what substrate knows about any system as typed items whose every value can say where it came from; the store and the model since S-57.
     substrate.dev/fill: build
     substrate.dev/basis: workbench/ (BRIEF.md; W1 to W4 done), plugins/substrate
+    substrate.dev/observed-as: "ui:wb-core, plugin:substrate, ui:plugin-substrate"
     substrate.dev/step: "W4"
 spec:
   type: service
@@ -291,6 +313,7 @@ metadata:
     substrate.dev/intent: Serve the store without a hand-written data API, so every client gets the rules Postgres enforces.
     substrate.dev/fill: adopt
     substrate.dev/basis: deploy/compose.yaml service postgrest, deploy/caddy/Caddyfile (/api)
+    substrate.dev/observed-as: "container:substrate-postgrest"
     substrate.dev/candidates: docker.io/postgrest/postgrest:v16.5 (MIT, 2026-10-20)
 spec:
   type: service
@@ -310,6 +333,7 @@ metadata:
     substrate.dev/intent: Do what SQL cannot - run extractors and relay live changes - behind the same token check as the API.
     substrate.dev/fill: build
     substrate.dev/basis: workbench/workbench/server.py, extract.py, mcp.py; compose service workbench (workbench/Containerfile)
+    substrate.dev/observed-as: "container:substrate-workbench"
     substrate.dev/step: "W3"
 spec:
   type: service
@@ -317,7 +341,7 @@ spec:
   owner: group:operator
   system: core
   subcomponentOf: workbench
-  providesApis: [workbench-mcp-api]
+  providesApis: [workbench-mcp-api, workbench-server-api]
   consumesApis: [workbench-api]
   dependsOn: [resource:postgres]
 ---
@@ -331,6 +355,7 @@ metadata:
     substrate.dev/intent: Keep the host bare - Workbench's command, Morphogen and gitleaks run in a container as the host user.
     substrate.dev/fill: build
     substrate.dev/basis: deploy/tools/Containerfile (its own image since S-57), scripts/tools.sh, bin/ (S-19)
+    substrate.dev/observed-as: "container:substrate-tools"
 spec:
   type: service
   lifecycle: production
@@ -738,6 +763,8 @@ kind: Resource
 metadata:
   name: postgres
   description: Postgres 17 with pgvector, pg_cron, pgmq, pgGraph (deploy/postgres, vendored from kernel; S-24, S-57); databases workbench, and kk kept.
+  annotations:
+    substrate.dev/observed-as: "container:substrate-db, volume:knowledge-kernel-db-data"
 spec: {type: database, owner: group:operator, system: core}
 ---
 apiVersion: backstage.io/v1alpha1
@@ -793,11 +820,16 @@ spec: {type: grpc, lifecycle: option, owner: group:operator, system: options, de
 ---
 apiVersion: backstage.io/v1alpha1
 kind: API
-metadata: {name: workbench-api, description: "Workbench's JSON API at /api - a view per content type, claims, content_types, rpc/login, rpc/whoami."}
+metadata: {name: workbench-api, annotations: {substrate.dev/observed-as: "api:workbench-rest-openapi"}, description: "Workbench's JSON API at /api - a view per content type, claims, content_types, rpc/login, rpc/whoami."}
 spec: {type: openapi, lifecycle: experimental, owner: group:operator, system: core, definition: "PostgREST's OpenAPI 2.0 description at http://127.0.0.1:8080/api/ (filtered by the caller's role)."}
 
 ---
 apiVersion: backstage.io/v1alpha1
 kind: API
-metadata: {name: workbench-mcp-api, description: "Workbench over MCP for agents at /wb/api/mcp - search, items with their claims, save, decisions, extractors."}
+metadata: {name: workbench-mcp-api, annotations: {substrate.dev/observed-as: "api:workbench-mcp-tools"}, description: "Workbench over MCP for agents at /wb/api/mcp - search, items with their claims, save, decisions, extractors."}
 spec: {type: mcp-server, lifecycle: experimental, owner: group:operator, system: core, definition: "Streamable HTTP, JSON responses; each tool call forwards the agent's own token to PostgREST."}
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata: {name: workbench-server-api, annotations: {substrate.dev/observed-as: "api:workbench-server-openapi"}, description: "The Workbench server's own HTTP API at /wb/api - health, live events, extractors, queueing a run, and its OpenAPI document (decided from a step 5 gap)."}
+spec: {type: openapi, lifecycle: experimental, owner: group:operator, system: core, definition: "OpenAPI 3.1, generated from the routes it serves, at http://127.0.0.1:8080/wb/api/openapi.json."}

@@ -1,0 +1,28 @@
+# Where to look when observing this system as it runs (plugins/substrate/OBSERVE.md). The collector reads the host
+# and every container its engine runs on its own; this file adds what it cannot find by itself. Values are never
+# kept: settings are read by name only.
+
+# A token for endpoints that ask for one: a command printing {"Authorization": "Bearer ..."}, held in memory only.
+token: scripts/workbench-mcp-headers.sh
+
+# Files read for setting names (keys only, never values) and for Claude Code's wiring.
+env_files: [.env]
+claude_code: [.claude/settings.json, .mcp.json]
+
+# HTTP endpoints: what the system actually serves, fetched as a client would.
+http:
+  - {name: front-door-shell, url: "http://127.0.0.1:8080/", kind: shell}
+  - {name: workbench-rest-openapi, url: "http://127.0.0.1:8080/api/", kind: openapi, auth: token}
+  - {name: workbench-server-openapi, url: "http://127.0.0.1:8080/wb/api/openapi.json", kind: openapi}
+  - {name: workbench-mcp-tools, url: "http://127.0.0.1:8080/wb/api/mcp", kind: mcp, auth: token}
+  - {name: workbench-health, url: "http://127.0.0.1:8080/wb/api/health", kind: plugins}
+  - {name: workbench-extractors, url: "http://127.0.0.1:8080/wb/api/extractors", kind: extractors, auth: token}
+  - {name: workbench-content-types, url: "http://127.0.0.1:8080/api/content_types", kind: content-types, auth: token}
+
+# How to read a kind of software inside any container running it, matched on the image's repository name.
+probes:
+  - {image: caddy, kind: caddy, exec: [wget, -qO-, "http://127.0.0.1:2019/config/"]}
+
+# Commands whose JSON output describes part of the system.
+commands:
+  - {name: morphogen-status, kind: morphogen, run: [bin/morphogen, status]}

@@ -32,9 +32,10 @@ wait_for() {   # what url logs
 wait_for API "http://127.0.0.1:8080/api/" postgrest
 wait_for server "http://127.0.0.1:8080/wb/api/health" workbench
 wait_for shell "http://127.0.0.1:8080/" caddy
-for x in catalog claude-code morphogen choices drift; do   # the map, what the repository has, verdicts, choices, the gaps
+for x in catalog claude-code morphogen choices; do   # the map, what the repository has, verdicts, choices
   "$ROOT/scripts/workbench.sh" extract "substrate:$x" | python3 -c 'import json, sys; d = json.load(sys.stdin); print("  substrate:'"$x"'", "ok" if d.get("ok") else "FAILED: " + str(d.get("error")), *(d.get("log") or []))'
 done
+"$ROOT/scripts/observe.sh" || echo "  observing stopped (above); the gaps are as they were"   # what runs, then the gaps
 
 say "Agents and this project's Claude Code"
 "$ROOT/scripts/workbench.sh" user list | python3 -c 'import json, sys; sys.exit(0 if any(u["name"] == "claude-code" for u in json.load(sys.stdin)) else 1)' \

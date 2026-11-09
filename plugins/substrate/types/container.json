@@ -1,0 +1,67 @@
+{
+  "title": "Container",
+  "description": "A container the engine runs (or has stopped), as its inspect output says.",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "the engine's name for it"
+    },
+    "project": {
+      "type": "string",
+      "description": "the compose project, from its label"
+    },
+    "service": {
+      "type": "string",
+      "description": "the compose service, from its label"
+    },
+    "image": {
+      "type": "string",
+      "description": "the image reference it was started from"
+    },
+    "digest": {
+      "type": "string",
+      "description": "the image digest it runs"
+    },
+    "state": {
+      "type": "string",
+      "description": "running, exited, ..."
+    },
+    "health": {
+      "type": "string",
+      "description": "its health check's status, if it has one"
+    },
+    "started_at": {
+      "type": "string",
+      "description": "when it last started"
+    },
+    "user": {
+      "type": "string",
+      "description": "the user it runs as"
+    },
+    "read_only": {
+      "type": "boolean",
+      "description": "whether its root filesystem is read-only"
+    },
+    "restart_policy": {
+      "type": "string",
+      "description": "the engine's restart policy"
+    },
+    "ports": {
+      "type": "array",
+      "description": "published ports: container port, host address and port"
+    },
+    "mounts": {
+      "type": "array",
+      "description": "binds and volumes: type, name, source, destination, rw"
+    },
+    "networks": {
+      "type": "object",
+      "description": "each network and the aliases it answers to there"
+    },
+    "env_names": {
+      "type": "array",
+      "description": "the names of its environment settings (never values)"
+    }
+  }
+}

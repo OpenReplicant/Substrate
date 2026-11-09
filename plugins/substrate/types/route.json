@@ -1,0 +1,31 @@
+{
+  "title": "Route",
+  "description": "A route a web server actually serves, read from its running configuration (not the file it was written in).",
+  "type": "object",
+  "properties": {
+    "server": {
+      "type": "string",
+      "description": "the web server and its server block"
+    },
+    "listen": {
+      "type": "array",
+      "description": "addresses it listens on"
+    },
+    "order": {
+      "type": "integer",
+      "description": "its place among the server's routes"
+    },
+    "match": {
+      "type": "array",
+      "description": "what requests it matches (paths, regexps, hosts)"
+    },
+    "handlers": {
+      "type": "array",
+      "description": "the handlers it runs, in order"
+    },
+    "upstreams": {
+      "type": "array",
+      "description": "where it proxies to (host:port)"
+    }
+  }
+}

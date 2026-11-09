@@ -1,0 +1,35 @@
+{
+  "title": "Connection",
+  "description": "A client's configured connection to a server, e.g. an MCP server in a project's .mcp.json.",
+  "type": "object",
+  "properties": {
+    "client": {
+      "type": "string",
+      "description": "the client: claude-code"
+    },
+    "file": {
+      "type": "string",
+      "description": "the file it is configured in"
+    },
+    "transport": {
+      "type": "string",
+      "description": "http, stdio, ..."
+    },
+    "url": {
+      "type": "string",
+      "description": "where it connects (without query)"
+    },
+    "command": {
+      "type": "string",
+      "description": "the command it starts, for stdio"
+    },
+    "auth": {
+      "type": "string",
+      "description": "how it authenticates: headersHelper, headers, none"
+    },
+    "env_names": {
+      "type": "array",
+      "description": "names of the environment it is given"
+    }
+  }
+}

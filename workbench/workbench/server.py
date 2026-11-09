@@ -33,7 +33,7 @@ from starlette.responses import JSONResponse, StreamingResponse
 from starlette.routing import Route
 
 from . import mcp
-from .extract import Plugins, run_extractor
+from .extract import PLUGIN_API, Plugins, run_extractor
 
 ROLES = {"wb_viewer", "wb_editor", "wb_owner"}
 WRITERS = {"wb_editor", "wb_owner"}
@@ -217,7 +217,24 @@ async def lifespan(app):
         t.cancel()
 
 
+SUMMARIES = {"/wb/api/health": "whether the server listens, works the queue, and which plugins it loaded",
+             "/wb/api/events": "live changes as Server-Sent Events", "/wb/api/extractors": "the extractors plugins added",
+             "/wb/api/extract": "queue an extractor run", "/wb/api/mcp": "MCP over HTTP for agents (JSON-RPC)",
+             "/wb/api/openapi.json": "this document"}
+
+
+async def openapi(request: Request):
+    """The routes this server actually serves, as an OpenAPI 3.1 document, so a client can read them, not guess."""
+    paths = {}
+    for r in request.app.routes:
+        methods = sorted(m.lower() for m in (r.methods or ["GET"]) if m != "HEAD")
+        paths[r.path] = {m: {"summary": SUMMARIES.get(r.path, ""), "responses": {"200": {"description": "ok"}}} for m in methods}
+    return JSONResponse({"openapi": "3.1.0", "info": {"title": "Workbench server", "version": PLUGIN_API},
+                         "servers": [{"url": "/"}], "paths": paths})
+
+
 app = Starlette(routes=[
+    Route("/wb/api/openapi.json", openapi),
     Route("/wb/api/health", health),
     Route("/wb/api/events", events),
     Route("/wb/api/extractors", extractors),

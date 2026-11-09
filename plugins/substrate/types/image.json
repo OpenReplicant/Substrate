@@ -1,0 +1,31 @@
+{
+  "title": "Image",
+  "description": "A container image present on a host because a container uses it.",
+  "type": "object",
+  "properties": {
+    "tags": {
+      "type": "array",
+      "description": "its repository tags"
+    },
+    "digest": {
+      "type": "string",
+      "description": "its digest"
+    },
+    "repo_digests": {
+      "type": "array",
+      "description": "repository@digest references"
+    },
+    "created": {
+      "type": "string",
+      "description": "when it was built"
+    },
+    "size": {
+      "type": "integer",
+      "description": "bytes"
+    },
+    "labels": {
+      "type": "object",
+      "description": "its org.opencontainers.image.* labels"
+    }
+  }
+}

@@ -1,11 +1,12 @@
 # Substrate's plugin for Workbench (workbench/BRIEF.md section 6): the kinds of thing Substrate models
-# (component, skill, hook, verdict, and choice and candidate for choices made from the catalogs), the extractors
-# that read them (catalog-info.yaml; Claude Code's .claude/; docs/choices with the registries they cite) and compare
-# them (drift, raising gaps for review), and a Map view.
+# (component, skill, hook, verdict, and choice and candidate for choices made from the catalogs; host, container,
+# image, volume, setting, route, api, plugin, ui, connection and cell for what is observed running, OBSERVE.md), the
+# extractors that read them (catalog-info.yaml; Claude Code's .claude/; docs/choices with the registries they cite;
+# observe.py's snapshots) and compare them (drift, raising gaps for review), and a Map view.
 id: substrate
-version: 0.3.0
+version: 0.4.0
 licence: Apache-2.0
 requires: {workbench: "1"}
 content_types: [types/*.json]
-server: substrate_plugin          # extractors: catalog, claude-code, drift (substrate_plugin.py)
+server: substrate_plugin          # extractors: catalog, claude-code, morphogen, choices, observed, drift (substrate_plugin.py)
 client: web/index.js

@@ -1,0 +1,39 @@
+{
+  "title": "Host",
+  "description": "A machine a system runs on, as read from it: its OS, kernel, CPU, memory and container engine.",
+  "type": "object",
+  "properties": {
+    "os": {
+      "type": "string",
+      "description": "the OS's PRETTY_NAME in /etc/os-release"
+    },
+    "kernel": {
+      "type": "string",
+      "description": "uname -r"
+    },
+    "arch": {
+      "type": "string",
+      "description": "uname -m"
+    },
+    "cpus": {
+      "type": "integer",
+      "description": "logical CPUs"
+    },
+    "cpu_model": {
+      "type": "string",
+      "description": "from /proc/cpuinfo"
+    },
+    "memory_bytes": {
+      "type": "integer",
+      "description": "MemTotal in /proc/meminfo"
+    },
+    "engine": {
+      "type": "string",
+      "description": "the container engine: podman or docker"
+    },
+    "engine_version": {
+      "type": "string",
+      "description": "the engine's own version"
+    }
+  }
+}

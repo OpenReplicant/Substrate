@@ -99,6 +99,21 @@ try:
     check("writes, runs and decisions are announced", kinds.get("item") and kinds.get("run") and kinds.get("decision"), kinds)
     check("an announcement names what changed, not its content", set(check_item) == {"kind", "type", "id", "op", "author"}, check_item)
 
+    # relations say who stated them; a run replaces only its own, and done() drops its own from items gone
+    rel = lambda: {(r[0], r[1], r[2]) for r in cli.connect().execute(  # noqa: E731
+        "select f.slug || '>' || t.slug, r.predicate, r.author from wb.relation r join content.note f on f.id = r.from_id"
+        " join content.note t on t.id = r.to_id").fetchall()}
+    run_extractor(cli.connect, plugins, "fixture:notes", {"text": "a: one\nb: two", "link": "a>b,b>a"})
+    run_extractor(cli.connect, plugins, "fixture:links", {"link": "a>b"})
+    check("a relation names the extractor that stated it", ("a>b", "linksTo", "fixture:notes") in rel()
+          and ("a>b", "mentions", "fixture:links") in rel(), rel())
+    run_extractor(cli.connect, plugins, "fixture:notes", {"text": "a: one\nb: two", "link": "a>b"})
+    check("a run replaces its own relations and leaves another author's", rel() == {
+        ("a>b", "linksTo", "fixture:notes"), ("a>b", "mentions", "fixture:links")}, rel())
+    run_extractor(cli.connect, plugins, "fixture:notes", {"text": "b: two", "link": ""})
+    check("an item gone from the source loses its extractor's relations, not another's",
+          rel() == {("a>b", "mentions", "fixture:links")}, rel())
+
     now = time.time()
     good = token({"role": "wb_viewer", "name": "vi", "exp": int(now) + 60})
     check("the server accepts a token PostgREST would", verify(good, os.environ["WORKBENCH_JWT_SECRET"]) is not None)

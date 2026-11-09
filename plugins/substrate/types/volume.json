@@ -1,0 +1,27 @@
+{
+  "title": "Volume",
+  "description": "A named volume on a host's container engine.",
+  "type": "object",
+  "properties": {
+    "driver": {
+      "type": "string",
+      "description": "the volume driver"
+    },
+    "mountpoint": {
+      "type": "string",
+      "description": "where it lives on the host"
+    },
+    "created": {
+      "type": "string",
+      "description": "when it was created"
+    },
+    "labels": {
+      "type": "object",
+      "description": "its labels, e.g. the compose project that made it"
+    },
+    "used_by": {
+      "type": "array",
+      "description": "the containers that mount it, when it was read"
+    }
+  }
+}

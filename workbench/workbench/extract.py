@@ -6,8 +6,9 @@ extractor called `<plugin>:<name>`. An extractor is `fn(ctx, inputs)`: it reads 
 
     ctx.source(uri, data, media_type)            a source it read (deduplicated by content), its id
     ctx.upsert(type, slug, fields, title=, source=, evidence={field: {quote, span}})   an item, its id
-    ctx.relate(from_type, from_id, predicate, to_type, to_id)
-    ctx.done(type)                               it read the whole source: retract what it no longer found
+    ctx.relate(from_type, from_id, predicate, to_type, to_id, source=)   a relation, stated by this extractor
+    ctx.done(type)                               it read the whole source: retract what it no longer found, and
+                                                 drop its relations from items it no longer found
     ctx.decision(kind, key, subject, evidence)   raise something for a person (the review lane)
     ctx.log(message)
 
@@ -144,15 +145,20 @@ class Context:
         self.counts["items"] += 1
         return item
 
-    def relate(self, from_type: str, from_id: str, predicate: str, to_type: str, to_id: str):
+    def relate(self, from_type: str, from_id: str, predicate: str, to_type: str, to_id: str, *, source: str | None = None):
         self.related_from.add((from_type, from_id))
-        self.relations.append((from_type, from_id, predicate, to_type, to_id))
+        self.relations.append((from_type, from_id, predicate, to_type, to_id, source))
 
     def done(self, type_id: str) -> int:
         n = self.conn.execute("select wb.retract_missing(%s, %s, %s::uuid[])",
                               (self.author, type_id, list(self.seen.get(type_id, set())))).fetchone()[0]
+        gone = self.conn.execute(
+            "delete from wb.relation where from_type = %s and (author = %s or author is null) and not (from_id = any(%s::uuid[]))",
+            (type_id, self.author, list(self.seen.get(type_id, set())))).rowcount
         if n:
             self.log(f"{type_id}: {n} claims retracted (no longer in the source)")
+        if gone:
+            self.log(f"{type_id}: {gone} relations from items no longer in the source removed")
         return n
 
     def decision(self, kind: str, key: str, subject: dict, evidence: list | None = None):
@@ -165,12 +171,15 @@ class Context:
         self.counts["decisions"] += 1
 
     def finish(self, withdraw: bool = True) -> dict:
-        # relations: what this run read replaces what it read before, for the items it read them from
-        for from_type, from_id in self.related_from:
-            self.conn.execute("delete from wb.relation where from_type = %s and from_id = %s", (from_type, from_id))
-        for rel in self.relations:
-            self.conn.execute("insert into wb.relation (from_type, from_id, predicate, to_type, to_id)"
-                              " values (%s, %s, %s, %s, %s) on conflict do nothing", rel)
+        # relations: what this run read replaces what this extractor stated before, from every item it read or related
+        # from; other authors' relations from the same items stay (unattributed ones, from before migration 008, go)
+        for from_type, from_id in self.related_from | {(t, i) for t, ids in self.seen.items() for i in ids}:
+            self.conn.execute("delete from wb.relation where from_type = %s and from_id = %s"
+                              " and (author = %s or author is null)", (from_type, from_id, self.author))
+        for *rel, source in self.relations:
+            self.conn.execute("insert into wb.relation (from_type, from_id, predicate, to_type, to_id, author, run, source)"
+                              " values (%s, %s, %s, %s, %s, %s, %s, %s) on conflict do nothing",
+                              (*rel, self.author, self.run, source))
         self.counts["relations"] = len(self.relations)
         withdrawn = 0
         if withdraw:

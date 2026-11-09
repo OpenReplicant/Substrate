@@ -1,0 +1,23 @@
+{
+  "title": "Setting",
+  "description": "A setting by name, never its value: an environment variable of a container, a key in an env file, a key in a tool's settings.",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "the setting's name"
+    },
+    "where": {
+      "type": "string",
+      "description": "what it was read from: container env, env file, settings file"
+    },
+    "of": {
+      "type": "string",
+      "description": "the container or file that has it"
+    },
+    "line": {
+      "type": "integer",
+      "description": "its line, for a file"
+    }
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "title": "Cell",
+  "description": "A cell Morphogen sees in a project: a part it can measure, judge and change, as morphogen status reports it.",
+  "type": "object",
+  "properties": {
+    "ref": {
+      "type": "string",
+      "description": "the cell's entity ref"
+    },
+    "role": {
+      "type": "string",
+      "description": "its role: container, text, code, ..."
+    },
+    "owner": {
+      "type": "string",
+      "description": "its owner"
+    },
+    "ready": {
+      "type": "boolean",
+      "description": "whether it has what a judged run needs"
+    },
+    "cell_source": {
+      "type": "string",
+      "description": "where Morphogen read it from"
+    }
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "title": "Plugin",
+  "description": "A plugin a running Workbench says it has loaded, with the content types and extractors it adds.",
+  "type": "object",
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "the version it states"
+    },
+    "server": {
+      "type": "string",
+      "description": "its server module"
+    },
+    "content_types": {
+      "type": "array",
+      "description": "the content types it registers"
+    },
+    "extractors": {
+      "type": "array",
+      "description": "the extractors it adds"
+    },
+    "error": {
+      "type": "string",
+      "description": "why it failed to load, if it did"
+    }
+  }
+}

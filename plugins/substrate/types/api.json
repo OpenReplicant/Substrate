@@ -1,0 +1,27 @@
+{
+  "title": "API",
+  "description": "An API a system serves, read from its own description: an OpenAPI document or an MCP server's tools/list.",
+  "type": "object",
+  "properties": {
+    "url": {
+      "type": "string",
+      "description": "where the description was fetched"
+    },
+    "kind": {
+      "type": "string",
+      "description": "openapi or mcp"
+    },
+    "api_title": {
+      "type": "string",
+      "description": "the title it gives itself"
+    },
+    "version": {
+      "type": "string",
+      "description": "the version it states"
+    },
+    "operations": {
+      "type": "array",
+      "description": "its paths and methods, or its tools"
+    }
+  }
+}

@@ -96,7 +96,8 @@ scripts/build.sh [db|workbench|tools]   # images, built in containers
 python3 scripts/spec.py status|next|set ID STATUS   # where the spec's build plan stands
 scripts/verdicts.sh             # Morphogen's verdicts into Workbench (also run by a hook after judged runs)
 scripts/map.sh                  # catalog-info.yaml into Workbench, then drift (also run by a hook after edits to it)
-scripts/trace.sh NAME           # a part's chain in Workbench: observed, declared, each gap and how it was decided
+scripts/observe.sh              # what runs on this machine (observe.yaml) into Workbench, gitleaks first, then drift
+scripts/trace.sh NAME [DEPTH]   # an item's chain in Workbench: claims, relations followed out, the part that runs as it, each gap and its decision
 scripts/workbench.sh migrate|plugin load DIR|extract PLUGIN:NAME|user add NAME|user reset NAME|user list|token NAME   # Workbench (prints passwords once: the owner runs user add)
 python3 scripts/harness.py status|apply   # this project's Claude Code wiring: Workbench's MCP server, no kernel hooks
 scripts/tools.sh start|stop|status   # the tools container that bin/ runs in

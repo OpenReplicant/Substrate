@@ -1,0 +1,35 @@
+{
+  "title": "UI",
+  "description": "A browser module a web shell actually loads, and the views, menus, commands and widgets it registers.",
+  "type": "object",
+  "properties": {
+    "module": {
+      "type": "string",
+      "description": "the module's path as the page loads it"
+    },
+    "plugin": {
+      "type": "string",
+      "description": "the plugin it belongs to, from its path"
+    },
+    "views": {
+      "type": "array",
+      "description": "views it registers"
+    },
+    "menus": {
+      "type": "array",
+      "description": "menu entries"
+    },
+    "commands": {
+      "type": "array",
+      "description": "palette commands"
+    },
+    "widgets": {
+      "type": "array",
+      "description": "dashboard widgets"
+    },
+    "sha256": {
+      "type": "string",
+      "description": "the module as served"
+    }
+  }
+}
