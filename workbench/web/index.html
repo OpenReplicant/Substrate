@@ -103,7 +103,8 @@
           <ul>
             <template x-for="(r, i) in results" :key="r.id">
               <li :class="isActive(i) ? 'is-active' : ''" @mousedown.prevent="choose(i)">
-                <span x-text="r.label"></span><span class="wb-faint" x-text="r.hint"></span>
+                <span class="wb-palette-main"><span x-text="r.label"></span><span class="wb-faint wb-palette-snippet" x-show="r.snippet" x-text="r.snippet"></span></span>
+                <span class="wb-faint" x-text="r.hint"></span>
               </li>
             </template>
           </ul>

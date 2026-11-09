@@ -1,7 +1,6 @@
 # The front door (workbench/BRIEF.md section 7):
 #   /api/*            PostgREST; the prefix is stripped, so /api/note is PostgREST's /note
-#   /wb/api/*         the Workbench server: live events (streamed, so never buffered), extractors
-#   /ui/*, /mcp*      kernel, parked until Workbench's W4 (repos/kernel/deploy/Caddyfile had only these)
+#   /wb/api/*         the Workbench server: live events (streamed, so never buffered), extractors, MCP
 #   /plugins/*/web/*  each installed plugin's browser files; nothing else in a plugin folder is served
 #   everything else   Workbench's shell from workbench/web; / is index.html, a template that finds the plugins
 # With KK_SITE set to a public host name, Caddy gets and renews a certificate, as in kernel's file.
@@ -17,11 +16,6 @@
 		reverse_proxy workbench:8100 {
 			flush_interval -1
 		}
-	}
-
-	@kernel path /ui /ui/* /mcp /mcp/*
-	handle @kernel {
-		reverse_proxy kernel:8000
 	}
 
 	@pluginweb path_regexp ^/plugins/[a-z0-9_-]+/web/

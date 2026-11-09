@@ -123,11 +123,17 @@ class Context:
         self._set("wb.source", source)
         self._set("wb.evidence", json.dumps(evidence or {}))
         view = sql.Identifier("api", type_id)
-        found = self.conn.execute(sql.SQL("select id from {} where slug = %s").format(view), (slug,)).fetchone()
+        found = self.conn.execute(sql.SQL("select id, to_jsonb(x) from {} x where slug = %s").format(view), (slug,)).fetchone()
         if found:
-            assignments = sql.SQL(", ").join(sql.SQL("{} = %s").format(sql.Identifier(k)) for k in values)
-            self.conn.execute(sql.SQL("update {} set {} where id = %s").format(view, assignments),
-                              (*values.values(), found[0]))
+            # only what changed: an unchanged item keeps its updated_at and updated_by, so "updated" means it
+            now = found[1]
+            changed = {k: v for k, v in values.items()
+                       if json.dumps(v.obj if isinstance(v, Jsonb) else v, sort_keys=True, default=str)
+                       != json.dumps(now.get(k), sort_keys=True, default=str)}
+            if changed:
+                assignments = sql.SQL(", ").join(sql.SQL("{} = %s").format(sql.Identifier(k)) for k in changed)
+                self.conn.execute(sql.SQL("update {} set {} where id = %s").format(view, assignments),
+                                  (*changed.values(), found[0]))
             item = str(found[0])
         else:
             names = ["slug", *values]

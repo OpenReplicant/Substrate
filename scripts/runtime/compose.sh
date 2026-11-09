@@ -1,4 +1,4 @@
-# Runtime: compose, the one runtime (S-41). Kernel's compose project plus deploy/compose.yaml, on Podman or Docker.
+# Runtime: compose, the one runtime (S-41): deploy/compose.yaml, on Podman or Docker.
 # Sourced by scripts/lib.sh; defines rt_up, rt_down, rt_status, rt_logs.
 # shellcheck shell=sh
 

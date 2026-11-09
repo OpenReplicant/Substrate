@@ -381,7 +381,8 @@ Alpine.data('palette', () => ({
   q: '', results: [], index: 0, seq: 0,
   get open() { return Alpine.store('wb').paletteOpen; },
   init() {
-    this.$watch('open', (v) => { if (v) { this.q = ''; this.search(); this.$nextTick(() => this.$refs.input?.focus()); } });
+    // focus once x-show has made the overlay visible: a hidden input cannot take focus, and $nextTick is too soon
+    this.$watch('open', (v) => { if (v) { this.q = ''; this.search(); requestAnimationFrame(() => requestAnimationFrame(() => this.$refs.input?.focus())); } });
     this.$watch('q', debounce(() => this.search(), 150));
   },
   close() { Alpine.store('wb').paletteOpen = false; },
@@ -392,11 +393,18 @@ Alpine.data('palette', () => ({
       .slice(0, 8).map((c) => ({id: 'cmd:' + c.id, label: c.title, hint: 'Command', run: () => c.run(wb)}));
     this.results = cmds; this.index = 0;
     if (q.length < 2) return;
-    const types = Alpine.store('wb').types;
-    const found = await Promise.all(types.map((t) => api.get(t.id, {select: 'id,title', title: `ilike.*${q}*`, limit: 5})
-      .then((rows) => rows.map((r) => ({id: `${t.id}:${r.id}`, label: r.title, hint: t.label, run: () => wb.open('item', {type: t.id, id: r.id})})))
-      .catch(() => [])));
-    if (seq === this.seq) this.results = [...cmds, ...found.flat()];
+    // recall: full-text over every type and every claim's quote (/api/rpc/search), best hit per item
+    const hits = await api.rpc('search', {q, lim: 12}).catch(() => []);
+    const best = new Map();
+    for (const h of hits) { const k = `${h.type}:${h.id}`; if (!best.has(k) || best.get(k).rank < h.rank) best.set(k, h); }
+    const titles = new Map(hits.filter((h) => h.title).map((h) => [`${h.type}:${h.id}`, h.title]));
+    const found = [...best.values()].sort((a, b) => b.rank - a.rank).slice(0, 12).map((h) => ({
+      id: `${h.type}:${h.id}`, label: titles.get(`${h.type}:${h.id}`) || h.snippet.replace(/<\/?b>/g, ''),
+      hint: (wb.type(h.type)?.label || h.type) + (h.via.startsWith('quote') ? ' · quoted' : ''),
+      snippet: h.snippet.replace(/<\/?b>/g, ''),
+      run: () => wb.open('item', {type: h.type, id: h.id}),
+    }));
+    if (seq === this.seq) this.results = [...cmds, ...found];
   },
   move(d) { if (this.results.length) this.index = (this.index + d + this.results.length) % this.results.length; },
   choose(i) {

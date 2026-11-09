@@ -12,35 +12,35 @@ note() { printf '  note  %s\n' "$*"; }
 probe() { curl -fsS -o /dev/null "$@" 2>/dev/null; }
 
 say "Services ($RUNTIME on $ENGINE)"
-probe "http://127.0.0.1:8080/ui/views.json" && ok "kernel      http://127.0.0.1:8080/ui/ (MCP at /mcp)" || bad "kernel UI does not answer (scripts/logs.sh kernel, caddy)"
-running=$(rt_status 2>/dev/null | awk 'NR > 1 {print $1}' | tr '\n' ' ')
 code=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:8080/api/")
-[ "$code" = "200" ] && ok "workbench   http://127.0.0.1:8080/api/ (PostgREST, OpenAPI at the root)" || bad "workbench API returned $code (scripts/logs.sh postgrest)"
+[ "$code" = "200" ] && ok "api         http://127.0.0.1:8080/api/ (PostgREST, OpenAPI at the root)" || bad "the API returned $code (scripts/logs.sh postgrest)"
 shell=$(curl -s "http://127.0.0.1:8080/")
-case "$shell" in *'name="wb-plugin"'*) ok "workbench   http://127.0.0.1:8080/ (the shell, $(printf '%s' "$shell" | grep -c 'name="wb-plugin"') plugin modules)" ;;
-  *) bad "the workbench shell is not served at / (scripts/logs.sh caddy)" ;; esac
+case "$shell" in *'name="wb-plugin"'*) ok "shell       http://127.0.0.1:8080/ ($(printf '%s' "$shell" | grep -c 'name="wb-plugin"') plugin modules)" ;;
+  *) bad "the shell is not served at / (scripts/logs.sh caddy)" ;; esac
 if h=$(curl -fsS "http://127.0.0.1:8080/wb/api/health" 2>/dev/null); then
-  ok "workbench   http://127.0.0.1:8080/wb/api/ ($(printf '%s' "$h" | python3 -c 'import json, sys; d = json.load(sys.stdin); print(("events relayed" if d["listening"] else "NOT listening") + ", jobs " + ("taken" if d["worker"] else "NOT taken") + ", plugins: " + ", ".join(p["id"] + (" (" + p["error"] + ")" if p.get("error") else "") for p in d["plugins"]))'))"
+  ok "server      http://127.0.0.1:8080/wb/api/ ($(printf '%s' "$h" | python3 -c 'import json, sys; d = json.load(sys.stdin); print(("events relayed" if d["listening"] else "NOT listening") + ", jobs " + ("taken" if d["worker"] else "NOT taken") + ", plugins: " + ", ".join(p["id"] + (" (" + p["error"] + ")" if p.get("error") else "") for p in d["plugins"]))'))"
 else bad "the Workbench server does not answer (scripts/logs.sh workbench)"; fi
-for s in db kernel caddy postgrest workbench; do
+code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "http://127.0.0.1:8080/wb/api/mcp" -H 'Content-Type: application/json' -d '{}')
+[ "$code" = "401" ] && ok "mcp         http://127.0.0.1:8080/wb/api/mcp (asks for a token)" || bad "the MCP endpoint returned $code without a token"
+running=$(rt_status 2>/dev/null | awk 'NR > 1 {print $1}' | tr '\n' ' ')
+for s in db caddy postgrest workbench; do
   case "$running" in *"-$s-"*) ;; *) bad "service $s is not running (scripts/logs.sh $s)" ;; esac
 done
-extra=$(printf '%s\n' $running | grep -v -e '-db-' -e '-kernel-' -e '-caddy-' -e '-init-' -e '-postgrest-' -e '-workbench-' || true)
-[ -z "$extra" ] && ok "only the core runs (db, kernel, caddy, postgrest, workbench)" || note "also running, outside the core: $(echo $extra)"
+extra=$(printf '%s\n' $running | grep -v -e '-db-' -e '-caddy-' -e '-postgrest-' -e '-workbench-' || true)
+[ -z "$extra" ] && ok "only the core runs (db, caddy, postgrest, workbench)" || note "also running, outside the core: $(echo $extra)"
 
 say "Wiring"
 if st=$(sec_status 2>&1); then ok "secrets ($SECRETS): $st"; else bad "secrets ($SECRETS): $st"; fi
 "$ROOT/scripts/tools.sh" status >/dev/null 2>&1 && ok "tools container running (bin/ wrappers work)" || bad "tools container not running: scripts/tools.sh start"
-if out=$(KK_ADMIN_URL="postgresql://postgres:$(env_value POSTGRES_PASSWORD)@127.0.0.1:$(env_value KK_DB_PORT)/kk" \
-         "$ROOT/bin/in-tools" python3 "$ROOT/scripts/map_check.py" 2>&1); then ok "map in kernel: $out"
-else bad "map in kernel: $(echo "$out" | tail -1) (scripts/map.sh)"; fi
 "$ROOT/bin/gitleaks" version >/dev/null 2>&1 && ok "gitleaks in the tools container: $("$ROOT/bin/gitleaks" version 2>/dev/null)" || bad "bin/gitleaks does not run"
-if [ -f "$ROOT/.mcp.json" ] && grep -q '"kernel"' "$ROOT/.mcp.json"; then
-  grep -q "$ROOT/bin/kernel-mcp" "$ROOT/.mcp.json" && ok "kernel MCP entry runs bin/kernel-mcp" \
-    || bad "kernel MCP entry does not use bin/kernel-mcp: python3 scripts/point_harness.py ."
-else
-  note "no kernel MCP entry here (scripts/up.sh writes it into the project it connects)"
-fi
+if out=$("$ROOT/scripts/workbench.sh" token claude-code --hours 0.02 2>&1); then ok "agent claude-code can get a token (MCP's headersHelper)"; else bad "no token for claude-code: $out"; fi
+hs=$(python3 "$ROOT/scripts/harness.py" status)
+printf '%s' "$hs" | python3 -c 'import json, sys; d = json.load(sys.stdin); sys.exit(0 if "workbench" in d["mcp_servers"] else 1)' \
+  && ok "Claude Code here: MCP servers $(printf '%s' "$hs" | python3 -c 'import json, sys; print(", ".join(json.load(sys.stdin)["mcp_servers"]))')" \
+  || bad "Claude Code here has no Workbench MCP entry: python3 scripts/harness.py apply"
+printf '%s' "$hs" | python3 -c 'import json, sys; sys.exit(0 if not json.load(sys.stdin)["kernel_hooks"] else 1)' || note "kernel's hooks are still in .claude/settings.local.json: python3 scripts/harness.py apply"
+gaps=$("$ROOT/bin/in-tools" true >/dev/null 2>&1 && curl -s "http://127.0.0.1:8080/api/decisions?status=eq.open&select=id" -H "Authorization: Bearer $("$ROOT/scripts/workbench.sh" token claude-code --hours 0.02 2>/dev/null)" | python3 -c 'import json, sys; print(len(json.load(sys.stdin)))' 2>/dev/null || echo "?")
+note "review lane: $gaps open"
 
 if [ -f "$ROOT/docs/build.yaml" ]; then
   note "spec: $(python3 "$ROOT/scripts/spec.py" next --short 2>&1)"

@@ -7,6 +7,7 @@
     workbench user reset NAME                               prints a new password once
     workbench user disable NAME                             signs them out of new sessions; nothing is deleted
     workbench user list
+    workbench token NAME [--hours H] [--header]             a token for a person or an agent (for MCP's headersHelper)
     workbench serve [--port 8100]                           the server: plugins, extractors, live events
     workbench extract PLUGIN:NAME [--input KEY=VALUE ...] [--queue]   run an extractor now, or queue it
 
@@ -161,6 +162,21 @@ def user(action: str, name: str | None, role: str) -> dict | list:
     return {"name": name, "password": password, "note": "shown once; sign in at /api/rpc/login"}
 
 
+def token(name: str, hours: float) -> str:
+    """A JWT for an existing, enabled person, as api.login would sign it. For agents, which sign in by token."""
+    import base64, hashlib, hmac, time
+    secret = os.environ["WORKBENCH_JWT_SECRET"]
+    with connect() as conn:
+        row = conn.execute("select role from wb_private.person where name = %s and not disabled", (name,)).fetchone()
+    if not row:
+        raise SystemExit(f"no enabled person named {name} (workbench user add {name} --role editor --agent)")
+    enc = lambda b: base64.urlsafe_b64encode(b).decode().rstrip("=")  # noqa: E731
+    head = enc(json.dumps({"alg": "HS256", "typ": "JWT"}, separators=(",", ":")).encode())
+    body = enc(json.dumps({"role": row[0], "name": name, "exp": int(time.time() + hours * 3600)}, separators=(",", ":")).encode())
+    sig = enc(hmac.new(secret.encode(), f"{head}.{body}".encode(), hashlib.sha256).digest())
+    return f"{head}.{body}.{sig}"
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="workbench", description=__doc__.split("\n")[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -170,10 +186,17 @@ def main(argv=None) -> int:
     t.add_argument("--plugin")
     u = sub.add_parser("user"); u.add_argument("action", choices=["add", "reset", "disable", "list"])
     u.add_argument("name", nargs="?"); u.add_argument("--role", choices=sorted(ROLES), default="owner")
+    u.add_argument("--agent", action="store_true", help="an agent: it signs in by token, so its password is not shown")
+    k = sub.add_parser("token"); k.add_argument("name"); k.add_argument("--hours", type=float, default=1.0)
+    k.add_argument("--header", action="store_true", help='print {"Authorization": "Bearer ..."} for a headersHelper')
     s = sub.add_parser("serve"); s.add_argument("--port", type=int, default=8100); s.add_argument("--host", default="0.0.0.0")
     e = sub.add_parser("extract"); e.add_argument("extractor"); e.add_argument("--input", action="append", default=[])
     e.add_argument("--queue", action="store_true", help="put it on the server's queue instead of running it here")
     a = ap.parse_args(argv)
+    if a.cmd == "token":
+        tok = token(a.name, a.hours)
+        print(json.dumps({"Authorization": f"Bearer {tok}"}) if a.header else tok)
+        return 0
     if a.cmd == "serve":
         import uvicorn
         uvicorn.run("workbench.server:app", host=a.host, port=a.port, log_level="info")
@@ -200,6 +223,8 @@ def main(argv=None) -> int:
         if a.action != "list" and not a.name:
             ap.error("user add, reset and disable need a NAME")
         result = user(a.action, a.name, a.role)
+        if getattr(a, "agent", False) and isinstance(result, dict):
+            result = {"name": result["name"], "agent": True, "note": "signs in by token: workbench token " + result["name"]}
     print(json.dumps(result, indent=2, default=str))
     return 0
 

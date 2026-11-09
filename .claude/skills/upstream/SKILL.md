@@ -5,8 +5,9 @@ description: Contribute a fix or improvement found while running the substrate b
 
 # Contribute upstream
 
-`repos/kernel` and `repos/morphogen` are full clones (`repos.yaml`, or `repos.local.yaml` when the owner
-points one at another forge). A fix to either belongs there, not in substrate.
+`repos/morphogen` and `repos/kernel` are full clones (`repos.yaml`, or `repos.local.yaml` when the owner
+points one at another forge). A fix to either belongs there, not in substrate. Kernel is an option since S-57: it no
+longer runs here, and its open PRs (#111, #112, #113) wait for the owner.
 
 **Any forge** (S-25). The canonical repositories are on GitHub, but a clone's `origin` may be a Forgejo, Gitea
 or GitLab mirror or fork. Work out which from `git -C repos/<repo> remote get-url origin` and use that forge's

@@ -35,10 +35,10 @@ steps:
 
   - id: 2
     status: blocked
-    waiting_on: "owner: decide the six component gaps in kernel's review lane (recommended: approve; the map now declares them); then scripts/trace.sh setup shows the whole chain"
+    waiting_on: "owner: decide the gap about the knowledge-kernel skill in Workbench's review lane (kernel has left, so recommended: decline, meaning the repository should change, then delete .claude/skills/knowledge-kernel, which kk up wrote)"
     title: "Autopoietic: one loop on itself"
     spec: "1, 3, 6, 7"
-    where: substrate, kernel's encoders and map-drift
+    where: substrate, Workbench (substrate:catalog, substrate:claude-code, substrate:drift)
     after: [1]
     check: >-
       substrate is modelled as its own kernel project at component level (services, skills, hooks, parameters as
@@ -47,8 +47,8 @@ steps:
       skills and hooks on disk, the running containers) as the observed half, one real gap reaches the review lane;
       a change closing it is proposed and decided by whoever decides that kind of change (spec section 7, S-51: a
       map revision by the owner in the review lane, since Morphogen refuses catalog edits; a component change by a
-      Morphogen verdict); and kernel, asked about the gap, returns gap, change and decision by claim id
-      (scripts/trace.py)
+      Morphogen verdict); and Workbench, asked about the gap, returns gap, change and decision by id
+      (scripts/trace.sh, the item's inspector, MCP's claims tool)
     notes: >-
       Absorbs the previous plan's steps 1 (verdicts become claims, kernel D-99, built) and 2 (the map becomes
       claims, kernel D-100, built). What is new is the observed half without telemetry, and the loop run once end
@@ -56,20 +56,22 @@ steps:
       observer), that is an upstream PR and the owner's call.
 
   - id: 3
-    title: Kernel as a content system
+    title: A content system for the model
     spec: "4"
-    where: kernel (PR OpenReplicant/kernel#112, D-101), upstream
+    where: workbench/ (S-52 to S-57)
     after: [2]
-    status: todo
-    needs_owner: true
+    status: done
+    done_on: 2026-11-09
     check: >-
-      a catalog entry is a kernel content type, read and edited as an item (with a view), with its claims and
-      drift checks unchanged; and a new kind of catalog entry (one a step-2 run did not have, such as a package
-      from a registry) can be added as a content type without changing kernel's store or loop
+      a catalog entry is a content type, read and edited as an item (with a view), with its claims and drift checks
+      unchanged; and a new kind of catalog entry (one a step-2 run did not have, such as a package from a registry)
+      can be added as a content type without changing the store or the loop
     notes: >-
-      A kernel change: prepare the case against kernel's CLAUDE.md and docs/content.md, and ask the owner before
-      taking #112 out of draft. Ontologies and aliases as content: a vocabulary is a pack; mappings between
-      vocabularies are SKOS claims, SSSOM-shaped where a mapping set needs its own metadata.
+      Was "kernel as a content system" (kernel D-101, PR #112). The owner chose a different route (S-52): Workbench,
+      a content system with claims beside typed tables, which replaced kernel (S-57). Checked on it: catalog entries
+      are `component` items read and edited in the shell, their claims and substrate:drift unchanged; `hook` and
+      `verdict` were added in W3 and W4 as plugin content types, with no change to the store or the loop. Ontologies
+      and aliases: wb.term and wb.mapping (SSSOM) exist; no vocabulary has been loaded into them yet.
 
   - id: 4
     title: Catalogs to choose from

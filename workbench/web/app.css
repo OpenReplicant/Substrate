@@ -227,6 +227,8 @@ textarea.wb-input { resize: vertical; line-height: 1.5; }
 .wb-palette ul { max-height: 50vh; margin: 0; padding: 6px; overflow-y: auto; list-style: none; }
 .wb-palette li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 10px; border-radius: var(--radius-sm); cursor: pointer; }
 .wb-palette li.is-active { background: var(--accent-soft); color: var(--accent); }
+.wb-palette-main { display: grid; min-width: 0; }
+.wb-palette-snippet { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: var(--fs-xs); }
 .wb-palette-empty { margin: 0; padding: 14px; color: var(--text-faint); }
 
 /* toasts */

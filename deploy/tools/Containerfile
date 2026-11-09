@@ -1,20 +1,21 @@
 # substrate-tools: every command the scripts and Claude Code's hooks need, so the host needs only git, python3,
-# the container engine and Claude Code (S-19). Built on kernel's own image, so kk, kernel-mcp, its hooks and
-# gitleaks are exactly what the stack runs; adds git and uv for Morphogen's commands.
+# the container engine and Claude Code (S-19). Its own image since kernel left the stack (S-57).
 #
-#   scripts/build.sh tools        (after the kernel image)
+#   scripts/build.sh tools
 #
 # Runs as one long-lived container (scripts/tools.sh) that host wrappers in bin/ exec into.
 
-ARG KERNEL_IMAGE=knowledge-kernel:local
-FROM ${KERNEL_IMAGE}
-USER root
-RUN apk add --no-cache git
-# uv 0.13.4 (2026-10-20, MIT OR Apache-2.0, from PyPI); the same CA secret as kernel's own Dockerfile
-RUN --mount=type=secret,id=ca,required=false \
-    if [ -f /run/secrets/ca ]; then export PIP_CERT=/run/secrets/ca; fi; \
-    pip install --no-cache-dir uv==0.13.4
-# uv keeps Morphogen's environment beside repos/morphogen, built for this image's Python (3.13, musl)
+FROM docker.io/library/python:3.13.17-slim-bookworm
+RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates curl \
+ && rm -rf /var/lib/apt/lists/*
+# gitleaks 8.30.1 (2026-03-21, MIT), checked against its release's published SHA-256
+ARG GITLEAKS_VERSION=8.30.1
+ARG GITLEAKS_SHA256=551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+RUN curl -fsSL -o /tmp/gitleaks.tgz "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+ && echo "${GITLEAKS_SHA256}  /tmp/gitleaks.tgz" | sha256sum -c - \
+ && tar -xzf /tmp/gitleaks.tgz -C /usr/local/bin gitleaks && rm /tmp/gitleaks.tgz
+# uv 0.13.4 (MIT OR Apache-2.0) for Morphogen's commands; Workbench's pins (workbench/Containerfile) for its command and tests
+RUN pip install --no-cache-dir uv==0.13.4 "psycopg[binary]==3.3.6" PyYAML==6.0.3 starlette==1.10.0 uvicorn==0.54.0
 ENV UV_LINK_MODE=copy UV_PYTHON_DOWNLOADS=never
 # the user is set at run time to the host user (scripts/tools.sh)
 CMD ["sleep", "infinity"]

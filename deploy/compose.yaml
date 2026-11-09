@@ -1,43 +1,47 @@
-# Substrate's changes to kernel's compose project (S-06), started by scripts/up.sh:
+# Substrate's stack (S-57): Workbench on Postgres, and the front door. Started by scripts/up.sh:
 #
-#   $CONTAINER_ENGINE compose -f repos/kernel/deploy/compose.yaml -f deploy/compose.yaml --env-file .env up -d
+#   $CONTAINER_ENGINE compose -f deploy/compose.yaml --env-file .env up -d
 #
-# Kernel's file comes first, so relative paths here resolve from repos/kernel/deploy/ (hence ../../../).
-# The stack (S-41, S-53): kernel's Postgres, kernel, and kernel's Caddy as the front door at
-# http://127.0.0.1:8080 (kernel's UI at /ui/, MCP at /mcp), plus Workbench's API, PostgREST, at /api/ over its own
-# database on the same Postgres. What substrate could add later is in catalog-info.yaml, system `options`.
+# Everything is published on 127.0.0.1 only: the front door at :8080 (the shell at /, the API at /api, the server
+# at /wb/api), Postgres at :${KK_DB_PORT}. Kernel, which this stack used to be built on, is an option now
+# (catalog-info.yaml, system options); its database `kk` stays in the same Postgres volume, untouched.
 
-name: knowledge-kernel          # the same project as kernel's stack
+name: substrate
+
+x-locked: &locked
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  restart: unless-stopped
 
 services:
 
-  # kernel reads what kk up scans from the host folder .state/artifacts, in place of kernel's kk-artifacts
-  # volume, so the quote verifier sees exactly what the tools container wrote. Its parts: kernel's default plus
-  # map drift, which compares the map with what the repository has (skills, hooks; kernel D-102, spec step 2).
-  kernel:
-    command: ["kk", "serve", "--host", "0.0.0.0", "--only", "${KK_SERVE_PARTS:-mcp,validator,belief,recall,quotes,tms,conformance,learner,gaps,drift}"]
-    volumes:
-      - ../../../.state/artifacts:/store:ro
-
-  # The front door (deploy/caddy/Caddyfile): Workbench's shell at /, its API at /api, plugins' web files, kernel at /ui.
-  caddy:
-    volumes: !override
-      - ../../../deploy/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
-      - ../../../workbench/web:/srv/wb:ro          # the shell
-      - ../../../plugins:/srv/plugins:ro           # installed plugins; only each one's web/ is served
+  # Postgres 17 with pgvector, pg_cron, pgmq and pgGraph (deploy/postgres/Dockerfile, vendored from kernel).
+  # Databases: workbench (Workbench's store), kk (kernel's, kept), substrate (the old bus's, kept).
+  db:
+    build: ./postgres
+    image: localhost/substrate-db:local
+    command: ["postgres", "-c", "shared_preload_libraries=pg_cron,graph", "-c", "cron.database_name=workbench"]
     environment:
-      WB_FRAME_SRC: ${WB_FRAME_SRC:-}              # origins apps may be framed from, beyond this one
-    depends_on: [kernel, postgrest, workbench]
+      POSTGRES_DB: workbench
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set in .env}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:${KK_DB_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      retries: 20
+    restart: unless-stopped
 
   # Workbench's API (workbench/BRIEF.md section 7): PostgREST over the `api` schema of the workbench database,
   # which `scripts/workbench.sh migrate` creates. It switches each request to the role in its JWT; requests
   # without one run as wb_anon, which may only sign in. It retries until the database and its login exist.
   postgrest:
+    <<: *locked
     image: ${POSTGREST_IMAGE:-docker.io/postgrest/postgrest:v16.5}
-    read_only: true
-    cap_drop: [ALL]
-    security_opt: [no-new-privileges:true]
-    restart: unless-stopped
     environment:
       PGRST_DB_URI: postgresql://wb_authenticator:${WORKBENCH_AUTHENTICATOR_PASSWORD:?set in .env}@db:5432/workbench
       PGRST_DB_SCHEMAS: api
@@ -47,28 +51,41 @@ services:
     depends_on:
       db: {condition: service_healthy}
 
-  # Workbench's server (workbench/workbench/server.py): plugins' Python, extractors off the pgmq queue `wb_jobs`,
-  # and Postgres's NOTIFY relayed as Server-Sent Events at /wb/api/events behind the same JWT PostgREST checks.
-  # It runs on kernel's image, which has its libraries, until Workbench leaves with its own (workbench/Containerfile).
+  # Workbench's server (workbench/workbench/server.py, its own image workbench/Containerfile): plugins' Python,
+  # extractors off the pgmq queue `wb_jobs`, NOTIFY relayed as Server-Sent Events, and MCP for agents, all behind
+  # the same JWT PostgREST checks.
   workbench:
-    image: knowledge-kernel:local
-    read_only: true
-    cap_drop: [ALL]
-    security_opt: [no-new-privileges:true]
-    restart: unless-stopped
+    <<: *locked
+    build: {context: ../workbench, dockerfile: Containerfile}
+    image: localhost/workbench:local
     user: nobody
     tmpfs: [/tmp]
-    command: ["python3", "-m", "workbench", "serve", "--port", "8100"]
-    working_dir: /srv/workbench
     environment:
-      PYTHONPATH: /srv/workbench
-      PYTHONDONTWRITEBYTECODE: "1"
       WORKBENCH_DATABASE_URL: postgresql://wb_server:${WORKBENCH_SERVER_PASSWORD:?set in .env}@db:5432/workbench
       WORKBENCH_JWT_SECRET: ${WORKBENCH_JWT_SECRET:?set in .env}
+      WB_POSTGREST_URL: http://postgrest:3000
       WB_PLUGINS_DIR: /srv/substrate/plugins
       WB_SUBSTRATE_ROOT: /srv/substrate        # what substrate's extractors read: this checkout, read-only
     volumes:
-      - ../../../workbench:/srv/workbench:ro
-      - ../../..:/srv/substrate:ro
+      - ..:/srv/substrate:ro
     depends_on:
       db: {condition: service_healthy}
+
+  # The front door (deploy/caddy/Caddyfile): the shell at /, plugins' web files, /api to PostgREST, /wb/api to the
+  # server. The stock Caddy image; the shell's page is a Caddy template that finds the installed plugins.
+  caddy:
+    image: ${CADDY_IMAGE:-docker.io/library/caddy:2.11.7-alpine}
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ../workbench/web:/srv/wb:ro              # the shell
+      - ../plugins:/srv/plugins:ro               # installed plugins; only each one's web/ is served
+    environment:
+      WB_FRAME_SRC: ${WB_FRAME_SRC:-}            # origins apps may be framed from, beyond this one
+    ports:
+      - "127.0.0.1:8080:80"
+    depends_on: [postgrest, workbench]
+    restart: unless-stopped
+
+volumes:
+  db-data:
+    name: knowledge-kernel_db-data             # the volume the stack has always used: its data carries over

@@ -1,6 +1,6 @@
 # Workbench: brief
 
-*Working name. Status: W1 to W3 done (2026-11-08/09, S-54 to S-56); W4 next. The owner agreed the decisions in section 10.*
+*Working name. Status: W1 to W4 done (2026-11-08/09, S-54 to S-57): Substrate's store since S-57. The owner agreed the decisions in section 10.*
 
 A small content system on Postgres with a desktop-like UI, extended by plugins. Content types are real tables;
 every value can say where it came from, through a claims table beside them; vocabularies and their mappings are

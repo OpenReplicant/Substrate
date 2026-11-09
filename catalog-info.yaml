@@ -1,15 +1,15 @@
-# Substrate's map, in Backstage's catalog entity model (kept in its own terms in kernel, D-100). Three systems
+# Substrate's map, in Backstage's catalog entity model; Workbench reads it (substrate:catalog). Three systems
 # (S-47):
-#   core     what runs: kernel, Morphogen, Claude Code, and the glue
+#   core     what runs: Workbench, Morphogen, Claude Code, and the glue
 #   options  components substrate can choose when a step needs one (lifecycle: option); none of them runs now
 #   sources  catalogs of catalogs: registries to search when no known component fits (lifecycle: listed)
-# One file, because encoder-backstage resolves refs within a file (scripts/map.sh reads it into kernel; a
+# One file, so every ref resolves within it (scripts/map.sh reads it into Workbench; a
 # PostToolUse hook does it after each edit). Morphogen reads it as cells (morphogen.yaml).
 #
 # Annotations:
 #   substrate.dev/intent      what the part is for
-#   substrate.dev/fill        existing (built, in kernel, Morphogen or Claude Code), adopt (open source as is),
-#                             build (to write: a kernel module, a skill, or glue here)
+#   substrate.dev/fill        existing (built, in Workbench, Morphogen or Claude Code), adopt (open source as is),
+#                             build (to write: a Workbench plugin, a skill, or glue here)
 #   substrate.dev/basis       where an existing part lives
 #   substrate.dev/step        the build step (docs/build.yaml) it belongs to
 #   options:  substrate.dev/fits (where it would sit), substrate.dev/interface (what keeps it possible now),
@@ -48,7 +48,7 @@ apiVersion: backstage.io/v1alpha1
 kind: System
 metadata:
   name: core
-  description: What runs - kernel (store and model), Morphogen (judge), Claude Code (actor), and the glue.
+  description: What runs - Workbench (store and model), Morphogen (judge), Claude Code (actor), and the glue.
 spec: {owner: group:operator, domain: substrate}
 ---
 apiVersion: backstage.io/v1alpha1
@@ -65,286 +65,21 @@ metadata:
   description: Registries to search for candidates when no known component fits - catalogs of catalogs (spec 5).
 spec: {owner: group:operator, domain: substrate}
 ---
-# ================================================================ CORE: kernel
-apiVersion: backstage.io/v1alpha1
-kind: Component
-metadata:
-  name: kernel
-  description: The store and the model - a content system on Postgres with claims as its assertion type; one kk serve process.
-  annotations:
-    substrate.dev/intent: Hold what is known about any system as cited, typed, belief-scored claims, and let people and agents read and write them as themselves.
-    substrate.dev/fill: existing
-    substrate.dev/basis: repos/kernel; kernel's compose stack (db, init, kernel, caddy) with deploy/compose.yaml
-spec:
-  type: service
-  lifecycle: production
-  owner: group:operator
-  system: core
-  providesApis: [kernel-mcp-api, change-sets, api-views, change-events, vocab]
-  consumesApis: [recall-api]      # kernel-mcp's recall tool calls the recall part
-  dependsOn: [resource:postgres, resource:artifact-store]
----
-apiVersion: backstage.io/v1alpha1
-kind: Component
-metadata:
-  name: claims-store
-  description: Entities, claims, artifacts, runs and change sets in one Postgres.
-  annotations:
-    substrate.dev/intent: Hold every assertion attributed, quoted, belief-scored, scoped and bitemporal; write only through change sets; delete nothing.
-    substrate.dev/fill: existing
-    substrate.dev/basis: kernel/schema/001_kernel.sql (D-01, D-02, D-05, D-09, D-10)
-spec:
-  type: library
-  lifecycle: production
-  owner: group:operator
-  system: core
-  subcomponentOf: kernel
-  dependsOn: [resource:postgres]
----
-apiVersion: backstage.io/v1alpha1
-kind: Component
-metadata:
-  name: content-types
-  description: Kernel as a content system - content types, items and versions over claims; ontologies and aliases as content and taxonomy.
-  annotations:
-    substrate.dev/intent: Let any kind of thing (a service, a package, a customer, a process) be a content type with its own shape and view, without changing the store.
-    substrate.dev/fill: build
-    substrate.dev/basis: kernel docs/content.md and D-101, draft PR OpenReplicant/kernel#112 (S-39, S-45)
-    substrate.dev/step: "3"
-spec:
-  type: library
-  lifecycle: experimental
-  owner: group:operator
-  system: core
-  subcomponentOf: kernel
-  consumesApis: [change-sets, vocab]
----
-apiVersion: backstage.io/v1alpha1
-kind: Component
-metadata:
-  name: vocabulary
-  description: Vocabularies as packs, with SKOS and SSSOM-shaped mappings between them.
-  annotations:
-    substrate.dev/intent: Give claims shared terms without forcing any source to change its own; new terms go through review.
-    substrate.dev/fill: existing
-    substrate.dev/basis: kernel ontology/ packs and modules/pack-loader (D-23, D-40); the backstage pack and its mappings (D-100)
-spec:
-  type: library
-  lifecycle: production
-  owner: group:operator
-  system: core
-  subcomponentOf: kernel
-  providesApis: [vocab]
----
-apiVersion: backstage.io/v1alpha1
-kind: Component
-metadata:
-  name: encoders
-  description: Sources in, proposed claims out - repositories, event logs, BPMN, conversations, papers.
-  annotations:
-    substrate.dev/intent: Turn each source into claims that cite it; re-reading a changed source supersedes what it said.
-    substrate.dev/fill: existing
-    substrate.dev/basis: kernel modules self-encoder, encoder-eventlog, encoder-bpmn, encoder-interaction, encoder-papers, memory-extractor, ingest-filter-gitleaks
-spec:
-  type: library
-  lifecycle: production
-  owner: group:agents
-  system: core
-  subcomponentOf: kernel
-  consumesApis: [change-sets, vocab]
----
-apiVersion: backstage.io/v1alpha1
-kind: Component
-metadata:
-  name: encoder-backstage
-  description: Catalog files as claims in Backstage's own terms, each citing its line.
-  annotations:
-    substrate.dev/intent: Put the map (what runs, what could, where to search) into kernel, cited by file and line.
-    substrate.dev/fill: existing
-    substrate.dev/basis: kernel modules/encoder-backstage and the backstage pack (D-100); run by scripts/map.sh (S-33)
-spec:
-  type: service
-  lifecycle: experimental
-  owner: group:agents
-  system: core
-  subcomponentOf: kernel
-  consumesApis: [change-sets, vocab]
-  dependsOn: [resource:git-repo]
----
-apiVersion: backstage.io/v1alpha1
-kind: Component
-metadata:
-  name: encoder-morphogen
-  description: Morphogen's verdicts as claims - DQV measurements with PROV lineage.
-  annotations:
-    substrate.dev/intent: Let kernel know what was judged, on what evidence, at what cost.
-    substrate.dev/fill: existing
-    substrate.dev/basis: kernel modules/encoder-morphogen (D-99); run by scripts/verdicts.sh and a PostToolUse hook (S-32)
-    substrate.dev/step: "2"
-spec:
-  type: service
-  lifecycle: experimental
-  owner: group:agents
-  system: core
-  subcomponentOf: kernel
-  consumesApis: [judge-api, change-sets, vocab]
-  dependsOn: [resource:evidence-log]
----
-apiVersion: backstage.io/v1alpha1
-kind: Component
-metadata:
-  name: map-drift
-  description: The declared map against what is observed; each gap to the review lane with claims on both sides.
-  annotations:
-    substrate.dev/intent: Notice when practice drifts from the map, and let a person decide which side is right.
-    substrate.dev/fill: existing
-    substrate.dev/basis: kernel modules/map-drift (D-100). Not running since S-41 (its observed half was the metrics observer); step 2 gives it one from code and running containers (S-44)
-    substrate.dev/step: "2"
-spec:
-  type: service
-  lifecycle: experimental
-  owner: group:operator
-  system: core
-  subcomponentOf: kernel
-  consumesApis: [change-events, api-views, change-sets]
----
-apiVersion: backstage.io/v1alpha1
-kind: Component
-metadata:
-  name: validator
-  description: SHACL validation of every change set before it applies.
-  annotations:
-    substrate.dev/intent: Refuse change sets that break the shapes; never write.
-    substrate.dev/fill: existing
-    substrate.dev/basis: kernel modules/validator-shacl (D-24)
-spec:
-  type: service
-  lifecycle: production
-  owner: group:operator
-  system: core
-  subcomponentOf: kernel
-  consumesApis: [change-events, api-views, vocab]
----
-apiVersion: backstage.io/v1alpha1
-kind: Component
-metadata:
-  name: belief-model
-  description: Belief from independent support and contradiction; swappable.
-  annotations:
-    substrate.dev/intent: Score each claim between 0 and 1 from support, contradiction and fallen premises - claims as hypotheses.
-    substrate.dev/fill: existing
-    substrate.dev/basis: kernel modules/belief-corroboration (D-04, D-27, D-62)
-spec:
-  type: service
-  lifecycle: production
-  owner: group:agents
-  system: core
-  subcomponentOf: kernel
-  consumesApis: [change-events, api-views, change-sets]
----
-apiVersion: backstage.io/v1alpha1
-kind: Component
-metadata:
-  name: verifiers
-  description: Quotes checked against sources; conclusions flagged when a premise falls.
-  annotations:
-    substrate.dev/intent: No method verifies its own output (kernel invariant 5).
-    substrate.dev/fill: existing
-    substrate.dev/basis: kernel modules verifier-quotes (D-67) and truth-maintenance (D-90)
-spec:
-  type: service
-  lifecycle: production
-  owner: group:agents
-  system: core
-  subcomponentOf: kernel
-  consumesApis: [change-events, api-views, change-sets]
-  dependsOn: [resource:artifact-store]
----
-apiVersion: backstage.io/v1alpha1
-kind: Component
-metadata:
-  name: recall
-  description: BM25 by default, embeddings and re-ranking opt-in; indexes are read models.
-  annotations:
-    substrate.dev/intent: Find the claims a question needs, ranked with belief.
-    substrate.dev/fill: existing
-    substrate.dev/basis: kernel modules recall-index and recall-dense (D-60, D-61, D-66)
-spec:
-  type: service
-  lifecycle: production
-  owner: group:agents
-  system: core
-  subcomponentOf: kernel
-  providesApis: [recall-api]
-  consumesApis: [api-views, change-events]
----
-apiVersion: backstage.io/v1alpha1
-kind: Component
-metadata:
-  name: control-loop
-  description: Monitor, analyse, plan - conformance against the documented process, and the process learner.
-  annotations:
-    substrate.dev/intent: Notice when behaviour leaves the documented process and propose either a fix or a revised process.
-    substrate.dev/fill: existing
-    substrate.dev/basis: kernel modules conformance and learner-process (D-50, D-76), parts of kk serve's default; observer-prometheus waits for the metrics option
-spec:
-  type: service
-  lifecycle: production
-  owner: group:agents
-  system: core
-  subcomponentOf: kernel
-  consumesApis: [api-views, change-sets]
----
-apiVersion: backstage.io/v1alpha1
-kind: Component
-metadata:
-  name: identity-resolver
-  description: Which records and mentions name the same entity.
-  annotations:
-    substrate.dev/intent: Link names, roles and records of one thing - exactMatch when certain, closeMatch for review; every merge reversible.
-    substrate.dev/fill: build
-    substrate.dev/basis: kernel M6-T9 (planned); Morphogen demos/entity-resolution supplies the cells and held-out pairs (S-07)
-    substrate.dev/candidates: Splink 5.0.0 (MIT), as M6-T9 names
-spec:
-  type: service
-  lifecycle: experimental
-  owner: group:agents
-  system: core
-  subcomponentOf: kernel
-  consumesApis: [api-views, change-sets, vocab]
----
-apiVersion: backstage.io/v1alpha1
-kind: Component
-metadata:
-  name: ui
-  description: Kernel's UI - search and explain, the review lane, the graph, and views as modules.
-  annotations:
-    substrate.dev/intent: Let people see what is believed and why, and decide in the review lane.
-    substrate.dev/fill: existing
-    substrate.dev/basis: kernel modules/ui with its views (D-44), at http://127.0.0.1:8080/ui/
-spec:
-  type: website
-  lifecycle: production
-  owner: group:operator
-  system: core
-  subcomponentOf: kernel
-  consumesApis: [kernel-mcp-api]
----
 apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
   name: front-door
-  description: Kernel's Caddy at 127.0.0.1:8080 - /mcp and /ui for kernel, /api for Workbench; HTTPS when KK_SITE names a public host.
+  description: Caddy at 127.0.0.1:8080 - Workbench's shell at /, its API at /api, its server at /wb/api; HTTPS when KK_SITE names a public host.
   annotations:
     substrate.dev/intent: One address for people and agents.
     substrate.dev/fill: adopt
-    substrate.dev/basis: kernel's caddy service (D-74) with deploy/caddy/Caddyfile (kernel's routes plus /api); CADDY_IMAGE pins docker.io/library/caddy:2.11.7-alpine
+    substrate.dev/basis: deploy/compose.yaml service caddy, deploy/caddy/Caddyfile (the shell's page is a Caddy template); CADDY_IMAGE pins docker.io/library/caddy:2.11.7-alpine
 spec:
   type: service
   lifecycle: production
   owner: group:operator
   system: core
-  consumesApis: [kernel-mcp-api, workbench-api]
+  consumesApis: [workbench-api]
 ---
 # ================================================================ CORE: judge and actor
 apiVersion: backstage.io/v1alpha1
@@ -372,23 +107,23 @@ metadata:
   annotations:
     substrate.dev/intent: Close gaps between the intended and the observed, through responses that are judged and recorded.
     substrate.dev/fill: existing
-    substrate.dev/basis: Claude Code, with kernel's MCP server and hooks through bin/ (S-03, S-19, kernel D-95)
+    substrate.dev/basis: Claude Code, with Workbench's MCP server (scripts/harness.py, a token per connection from scripts/workbench-mcp-headers.sh) and Morphogen's plugin (S-03, S-57)
 spec:
   type: service
   lifecycle: production
   owner: group:operator
   system: core
-  consumesApis: [kernel-mcp-api, judge-api]
+  consumesApis: [workbench-mcp-api, judge-api]
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
   name: skills
-  description: Substrate's procedures - Claude Code skills, here and in kernel and Morphogen.
+  description: Substrate's procedures - Claude Code skills, here and in Morphogen.
   annotations:
     substrate.dev/intent: Hold how to do each kind of work; a skill is a text cell Morphogen can judge and improve.
     substrate.dev/fill: existing
-    substrate.dev/basis: .claude/skills (setup, build-out, upstream); kernel's skill-interview, skill-process-extraction; Morphogen's skills/map
+    substrate.dev/basis: .claude/skills (setup, build-out, upstream); Morphogen's skills (morphogen, map)
 spec:
   type: library
   lifecycle: production
@@ -404,8 +139,8 @@ metadata:
   description: Asks people what the map cannot see, and records each answer as a claim attributed to them.
   annotations:
     substrate.dev/intent: Fill the intended half of a system from the people who hold it (S-43).
-    substrate.dev/fill: existing
-    substrate.dev/basis: kernel modules skill-interview and map-gaps (the gaps an interviewer asks about)
+    substrate.dev/fill: build
+    substrate.dev/basis: to rebuild on Workbench (kernel's skill-interview and map-gaps are the reference, kernel being an option now)
     substrate.dev/step: "5"
 spec:
   type: library
@@ -413,7 +148,7 @@ spec:
   owner: group:agents
   system: core
   subcomponentOf: claude-code
-  consumesApis: [kernel-mcp-api]
+  consumesApis: [workbench-mcp-api]
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Component
@@ -431,7 +166,7 @@ spec:
   owner: group:agents
   system: core
   subcomponentOf: claude-code
-  consumesApis: [kernel-mcp-api, judge-api]
+  consumesApis: [workbench-mcp-api, judge-api]
 ---
 # ================================================================ CORE: skills and hooks (AiResource, Backstage 1.51; kernel D-102)
 # Each is a part the self-encoder reads from .claude/ (skills by their frontmatter name, hooks as <event>-<script>),
@@ -492,7 +227,7 @@ apiVersion: backstage.io/v1alpha1
 kind: AiResource
 metadata:
   name: posttooluse-verdicts
-  description: After a Morphogen tool call, records its verdicts in kernel as claims (scripts/verdicts.sh --hook).
+  description: After a Morphogen tool call, records its verdicts in Workbench (scripts/verdicts.sh --hook, substrate:morphogen).
   annotations:
     substrate.dev/basis: .claude/settings.json hooks.PostToolUse (matcher mcp__.*morphogen.*)
 spec:
@@ -505,7 +240,7 @@ apiVersion: backstage.io/v1alpha1
 kind: AiResource
 metadata:
   name: posttooluse-map
-  description: After an edit to a catalog-info.yaml, reads the map into kernel again (scripts/map.sh --hook).
+  description: After an edit to a catalog-info.yaml, reads the map into Workbench again and checks drift (scripts/map.sh --hook).
   annotations:
     substrate.dev/basis: .claude/settings.json hooks.PostToolUse (matcher Edit|Write|MultiEdit)
 spec:
@@ -521,16 +256,16 @@ metadata:
   name: workbench
   description: A content system on Postgres - typed tables per content type, claims beside every value, vocabularies and SSSOM mappings, plugins.
   annotations:
-    substrate.dev/intent: Hold what substrate knows about any system as typed items whose every value can say where it came from; replaces kernel at W4.
+    substrate.dev/intent: Hold what substrate knows about any system as typed items whose every value can say where it came from; the store and the model since S-57.
     substrate.dev/fill: build
-    substrate.dev/basis: workbench/ (BRIEF.md; W1 to W3 done - store, shell, server and extractors), plugins/substrate
-    substrate.dev/step: "W3"
+    substrate.dev/basis: workbench/ (BRIEF.md; W1 to W4 done), plugins/substrate
+    substrate.dev/step: "W4"
 spec:
   type: service
   lifecycle: experimental
   owner: group:operator
   system: core
-  providesApis: [workbench-api]
+  providesApis: [workbench-api, workbench-mcp-api]
   dependsOn: [resource:postgres]
 ---
 apiVersion: backstage.io/v1alpha1
@@ -556,11 +291,11 @@ apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
   name: workbench-server
-  description: The Workbench server at /wb/api - plugins' Python, extractors off a pgmq queue, NOTIFY relayed as Server-Sent Events.
+  description: The Workbench server at /wb/api - plugins' Python, extractors off a pgmq queue, NOTIFY relayed as Server-Sent Events, MCP for agents.
   annotations:
     substrate.dev/intent: Do what SQL cannot - run extractors and relay live changes - behind the same token check as the API.
     substrate.dev/fill: build
-    substrate.dev/basis: workbench/workbench/server.py and extract.py; compose service workbench (kernel's image for now)
+    substrate.dev/basis: workbench/workbench/server.py, extract.py, mcp.py; compose service workbench (workbench/Containerfile)
     substrate.dev/step: "W3"
 spec:
   type: service
@@ -568,6 +303,7 @@ spec:
   owner: group:operator
   system: core
   subcomponentOf: workbench
+  providesApis: [workbench-mcp-api]
   consumesApis: [workbench-api]
   dependsOn: [resource:postgres]
 ---
@@ -578,15 +314,14 @@ metadata:
   name: tools
   description: The commands people, scripts and Claude Code run, inside one container (bin/).
   annotations:
-    substrate.dev/intent: Keep the host bare - kk, Morphogen, gitleaks and kernel's MCP server and hooks run in a container as the host user.
+    substrate.dev/intent: Keep the host bare - Workbench's command, Morphogen and gitleaks run in a container as the host user.
     substrate.dev/fill: build
-    substrate.dev/basis: deploy/tools/Containerfile on kernel's image, scripts/tools.sh, bin/ (S-19)
+    substrate.dev/basis: deploy/tools/Containerfile (its own image since S-57), scripts/tools.sh, bin/ (S-19)
 spec:
   type: service
   lifecycle: production
   owner: group:operator
   system: core
-  consumesApis: [change-sets, api-views]
   dependsOn: [resource:sandbox, resource:git-repo]
 ---
 apiVersion: backstage.io/v1alpha1
@@ -636,7 +371,7 @@ spec:
   lifecycle: production
   owner: group:operator
   system: core
-  consumesApis: [runtime-api, secrets-api, change-sets]
+  consumesApis: [runtime-api, secrets-api, workbench-api]
   dependsOn: [component:tools]
 ---
 # ================================================================ OPTIONS (spec 8): none of these runs now
@@ -646,7 +381,7 @@ metadata:
   name: model-gateway
   description: Bifrost - every model call through one gateway, so tokens and cost are measured outside the agent.
   annotations:
-    substrate.dev/fits: Between Claude Code (and kernel modules that call models) and the model providers - Anthropic, OpenRouter, local models.
+    substrate.dev/fits: Between Claude Code (and anything else that calls models) and the model providers - Anthropic, OpenRouter, local models.
     substrate.dev/interface: Claude Code reads ANTHROPIC_BASE_URL (and ANTHROPIC_CUSTOM_HEADERS for the virtual key); nothing in substrate assumes direct access.
     substrate.dev/when: Cost must be measured outside the agent (Morphogen judging cost, budgets), or several providers routed behind one key.
     substrate.dev/restore: "a00fb61 - deploy/compose.yaml service bifrost, scripts/render_bifrost.py, scripts/gateway.py, .env.example's gateway block (S-04, S-14, S-34, S-40)"
@@ -658,6 +393,25 @@ spec:
   owner: group:operator
   system: options
   providesApis: [model-api]
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: knowledge-kernel
+  description: Kernel - the claims-first world model substrate was built on until S-57 (claims, change sets, review lane, encoders, MCP).
+  annotations:
+    substrate.dev/fits: The store and model, in place of Workbench, where every fact as a claim, per-scope clearance and kernel's reasoning (truth maintenance, belief) are needed.
+    substrate.dev/interface: Workbench keeps what kernel was for - provenance on every value, supersede never overwrite, mappings, decisions - so a kernel plugin could read or write the same items.
+    substrate.dev/when: Several organisations share one store with per-scope clearance, or kernel's reasoning modules are wanted.
+    substrate.dev/restore: "a0dd2fd and earlier - deploy/compose.yaml as an overlay on repos/kernel/deploy/compose.yaml, bin/kk and bin/kernel-mcp*, scripts/map.sh and verdicts.sh on kernel's encoders, kk up in scripts/up.sh; .state/harness-backup/ has this project's Claude Code wiring for it"
+    substrate.dev/evidence: "Ran 2026-11-06 to 2026-11-09. Its database kk is kept in the Postgres volume (6399 claims). Typed records fit it badly, and its ceremony came before work (S-52). Open: kernel#111, #112 (content framing), #113 (components beyond services)."
+    substrate.dev/candidates: repos/kernel (Apache-2.0)
+spec:
+  type: service
+  lifecycle: option
+  owner: group:operator
+  system: options
+
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Component
@@ -764,7 +518,7 @@ metadata:
     substrate.dev/interface: pgmq is already an extension in kernel's Postgres image (kernel D-94); kernel's own LISTEN/NOTIFY is unchanged.
     substrate.dev/when: Something should start a session without a person - a detector finding, a goal past its date.
     substrate.dev/restore: "a00fb61 - scripts/bus.sh, scripts/bus.py, deploy/bus/queues.txt, modules/dispatcher/BRIEF.md (S-21, S-24)"
-    substrate.dev/evidence: "Ran 2026-11-08 (queues triggers, owner, events). Database substrate and login substrate_bus are still in kernel's Postgres, unused."
+    substrate.dev/evidence: "Ran 2026-11-08 (queues triggers, owner, events). Database substrate and login substrate_bus are still in the Postgres volume, unused. Workbench uses pgmq for its jobs (wb_jobs)."
     substrate.dev/candidates: pgmq v1.13.1 (PostgreSQL License)
 spec:
   type: service
@@ -788,7 +542,7 @@ spec:
   lifecycle: option
   owner: group:operator
   system: options
-  consumesApis: [kernel-mcp-api]
+  consumesApis: [workbench-api]
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Component
@@ -918,15 +672,8 @@ apiVersion: backstage.io/v1alpha1
 kind: Resource
 metadata:
   name: postgres
-  description: Kernel's Postgres 17 image - pgvector, pg_cron, pgmq, pgGraph (kernel D-22, D-94; S-24).
+  description: Postgres 17 with pgvector, pg_cron, pgmq, pgGraph (deploy/postgres, vendored from kernel; S-24, S-57); databases workbench, and kk kept.
 spec: {type: database, owner: group:operator, system: core}
----
-apiVersion: backstage.io/v1alpha1
-kind: Resource
-metadata:
-  name: artifact-store
-  description: .state/artifacts - what encoders read, for quotes to be checked against.
-spec: {type: volume, owner: group:operator, system: core}
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Resource
@@ -948,37 +695,6 @@ metadata:
   name: sandbox
   description: Containers for judged runs, modules and the tools (Podman).
 spec: {type: container-runtime, owner: group:operator, system: core}
----
-# ================================================================ APIs
-apiVersion: backstage.io/v1alpha1
-kind: API
-metadata: {name: change-sets, description: "submit_change_set - the only way to write (kernel D-05)."}
-spec: {type: sql-function, lifecycle: production, owner: group:operator, system: core, definition: "api.submit_change_set(ops jsonb) under the caller's own role; auto and review lanes."}
----
-apiVersion: backstage.io/v1alpha1
-kind: API
-metadata: {name: api-views, description: "The api schema - what modules read, with row-level security."}
-spec: {type: sql-views, lifecycle: production, owner: group:operator, system: core, definition: "Views in schema api, security_invoker, clearance per role."}
----
-apiVersion: backstage.io/v1alpha1
-kind: API
-metadata: {name: change-events, description: "NOTIFY on kernel_change_set (D-32)."}
-spec: {type: pg-notify, lifecycle: production, owner: group:operator, system: core, definition: "LISTEN kernel_change_set -> {id, status, scope, lane}."}
----
-apiVersion: backstage.io/v1alpha1
-kind: API
-metadata: {name: vocab, description: "Installed packs, slots and mappings."}
-spec: {type: rdf, lifecycle: production, owner: group:operator, system: core, definition: "ontology/packs.yaml, slots.yaml, mappings.ttl."}
----
-apiVersion: backstage.io/v1alpha1
-kind: API
-metadata: {name: recall-api, description: "Ranked claims for a question."}
-spec: {type: python-module, lifecycle: production, owner: group:agents, system: core, definition: "recall(question, budget) -> claims with belief and handles."}
----
-apiVersion: backstage.io/v1alpha1
-kind: API
-metadata: {name: kernel-mcp-api, description: "Kernel's MCP tools - memory and operator profiles."}
-spec: {type: mcp-server, lifecycle: production, owner: group:operator, system: core, definition: "memory: remember, recall, explain, changes_since. operator: every tool."}
 ---
 apiVersion: backstage.io/v1alpha1
 kind: API
@@ -1014,3 +730,9 @@ apiVersion: backstage.io/v1alpha1
 kind: API
 metadata: {name: workbench-api, description: "Workbench's JSON API at /api - a view per content type, claims, content_types, rpc/login, rpc/whoami."}
 spec: {type: openapi, lifecycle: experimental, owner: group:operator, system: core, definition: "PostgREST's OpenAPI 2.0 description at http://127.0.0.1:8080/api/ (filtered by the caller's role)."}
+
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata: {name: workbench-mcp-api, description: "Workbench over MCP for agents at /wb/api/mcp - search, items with their claims, save, decisions, extractors."}
+spec: {type: mcp-server, lifecycle: experimental, owner: group:operator, system: core, definition: "Streamable HTTP, JSON responses; each tool call forwards the agent's own token to PostgREST."}

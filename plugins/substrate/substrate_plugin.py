@@ -5,14 +5,20 @@
     substrate:claude-code  .claude/skills/*/SKILL.md -> skill items; .claude/settings.json hooks -> hook items
     substrate:drift        what the map declares (AiResource entries of type skill or hook) against what the
                            repository has: each difference is a gap in the review lane, withdrawn once it closes
+    substrate:morphogen    Morphogen's evidence log (<git common dir>/morphogen/evidence.db) -> verdict items, after
+                           checking the whole hash chain independently of Morphogen; a broken chain records nothing
 
 They read the repository at WB_SUBSTRATE_ROOT (default: the checkout this plugin is in). Self is not a special
 case (S-49): nothing here knows it is reading Substrate; any repository with these files reads the same way.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import re
+import shutil
+import sqlite3
+import tempfile
 from pathlib import Path, PurePosixPath
 
 import yaml
@@ -54,6 +60,51 @@ def evidence(lines, spans, path):
     if not a:
         return None
     return {"quote": "\n".join(lines[a - 1:min(b, a + 2)]).strip(), "span": {"start_line": a, "end_line": b}}
+
+
+GENESIS = "0" * 64
+
+
+def canonical(obj) -> str:
+    """Morphogen's canonical JSON (morphogen/evidence.py), which its hashes cover."""
+    return json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+
+
+class ChainBroken(Exception):
+    pass
+
+
+def read_evidence(path: Path) -> list[dict]:
+    """Every record, oldest first, after checking the chain: each record's hash covers its canonical JSON without
+    the hash, and names the one before it. Read from a copy, so a writer's WAL and a read-only mount do not clash."""
+    with tempfile.TemporaryDirectory() as d:
+        for suffix in ("", "-wal", "-shm"):
+            if Path(str(path) + suffix).exists():
+                shutil.copy(str(path) + suffix, Path(d) / ("evidence.db" + suffix))
+        c = sqlite3.connect(Path(d) / "evidence.db")
+        try:
+            rows = c.execute("SELECT seq, raw FROM evidence ORDER BY seq").fetchall()
+        finally:
+            c.close()
+    out, prev = [], GENESIS
+    for i, (seq, raw) in enumerate(rows, start=1):
+        rec = json.loads(raw)
+        body = {k: v for k, v in rec.items() if k != "hash"}
+        if seq != i or rec.get("seq") != i or rec.get("prev") != prev or \
+                hashlib.sha256(canonical(body).encode()).hexdigest() != rec.get("hash"):
+            raise ChainBroken(f"the evidence log is broken at record {i}: its hash or its link does not match")
+        prev = rec["hash"]
+        out.append(rec)
+    return out
+
+
+def git_common_dir(root: Path) -> Path:
+    g = root / ".git"
+    if g.is_file():                                      # a worktree: .git names the real git dir
+        real = Path(g.read_text().split(":", 1)[1].strip())
+        common = real / "commondir"
+        return (real / common.read_text().strip()).resolve() if common.is_file() else real
+    return g
 
 
 def register(wb):
@@ -174,6 +225,37 @@ def register(wb):
                     "declared": {"type": typ, "slug": slug}, "direction": "build it, or take it off the map"})
         ctx.log(f"{len(declared)} declared, {len(observed)} observed")
 
+    def morphogen(ctx, inputs):
+        path = Path(inputs.get("log") or wb.setting("evidence") or git_common_dir(root) / "morphogen" / "evidence.db")
+        if not path.is_file():
+            ctx.log(f"no evidence log at {path}: Morphogen has not judged anything here yet")
+            return
+        records = read_evidence(path)                     # raises on a broken chain: the run fails, nothing is kept
+        components = dict(ctx.conn.execute("select slug, id from api.component").fetchall())
+        verdicts = [r for r in records if r.get("kind") == "verdict" and r.get("by") == "judge"]
+        for rec in verdicts:
+            data = canonical(rec).encode()
+            src = ctx.source(f"morphogen:evidence.db#{rec['seq']}", data, "application/json")
+            part = rec.get("cell") or (rec.get("subject") or {}).get("system") or ""
+            outcome = rec.get("outcome") or {}
+            fields = {"claim": rec.get("claim"), "verdict": rec.get("verdict"), "gate": (rec.get("gate") or {}).get("decision"),
+                      "cell": part, "base": (rec.get("refs") or {}).get("base"), "candidate": (rec.get("refs") or {}).get("candidate"),
+                      "trust": rec.get("trust"), "metrics": outcome.get("metrics") or {},
+                      "reasons": {k: outcome.get(k) for k in ("forbidden", "denied", "check", "interfaces", "wrong", "failed") if k in outcome},
+                      "seq": rec["seq"], "hash": rec["hash"]}
+            ev = {f: {"quote": f"{rec['claim']}" if f == "claim" else json.dumps(rec.get(k), sort_keys=True)[:300],
+                      "span": {"record": rec["seq"], "pointer": "/" + k}}
+                  for f, k in (("claim", "claim"), ("verdict", "verdict"), ("gate", "gate"), ("trust", "trust"))}
+            item = ctx.upsert("verdict", f"{re.sub(r'[^a-z0-9]+', '-', part.lower()).strip('-') or 'system'}-{rec['seq']}",
+                              {k: v for k, v in fields.items() if v is not None},
+                              title=rec.get("claim") or f"verdict {rec['seq']}", source=src, evidence=ev)
+            target = components.get(part.split("/")[-1])
+            if target:
+                ctx.relate("verdict", item, "judges", "component", target)
+        ctx.done("verdict")
+        ctx.log(f"{len(records)} records in a sound chain, {len(verdicts)} verdicts")
+
     wb.extractor("catalog", catalog, "catalog-info.yaml: every entity as a component item, citing its line, with its relations")
     wb.extractor("claude-code", claude_code, "Claude Code's .claude/: skills and hooks as items")
+    wb.extractor("morphogen", morphogen, "Morphogen's evidence log: each verdict, after checking the whole hash chain")
     wb.extractor("drift", drift, "what the map declares against what the repository has; each difference to the review lane")

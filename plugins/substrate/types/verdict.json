@@ -1,0 +1,18 @@
+{
+  "title": "Verdict",
+  "description": "A Morphogen verdict: whether a candidate change to a cell is better than its base, on evidence the changer could not reach. Read from Morphogen's hash-chained evidence log.",
+  "type": "object",
+  "properties": {
+    "claim": {"type": "string", "description": "the judge's sentence, e.g. 'cell: abc is better than def'"},
+    "verdict": {"type": "string", "description": "pass or fail"},
+    "gate": {"type": "string", "description": "who may act on it: merge (an agent may), review (a person decides), none"},
+    "cell": {"type": "string", "description": "the cell or system judged"},
+    "base": {"type": "string", "description": "the base commit"},
+    "candidate": {"type": "string", "description": "the candidate commit"},
+    "trust": {"type": "string", "description": "measured (on the real system) or simulated (on a model of it)"},
+    "metrics": {"type": "object", "description": "per metric: gain, 95% interval, sign test p, base and candidate medians"},
+    "reasons": {"type": "object", "description": "what the judge checked: forbidden files, tests, interfaces, equivalence"},
+    "seq": {"type": "integer", "description": "its place in the evidence log"},
+    "hash": {"type": "string", "description": "its hash in the evidence log's chain"}
+  }
+}

@@ -18,11 +18,12 @@ instead; this skill is the default, not an override.
    else is built on a stack that does not run.
 3. **Say what you are about to do**, in a line, and set the step to `doing`
    (`python3 scripts/spec.py set ID doing`).
-4. **Brief first.** For a new module, write or update `modules/<name>/BRIEF.md` before code: what it reads, what
-   it writes (claims through change sets only, kernel's module contract), its role, its check. The repository's
+4. **Brief first.** For a new part, write or update its brief before code: what it reads, what
+   it writes (through Workbench's API or an extractor's context, so every value is a claim), its role, its check. The repository's
    rules apply throughout (CLAUDE.md): look things up and pin them, core first, one tested path, licences, the
    map.
-5. **Build where the work belongs.** Glue and substrate modules here; anything in kernel or Morphogen upstream
+5. **Build where the work belongs.** Glue and substrate's plugin here; Workbench in `workbench/` (nothing
+   substrate-specific); anything in Morphogen upstream
    by pull request (the upstream skill), following that repository's own CLAUDE.md.
 6. **Judge what claims to improve something.** A change that is meant to make something better (recall
    quality, a skill, a threshold) lands only with a Morphogen verdict; a change that only adds a part needs its
@@ -36,7 +37,7 @@ instead; this skill is the default, not an override.
 
 ## When a step cannot go on
 
-- **The owner's decision** (`needs_owner: true`, or anything CLAUDE.md says is theirs: kernel changes, licences,
+- **The owner's decision** (`needs_owner: true`, or anything CLAUDE.md says is theirs: changes to the judge, licences,
   positioning, money): prepare the case (a brief, a draft branch, the evidence, a recommendation), ask the
   owner in one question, and set the step `blocked` with `--waiting-on "owner: <the question>"` if they are
   not there to answer. Then go on to the next step that does not depend on it.

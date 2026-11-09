@@ -34,7 +34,7 @@ is the judge, which is built so a change cannot reward-hack its way through.
 
 | Part | Project | Does |
 | --- | --- | --- |
-| Kernel | [kernel](https://github.com/OpenReplicant/kernel), cloned to `repos/kernel` | the store and the model: a content system on Postgres, with claims as the assertion type and ontologies and aliases as content and taxonomy |
+| Store | Workbench, in `workbench/` (built to leave as its own project) | the store and the model: typed items with claims beside every value (who said it, from which source, quoting it), vocabularies and SSSOM mappings; a desktop-like shell, an API, extractors, live updates, MCP for agents |
 | Actor | Claude Code | explores, interviews, builds, maps |
 | Judge | [Morphogen](https://github.com/OpenReplicant/Morphogen), cloned to `repos/morphogen` | a change lands only with a verdict the changer cannot reach |
 
@@ -49,7 +49,7 @@ interface that keeps it possible, when to bring it back, and the commit to resto
 ## Where it is going
 
 [`docs/spec.md`](docs/spec.md) is what substrate is meant to become, and [`docs/build.yaml`](docs/build.yaml)
-its build plan: cut to the core, one loop on itself, kernel as a content system, catalogs to choose from,
+its build plan: cut to the core, one loop on itself, a content system for the model, catalogs to choose from,
 another system beside itself. Left in place, they make Claude Code sessions here build it out a step at a time (the `build-out`
 skill). `python3 scripts/spec.py status` shows where it stands; deleting `docs/spec.md` stops it.
 
@@ -59,8 +59,8 @@ Clone this repository, open Claude Code in it, and ask it to set up (the `setup`
 
 ```sh
 git clone https://github.com/OpenReplicant/Substrate substrate && cd substrate
-scripts/bootstrap.sh          # host check, kernel and Morphogen cloned into repos/, the tools container
-scripts/up.sh                 # the stack, then kernel connected to this repository
+scripts/bootstrap.sh          # host check, Morphogen (and kernel, an option) cloned into repos/, the tools container
+scripts/up.sh                 # the stack, Workbench, substrate's plugin and extractors, Claude Code's wiring
 scripts/check.sh              # is everything up and wired
 ```
 
@@ -76,20 +76,21 @@ catalog-info.yaml    the map: what runs (core), what it can choose (options), wh
 morphogen.yaml       the same map as Morphogen cells
 repos.yaml           the upstream projects and the commits last checked
 docs/                the spec and its build plan
-deploy/              the compose overlay on kernel's stack; the secrets list; the tools image
-modules/             briefs for kernel modules that connect the parts
+deploy/              the stack (compose.yaml), the Postgres image, the Caddyfile, the secrets list, the tools image
+workbench/           Workbench: the store, its shell, server and MCP (its own README, licence and tests)
+plugins/substrate/   substrate's Workbench plugin: content types, extractors, the Map
 scripts/             bootstrap, up, down, check, logs, tools, spec, verdicts, map
-bin/                 kk, morphogen, gitleaks, kernel-mcp: each runs inside the tools container
-upstream/            fixes prepared for kernel or Morphogen, not yet opened as PRs
+bin/                 morphogen, gitleaks: each runs inside the tools container
+upstream/            fixes prepared for Morphogen (or kernel), not yet opened as PRs
 .claude/skills/      setup, build-out, upstream
-repos/               kernel and Morphogen clones (gitignored; each its own git repository)
+repos/               Morphogen and kernel clones (gitignored; each its own git repository)
 ```
 
 ## Working upstream
 
-Fixes and improvements to kernel or Morphogen go to those repositories by branch and pull request (the
+Fixes and improvements to Morphogen (or kernel) go to those repositories by branch and pull request (the
 `upstream` skill), never as patches left in a clone.
 
 ## Licence
 
-Apache-2.0, as kernel and Morphogen.
+Apache-2.0, as Workbench, kernel and Morphogen.

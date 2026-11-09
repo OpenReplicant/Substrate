@@ -1,9 +1,8 @@
-# Shared by the scripts: where things are, which runtime and engine, compose over kernel's stack.
+# Shared by the scripts: where things are, which runtime and engine, and compose over deploy/compose.yaml.
 # shellcheck shell=sh
 
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 case "$ROOT" in */scripts) ROOT=$(dirname "$ROOT") ;; esac   # sourced from scripts/runtime/
-KERNEL="$ROOT/repos/kernel"
 MORPHOGEN="$ROOT/repos/morphogen"
 ENV_FILE="$ROOT/.env"
 
@@ -57,7 +56,7 @@ SECRETS=${SECRETS:-env}
 
 compose() {
   secrets_export || return 1
-  "$ENGINE" compose -f "$KERNEL/deploy/compose.yaml" -f "$ROOT/deploy/compose.yaml" --env-file "$ENV_FILE" "$@"
+  "$ENGINE" compose -f "$ROOT/deploy/compose.yaml" --env-file "$ENV_FILE" "$@"
 }
 
 say() { printf '\n== %s\n' "$*"; }

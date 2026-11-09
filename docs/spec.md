@@ -20,7 +20,7 @@ each is for, what depends on what, and what may change. Morphogen reads the same
 can be named as a component can be judged as one.
 
 **Self is not a special case.** Substrate models itself exactly as it models any other system: its own project
-in kernel, its own catalog, the same encoders, drift checks and judge. Nothing in the loop works only on itself.
+in Workbench, its own catalog, the same extractors, drift checks and judge. Nothing in the loop works only on itself.
 That is what makes it self-modifying, and what makes several systems in one world model ordinary: each is a
 project, and the relations between them (this one manages that one; this component calls that API) are claims
 like any other.
@@ -76,7 +76,7 @@ what, what happened, measured by encoders). Both are claims in one store, so the
 between them is where all of substrate's work comes from.
 
 **A gap closes either way.** Practice can be brought back to intent (a fix), or intent revised to match
-practice that turned out better. Which way is a decision, made in kernel's review lane with the evidence beside
+practice that turned out better. Which way is a decision, made in Workbench's review lane with the evidence beside
 it. Always enforcing the blueprint makes a system rigid; always accepting what it observes leaves it no
 identity.
 
@@ -94,37 +94,32 @@ Three, plus the glue between them.
 
 | Part | Does | Where |
 | --- | --- | --- |
-| **Kernel** | the store and the model: a content system on Postgres with claims as its assertion type | `repos/kernel` |
+| **Workbench** | the store and the model: a content system on Postgres, typed items with claims beside every value; its shell, API, server and MCP | `workbench/` (built to leave) |
 | **Claude Code** | the actor: explores, interviews, researches, builds, maps; its skills are substrate's procedures | you |
 | **Morphogen** | the judge: a change lands only with a verdict the changer cannot reach | `repos/morphogen` |
 
 The glue is this repository: scripts that bring the parts up and connect them, the tools container they run in
-(S-19), and the map (`catalog-info.yaml`). It runs one way for now: compose with Podman, secrets in `.env`.
+(S-19), substrate's Workbench plugin (`plugins/substrate`), and the map (`catalog-info.yaml`). It runs one way for
+now: compose with Podman, secrets in `.env`. Kernel, which substrate was built on until S-57, is an option.
 
-### Kernel as a content system
+### The store: Workbench
 
-Kernel is a claim log with ontologies, shaped as a content management system on Postgres (kernel D-101,
-`docs/content.md`, PR OpenReplicant/kernel#112). What sets it apart from a CMS, and why it is a kernel: claims,
-structure and ontologies sit together at the centre of the world model, and everything that works on them is a
-module around it. Ontologies serve as the taxonomies; claim extraction (encoders), comparison (map-drift) and
-graph projection (pgGraph) are modules (owner, 2026-11-08).
+Workbench (`workbench/BRIEF.md`) is a general-purpose, AI-first content system on Postgres, and substrate is one
+plugin on it (S-52 to S-57). It keeps what the knowledge kernel was for and drops what got in the way: claims,
+structure and ontologies sit together at the centre, and everything that works on them is a plugin around it.
+Ontologies serve as taxonomies; extraction, comparison and graph projection are plugins and queries.
 
-- **Content types** are pack classes with SHACL shapes; **items** are entities; **versions** are artifacts. A
-  content type can come with its own view.
-- **Claims** are the assertion type and the index over everything else: attributed, quoting their evidence,
-  belief-scored, scoped, bitemporal, written only by change sets. Claims are what substrate reasons over and
-  what verifiers check. Everything else (documents, transcripts, code, packages) is what claims cite.
-- **Ontologies and aliases are content and taxonomy.** A vocabulary is a pack; relations between vocabularies
-  are mapping claims (SKOS `exactMatch` and `closeMatch`, SSSOM-shaped when a mapping set needs its own
-  metadata). A domain keeps its own terms, and mappings relate them, rather than translating everything into
-  one schema (S-33).
-- **System graphs use the catalog's entity model.** Components, systems, resources, APIs, groups and their
-  relations, kept in Backstage's own names (kernel D-100) because that is the most widely used way owners
-  declare systems. No Backstage server is needed (S-38). A catalog can hold any kind of thing: a service, a
-  package, a customer, a process.
-- **Postgres does the rest.** Row-level security (clearance), full-text search and pgvector (recall), pgGraph
-  (neighbourhoods and paths), LISTEN/NOTIFY, pg_cron and pgmq are already in kernel's image. Each is used when a
-  step needs it, not before.
+- **Content types are tables** with real columns, registered by plugins from JSON Schema; **items** are rows.
+- **Claims are the evidence layer** beside them: every value an item has, a claim says who or what stated it,
+  from which source, quoting it, when. Triggers in Postgres record them for every write, by a person, an agent
+  or an extractor alike; an edit supersedes its author's earlier claim, and other sources stay beside it.
+- **Vocabularies and SSSOM mappings are tables**: a domain keeps its own terms, and mappings relate them (S-33).
+- **System graphs use the catalog's entity model**, in Backstage's names, as items and relations; no Backstage
+  server (S-38). A catalog can hold any kind of thing: a service, a package, a skill, a verdict.
+- **Postgres does the rest**: row-level security, full-text search (recall), pgvector, pgGraph, LISTEN/NOTIFY
+  (live updates), pgmq (durable jobs), pg_cron. Each is used when a step needs it, not before.
+- **Extractors** (plugins) read sources into items, relations and claims; **the review lane** holds what a person
+  decides; **agents** use the same API over MCP, as users with roles.
 
 ## 5. Catalogs: choosing, not guessing
 
@@ -153,7 +148,7 @@ LGPL licence in the default stack (kernel D-11), and a release at least two week
 | **Observation** | encoders read code, config, running containers, logs and metrics | the encoder's role, quoting what it read |
 | **Exploration** | Claude Code reads a system (repository, docs, an API, a registry) and records what it found | the agent, quoting the source |
 | **Interviews** | a person answers questions; each statement becomes a claim | the person, quoting the transcript |
-| **Verdicts** | `encoder-morphogen` reads Morphogen's evidence log (kernel D-99) | Morphogen, with PROV lineage to the record |
+| **Verdicts** | `substrate:morphogen` reads Morphogen's evidence log, checking its hash chain first | Morphogen, citing the record in the log |
 
 Interviews matter as much as observation: most of the intended half of any real system lives only in people's
 heads. A person's statement is a claim like any other. It can conflict with an observed one, and the conflict
@@ -181,18 +176,18 @@ change to the thing that judges.**
 | What changes | Proposed by | Decided by | Why |
 | --- | --- | --- | --- |
 | A component (code, a skill, a hook, a parameter) to make it better | Claude Code, or one of Morphogen's optimizers (`tune`) | Morphogen's verdict: rules from the base, held-out cases, the red team | the changer cannot reach the evaluator; an optimizer inside Morphogen is still only a candidate source |
-| The map (which way a gap closes: revise intent, or fix practice) | Claude Code, from a gap map-drift found | the owner, in kernel's review lane | Morphogen reads the catalog as its own rules and refuses any candidate that edits it, so a map revision can never be its own verdict |
+| The map (which way a gap closes: revise intent, or fix practice) | Claude Code, from a gap drift found | the owner, in Workbench's review lane | Morphogen reads the catalog as its own rules and refuses any candidate that edits it, so a map revision can never be its own verdict |
 | A part added or removed, with no claim to improve anything | Claude Code, in a build step | the step's check, then the map revision above | adding a part is not an experiment; the map records it |
 | **The judge itself**: Morphogen's code, its cells and rules (`morphogen.yaml`), its red team, its statistics | anyone, Morphogen's own map skill included | never Morphogen: the ratchet. A red-team test that proves the hole must pass the current judge first; the fix reaches Morphogen's main by a pull request the owner reviews; every earlier cheat must keep failing; A/A checks after a statistics change | a judge that approves changes to itself is the reward hack in its purest form; the recursion stops at a person and a test suite that only grows |
 | Who decides, and how much is automated (organization) | anyone | the owner only | section 3: organization is never automated |
 
 When the judge changes, verdicts given under the old one stay what they were. A planned Morphogen addition
 re-judges past verdicts under a stricter judge and flags passes that only passed through the hole it closed.
-Kernel records each step as claims either way: the proposal, the test that proved the hole, the review, and the
+Workbench records each step either way: the proposal, the test that proved the hole, the review, and the
 verdicts before and after.
 
-The owner sees kernel's UI: the review lane (gaps, proposals, verdicts, each with evidence) and recall over
-everything. Only decisions that are the owner's reach them: organization (section 3), kernel changes, licences,
+The owner sees Workbench: the review lane (gaps, proposals, verdicts, each with evidence), the map, and search over
+everything. Only decisions that are the owner's reach them: organization (section 3), changes to the judge, licences,
 money. When the lane gets noisy, fix the noise where it starts (an encoder, a query).
 
 ## 8. Options: what substrate stays compatible with
@@ -206,16 +201,16 @@ through section 5, as a choice with evidence, when a step needs it.
 | Option | Fits where | Kept possible by | Bring back when |
 | --- | --- | --- | --- |
 | Model gateway (Bifrost v2.3.2) | between Claude Code and model providers | Claude Code reads `ANTHROPIC_BASE_URL`; nothing assumes direct access | cost must be measured outside the agent, or several providers routed |
-| Metrics (Prometheus v3.15.0) | observed half: rates, cost, errors | kernel's `observer-prometheus` reads PromQL | a gap needs numbers over time |
+| Metrics (Prometheus v3.15.0) | observed half: rates, cost, errors | an extractor reads PromQL (kernel's `observer-prometheus` is the reference) | a gap needs numbers over time |
 | Traces (OpenTelemetry collector 0.163.2) | observed half: who calls whom | `service.name` = the catalog name | a gap needs observed calls, not just code |
 | Catalog browser (Backstage, create-app 0.9.3) | a view over the catalog | the catalog stays in Backstage's entity model | people want to browse, or a Backstage plugin is needed |
 | Scheduler (Nomad 2.0.7) | runs the services | scripts call only `rt_up`, `rt_down`, `rt_status`, `rt_logs` | many nodes, batch jobs, or an API an actuator drives |
 | Secrets store (OpenBao 2.7.1) | holds credentials | scripts read secrets only through `env_value` and `sec_*` | more than one person or machine, or audit needed |
-| Bus (pgmq 1.13.1) | work and notices between parts | pgmq is already an extension in kernel's image | triggers should start sessions without a person |
-| Owner console | one live page for the owner | kernel serves its own UI and MCP | kernel's UI is not enough to act from |
-| Front-door plugins (Caddy 2.11.7 with xcaddy) | the one address | kernel's Caddy stays the front door | a plugin (auth, HTTPS, rate limits) is needed |
+| Bus (pgmq 1.13.1) | work and notices between parts | Workbench already uses pgmq for its jobs (`wb_jobs`) | triggers should start sessions without a person |
+| Owner console | one live page for the owner | Workbench's shell is that page now (S-55) | — |
+| Front-door plugins (Caddy 2.11.7 with xcaddy) | the one address | Caddy stays the front door (`CADDY_IMAGE`) | a plugin (auth, HTTPS, rate limits) is needed |
 | Docker | the container engine | engine-specific code only in `scripts/lib.sh` | a machine without Podman |
-| TOSCA, RDF tools | other tools reading or writing the model | kernel's mappings pack; export as N-Quads (kernel D-45) | a tool needs the model in its own terms |
+| TOSCA, RDF tools | other tools reading or writing the model | Workbench's SSSOM mappings table; an export is a plugin | a tool needs the model in its own terms |
 | A forge (Forgejo, Gitea, GitLab) | where pull requests are reviewed | git remotes only (S-25) | a repository lives there |
 
 **Held ideas.** These come from the previous spec. Each can return as a step when a level needs it: working
@@ -230,7 +225,7 @@ Each step ends with a check anyone can run. [`build.yaml`](build.yaml) holds the
 | --- | --- | --- |
 | 1 | Cut to the core | the stack is kernel's Postgres, kernel and the tools container; each removed part is an option in the map (section 8); `scripts/check.sh` passes |
 | 2 | Autopoietic: one loop on itself | substrate is modelled as its own project at component level (services, skills, hooks, parameters) with nothing self-only; a gap between the map and what is observed is found, a change closing it is proposed and decided by whoever decides that kind of change (section 7: a map revision by the owner in review, a component change by Morphogen), and kernel traces gap → change → decision by claim ids |
-| 3 | Kernel as a content system | the catalog is a content type in kernel, read and edited as items, with its claims and drift checks unchanged (needs the owner: a kernel change) |
+| 3 | A content system for the model | the catalog is a content type, read and edited as items, with its claims and drift checks unchanged; a new kind of entry is a new content type with no change to the store (done by Workbench, S-57) |
 | 4 | Catalogs to choose from | one real choice (a component a step needs) is made by searching the source catalogs, shortlisting candidates as entries with cited claims, testing them, and recording the pick and the rejections |
 | 5 | Engineer: another system beside itself | a real system the owner picks is a second project in the same world model, its graph cited from at least one interview and one observed source; the relations between it and substrate are claims; and one change to it is judged and applied the same way step 2 changed substrate (needs the owner: which system) |
 
@@ -244,7 +239,6 @@ A sixth step, a second unlike domain, was dropped (S-49): the generalist level s
 - **The judge is the one wall.** If Morphogen's separation fails (the changer can see the held-out cases, or
   edit the rules), nothing else stops a reward hack. Its red team and A/A checks run before any loop's results
   are trusted.
-- **Kernel changes are the owner's call.** Step 3 is a kernel PR; substrate prepares it and waits.
 - **Interviews cost a person's time.** Step 5 depends on someone willing to answer, and on questions good enough
   to be worth it.
 - **The observed half starts thin.** With metrics and traces as options (section 8), what is observed about
@@ -256,7 +250,7 @@ A sixth step, a second unlike domain, was dropped (S-49): the generalist level s
 ## 11. Sources
 
 - This repository's `DECISIONS.md` (S-41 onwards for this spec) and `catalog-info.yaml`
-- kernel (https://github.com/OpenReplicant/kernel): `docs/decisions.md`, `docs/content.md` (PR #112)
+- Workbench: `workbench/BRIEF.md`; kernel (https://github.com/OpenReplicant/kernel), its predecessor, now an option
 - Morphogen (https://github.com/OpenReplicant/Morphogen)
 - Maturana and Varela, *Autopoiesis and Cognition*, 1980 (organization and structure)
 - SSSOM: https://mapping-commons.github.io/sssom/ ; SKOS: https://www.w3.org/TR/skos-reference/

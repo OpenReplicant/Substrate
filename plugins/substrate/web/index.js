@@ -1,5 +1,4 @@
 // Substrate's plugin, browser side (workbench/README.md, "Client plugins"). It adds:
-//   - kernel's UI as an app. Kernel sends `frame-ancestors 'none'`, so it opens in its own window rather than a tab.
 //   - a dashboard widget: the system's components by lifecycle, built with mount() rather than an Alpine template,
 //     to show the framework-free half of the contract.
 //   - the Map: what the catalog declares against what the repository has (skills and hooks), the gaps between them
@@ -51,7 +50,6 @@ export default function substrate(wb) {
     get summary() { return this.loading ? 'Loading…' : `${this.rows.length} parts · ${this.gaps} waiting for a decision`; },
   }));
 
-  wb.app({id: 'kernel', title: 'Kernel (parked)', icon: 'schema', url: '/ui/', embed: 'window', order: 90});
 
   wb.widget({
     id: 'substrate-lifecycle', title: 'Components by lifecycle', size: 's', order: 10,

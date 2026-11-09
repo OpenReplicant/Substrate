@@ -3,20 +3,20 @@
 A self-modifying agent platform: an agent in charge of a system of components, its own system included. A
 component is anything that can be modified (a service, a skill, a hook, a parameter, a prompt), named in the
 catalog's entity model. It models each system as cited claims, acts on that model, and changes something only on
-evidence it cannot fake. Self is not a special case: substrate is one project in kernel like any other system,
+evidence it cannot fake. Self is not a special case: substrate is modelled in Workbench like any other system,
 so nothing you build here may work only on itself. Read `README.md` for the picture,
 `docs/spec.md` for where it is going, and `DECISIONS.md` for every default and why (S-41 sets the current scope).
 
 | Part | Where | Role |
 | --- | --- | --- |
-| kernel | `repos/kernel` (its own git repo) | the store and the model: a content system on Postgres, claims as the assertion type, ontologies and aliases as content |
 | Morphogen | `repos/morphogen` (its own git repo) | the judge: a change lands only with a verdict the changer cannot reach |
 | Claude Code | you | the actor: explorer, interviewer, builder, mapper |
-| Workbench | `workbench/` (built to leave), `plugins/substrate/`, container `postgrest` | the content system replacing kernel: typed tables, claims beside every value, PostgREST at `/api`, its shell at `/`, its server at `/wb/api` (extractors, live events), container `workbench`; `workbench/BRIEF.md` (W1 to W3 of 4 done) |
-| Tools | `bin/`, container `substrate-tools` | kk, Morphogen, gitleaks, kernel's MCP server and hooks, run in a container as you |
+| Workbench | `workbench/` (built to leave), containers `db`, `postgrest`, `workbench`, `caddy` | the store and the model: typed tables, claims beside every value, vocabularies and SSSOM mappings; its shell at `/`, PostgREST at `/api`, its server at `/wb/api` (extractors, live events, MCP for you); `workbench/BRIEF.md` |
+| Substrate's plugin | `plugins/substrate/` | the content types (component, skill, hook, verdict), extractors (catalog, claude-code, morphogen, drift) and the Map view |
+| Tools | `bin/`, container `substrate-tools` | Workbench's command, Morphogen, gitleaks, run in a container as you |
 | Glue | `scripts/`, `deploy/`, `modules/`, `catalog-info.yaml` | brings the parts up, connects them, and keeps the map: what runs, what could, where to search |
 
-Everything else (a model gateway, Prometheus, OpenTelemetry, Backstage, Nomad, OpenBao, a bus, a console) is an
+Everything else (kernel, a model gateway, Prometheus, OpenTelemetry, Backstage, Nomad, OpenBao, a console) is an
 option in `catalog-info.yaml` (system `options`, spec section 8): don't build it now, don't close the door on it.
 
 The design is open and science-minded (spec section 2). Parts, code, content types and views can all change.
@@ -24,6 +24,11 @@ Claims are hypotheses, and a change is an experiment judged on cases you have no
 restriction is Morphogen: never weaken a check to pass it, never read or tune on held-out cases, never edit
 the judge's rules from the change being judged. You are expected to be tempted sometimes; the judge is there
 for that.
+
+**Workbench is your memory and your map.** Its MCP server (`workbench` in `.mcp.json`) lets you search, read an
+item with the claims behind each value, save items (your writes are claims attributed to `claude-code`), and see
+and decide the review lane. Changes you make to the repository reach it through the extractors, which the hooks
+and `scripts/up.sh` run.
 
 ## Getting a machine going
 
@@ -40,9 +45,11 @@ deleting `docs/spec.md` or marking steps `dropped`.
 
 ## Where work goes
 
-- **Glue** (this repository): `scripts/`, `deploy/`, `modules/` (kernel modules that connect the parts, briefs
-  first), `catalog-info.yaml` (the map), `docs/` (the spec).
-- **Fixes and improvements to kernel or Morphogen** go upstream, in their own repositories, by pull request:
+- **Glue** (this repository): `scripts/`, `deploy/`, `plugins/substrate/` (substrate's Workbench plugin),
+  `catalog-info.yaml` (the map), `docs/` (the spec).
+- **Workbench** (`workbench/`): a general-purpose CMS that substrate is one plugin on. Nothing in it may know about
+  substrate; it is built to leave as its own project.
+- **Fixes and improvements to Morphogen (or kernel, now an option)** go upstream, in their own repositories, by pull request:
   the `upstream` skill (`.claude/skills/upstream/SKILL.md`). Never patch a clone and leave it: a change in
   `repos/` that is not on a branch with a PR is lost work. Each clone has its own `CLAUDE.md`; read it before
   changing that repository, and follow its rules there (kernel's invariants and "kernel changes are
@@ -66,7 +73,7 @@ deleting `docs/spec.md` or marking steps `dropped`.
 5. **One tested path.** Compose with Podman (the owner's default). Scripts call only the runtime's four verbs
    (`rt_up`, `rt_down`, `rt_status`, `rt_logs`) and keep engine-specific code in `scripts/lib.sh`, so Docker
    or another runtime stays possible without being tested.
-6. **Licences:** permissive or LGPL libraries in the default stack (kernel D-11). Check before adding.
+6. **Licences:** permissive or LGPL libraries in the default stack. Check before adding.
 7. **Every change ends with `scripts/check.sh` passing**, or with the failure named and explained.
 8. **The map is the source.** When a part is added, removed or changes how it is filled, update
    `catalog-info.yaml`, then confirm `bin/morphogen structure check morphogen.yaml` reports no errors.
@@ -74,7 +81,7 @@ deleting `docs/spec.md` or marking steps `dropped`.
 ## Working with the owner
 
 - Recommend one option and keep moving; ask only for decisions that are theirs (positioning, licences,
-  kernel changes, spending money, which system or domain to model next). Say what you recommend when you ask.
+  changes to the judge, spending money, which system or domain to model next). Say what you recommend when you ask.
 - Plain words. Don't write "...and it's worth...". Don't reach for broad framings (cognitive architectures,
   organisational models) where a plain description of the loop will do.
 - Decisions go in `DECISIONS.md` as new rows (append-only; supersede, never edit).
@@ -83,20 +90,21 @@ deleting `docs/spec.md` or marking steps `dropped`.
 
 ```sh
 scripts/bootstrap.sh            # once per machine: host tools, clones, images, the tools container
-scripts/up.sh [PROJECT]         # the stack, then kk up on PROJECT (default: this repository)
+scripts/up.sh                   # the stack, Workbench's schema, substrate's plugin and extractors, Claude Code's wiring
 scripts/check.sh                # is everything up and wired
-scripts/build.sh [kernel|db|tools]   # images, built in containers
+scripts/build.sh [db|workbench|tools]   # images, built in containers
 python3 scripts/spec.py status|next|set ID STATUS   # where the spec's build plan stands
-scripts/verdicts.sh [PROJECT]   # Morphogen's verdicts into kernel as claims (also run by a hook after judged runs)
-scripts/map.sh [PROJECT]        # catalog-info.yaml into kernel (also run by a hook after edits to it)
-scripts/trace.sh NAME           # a part's chain in kernel: observed, declared, each gap and how it was decided
-scripts/workbench.sh migrate|plugin load DIR|extract PLUGIN:NAME|user add NAME|user reset NAME|user list   # Workbench (prints passwords once: the owner runs user add)
+scripts/verdicts.sh             # Morphogen's verdicts into Workbench (also run by a hook after judged runs)
+scripts/map.sh                  # catalog-info.yaml into Workbench, then drift (also run by a hook after edits to it)
+scripts/trace.sh NAME           # a part's chain in Workbench: observed, declared, each gap and how it was decided
+scripts/workbench.sh migrate|plugin load DIR|extract PLUGIN:NAME|user add NAME|user reset NAME|user list|token NAME   # Workbench (prints passwords once: the owner runs user add)
+python3 scripts/harness.py status|apply   # this project's Claude Code wiring: Workbench's MCP server, no kernel hooks
 scripts/tools.sh start|stop|status   # the tools container that bin/ runs in
 scripts/logs.sh SERVICE         # a service's recent logs
 scripts/down.sh [--volumes]     # stop (delete data after asking)
 ```
 
-Kernel's command is `bin/kk`; Morphogen's is `bin/morphogen`. Both run inside the `substrate-tools` container,
-as do `bin/gitleaks` and kernel's MCP server and hooks (S-19). Install nothing on the host for them: a tool the
+Morphogen's command is `bin/morphogen`; it runs inside the `substrate-tools` container, as do `bin/gitleaks` and
+Workbench's command (`scripts/workbench.sh`) (S-19). Install nothing on the host for them: a tool the
 scripts need goes into `deploy/tools/Containerfile`. Morphogen's judged runs (judge, tune, measure) start
 sandboxes of their own and go through its Claude Code plugin, which runs on the host.

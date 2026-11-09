@@ -4,12 +4,14 @@
     GET  /wb/api/events        Server-Sent Events: what changed (Postgres NOTIFY on wb_events), as ids only
     GET  /wb/api/extractors    the extractors plugins registered
     POST /wb/api/extract       {extractor, inputs}: queue a run (pgmq queue wb_jobs); editors and owners
+    POST /wb/api/mcp           MCP (streamable HTTP, JSON responses) for agents: every tool call goes to PostgREST
+                               with the agent's own token, so an agent is a user like any other (mcp.py)
 
 Every request but health carries the same JWT PostgREST checks (HS256 with WORKBENCH_JWT_SECRET, `exp`, a
 wb_* `role`), verified here the same way. Events name what changed and nothing more, so a subscriber reads it
 through PostgREST under its own token, and Postgres stays the one place that decides who sees what.
 
-Settings: WORKBENCH_DATABASE_URL (the wb_server login), WORKBENCH_JWT_SECRET, WB_PLUGINS_DIR.
+Settings: WORKBENCH_DATABASE_URL (the wb_server login), WORKBENCH_JWT_SECRET, WB_PLUGINS_DIR, WB_POSTGREST_URL.
 """
 from __future__ import annotations
 
@@ -30,6 +32,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse, StreamingResponse
 from starlette.routing import Route
 
+from . import mcp
 from .extract import Plugins, run_extractor
 
 ROLES = {"wb_viewer", "wb_editor", "wb_owner"}
@@ -106,6 +109,36 @@ async def extract(request: Request):
             return conn.execute("select pgmq.send('wb_jobs', %s)", (Jsonb(job),)).fetchone()[0]
     msg = await asyncio.to_thread(send)
     return JSONResponse({"queued": msg, **job}, status_code=202)
+
+
+async def mcp_endpoint(request: Request):
+    who = caller(request)
+    if not who:          # 401 lets a client re-run its headers helper for a fresh token, then retry
+        return JSONResponse({"jsonrpc": "2.0", "id": None, "error": {"code": -32001, "message": "sign in first"}},
+                            status_code=401, headers={"WWW-Authenticate": "Bearer"})
+    if request.method != "POST":
+        return refused(405, "this endpoint takes POST only (no server-sent stream)")
+    try:
+        body = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse({"jsonrpc": "2.0", "id": None, "error": {"code": -32700, "message": "not JSON"}}, status_code=400)
+    token = request.headers["authorization"].removeprefix("Bearer ").strip()
+
+    def queue(key, inputs):
+        if who["role"] not in WRITERS:
+            raise PermissionError("your role cannot run extractors")
+        if key not in state["plugins"].extractors:
+            raise KeyError(f"no extractor {key}")
+        with db() as conn:
+            return conn.execute("select pgmq.send('wb_jobs', %s)",
+                                (Jsonb({"extractor": key, "inputs": inputs or {}, "requested_by": who.get("name")}),)).fetchone()[0]
+
+    tools = mcp.Tools(token, who, os.environ.get("WB_POSTGREST_URL", "http://postgrest:3000"), queue,
+                      lambda: state["plugins"].describe())
+    replies = [r for r in [await asyncio.to_thread(mcp.handle, m, tools) for m in (body if isinstance(body, list) else [body])] if r]
+    if not replies:
+        return JSONResponse(None, status_code=202)
+    return JSONResponse(replies if isinstance(body, list) else replies[0])
 
 
 async def events(request: Request):
@@ -189,4 +222,5 @@ app = Starlette(routes=[
     Route("/wb/api/events", events),
     Route("/wb/api/extractors", extractors),
     Route("/wb/api/extract", extract, methods=["POST"]),
+    Route("/wb/api/mcp", mcp_endpoint, methods=["GET", "POST"]),
 ], lifespan=lifespan)

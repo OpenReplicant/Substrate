@@ -10,7 +10,7 @@ It lives inside Substrate for now and imports nothing from it; it is meant to le
 
 ```
 Caddy ──┬─ /api/*  PostgREST v16.5 ──▶ Postgres: database `workbench` (schemas api, content, wb, wb_private, wb_crypto)
-        ├─ /wb/api/*  the server: extractors (off the pgmq queue wb_jobs), live events (NOTIFY as Server-Sent Events)
+        ├─ /wb/api/*  the server: extractors (off the pgmq queue wb_jobs), live events (NOTIFY as Server-Sent Events), MCP
         ├─ /plugins/<id>/web/*   each plugin's browser files (nothing else in a plugin folder is served)
         └─ /       the shell: index.html is a Caddy template that finds the installed plugins
 ```
@@ -78,6 +78,23 @@ bigint; `number` double precision; `boolean`; anything else jsonb). Every type a
   does. Subscribers refetch through PostgREST under their own token, so Postgres stays the one place that decides
   who may see what. pgmq carries durable work; NOTIFY carries notices; neither is exposed directly.
 
+## Recall
+
+`/api/rpc/search` (`{q, lim}`): full-text over every content type's text fields and every current claim's quote,
+any word as a prefix, ranked, with a highlighted snippet; it runs as the caller, so it searches only what their
+role may read. The command palette and the MCP `search` tool use it. Vectors (pgvector, `wb.embedding`) come when
+an embedding model is chosen.
+
+## Agents (MCP)
+
+`POST /wb/api/mcp`: MCP over streamable HTTP with plain JSON responses. Tools: `search`, `list_types`,
+`list_items`, `get_item` (an item with the claims behind each value), `save_item`, `claims`, `open_decisions`,
+`decide`, `list_extractors`, `run_extractor`. Every call forwards the agent's own token to PostgREST, so an agent
+is a user like any other: its role limits it, and the triggers record its writes as claims under its name.
+An agent is a person row with a role (`workbench user add NAME --role editor --agent`) that signs in by token:
+`workbench token NAME --header` prints `{"Authorization": "Bearer ..."}`, which is what Claude Code's
+`headersHelper` expects, so a fresh token is minted at each connection and none is stored.
+
 ## The shell
 
 An IDE-shaped desktop: a **sidebar** (where things live; plugins add entries, content types appear under
@@ -131,8 +148,7 @@ They run in a throwaway database, which they drop.
   editor shows "N sources disagree" beside such a field.
 - Every signed-in role receives every change event; that is right while rights are per role, and becomes a filter
   when rights are per item.
-- The server runs on kernel's image inside Substrate (Starlette 1.8.0); `Containerfile` is its own image, unused yet.
-- No MCP server yet: agents use the HTTP API with a token.
+- An agent's token lasts an hour; Claude Code mints another at each connection and after a 401.
 - Content types are read-only in the UI; a plugin registers them.
 
 ## Licence
