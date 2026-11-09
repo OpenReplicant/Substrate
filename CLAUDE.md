@@ -35,6 +35,13 @@ and `scripts/up.sh` run.
 Use the `setup` skill (`.claude/skills/setup/SKILL.md`) whenever the owner says "set up" or "start the stack",
 or when a check fails.
 
+## A system of the owner's
+
+Substrate can take on another system beside itself: one that exists (a machine, a stack, a repository), one the
+owner wants built, or a change to substrate itself. Use the `interview` skill (`.claude/skills/interview/SKILL.md`)
+for any of them; on a first session the SessionStart hook says to offer the three. A system's map is a domain of
+its own in Workbench, and stays there: never export another system's map into this repository.
+
 ## Becoming the spec
 
 `docs/spec.md` is what substrate is meant to become, and `docs/build.yaml` its build plan. While they
@@ -99,7 +106,8 @@ scripts/build.sh [db|workbench|tools]   # images, built in containers
 python3 scripts/spec.py status|next|set ID STATUS   # where the spec's build plan stands
 scripts/verdicts.sh             # Morphogen's verdicts into Workbench (also run by a hook after judged runs)
 scripts/map.sh [export|check|import]   # the map's relations, drift, inferences; or the map to and from catalog-info.yaml (MAP.md)
-scripts/observe.sh              # what runs on this machine (observe.yaml) into Workbench, gitleaks first, then drift
+scripts/observe.sh              # what runs on this machine (observe.yaml, and observe.local.yaml: what its owner allows) into Workbench, gitleaks first, then drift
+scripts/interview.sh            # interview transcripts (.state/interviews) into the person's own claims, gitleaks first (the interview skill)
 scripts/contract.sh INTERFACE [FILLER]|all   # a slot's contract test against a filler (e.g. secrets-api openbao); results into Workbench
 scripts/graph.sh                # the graph views (Ontop mapping, pgGraph projection) regenerated from Workbench's terms
 scripts/trace.sh NAME [DEPTH]   # an item's chain in Workbench: claims, relations followed out, the part that runs as it, each gap and its decision

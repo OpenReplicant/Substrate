@@ -41,18 +41,21 @@ On the machine it was built on, it has:
 - **Chosen parts from catalogs, not memory.** It picked its SPARQL endpoint by searching registries, testing a
   shortlist and recording why the others lost (`docs/choices/`).
 
-Not done yet, and next:
+Built, and not yet run for real:
 
-- **Interviews.** Most of what a system is *for* lives in people's heads. The next step has the agent
-  interview the system's owner, with each answer saved as a claim quoting the transcript, and questions
-  drawn from the gaps in the map.
-- **A judged change.** Morphogen is wired in, but no change here has been judged by it yet. The first will
-  be one that closes a gap in a second system.
+- **Interviews.** Most of what a system is *for* lives in people's heads. The `interview` skill asks from the
+  gaps and thin parts of the map and keeps a word-for-word transcript. Each statement that quotes the person
+  exactly becomes their own claim, beside the map's value rather than over it, and a disagreement goes to
+  review. No one has sat for one yet.
+- **A judged change.** Morphogen is wired in, but no change here has been judged by it yet. A gate for
+  ordinary changes (the tests of every interface the changed files' parts touch) is in review upstream
+  (Morphogen #74). The first judged change will be one that closes a gap in a second system.
 
 ## Three ways to start
 
 Once it is up, open Claude Code in this folder. It already knows substrate itself: the map, what runs and the
-gaps are in Workbench. From there you can point it at a system in three ways, all through the same loop:
+gaps are in Workbench. Its first session offers you three ways to point it at a system of yours, all run by the
+`interview` skill and all through the same loop:
 
 | You have | It starts by | The gaps are |
 | --- | --- | --- |
@@ -137,9 +140,9 @@ docs/                the spec, its build plan, recorded choices
 deploy/              the stack (compose.yaml), the Postgres image, the Caddyfile, the secrets list, the tools image
 workbench/           Workbench: the store, its shell, server and MCP (its own README, licence and tests)
 plugins/substrate/   substrate's Workbench plugin: content types, extractors, the observer, the reasoner, the Map
-scripts/             bootstrap, up, down, check, test, observe, map, contract, trace, graph, spec, verdicts
+scripts/             bootstrap, up, down, check, test, observe, interview, map, contract, trace, graph, spec, verdicts
 bin/                 morphogen, gitleaks: each runs inside the tools container (in-tools runs anything else there)
-.claude/skills/      setup, build-out, research, upstream
+.claude/skills/      setup, build-out, research, upstream, interview
 repos/               the Morphogen clone, gitignored, its own git repository
 ```
 

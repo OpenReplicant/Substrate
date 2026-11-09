@@ -185,8 +185,14 @@ metadata:
   name: interviewer
   description: Asks people what the map cannot see, and records each answer as a claim attributed to them.
   annotations:
-    substrate.dev/basis: to build as a skill on Workbench's MCP (questions from the gaps and thin parts of the graph)
-    substrate.dev/fill: build
+    morphogen.dev/change: 'plugins/substrate/substrate_interview.py
+
+      plugins/substrate/INTERVIEW.md
+
+      scripts/interview.sh'
+    substrate.dev/basis: the interview skill (.claude/skills/interview), transcripts in .state/interviews read by substrate:interview
+      (plugins/substrate/INTERVIEW.md), scripts/interview.sh
+    substrate.dev/fill: existing
     substrate.dev/intent: Fill the intended half of a system from the people who hold it (S-43).
     substrate.dev/step: '8'
 spec:
@@ -1003,6 +1009,21 @@ spec:
   type: skill
   lifecycle: production
   owner: group:agents
+  system: core
+---
+apiVersion: backstage.io/v1alpha1
+kind: AiResource
+metadata:
+  name: interview
+  description: Interview a person about a system (one that exists, one they want, or a change to substrate) and put what they
+    say on its map as their own cited claims.
+  annotations:
+    morphogen.dev/change: .claude/skills/interview/SKILL.md
+    substrate.dev/basis: .claude/skills/interview/SKILL.md
+spec:
+  type: skill
+  lifecycle: production
+  owner: group:operator
   system: core
 ---
 apiVersion: backstage.io/v1alpha1

@@ -9,6 +9,9 @@ extractor called `<plugin>:<name>`. An extractor is `fn(ctx, inputs)`: it reads 
     ctx.relate(from_type, from_id, predicate, to_type, to_id, source=, quote=, span=)   a relation, a claim of this
                                                  extractor's (span.premises: the claims an inference rests on)
     ctx.speaks_for(type, id)                     this run states all its relations from that item, even none
+    ctx.state(type, id, field, value, said_by=, source=, quote=, span=)   what a source says about an item, as a
+                                                 claim of who said it, beside the item's value (never over it);
+                                                 what this extractor stated before and no longer does is retracted
     ctx.done(type)                               it read the whole source: retract what it no longer found, and
                                                  drop its relations from items it no longer found
     ctx.decision(kind, key, subject, evidence)   raise something for a person (the review lane)
@@ -86,7 +89,8 @@ class Context:
         self.relations: list[tuple] = []
         self.related_from: set[tuple] = set()
         self.keys: set[str] = set()
-        self.counts = {"items": 0, "sources": 0, "relations": 0, "decisions": 0}
+        self.counts = {"items": 0, "sources": 0, "relations": 0, "decisions": 0, "statements": 0}
+        self.stated: list[str] = []
         self.messages: list[str] = []
         self.conn.execute("set local role wb_server")
         self.run = self.conn.execute(
@@ -154,6 +158,18 @@ class Context:
         self.relations.append({"from_type": from_type, "from_id": str(from_id), "predicate": predicate, "to_type": to_type,
                                "to_id": str(to_id), "source": source, "quote": quote, "span": span})
 
+    def state(self, type_id: str, item: str, field: str, value, *, said_by: str, source: str | None = None,
+              quote: str | None = None, span: dict | None = None) -> str:
+        """A statement a source makes about an item (a person in a transcript, say): a claim whose author is who
+        said it and whose run is this one, recorded beside the item's current value rather than written over it
+        (migration 012). The caller compares and raises a decision where the two disagree."""
+        cid = str(self.conn.execute("select wb.state_claim(%s, %s, %s, %s, %s, %s, %s, %s)",
+                                    (type_id, item, field, Jsonb(value), said_by, source, quote,
+                                     Jsonb(span) if span is not None else None)).fetchone()[0])
+        self.stated.append(cid)
+        self.counts["statements"] += 1
+        return cid
+
     def speaks_for(self, from_type: str, from_id: str):
         """This run states every relation it has from this item: what it stated before and not now is retracted, even if
         it relates nothing from it this time (an inference no longer drawn, a link no longer observed)."""
@@ -189,6 +205,9 @@ class Context:
             if retracted:
                 self.log(f"{retracted} relations no longer stated, retracted")
         self.counts["relations"] = len(self.relations)
+        unstated = self.conn.execute("select wb.retract_unstated(%s, %s::uuid[])", (self.author, self.stated)).fetchone()[0]
+        if unstated:
+            self.log(f"{unstated} statements no longer in their source, retracted")
         withdrawn = 0
         if withdraw:
             withdrawn = self.conn.execute(

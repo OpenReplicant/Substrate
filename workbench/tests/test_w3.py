@@ -143,6 +143,28 @@ try:
     check("a token signed with another secret is refused", verify(token({"role": "wb_owner", "exp": int(now) + 60}, "x" * 40), os.environ["WORKBENCH_JWT_SECRET"]) is None)
     check("a token for another role is refused", verify(token({"role": "postgres", "exp": int(now) + 60}), os.environ["WORKBENCH_JWT_SECRET"]) is None)
     check("a malformed token is refused", verify("not.a.token", os.environ["WORKBENCH_JWT_SECRET"]) is None)
+    # statements: a source quoting a person, recorded beside the item's value as that person's claim
+    def says(ctx, inputs):
+        nid = ctx.conn.execute("select id from api.note where slug = 'a'").fetchone()[0]
+        src = ctx.source("file:interview.md", inputs["text"].encode(), "text/markdown")
+        for line in filter(None, inputs["text"].splitlines()):
+            ctx.state("note", str(nid), "body", line, said_by="pat", source=src, quote=line, span={"line": 1})
+    plugins.extractors["test:says"] = {"key": "test:says", "plugin": "fixture", "name": "says", "fn": says, "description": "", "inputs": {}}
+    run_extractor(cli.connect, plugins, "test:says", {"text": "it is the first note"})
+    with cli.connect() as conn:
+        body = conn.execute("select body from api.note where slug = 'a'").fetchone()[0]
+        said = conn.execute("""select c.author, c.value, c.quote, r.extractor from wb.claim c join wb.run r on r.id = c.run_id
+                               join content.note n on n.id = c.subject_id where n.slug = 'a' and c.field = 'body'
+                               and c.status = 'current' and c.author = 'pat'""").fetchall()
+    check("a statement is the person's claim, recorded by the run, beside the item's value",
+          said == [("pat", "it is the first note", "it is the first note", "test:says")] and body != "it is the first note", (said, body))
+    again = run_extractor(cli.connect, plugins, "test:says", {"text": "it is the first note"})
+    check("stating it again adds nothing", again.get("statements") == 1 and "retracted" not in " ".join(again.get("log") or []), again)
+    run_extractor(cli.connect, plugins, "test:says", {"text": ""})
+    with cli.connect() as conn:
+        left = conn.execute("""select count(*) from wb.claim c join content.note n on n.id = c.subject_id
+                               where n.slug = 'a' and c.author = 'pat' and c.status = 'current'""").fetchone()[0]
+    check("a statement taken out of its source is retracted", left == 0, left)
     with cli.connect() as conn:
         conn.execute("set role wb_editor")
         try:

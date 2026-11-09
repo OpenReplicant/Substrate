@@ -174,24 +174,27 @@ steps:
       Done 2026-11-09 (S-64, S-65): relations as claims with premises, generated vocabulary and mappings, Ontop at /sparql (run.sh live passes), substrate:reasoner (OWL 2 RL), pgGraph paths as the caller.
 
   - id: 8
-    title: "Engineer: the machine and its agents, a system beside substrate"
+    title: "Engineer: a first system beside substrate, one that exists or one that is wanted"
     spec: "1, 6, 7"
-    where: substrate (an interview skill; step 5's extractors pointed wider), Workbench (a second project)
+    where: substrate (the interview skill, substrate:interview, observe.local.yaml), Workbench (statements, a second domain)
     after: [5]
     status: todo
     needs_owner: true
     check: >-
-      the owner's machine and its Claude Code setup beyond this repository (user settings, installed plugins,
-      MCP servers, other projects) is a second project in the same Workbench, observed by step 5's extractors
-      pointed at it; the owner is interviewed as its real owner about what it is for, each statement a claim
-      attributed to them quoting the transcript, with questions drawn from the gaps and thin parts of the graph;
-      the relations between the two systems are claims (substrate runs on it, uses its container engine and its
-      Claude Code); at least one gap reaches review; and one change closing it is proposed, judged by Morphogen
-      and applied by the same loop that changed substrate in step 2
+      a second system is a domain of its own on the same Workbench map, beside substrate's: one that exists
+      (observed by step 5's collector as far as its owner allows in observe.local.yaml) or one that is wanted (its
+      map written first, each part's observed-as saying how it will be known to run); its owner is interviewed
+      with the interview skill, each statement their claim quoting the transcript, with questions drawn from the
+      gaps and thin parts of the map; the relations between the two systems are claims; at least one gap reaches
+      review; and one change closing it is proposed, judged by Morphogen and applied by the same loop that changed
+      substrate in step 2. The test run is the owner's machine and its Claude Code setup beyond this repository
     notes: >-
-      S-61 replaces S-60's scenario interview (the owner as a decision maker for a business that is not theirs)
-      with a real second system the owner does have: the machine substrate runs on. The owner decides when to
-      sit for the interview and what of the machine is in scope; nothing outside what the owner names is read.
+      S-61 replaced S-60's scenario interview with a real second system the owner does have: the machine
+      substrate runs on. S-71 widens the step so the same run proves both starts a newcomer has (a system that
+      exists, a system that is wanted), with the machine as the first. Built before the interview: the interview
+      skill, transcripts in .state/interviews read by substrate:interview, statements as the person's claims beside
+      the map (Workbench migration 012), observe.local.yaml for what the owner allows. The owner decides when to
+      sit for the interview and what is in scope; nothing outside what they name is read.
 
   - id: 9
     status: done

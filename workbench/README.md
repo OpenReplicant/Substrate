@@ -66,7 +66,8 @@ bigint; `number` double precision; `boolean`; anything else jsonb). Every type a
 
 - **Extractors.** A plugin's `server` module has `register(wb)`; `wb.extractor(name, fn, description)` adds
   `<plugin>:<name>`. `fn(ctx, inputs)` reads its sources and writes through `ctx` (`source`, `upsert`, `relate`,
-  `done`, `decision`, `log`; `workbench/extract.py`). A run is one transaction: all or nothing, recorded in
+  `state`, `done`, `decision`, `log`; `workbench/extract.py`). `ctx.state` records what a source says about an item
+  as a claim of whoever said it (a person quoted in a transcript), beside the item's value rather than over it. A run is one transaction: all or nothing, recorded in
   `wb.run`. Writes go through the same `api` views PostgREST serves, so the same triggers record each claim,
   attributed to the extractor and carrying its source, quote and line span. Reading an unchanged source again adds
   nothing; what a source no longer says is retracted (`ctx.done(type)`); a decision a run no longer raises is

@@ -171,7 +171,7 @@ def read_volumes(engine: str) -> list[dict]:
 def read_env_files(root: Path, files: list[str]) -> list[dict]:
     out = []
     for rel in files:
-        f = root / rel
+        f = root / Path(rel).expanduser()
         if f.is_file():
             keys = [{"name": m.group(1), "line": n} for n, line in enumerate(f.read_text().splitlines(), 1)
                     if (m := re.match(r"^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=", line))]
@@ -182,7 +182,7 @@ def read_env_files(root: Path, files: list[str]) -> list[dict]:
 def read_claude_code(root: Path, files: list[str]) -> dict:
     out = {"settings": [], "mcp_servers": []}
     for rel in files:
-        f = root / rel
+        f = root / Path(rel).expanduser()
         if not f.is_file():
             continue
         d = json.loads(f.read_text())
@@ -273,8 +273,18 @@ def read_probe(engine: str, probe: dict, container: dict) -> dict:
     return snap
 
 
+def load_config(root: Path) -> dict:
+    """observe.yaml, then observe.local.yaml (gitignored: what this machine's owner has said may be read, beyond
+    the system itself) on top: its lists add to observe.yaml's, its other keys replace them."""
+    cfg = yaml.safe_load((root / "observe.yaml").read_text()) or {} if (root / "observe.yaml").is_file() else {}
+    local = root / "observe.local.yaml"
+    for k, v in ((yaml.safe_load(local.read_text()) or {}) if local.is_file() else {}).items():
+        cfg[k] = (cfg.get(k) or []) + v if isinstance(v, list) and isinstance(cfg.get(k), list) else v
+    return cfg
+
+
 def main(root: Path) -> int:
-    cfg = yaml.safe_load((root / "observe.yaml").read_text()) if (root / "observe.yaml").is_file() else {}
+    cfg = load_config(root)
     engine = os.environ.get("CONTAINER_ENGINE") or cfg.get("engine") or ("podman" if shutil.which("podman") else "docker")
     host = socket.gethostname()
     out = root / ".state" / "observed" / re.sub(r"[^A-Za-z0-9._-]", "-", host)

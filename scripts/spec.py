@@ -90,9 +90,25 @@ def set_status(sid: int, status: str, waiting: str | None) -> int:
     return 0
 
 
+START = ("Substrate is set up and knows itself: its map, what runs and the gaps between them are in Workbench. "
+         "No one has been interviewed about a system of their own yet. In your first reply, offer the owner the three "
+         "ways to start, each run by the interview skill: map a system that exists (this machine, a stack, a "
+         "repository), plan one they want built (its map comes first; every part not yet running is the build list), "
+         "or change substrate itself. Recommend one, then do what they choose.")
+
+
+def first_session() -> bool:
+    """Set up, and no interview transcript yet: a newcomer's first session (README's three ways to start)."""
+    interviews = ROOT / ".state/interviews"
+    return (ROOT / ".env").exists() and not (interviews.is_dir() and any(interviews.glob("*/*.md")))
+
+
 def hook() -> int:
-    """SessionStart: say where the build-out stands, briefly (well under the 2,000-character preview)."""
+    """SessionStart: say where the build-out stands, briefly (well under the 2,000-character preview), and on a
+    first session offer the ways to start."""
     if not SPEC.exists() or not PLAN.exists():
+        if first_session():
+            print(json.dumps({"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": START}}))
         return 0
     plan = steps()
     s = nxt(plan)
@@ -108,6 +124,8 @@ def hook() -> int:
         text = (f"Substrate's spec is in place (docs/spec.md): {done} of {len(plan)} build steps done. Next: "
                 f"{line(s)}. Unless the owner asks for something else, continue it with the build-out skill; "
                 "decisions that are the owner's wait for them.")
+    if first_session():
+        text = START + " Otherwise: " + text
     print(json.dumps({"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": text}}))
     return 0
 

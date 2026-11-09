@@ -155,7 +155,13 @@ def main(argv: list[str]) -> int:
         print(f"no live entities in domain {domain}")
         return 1
     text = dump(docs, domain)
+    own = os.environ.get("SUBSTRATE_DOMAIN", "substrate")       # the one domain whose map this repository publishes
+    if cmd == "export" and domain != own and target.is_relative_to(root) and not target.is_relative_to(root / ".state"):
+        print(f"{domain}'s map is its owner's, not this repository's: export it outside the checkout or under .state/ "
+              f"(scripts/map.sh export {domain} .state/maps/{domain}.yaml)")
+        return 1
     if cmd == "export":
+        target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(text)
         print(f"wrote {target.relative_to(root) if target.is_relative_to(root) else target}: {len(docs)} entities of {domain}")
         return 0

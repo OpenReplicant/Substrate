@@ -36,6 +36,7 @@ from pathlib import Path, PurePosixPath
 
 import yaml
 
+from substrate_interview import check as check_statements, parse as parse_transcript  # noqa: E402
 from substrate_map import SPEC_FIELDS, doc_fields, name_for, slug_for  # noqa: E402
 
 RELATIONS = {"system": "partOf", "domain": "partOf", "subcomponentOf": "partOf", "dependsOn": "dependsOn",
@@ -850,4 +851,61 @@ def register(wb):
     wb.extractor("reasoner", reasoner, "OWL 2 RL over stated relations (transitive, inverse, symmetric properties in wb.term); "
                  "each conclusion a claim quoting the rule and its premises, retracted with them")
     wb.extractor("contracts", contracts, "contract runs (.state/contracts, scripts/contract.sh): each slot's test against a filler, pass or fail")
+    def interview(ctx, inputs):
+        """Interview transcripts (.state/interviews/<system>/*.md; INTERVIEW.md) into statements. Each statement that
+        stands (its quote is the person's own words in that turn) becomes the person's claim on the map entry it
+        names, quoting them, beside the map's value; where the two differ, the difference goes to review. A
+        statement that does not stand, or names nothing on the map, is raised too, never recorded."""
+        base = root / inputs.get("folder", ".state/interviews")
+        files = sorted(base.glob("*/*.md")) if base.is_dir() else []
+        if not files:
+            ctx.log(f"no transcripts in {inputs.get('folder', '.state/interviews')}")
+            return
+        types = {r[0] for r in ctx.conn.execute("select id from wb.content_type").fetchall()}
+        n = {"transcripts": 0, "stand": 0, "refused": 0, "differ": 0}
+        for f in files:
+            raw = f.read_bytes()
+            rel = str(f.relative_to(root)) if f.is_relative_to(root) else str(f)
+            doc = parse_transcript(raw.decode())
+            src = ctx.source(f"file:{rel}", raw, "text/markdown")
+            n["transcripts"] += 1
+            person = str(doc["meta"].get("person") or "")
+            for problem in doc["problems"]:
+                ctx.decision("gap", f"transcript:{rel}:{problem}", {"text": f"{rel}: {problem}", "file": rel,
+                                                                     "direction": "fix the transcript"})
+            for r in check_statements(doc):
+                s = r["statement"] if isinstance(r["statement"], dict) else {}
+                typ, _, slug = str(s.get("item", "")).partition(":")
+                typ, slug = (typ, slug) if slug else ("component", typ)
+                field = str(s.get("field", ""))
+                row = None
+                if r["ok"] and typ in types:
+                    row = ctx.conn.execute(f"select id, to_jsonb(x) from api.{typ} x where slug = %s and wb.live(x.id)",
+                                           (slug,)).fetchone()
+                ann = field.partition(":")[2] if field.startswith("annotations:") else None
+                why = r.get("why") or (f"no {typ} {slug} stands on the map" if row is None else
+                                       f"{typ} has no field {field}" if not ann and field not in row[1] else None)
+                if why:
+                    n["refused"] += 1
+                    ctx.decision("gap", f"unstated:{rel}:{r['n']}:{s.get('item')}:{field}", {
+                        "text": f"A statement in {rel} does not stand: {why}.", "statement": s, "file": rel,
+                        "direction": "fix the statement (its quote must be the person's own words), or take it out"})
+                    continue
+                current = (row[1].get("annotations") or {}).get(ann) if ann else row[1].get(field)
+                ctx.state(typ, str(row[0]), field, s["value"], said_by=person, source=src, quote=str(s["quote"]),
+                          span={"start_line": r["quote_line"], "end_line": r["quote_line"], "turn": s.get("turn")})
+                n["stand"] += 1
+                if current != s["value"]:
+                    n["differ"] += 1
+                    ctx.decision("gap", f"said:{typ}:{slug}:{field}:{person}", {
+                        "text": f"{person} said {typ} {slug}'s {field} is {json.dumps(s['value'])}; the map says "
+                                + (json.dumps(current) if current not in (None, "") else "nothing") + ".",
+                        "said": s["value"], "map": current, "quote": s["quote"], "file": rel, "person": person,
+                        "item": {"type": typ, "slug": slug, "field": field},
+                        "direction": "change the map to what was said, or ask again"})
+        ctx.log(f"{n['transcripts']} transcripts: {n['stand']} statements stand ({n['differ']} differ from the map), "
+                f"{n['refused']} refused")
+
+    wb.extractor("interview", interview, "interview transcripts (.state/interviews): each statement that quotes the person "
+                 "word for word, as their claim on the map entry it names; disagreements and refusals to review")
     wb.extractor("drift", drift, "what the map declares against what the repository has; each difference to the review lane")
