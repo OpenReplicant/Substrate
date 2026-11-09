@@ -46,7 +46,7 @@ def unb64(s):
 
 try:
     out = cli.migrate()
-    check("migrate creates the database and applies the core", out["created"] and out["applied"] == ["001_core.sql", "002_jwt.sql"])
+    check("migrate creates the database and applies the core", out["created"] and out["applied"] == ["001_core.sql", "002_jwt.sql", "003_decisions_api.sql"])
     check("migrate again applies nothing", cli.migrate()["applied"] == [])
     loaded = cli.load_plugin(HERE / "fixtures/plugin")
     check("a plugin's content type gets its table", loaded["types"][0]["type"] == "note"
@@ -114,6 +114,23 @@ try:
             check("an anonymous request reads nothing", False, "it read")
         except psycopg.errors.InsufficientPrivilege:
             check("an anonymous request reads nothing", True)
+
+        # the review lane: a decision waits; viewers see it, an editor decides it once, with their name
+        did = conn.execute("insert into wb.decision (kind, subject) values ('gap', '{\"text\": \"x\"}') returning id").fetchone()[0]
+        seen = as_user(conn, "wb_viewer", "vi", "select status from api.decisions where id = %s", (did,))
+        check("a viewer sees an open decision", seen == [("open",)], seen)
+        try:
+            as_user(conn, "wb_viewer", "vi", "select api.decide(%s, true, null)", (did,))
+            check("a viewer cannot decide", False, "decided")
+        except psycopg.errors.InsufficientPrivilege:
+            check("a viewer cannot decide", True)
+        res = as_user(conn, "wb_editor", "ed", "select api.decide(%s, true, 'looks right')", (did,))[0][0]
+        check("an editor decides, and the decision carries their name", res["status"] == "approved" and res["decided_by"] == "ed", res)
+        try:
+            as_user(conn, "wb_editor", "ed", "select api.decide(%s, false, null)", (did,))
+            check("a decision is made once", False, "decided twice")
+        except psycopg.errors.NoDataFound:
+            check("a decision is made once", True)
 
         # sign-in: anonymous may call login; the token is a JWT PostgREST can verify with the shared secret
         tok = as_user(conn, "wb_anon", "", "select api.login('ed', %s)", (ed,))[0][0]

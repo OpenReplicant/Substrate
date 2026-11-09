@@ -10,7 +10,8 @@ It lives inside Substrate for now and imports nothing from it; it is meant to le
 
 ```
 Caddy ──┬─ /api/*  PostgREST v16.5 ──▶ Postgres: database `workbench` (schemas api, content, wb, wb_private, wb_crypto)
-        └─ /       the shell (W2)
+        ├─ /plugins/<id>/web/*   each plugin's browser files (nothing else in a plugin folder is served)
+        └─ /       the shell: index.html is a Caddy template that finds the installed plugins
 ```
 
 The rules are in Postgres (`workbench/sql/`): a trigger records a claim for every field a write sets or
@@ -58,6 +59,41 @@ A property's JSON type decides its column (`string` text, with `date-time`, `dat
 bigint; `number` double precision; `boolean`; anything else jsonb). Every type also has `id`, `slug`, `title`,
 `created_at`, `updated_at`, `created_by` and `updated_by`. Registering again adds new columns and never drops one.
 
+## The shell
+
+An IDE-shaped desktop: a **sidebar** (where things live; plugins add entries, content types appear under
+Content, apps under Apps), a **workspace** of tabs that split, float and pop out (Dockview), an **inspector** for
+the current selection (first: where each value came from), a **dashboard** of widget cards, and a **command
+palette** (Ctrl/Cmd K) that runs commands and finds items across every type. Alpine.js (its CSP build) drives the
+core screens; the page runs under a strict Content-Security-Policy (no inline script or style, no eval).
+
+## Client plugins
+
+A plugin's `web/index.js` default export is called with `wb` before the page starts:
+
+```js
+export default function myPlugin(wb) {
+  wb.view({id: 'my-view', title: (p) => 'Mine', template: 'my-tpl'});      // a tab; markup in web/views.html
+  wb.widget({id: 'my-widget', title: 'Mine', size: 's', mount(el, wb) { el.textContent = 'hi'; return () => {}; }});
+  wb.inspector({id: 'my-section', title: 'Mine', applies: (sel) => sel?.type === 'component', template: 'my-insp'});
+  wb.field({id: 'colour', match: (prop) => (prop.format === 'color' ? 3 : 0), mount(el, {value, set}) { ... }});
+  wb.command({id: 'my-cmd', title: 'Do the thing', run: (wb) => wb.notify('done')});
+  wb.menu({id: 'my-menu', section: 'Workspace', title: 'Mine', icon: 'doc', open: ['my-view', {}]});
+  wb.app({id: 'grafana', title: 'Grafana', url: '/apps/grafana/', embed: 'frame'});   // or embed: 'window'
+  wb.data('myComponent', () => ({ /* an Alpine component for your templates */ }));
+}
+```
+
+`web/views.html` holds the plugin's `<template id="...">`s; the page includes it at serve time. A view or
+widget uses either a `template` (Alpine) or `mount(el, wb)` (anything; return a cleanup function). `wb` also
+gives `api` (PostgREST), `open(viewId, params, {where})`, `select({type, id, field})`, `state` (types,
+selection), `on(event, fn)` (`saved`, `selection`, `claims-changed`, `signedin`), `notify`, `canEdit()`,
+`format` (`ago`, `when`, `show`) and `panelOf(el)` (a view's params and title).
+
+Apps: a web UI that allows framing from Workbench's origin opens as a tab (`embed: 'frame'`; another origin must
+be listed in `WB_FRAME_SRC`); one that refuses (`X-Frame-Options`, `frame-ancestors`) opens in its own window
+(`embed: 'window'`). Kernel's UI is the second kind.
+
 ## Tests
 
 ```sh
@@ -66,12 +102,17 @@ WORKBENCH_ADMIN_URL=postgresql://postgres:...@127.0.0.1:5432/postgres python3 te
 
 They run in a throwaway database, which they drop.
 
-## Known limits (W1)
+## Known limits
 
 - Disabling a person stops new sign-ins; a token they already hold works until it expires (8 hours).
 - Rights are per role, not per item; row-level security per item comes when a plugin needs it.
-- Conflicting claims from different authors sit side by side, but nothing marks them `disputed` yet.
+- Conflicting claims from different authors sit side by side, but nothing marks them `disputed` yet; the item
+  editor shows "N sources disagree" beside such a field.
+- No live updates yet: views reload on their own saves; events from other people arrive with the server (W3).
+- Content types are read-only in the UI; a plugin registers them.
 
 ## Licence
 
-Apache-2.0. `workbench/sql/002_jwt.sql` is from pgjwt 0.2.0, MIT (`LICENSES/pgjwt-MIT.txt`).
+Apache-2.0. `workbench/sql/002_jwt.sql` is from pgjwt 0.2.0, MIT (`LICENSES/pgjwt-MIT.txt`). `web/vendor/` holds
+Alpine.js's CSP build 3.17.5 (MIT) and dockview-core 8.6.2 (MIT; its stylesheet extracted from its UMD build
+unchanged), each with its licence.

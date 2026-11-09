@@ -19,10 +19,14 @@ services:
     volumes:
       - ../../../.state/artifacts:/store:ro
 
-  # The front door with Workbench's route added (deploy/caddy/Caddyfile: kernel's routes, plus /api to PostgREST).
+  # The front door (deploy/caddy/Caddyfile): Workbench's shell at /, its API at /api, plugins' web files, kernel at /ui.
   caddy:
     volumes: !override
       - ../../../deploy/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ../../../workbench/web:/srv/wb:ro          # the shell
+      - ../../../plugins:/srv/plugins:ro           # installed plugins; only each one's web/ is served
+    environment:
+      WB_FRAME_SRC: ${WB_FRAME_SRC:-}              # origins apps may be framed from, beyond this one
     depends_on: [kernel, postgrest]
 
   # Workbench's API (workbench/BRIEF.md section 7): PostgREST over the `api` schema of the workbench database,

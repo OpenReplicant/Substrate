@@ -16,6 +16,9 @@ probe "http://127.0.0.1:8080/ui/views.json" && ok "kernel      http://127.0.0.1:
 running=$(rt_status 2>/dev/null | awk 'NR > 1 {print $1}' | tr '\n' ' ')
 code=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:8080/api/")
 [ "$code" = "200" ] && ok "workbench   http://127.0.0.1:8080/api/ (PostgREST, OpenAPI at the root)" || bad "workbench API returned $code (scripts/logs.sh postgrest)"
+shell=$(curl -s "http://127.0.0.1:8080/")
+case "$shell" in *'name="wb-plugin"'*) ok "workbench   http://127.0.0.1:8080/ (the shell, $(printf '%s' "$shell" | grep -c 'name="wb-plugin"') plugin modules)" ;;
+  *) bad "the workbench shell is not served at / (scripts/logs.sh caddy)" ;; esac
 for s in db kernel caddy postgrest; do
   case "$running" in *"-$s-"*) ;; *) bad "service $s is not running (scripts/logs.sh $s)" ;; esac
 done

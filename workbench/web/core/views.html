@@ -1,0 +1,257 @@
+<!-- Workbench's core screens (core/index.js registers them). Each <template> is cloned into a tab, a dashboard
+     card or an inspector section; its root's x-data names a component registered with wb.data(). -->
+
+<!-- ============================================================ dashboard -->
+<template id="wb-tpl-dashboard">
+  <div class="wb-page" x-data="dashboard">
+    <header class="wb-page-head"><h1>Dashboard</h1></header>
+    <div class="wb-grid">
+      <template x-for="w in widgets" :key="w.id">
+        <section :class="sizeClass(w)" :data-widget="w.id">
+          <h2 class="wb-card-title" x-text="w.title"></h2>
+          <div class="wb-card-body" x-data="widgetCard"></div>
+        </section>
+      </template>
+    </div>
+  </div>
+</template>
+
+<template id="wb-tpl-w-content">
+  <ul class="wb-stat-list" x-data="contentWidget">
+    <template x-for="r in rows" :key="r.id">
+      <li><button class="wb-link" @click="open(r)" x-text="r.label"></button><span class="wb-stat" x-text="r.n"></span></li>
+    </template>
+    <li class="wb-faint" x-show="!rows.length">No content types yet. A plugin adds them.</li>
+  </ul>
+</template>
+
+<template id="wb-tpl-w-recent">
+  <ul class="wb-feed" x-data="recentWidget">
+    <template x-for="c in rows" :key="c.key">
+      <li @click="open(c)">
+        <span class="wb-feed-what" x-text="label(c)"></span>
+        <span class="wb-feed-value" x-text="value(c)"></span>
+        <span class="wb-faint" x-text="c.author + ' · ' + ago(c)"></span>
+      </li>
+    </template>
+    <li class="wb-faint" x-show="loaded && !rows.length">Nothing has changed yet.</li>
+  </ul>
+</template>
+
+<template id="wb-tpl-w-decisions">
+  <div class="wb-callout" x-data="decisionsWidget">
+    <span class="wb-big" x-text="text"></span>
+    <button class="wb-btn" @click="open()">Open the review lane</button>
+  </div>
+</template>
+
+<template id="wb-tpl-w-apps">
+  <div class="wb-tiles" x-data="appsWidget">
+    <template x-for="a in apps" :key="a.id">
+      <button class="wb-tile" @click="launch(a)"><svg><use :href="'#i-' + (a.icon || 'app')"/></svg><span x-text="a.title"></span></button>
+    </template>
+  </div>
+</template>
+
+<!-- ============================================================ list of one content type -->
+<template id="wb-tpl-list">
+  <div class="wb-page wb-page-fill" x-data="listView">
+    <header class="wb-page-head">
+      <h1 x-text="type.label"></h1>
+      <input class="wb-input wb-filter" type="search" placeholder="Filter by title or slug" x-model="q" aria-label="Filter">
+      <span class="wb-faint" x-text="summary"></span>
+      <span class="wb-spacer"></span>
+      <button class="wb-btn primary" x-show="canEdit" @click="create()"><svg><use href="#i-plus"/></svg>New</button>
+    </header>
+    <p class="wb-error" x-show="error" x-text="error"></p>
+    <div class="wb-table-wrap">
+      <table class="wb-table">
+        <thead><tr>
+          <template x-for="c in columns" :key="c.name">
+            <th @click="sortBy(c)" :aria-sort="sortMark(c) ? 'sorted' : 'none'"><span x-text="c.label"></span> <span class="wb-sort" x-text="sortMark(c)"></span></th>
+          </template>
+        </tr></thead>
+        <tbody>
+          <template x-for="r in rows" :key="r.id">
+            <tr tabindex="0" @click="open(r, $event)" @keydown.enter="open(r, $event)">
+              <template x-for="c in columns" :key="c.name"><td x-text="cell(r, c)"></td></template>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+      <p class="wb-empty" x-show="!loading && !rows.length" x-text="summary"></p>
+    </div>
+    <footer class="wb-pager">
+      <span class="wb-faint">Ctrl-click opens beside</span>
+      <span class="wb-spacer"></span>
+      <button class="wb-btn" @click="prev()" :disabled="!hasPrev">Previous</button>
+      <button class="wb-btn" @click="next()" :disabled="!hasNext">Next</button>
+    </footer>
+  </div>
+</template>
+
+<!-- ============================================================ one item -->
+<template id="wb-tpl-item">
+  <div class="wb-page wb-page-fill" x-data="itemView">
+    <header class="wb-page-head">
+      <h1 x-text="isNew ? 'New ' + type.label : (item ? item.title : '…')"></h1>
+      <span class="wb-badge" x-text="type.label"></span>
+      <span class="wb-faint" x-text="meta()"></span>
+      <span class="wb-spacer"></span>
+      <button class="wb-btn" x-show="dirty && !readOnly" @click="revert()">Revert</button>
+      <button class="wb-btn primary" x-show="!readOnly" :disabled="saving || (!dirty && !isNew)" @click="save()"
+              x-text="saving ? 'Saving…' : (isNew ? 'Create' : 'Save')"></button>
+    </header>
+    <p class="wb-error" x-show="error" x-text="error"></p>
+    <p class="wb-note" x-show="readOnly && !loading">You can read this. Your role cannot change it.</p>
+    <form class="wb-form" @submit.prevent="save()" x-show="!loading">
+      <template x-for="f in fields" :key="f.name">
+        <div class="wb-field" :class="(isFocused(f) ? 'is-focused ' : '') + (changed(f) ? 'is-changed' : '')" @focusin="select(f)">
+          <div class="wb-field-head">
+            <label x-text="f.label"></label>
+            <button type="button" class="wb-sources" x-show="sources(f)" :class="disagree(f) ? 'is-disputed' : ''"
+                    @click="select(f)" x-text="sourceText(f)" title="Show where this value came from"></button>
+          </div>
+          <template x-if="is(f, 'text')"><input class="wb-input" type="text" :value="value(f)" @input="setValue(f, $event)" :disabled="readOnly" :aria-label="f.label"></template>
+          <template x-if="is(f, 'textarea')"><textarea class="wb-input" rows="4" :value="value(f)" @input="setValue(f, $event)" :disabled="readOnly" :aria-label="f.label"></textarea></template>
+          <template x-if="is(f, 'number')"><input class="wb-input wb-narrow" type="number" step="any" :value="value(f)" @input="setValue(f, $event)" :disabled="readOnly" :aria-label="f.label"></template>
+          <template x-if="is(f, 'boolean')"><label class="wb-check"><input type="checkbox" :checked="value(f)" @change="setValue(f, $event)" :disabled="readOnly"><span>Yes</span></label></template>
+          <template x-if="is(f, 'datetime')"><input class="wb-input wb-narrow" type="datetime-local" :value="value(f)" @input="setValue(f, $event)" :disabled="readOnly" :aria-label="f.label"></template>
+          <template x-if="is(f, 'date')"><input class="wb-input wb-narrow" type="date" :value="value(f)" @input="setValue(f, $event)" :disabled="readOnly" :aria-label="f.label"></template>
+          <template x-if="is(f, 'tags')"><input class="wb-input" type="text" :value="value(f)" @input="setValue(f, $event)" :disabled="readOnly" placeholder="comma, separated" :aria-label="f.label"></template>
+          <template x-if="is(f, 'json')"><textarea class="wb-input wb-mono" rows="5" :value="value(f)" @input="setValue(f, $event)" :disabled="readOnly" :aria-label="f.label"></textarea></template>
+          <template x-if="custom(f)"><div class="wb-custom-field" x-init="mountField($el, f)"></div></template>
+          <p class="wb-help" x-show="f.description" x-text="f.description"></p>
+        </div>
+      </template>
+    </form>
+  </div>
+</template>
+
+<!-- ============================================================ inspector sections -->
+<template id="wb-tpl-provenance">
+  <div x-data="provenance">
+    <p class="wb-faint" x-text="heading"></p>
+    <p class="wb-faint" x-show="empty">No claims about this yet.</p>
+    <ol class="wb-claims">
+      <template x-for="c in rows" :key="c.id">
+        <li :class="statusClass(c)">
+          <div class="wb-claim-field" x-show="!sel.field" x-text="c.field"></div>
+          <div class="wb-claim-value" x-text="value(c)"></div>
+          <div class="wb-claim-meta"><span x-text="c.author"></span> · <time :title="exact(c)" x-text="ago(c)"></time> · <span x-text="origin(c)"></span> · <span class="wb-claim-status" x-text="c.status"></span></div>
+          <blockquote x-show="c.quote" x-text="c.quote"></blockquote>
+        </li>
+      </template>
+    </ol>
+  </div>
+</template>
+
+<template id="wb-tpl-item-info">
+  <dl class="wb-dl" x-data="itemInfo" x-show="item">
+    <dt>Slug</dt><dd x-text="item ? (item.slug || '—') : ''"></dd>
+    <dt>Created</dt><dd x-text="created()"></dd>
+    <dt>Updated</dt><dd x-text="updated()"></dd>
+    <dt>Link</dt><dd><button class="wb-link" @click="copy()">Copy a link to this item</button></dd>
+  </dl>
+</template>
+
+<!-- ============================================================ claims -->
+<template id="wb-tpl-claims">
+  <div class="wb-page wb-page-fill" x-data="claimsView">
+    <header class="wb-page-head">
+      <h1>Claims</h1>
+      <input class="wb-input wb-filter" type="search" placeholder="Author" x-model="author" aria-label="Author">
+      <select class="wb-input wb-narrow" x-model="type" aria-label="Content type">
+        <option value="">Every type</option>
+        <template x-for="t in types" :key="t.id"><option :value="t.id" x-text="t.label"></option></template>
+      </select>
+      <select class="wb-input wb-narrow" x-model="status" aria-label="Status">
+        <option value="current">Current</option><option value="superseded">Superseded</option>
+        <option value="disputed">Disputed</option><option value="retracted">Retracted</option><option value="">Any status</option>
+      </select>
+    </header>
+    <p class="wb-lede">Every value in Workbench is backed by claims: who or what stated it, when, and from which source. An edit supersedes its author's earlier claim; other authors' claims stay beside it.</p>
+    <div class="wb-table-wrap">
+      <table class="wb-table">
+        <thead><tr><th>Item</th><th>Field</th><th>Value</th><th>By</th><th>When</th><th>Status</th></tr></thead>
+        <tbody>
+          <template x-for="c in rows" :key="c.id">
+            <tr tabindex="0" @click="open(c)" @keydown.enter="open(c)">
+              <td x-text="label(c)"></td><td x-text="c.field"></td><td class="wb-clip" x-text="value(c)"></td>
+              <td x-text="c.author"></td><td x-text="ago(c)"></td><td><span class="wb-pill" :class="'is-' + c.status" x-text="c.status"></span></td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+      <p class="wb-empty" x-show="!loading && !rows.length">No claims match.</p>
+    </div>
+  </div>
+</template>
+
+<!-- ============================================================ review lane -->
+<template id="wb-tpl-review">
+  <div class="wb-page" x-data="reviewView">
+    <header class="wb-page-head">
+      <h1>Review</h1>
+      <select class="wb-input wb-narrow" x-model="status" aria-label="Show">
+        <option value="open">Waiting</option><option value="approved">Approved</option><option value="declined">Declined</option><option value="">Everything</option>
+      </select>
+    </header>
+    <p class="wb-lede">Decisions that need a person: gaps between what is declared and what is observed, conflicting sources, possible duplicates, proposals from agents. Approve or decline each with a note; the decision is recorded with your name.</p>
+    <div class="wb-empty-state" x-show="empty">
+      <p>Nothing is waiting.</p>
+      <p class="wb-faint">Extractors and plugins raise decisions here when they find something a person should settle.</p>
+    </div>
+    <ul class="wb-decisions">
+      <template x-for="d in rows" :key="d.id">
+        <li class="wb-decision">
+          <div class="wb-decision-head"><span class="wb-badge" x-text="d.kind"></span><span class="wb-faint" x-text="ago(d)"></span></div>
+          <p class="wb-decision-text" x-text="subject(d)"></p>
+          <template x-if="isOpen(d) && canEdit">
+            <div class="wb-decision-actions">
+              <input class="wb-input" placeholder="A note (optional)" @input="setNote(d, $event)" aria-label="Note">
+              <button class="wb-btn primary" @click="decide(d, true)">Approve</button>
+              <button class="wb-btn" @click="decide(d, false)">Decline</button>
+            </div>
+          </template>
+          <p class="wb-faint" x-show="!isOpen(d)" x-text="decidedText(d)"></p>
+        </li>
+      </template>
+    </ul>
+  </div>
+</template>
+
+<!-- ============================================================ content types -->
+<template id="wb-tpl-types">
+  <div class="wb-page" x-data="typesView">
+    <header class="wb-page-head"><h1>Content types</h1></header>
+    <p class="wb-lede">Each type is a table with real columns, registered by a plugin from a JSON Schema. Every type also has a title, a slug, and who made and last changed each item.</p>
+    <div class="wb-grid">
+      <template x-for="t in types" :key="t.id">
+        <section class="wb-card wb-size-m">
+          <h2 class="wb-card-title"><button class="wb-link" @click="open(t)" x-text="t.label"></button> <span class="wb-faint" x-text="t.plugin ? 'from ' + t.plugin : ''"></span></h2>
+          <p class="wb-faint" x-text="t.schema.description || ''"></p>
+          <table class="wb-table wb-compact">
+            <template x-for="p in props(t)" :key="p.name">
+              <tr><td class="wb-mono" x-text="p.name"></td><td class="wb-faint" x-text="p.type"></td><td x-text="p.description"></td></tr>
+            </template>
+          </table>
+        </section>
+      </template>
+    </div>
+  </div>
+</template>
+
+<!-- ============================================================ an app in a frame -->
+<template id="wb-tpl-app">
+  <div class="wb-app-frame" x-data="appFrame">
+    <div class="wb-app-bar">
+      <strong x-text="title"></strong><span class="wb-faint wb-clip" x-text="url"></span>
+      <span class="wb-spacer"></span>
+      <button class="wb-icon-btn" @click="reload()" title="Reload"><svg><use href="#i-refresh"/></svg></button>
+      <button class="wb-icon-btn" @click="external()" title="Open in its own window"><svg><use href="#i-external"/></svg></button>
+    </div>
+    <iframe x-ref="frame" :src="url" :title="title" referrerpolicy="same-origin"
+            sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-downloads allow-modals"></iframe>
+  </div>
+</template>

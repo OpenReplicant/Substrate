@@ -1,11 +1,23 @@
 # Workbench: brief
 
-*Working name. Status: W1 done (2026-11-08, S-54); W2 next. The owner agreed the decisions in section 10.*
+*Working name. Status: W1 and W2 done (2026-11-08, S-54, S-55); W3 next. The owner agreed the decisions in section 10.*
 
 A small content system on Postgres with a desktop-like UI, extended by plugins. Content types are real tables;
 every value can say where it came from, through a claims table beside them; vocabularies and their mappings are
 content too. Extractors mine sources into any of these, not only claims. It is built inside Substrate first and
 written so it can leave as its own project: Substrate becomes one plugin among others.
+
+## 0. What it is for
+
+A general-purpose CMS, AI-first (owner, 2026-11-08: "a nice general-use CMS with badass plugin/extensibility...
+the CMS world could use a shakeup with an AI-first design"). AI-first means concrete things here: every value
+carries its provenance, so an agent's writes are attributed and reviewable exactly as a person's are; agents are
+users with roles; extraction and a review lane are core concepts, not add-ons; content types are themselves
+content an agent can propose. Substrate is one plugin on it, and nothing in the core knows about Substrate.
+
+The desktop shell is also a launcher: other tools' web UIs open as apps inside it, so a set of disjointed
+UIs is used from one place (owner: "tie together a bunch of disjointed UIs with iframes and launch them from a
+unified UI").
 
 ## 1. Why, and what it replaces
 
@@ -71,27 +83,41 @@ a source, and each answer is a claim attributed to the person.
 
 ## 4. The UI
 
-A desktop in the browser, with WordPress's admin as its starting shape:
+One mental model, an IDE's rather than a desktop's, so the concepts do not blur:
 
-- **sidebar menu** built from what plugins register (content types, tools, settings);
-- **a window manager** for the work area: panels open as tabs, split, dock, float or pop out into their own
-  window, and the arrangement is saved per person (Dockview, below);
-- **the dashboard** is a layout of widgets that plugins provide (recent changes, open decisions, gaps,
-  extractor runs);
-- **core panels**: a content list per type (filter, sort, search), an item editor (a form from the type's
-  schema, with each field's claims and sources beside it), the claims explorer, the review lane, a graph view,
-  a trace view (a part's chain: observed, declared, gaps, decisions);
-- live updates over Server-Sent Events from Postgres's LISTEN/NOTIFY.
+| Part | Its one job |
+| --- | --- |
+| **Sidebar** | where things live, WordPress-style: fixed sections (Workspace, Content, Review, Apps, System); plugins add entries; every content type appears under Content; it collapses to icons |
+| **Workspace** | where work happens: views open as tabs (Dockview); split to compare, float or pop out on request; a plain tab group by default; the layout is saved per person; the URL names the active tab |
+| **Inspector** | context for the current selection, on the right: first where each value came from (claims, newest first, superseded ones faded), then the item's facts; plugins add sections |
+| **Dashboard** | a home tab of widget cards in a responsive grid (sizes s, m, l); plugins add cards; not a free-form canvas |
+| **Command palette** | Ctrl/Cmd K: commands, and items by title across every type; the fast path once there are many types |
+| **Apps** | other web UIs launched from the sidebar: in a tab (an iframe) when they allow framing from this origin, else in their own window |
 
-**Alpine.js** (3.17.5, MIT, 2026-10-20) drives the shell and the core panels: the menu, lists, forms and the
-review lane are Alpine components over the API, with no build step. The shell exposes Alpine to plugins, so a
-plugin panel can be Alpine too; it can equally bring anything else, since a panel only mounts into an element.
+The **selection** (type, item, field) is the only shared state: views set it, inspectors follow it.
 
-**Layout library: Dockview** (`dockview-core`, MIT, no dependencies, vanilla TypeScript API). It handles
-docking, tabs, splits, floating groups, pop-out windows and serialisable layouts. Pin 8.6.2 (2026-10-25); 8.7
-to 8.9 are under two weeks old. GridStack (MIT, no dependencies; 14.0.0, 2026-09-21) is the candidate for a
-free-form widget grid inside the dashboard panel if Dockview's grid is not enough. Golden Layout (MIT) is set
-aside: its last release was 2.6.0 in 2022. Plugin UI is plain ES modules, so no framework is imposed.
+Extension points are separate, named kinds, each with one small contract: views, widgets, inspector sections,
+field editors (chosen by JSON Schema type and format), commands, menu entries, apps (README.md, "Client
+plugins"). The core's own screens are a plugin on the same calls.
+
+**How the page is built.** Caddy serves `index.html` as a template (its `templates` handler, 2.11.7: `listFiles`,
+`fileExists`, `include`): it finds the installed plugins in `/plugins`, lists each one's `web/index.js` and
+includes each one's `web/views.html`, so adding a plugin is adding a folder, with no build step and no registry
+call. Data is never rendered on the server: sign-in tokens live in the browser, and one rendering path (Alpine
+over the JSON API) is simpler than two. A plugin that wants server-rendered HTML (an HTMX-style flow) will get a
+view kind that fetches a fragment with the person's token and starts Alpine in it; Alpine AJAX
+(`@imacrayon/alpine-ajax`, MIT) is the candidate, to be checked against the CSP build when a plugin server first
+returns HTML (W3).
+
+**Libraries.** Alpine.js's CSP build (`@alpinejs/csp` 3.17.5, MIT): no `eval`, so the page runs under a strict
+Content-Security-Policy (`script-src 'self'; style-src 'self'`), which matters when plugins share the page; its
+limits (no nested assignments or globals in attributes, no `x-html`) push logic into registered components,
+which is the cleaner plugin contract anyway. dockview-core 8.6.2 (MIT, no dependencies): its ES module build,
+with the stylesheet its UMD build injects extracted into a file, so nothing is inline. GridStack and Golden Layout
+are not used.
+
+**Look.** Calm and dense but readable: system fonts, neutral surfaces, one accent, light and dark themes from
+CSS tokens that Dockview's variables are mapped onto, so plugins match by using the same tokens.
 
 ## 5. Plugins and integrations
 
@@ -194,7 +220,7 @@ All of them are allowed by kernel D-11's posture (permissive, or LGPL as a libra
 | # | Step | Done when |
 | --- | --- | --- |
 | W1 | Store, API, sign-in | migrations create `wb.*`; a content type registered from a plugin gets its table; PostgREST creates, edits and lists items behind Caddy, a trigger records a claim for every write, and a viewer cannot write; `workbench user add owner` and signing in through `/api/rpc/login` work |
-| W2 | Shell and core panels | the sidebar, Dockview window manager, dashboard, content list, item editor with claims beside each field, and review lane run; a layout survives a reload |
+| W2 | Shell and core panels | the sidebar, Dockview workspace, inspector, dashboard, command palette, content list, item editor with claims beside each field, claims, review lane, content types and apps run under a strict CSP; plugins are found by Caddy's template; a layout survives a reload |
 | W3 | Plugin loader and Substrate's plugin | `plugins/substrate` loads; its extractors read `catalog-info.yaml` and `.claude/`, and the drift panel shows declared against observed |
 | W4 | Kernel leaves the stack | everything Substrate used kernel for runs on Workbench, including Morphogen's verdicts as claims; kernel stops in `deploy/compose.yaml` and becomes an option |
 
