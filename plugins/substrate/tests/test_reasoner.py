@@ -89,6 +89,11 @@ try:
               path and path[-1][1] == "v" and ("reaches" in preds or preds[:3] == ["proxiesTo", "dialsTo", "mounts"]), path)
         back = conn.execute("select count(*) from api.graph_path('volume', 'v', 'route', 'r')").fetchone()[0]
         check("and not against it", back == 0, back)
+    with cli.connect() as conn:                   # a new session, as an ordinary reader: pgGraph applies its rights
+        conn.execute("set role wb_viewer")
+        mine = conn.execute("select slug from api.graph_path('route', 'r', 'volume', 'v')").fetchall()
+        check("a reader gets the same path as themselves (schema usage, table SELECT, graph read; nothing internal)",
+              mine and mine[-1][0] == "v", mine)
 finally:
     with psycopg.connect(cli.url("postgres"), autocommit=True) as conn:
         conn.execute(sql.SQL("drop database if exists {} with (force)").format(sql.Identifier(DB)))
