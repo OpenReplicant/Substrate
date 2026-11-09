@@ -97,6 +97,8 @@ python3 scripts/spec.py status|next|set ID STATUS   # where the spec's build pla
 scripts/verdicts.sh             # Morphogen's verdicts into Workbench (also run by a hook after judged runs)
 scripts/map.sh                  # catalog-info.yaml into Workbench, then drift (also run by a hook after edits to it)
 scripts/observe.sh              # what runs on this machine (observe.yaml) into Workbench, gitleaks first, then drift
+scripts/contract.sh INTERFACE [FILLER]|all   # a slot's contract test against a filler (e.g. secrets-api openbao); results into Workbench
+scripts/graph.sh                # the graph views (Ontop mapping, pgGraph projection) regenerated from Workbench's terms
 scripts/trace.sh NAME [DEPTH]   # an item's chain in Workbench: claims, relations followed out, the part that runs as it, each gap and its decision
 scripts/workbench.sh migrate|plugin load DIR|extract PLUGIN:NAME|user add NAME|user reset NAME|user list|token NAME   # Workbench (prints passwords once: the owner runs user add)
 python3 scripts/harness.py status|apply   # this project's Claude Code wiring: Workbench's MCP server, no kernel hooks

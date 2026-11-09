@@ -10,6 +10,8 @@
                            value quoting its snapshot by JSON pointer, and how they relate (OBSERVE.md)
     substrate:reasoner     OWL 2 RL rules (prp-trp, prp-inv, prp-symp) over the relations other extractors stated, from the
                            terms in wb.term; each conclusion a claim quoting the rule and its premises
+    substrate:contracts    the contract runs scripts/contract.sh wrote (.state/contracts) -> contract items, each check quoted,
+                           related to the API it tests and the part it ran against
     substrate:morphogen    Morphogen's evidence log (<git common dir>/morphogen/evidence.db) -> verdict items, after
                            checking the whole hash chain independently of Morphogen; a broken chain records nothing
 
@@ -711,6 +713,45 @@ def register(wb):
                         draw("prp-inv", e[3], e[4], pred, e[0], e[1], [e])
         ctx.log(f"{len(edges)} stated relations; drawn: " + ", ".join(f"{n} by {r}" for r, n in counts.items()))
 
+    def contracts(ctx, inputs):
+        """Contract runs (scripts/contract.sh writes .state/contracts/<interface>--<filler>.json) into contract items:
+        each check's result quoted from the file, the run related to the API it tests and to the part that filled it
+        (the provider of that API whose substrate.dev/filler names the filler)."""
+        folder = root / inputs.get("folder", ".state/contracts")
+        files = sorted(folder.glob("*--*.json")) if folder.is_dir() else []
+        if not files:
+            ctx.log("no contract runs yet: scripts/contract.sh all")
+            return
+        comps = {slug: (str(i), ann or {}) for i, slug, ann in ctx.conn.execute("select id, slug, annotations from api.component").fetchall()}
+        provides = {}
+        for (f_id, f_slug, to_slug) in ctx.conn.execute(
+                """select r.from_id::text, f.slug, t.slug from wb.relation r join content.component f on f.id = r.from_id
+                   join content.component t on t.id = r.to_id where r.predicate = 'providesApi'""").fetchall():
+            provides.setdefault(to_slug, []).append(f_slug)
+        passed = failed = 0
+        for f in files:
+            raw = f.read_bytes()
+            d = json.loads(raw)
+            src = ctx.source(f"file:{f.relative_to(root)}", raw, "application/json")
+            bad = [c["name"] for c in d.get("checks") or [] if not c.get("ok")]
+            fields = {"interface": d["interface"], "filler": d["filler"], "passed": d["passed"], "checks": d.get("checks"),
+                      "failed": bad, "ran_at": d.get("ran_at"), "host": d.get("host"), "command": d.get("command")}
+            ev = {k: at(f"/{k}", d.get(k)) for k in ("interface", "filler", "passed", "checks", "ran_at", "host", "command")}
+            ev["failed"] = {"quote": "; ".join(bad) or "none", "span": {"pointer": "/checks", "derived": "the checks whose ok is false"}}
+            ev["title"] = at("/interface", d["interface"])
+            item = ctx.upsert("contract", slugify(f"{d['interface']}-{d['filler']}"), fields,
+                              title=f"{d['interface']} with {d['filler']}: {'passes' if d['passed'] else 'fails'}", source=src, evidence=ev)
+            passed, failed = passed + bool(d["passed"]), failed + (not d["passed"])
+            api = f"api-{d['interface']}"
+            if api in comps:
+                ctx.relate("contract", item, "tests", "component", comps[api][0], source=src, quote=d.get("command"))
+            filler = next((c for c in provides.get(api, []) if comps.get(c, ("", {}))[1].get("substrate.dev/filler") == d["filler"]), None)
+            if filler:
+                ctx.relate("contract", item, "ranAgainst", "component", comps[filler][0], source=src,
+                           quote=f"substrate.dev/filler: {d['filler']}")
+        ctx.done("contract")
+        ctx.log(f"{len(files)} contract runs: {passed} pass, {failed} fail")
+
     def morphogen(ctx, inputs):
         path = Path(inputs.get("log") or wb.setting("evidence") or git_common_dir(root) / "morphogen" / "evidence.db")
         if not path.is_file():
@@ -791,4 +832,5 @@ def register(wb):
                  "setting names, routes, APIs, plugins, UIs, connections and Morphogen's cells")
     wb.extractor("reasoner", reasoner, "OWL 2 RL over stated relations (transitive, inverse, symmetric properties in wb.term); "
                  "each conclusion a claim quoting the rule and its premises, retracted with them")
+    wb.extractor("contracts", contracts, "contract runs (.state/contracts, scripts/contract.sh): each slot's test against a filler, pass or fail")
     wb.extractor("drift", drift, "what the map declares against what the repository has; each difference to the review lane")

@@ -1,0 +1,48 @@
+{
+  "title": "Contract run",
+  "description": "One run of a slot's contract test against one filler (scripts/contract.sh): what was checked, pass or fail.",
+  "type": "object",
+  "properties": {
+    "interface": {
+      "type": "string",
+      "description": "the API whose contract it is, e.g. secrets-api",
+      "x-term": "sub:interface"
+    },
+    "filler": {
+      "type": "string",
+      "description": "what filled the slot for the run, e.g. env or openbao",
+      "x-term": "sub:filler"
+    },
+    "passed": {
+      "type": "boolean",
+      "description": "whether every check passed",
+      "x-term": "sub:passed"
+    },
+    "checks": {
+      "type": "array",
+      "description": "each check: its name, ok, and why not",
+      "x-term": "sub:checks"
+    },
+    "failed": {
+      "type": "array",
+      "description": "the names of the checks that failed",
+      "x-term": "sub:failed"
+    },
+    "ran_at": {
+      "type": "string",
+      "description": "when it ran",
+      "x-term": "sub:ranAt"
+    },
+    "host": {
+      "type": "string",
+      "description": "the machine it ran on",
+      "x-term": "sub:host"
+    },
+    "command": {
+      "type": "string",
+      "description": "how to run it again",
+      "x-term": "sub:command"
+    }
+  },
+  "x-term": "sub:ContractRun"
+}

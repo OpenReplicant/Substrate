@@ -48,6 +48,19 @@ note "review lane: $gaps open"
 
 if [ -f "$ROOT/docs/build.yaml" ]; then
   note "spec: $(python3 "$ROOT/scripts/spec.py" next --short 2>&1)"
+if [ -f "$ROOT/docs/build.yaml" ]; then
+  python3 -c 'import sys, yaml; yaml.safe_load(open(sys.argv[1]))' "$ROOT/docs/build.yaml" 2>/dev/null \
+    && ok "docs/build.yaml parses as YAML" || bad "docs/build.yaml is not valid YAML (python3 -c 'import yaml; yaml.safe_load(open(\"docs/build.yaml\"))')"
+fi
+if ls "$ROOT"/.state/contracts/*--*.json >/dev/null 2>&1; then
+  c=$(python3 -c '
+import json, sys
+runs = [json.load(open(f)) for f in sys.argv[1:]]
+bad = [r["interface"] + " with " + r["filler"] for r in runs if not r["passed"]]
+oldest = min(r["ran_at"] for r in runs)[:16]
+print(("FAIL " + ", ".join(bad)) if bad else f"{len(runs)} runs, all pass; oldest {oldest}")' "$ROOT"/.state/contracts/*--*.json)
+  case "$c" in FAIL*) bad "contracts: ${c#FAIL } (scripts/contract.sh INTERFACE FILLER)" ;; *) ok "contracts: $c (scripts/contract.sh all)" ;; esac
+else note "contracts: none run yet (scripts/contract.sh all)"; fi
 fi
 
 say "Upstream clones"

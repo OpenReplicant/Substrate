@@ -54,6 +54,12 @@ terms:
   parents:
   - sub:Observed
   comment: A container the engine runs (or has stopped), as its inspect output says.
+- iri: sub:ContractRun
+  kind: class
+  label: Contract run
+  parents:
+  - wb:Item
+  comment: 'One run of a slot''s contract test against one filler (scripts/contract.sh): what was checked, pass or fail.'
 - iri: sub:Domain
   kind: class
   label: Domain
@@ -219,6 +225,11 @@ terms:
   label: cellSource
   domain: sub:Cell
   comment: where Morphogen read it from
+- iri: sub:checks
+  kind: datatype-property
+  label: checks
+  domain: sub:ContractRun
+  comment: 'each check: its name, ok, and why not'
 - iri: sub:claim
   kind: datatype-property
   label: claim
@@ -299,11 +310,21 @@ terms:
   label: extractors
   domain: sub:Plugin
   comment: the extractors it adds
+- iri: sub:failed
+  kind: datatype-property
+  label: failed
+  domain: sub:ContractRun
+  comment: the names of the checks that failed
 - iri: sub:file
   kind: datatype-property
   label: file
   domain: sub:Connection
   comment: the file it is configured in
+- iri: sub:filler
+  kind: datatype-property
+  label: filler
+  domain: sub:ContractRun
+  comment: what filled the slot for the run, e.g. env or openbao
 - iri: sub:fit
   kind: datatype-property
   label: fit
@@ -329,9 +350,19 @@ terms:
   label: health
   domain: sub:Container
   comment: its health check's status, if it has one
+- iri: sub:host
+  kind: datatype-property
+  label: host
+  domain: sub:ContractRun
+  comment: the machine it ran on
 - iri: sub:image
   kind: datatype-property
   label: image
+- iri: sub:interface
+  kind: datatype-property
+  label: interface
+  domain: sub:ContractRun
+  comment: the API whose contract it is, e.g. secrets-api
 - iri: sub:kernel
   kind: datatype-property
   label: kernel
@@ -454,6 +485,11 @@ terms:
 - iri: sub:owner
   kind: datatype-property
   label: owner
+- iri: sub:passed
+  kind: datatype-property
+  label: passed
+  domain: sub:ContractRun
+  comment: whether every check passed
 - iri: sub:path
   kind: datatype-property
   label: path
@@ -482,6 +518,11 @@ terms:
   label: question
   domain: sub:Choice
   comment: what was being chosen
+- iri: sub:ranAt
+  kind: datatype-property
+  label: ranAt
+  domain: sub:ContractRun
+  comment: when it ran
 - iri: sub:readOnly
   kind: datatype-property
   label: readOnly
@@ -757,6 +798,12 @@ terms:
   predicate: proxiesTo
   parents:
   - sub:reaches
+- iri: sub:ranAgainst
+  kind: property
+  label: ranAgainst
+  predicate: ranAgainst
+  parents:
+  - wb:relatedTo
 - iri: sub:reaches
   kind: property
   label: reaches
@@ -791,3 +838,9 @@ terms:
   predicate: serves
   parents:
   - sub:observedRelation
+- iri: sub:tests
+  kind: property
+  label: tests
+  predicate: tests
+  parents:
+  - wb:relatedTo

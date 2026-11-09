@@ -12,8 +12,10 @@
 #                             build (to write: a Workbench plugin, a skill, or glue here)
 #   substrate.dev/basis       where an existing part lives
 #   substrate.dev/step        the build step (docs/build.yaml) it belongs to
+#   substrate.dev/filler     which filler of its slot it is, as scripts/contract.sh names it (compose, env, openbao, ...)
 #   substrate.dev/observed-as how it is recognised running: <type>:<slug> items substrate:observed reads (a slug may
 #                             be a glob), comma-separated; substrate:drift raises what no part accounts for (OBSERVE.md)
+#   APIs:     morphogen.dev/tests (the slot's contract test, which any filler must pass; Morphogen runs it)
 #   options:  substrate.dev/fits (where it would sit), substrate.dev/interface (what keeps it possible now),
 #             substrate.dev/when (what would bring it back), substrate.dev/restore (the commit and paths to
 #             restore it from), substrate.dev/evidence (what was learned running it), substrate.dev/candidates
@@ -91,6 +93,7 @@ metadata:
   name: morphogen
   description: The judge - rules from the base, outside measurement, held-out cases, A/A checks, the red team, the evidence log.
   annotations:
+    substrate.dev/filler: morphogen
     substrate.dev/intent: Accept a change only on evidence the changer cannot reach. The one hard restriction (S-46) - it exists because the changer is expected to try to reward-hack sometimes.
     substrate.dev/fill: existing
     substrate.dev/basis: repos/morphogen; its Claude Code plugin, installed from GitHub so the judge is never the candidate
@@ -100,7 +103,7 @@ spec:
   owner: group:operator
   system: core
   providesApis: [judge-api]
-  dependsOn: [resource:evidence-log, resource:sandbox, resource:git-repo]
+  consumesApis: [evidence-api, sandbox-api, repository-api]
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Component
@@ -169,7 +172,7 @@ spec:
   lifecycle: experimental
   owner: group:agents
   system: core
-  dependsOn: [component:workbench]
+  consumesApis: [workbench-api, workbench-server-api]
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Component
@@ -186,7 +189,7 @@ spec:
   lifecycle: experimental
   owner: group:agents
   system: core
-  dependsOn: [component:workbench, component:tools]
+  consumesApis: [workbench-api, workbench-server-api, tools-api]
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Component
@@ -319,7 +322,7 @@ spec:
   owner: group:operator
   system: core
   providesApis: [workbench-api, workbench-mcp-api]
-  dependsOn: [resource:postgres]
+  consumesApis: [database-api]
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Component
@@ -327,6 +330,7 @@ metadata:
   name: workbench-rest
   description: PostgREST v16.5 at /api - the Workbench schema as a JSON API with an OpenAPI description; roles from the sign-in JWT.
   annotations:
+    substrate.dev/filler: postgrest
     substrate.dev/intent: Serve the store without a hand-written data API, so every client gets the rules Postgres enforces.
     substrate.dev/fill: adopt
     substrate.dev/basis: deploy/compose.yaml service postgrest, deploy/caddy/Caddyfile (/api)
@@ -339,7 +343,7 @@ spec:
   system: core
   subcomponentOf: workbench
   providesApis: [workbench-api]
-  dependsOn: [resource:postgres]
+  consumesApis: [database-api]
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Component
@@ -347,6 +351,7 @@ metadata:
   name: workbench-server
   description: The Workbench server at /wb/api - plugins' Python, extractors off a pgmq queue, NOTIFY relayed as Server-Sent Events, MCP for agents.
   annotations:
+    substrate.dev/filler: workbench-server
     substrate.dev/intent: Do what SQL cannot - run extractors and relay live changes - behind the same token check as the API.
     substrate.dev/fill: build
     substrate.dev/basis: workbench/workbench/server.py, extract.py, mcp.py; compose service workbench (workbench/Containerfile)
@@ -359,8 +364,7 @@ spec:
   system: core
   subcomponentOf: workbench
   providesApis: [workbench-mcp-api, workbench-server-api]
-  consumesApis: [workbench-api]
-  dependsOn: [resource:postgres]
+  consumesApis: [workbench-api, database-api]
 ---
 # ================================================================ CORE: glue
 apiVersion: backstage.io/v1alpha1
@@ -369,6 +373,7 @@ metadata:
   name: tools
   description: The commands people, scripts and Claude Code run, inside one container (bin/).
   annotations:
+    substrate.dev/filler: substrate-tools
     substrate.dev/intent: Keep the host bare - Workbench's command, Morphogen and gitleaks run in a container as the host user.
     substrate.dev/fill: build
     substrate.dev/basis: deploy/tools/Containerfile (its own image since S-57), scripts/tools.sh, bin/ (S-19)
@@ -378,7 +383,8 @@ spec:
   lifecycle: production
   owner: group:operator
   system: core
-  dependsOn: [resource:sandbox, resource:git-repo]
+  providesApis: [tools-api]
+  consumesApis: [sandbox-api, repository-api]
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Component
@@ -386,6 +392,7 @@ metadata:
   name: runtime
   description: What runs the services - compose, through four verbs.
   annotations:
+    substrate.dev/filler: compose
     substrate.dev/intent: Start, stop, list and read the services; nothing else in the scripts knows how.
     substrate.dev/fill: adopt
     substrate.dev/basis: scripts/runtime/compose.sh (rt_up, rt_down, rt_status, rt_logs) on Podman (S-13, S-16, S-41)
@@ -395,7 +402,7 @@ spec:
   owner: group:operator
   system: core
   providesApis: [runtime-api]
-  dependsOn: [resource:sandbox]
+  consumesApis: [sandbox-api]
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Component
@@ -403,6 +410,7 @@ metadata:
   name: secrets
   description: Credentials in .env (mode 600), read through env_value and the sec_* verbs.
   annotations:
+    substrate.dev/filler: env
     substrate.dev/intent: Keep credentials out of files people read, behind calls another store can answer later.
     substrate.dev/fill: existing
     substrate.dev/basis: scripts/secrets/env.sh, deploy/secrets.txt, scripts/settings.sh (S-31, S-41)
@@ -427,8 +435,7 @@ spec:
   lifecycle: production
   owner: group:operator
   system: core
-  consumesApis: [runtime-api, secrets-api, workbench-api]
-  dependsOn: [component:tools]
+  consumesApis: [runtime-api, secrets-api, workbench-api, tools-api]
 ---
 # ================================================================ OPTIONS (spec 8): none of these runs now
 apiVersion: backstage.io/v1alpha1
@@ -532,6 +539,7 @@ metadata:
   name: scheduler
   description: Nomad - one control plane for containers, processes and clusters, with an ACL'd API an actuator can drive.
   annotations:
+    substrate.dev/filler: nomad
     substrate.dev/fits: Behind the runtime verbs, in place of compose.
     substrate.dev/interface: Scripts call only rt_up, rt_down, rt_status, rt_logs; a scheduler is a new file in scripts/runtime/.
     substrate.dev/when: Several nodes, batch jobs started by triggers, or an actuator that restarts and scales through an API.
@@ -551,6 +559,7 @@ metadata:
   name: secrets-store
   description: OpenBao - one API for secrets with policies, audit and versions.
   annotations:
+    substrate.dev/filler: openbao
     substrate.dev/fits: Behind the secrets verbs, in place of .env.
     substrate.dev/interface: Scripts read secrets only through env_value and sec_start, sec_stop, sec_get, sec_put, sec_status; a store is a new file in scripts/secrets/.
     substrate.dev/when: More than one person or machine, credentials handed to services one by one, or an audit trail needed.
@@ -623,6 +632,7 @@ metadata:
   name: graph-endpoint
   description: A SPARQL endpoint over Workbench's items, claims and relations, with reasoning - Ontop, a virtual knowledge graph over the live tables.
   annotations:
+    substrate.dev/filler: ontop
     substrate.dev/intent: Ask the store by meaning (classes, sub-properties, claims and their premises) without a copy of it.
     substrate.dev/fill: adopt
     substrate.dev/basis: deploy/ontop/Containerfile (Ontop 5.5.0 with PgJDBC 42.7.14), compose service graph, Caddy /sparql; its mapping and ontology generated from Workbench's terms (workbench/workbench/graph.py, scripts/graph.sh, .state/graph); reads as wb_reader
@@ -636,7 +646,7 @@ spec:
   owner: group:operator
   system: core
   providesApis: [graph-api]
-  dependsOn: [resource:postgres, component:workbench]
+  consumesApis: [workbench-api, database-api]
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Component
@@ -660,6 +670,7 @@ metadata:
   name: remote-judge
   description: Morphogen on another machine, so the changer cannot even reach the judge's host.
   annotations:
+    substrate.dev/filler: remote-morphogen
     substrate.dev/fits: In place of the local Morphogen behind judge-api.
     substrate.dev/interface: judge-api (Morphogen's CLI and MCP tools); substrate:morphogen reads the evidence log, which would be shipped or served instead of read from this repository's git directory.
     substrate.dev/when: Stronger separation is wanted, or several substrates share one judge (S-61).
@@ -778,48 +789,55 @@ spec: {type: registry, lifecycle: listed, owner: group:operator, system: sources
 ---
 # ================================================================ RESOURCES
 apiVersion: backstage.io/v1alpha1
-kind: Resource
+kind: Component
 metadata:
   name: postgres
   description: Postgres 17 with pgvector, pg_cron, pgmq, pgGraph (deploy/postgres, vendored from kernel; S-24, S-57); databases workbench, and kk kept.
   annotations:
+    substrate.dev/filler: postgres
     substrate.dev/observed-as: "container:substrate-db, volume:knowledge-kernel-db-data"
-spec: {type: database, owner: group:operator, system: core}
+spec: {type: database, owner: group:operator, system: core, lifecycle: production, providesApis: [database-api]}
 ---
 apiVersion: backstage.io/v1alpha1
-kind: Resource
+kind: Component
 metadata:
   name: evidence-log
   description: Morphogen's hash-chained verdict log, in git's own directory.
-spec: {type: database, owner: group:operator, system: core}
+  annotations:
+    substrate.dev/filler: morphogen-evidence
+spec: {type: database, owner: group:operator, system: core, lifecycle: production, providesApis: [evidence-api]}
 ---
 apiVersion: backstage.io/v1alpha1
-kind: Resource
+kind: Component
 metadata:
   name: git-repo
   description: Code, the map, the cells, and history.
-spec: {type: repository, owner: group:operator, system: core}
+  annotations:
+    substrate.dev/filler: git
+spec: {type: repository, owner: group:operator, system: core, lifecycle: production, providesApis: [repository-api]}
 ---
 apiVersion: backstage.io/v1alpha1
-kind: Resource
+kind: Component
 metadata:
   name: sandbox
   description: Containers for judged runs, modules and the tools (Podman).
-spec: {type: container-runtime, owner: group:operator, system: core}
+  annotations:
+    substrate.dev/filler: podman
+spec: {type: container-runtime, owner: group:operator, system: core, lifecycle: production, providesApis: [sandbox-api]}
 ---
 apiVersion: backstage.io/v1alpha1
 kind: API
-metadata: {name: judge-api, description: "Morphogen's MCP tools and CLI - status, measure, probe, judge, tune, evidence."}
+metadata: {name: judge-api, annotations: {morphogen.dev/tests: "scripts/contract.sh judge-api"}, description: "Morphogen's MCP tools and CLI - status, measure, probe, judge, tune, evidence."}
 spec: {type: mcp-server, lifecycle: production, owner: group:operator, system: core, definition: "Morphogen's MCP tools; rules from the base commit."}
 ---
 apiVersion: backstage.io/v1alpha1
 kind: API
-metadata: {name: runtime-api, description: "The runtime's four verbs; compose answers them now, a scheduler could."}
+metadata: {name: runtime-api, annotations: {morphogen.dev/tests: "scripts/contract.sh runtime-api"}, description: "The runtime's four verbs; compose answers them now, a scheduler could."}
 spec: {type: shell, lifecycle: production, owner: group:operator, system: core, definition: "rt_up, rt_down [--volumes], rt_status, rt_logs SERVICE (scripts/runtime/<name>.sh)."}
 ---
 apiVersion: backstage.io/v1alpha1
 kind: API
-metadata: {name: secrets-api, description: "The secrets verbs; .env answers them now, a store could."}
+metadata: {name: secrets-api, annotations: {morphogen.dev/tests: "scripts/contract.sh secrets-api"}, description: "The secrets verbs; .env answers them now, a store could."}
 spec: {type: shell, lifecycle: production, owner: group:operator, system: core, definition: "env_value NAME; sec_start, sec_stop, sec_get NAME, sec_put NAME (stdin), sec_status (scripts/secrets/<name>.sh)."}
 ---
 apiVersion: backstage.io/v1alpha1
@@ -839,21 +857,46 @@ spec: {type: grpc, lifecycle: option, owner: group:operator, system: options, de
 ---
 apiVersion: backstage.io/v1alpha1
 kind: API
-metadata: {name: workbench-api, annotations: {substrate.dev/observed-as: "api:workbench-rest-openapi"}, description: "Workbench's JSON API at /api - a view per content type, claims, content_types, rpc/login, rpc/whoami."}
+metadata: {name: workbench-api, annotations: {morphogen.dev/tests: "scripts/contract.sh workbench-api", substrate.dev/observed-as: "api:workbench-rest-openapi"}, description: "Workbench's JSON API at /api - a view per content type, claims, content_types, rpc/login, rpc/whoami."}
 spec: {type: openapi, lifecycle: experimental, owner: group:operator, system: core, definition: "PostgREST's OpenAPI 2.0 description at http://127.0.0.1:8080/api/ (filtered by the caller's role)."}
 
 ---
 apiVersion: backstage.io/v1alpha1
 kind: API
-metadata: {name: workbench-mcp-api, annotations: {substrate.dev/observed-as: "api:workbench-mcp-tools"}, description: "Workbench over MCP for agents at /wb/api/mcp - search, items with their claims, save, decisions, extractors."}
+metadata: {name: workbench-mcp-api, annotations: {morphogen.dev/tests: "scripts/contract.sh workbench-mcp-api", substrate.dev/observed-as: "api:workbench-mcp-tools"}, description: "Workbench over MCP for agents at /wb/api/mcp - search, items with their claims, save, decisions, extractors."}
 spec: {type: mcp-server, lifecycle: experimental, owner: group:operator, system: core, definition: "Streamable HTTP, JSON responses; each tool call forwards the agent's own token to PostgREST."}
 ---
 apiVersion: backstage.io/v1alpha1
 kind: API
-metadata: {name: workbench-server-api, annotations: {substrate.dev/observed-as: "api:workbench-server-openapi"}, description: "The Workbench server's own HTTP API at /wb/api - health, live events, extractors, queueing a run, and its OpenAPI document (decided from a step 5 gap)."}
+metadata: {name: workbench-server-api, annotations: {morphogen.dev/tests: "scripts/contract.sh workbench-server-api", substrate.dev/observed-as: "api:workbench-server-openapi"}, description: "The Workbench server's own HTTP API at /wb/api - health, live events, extractors, queueing a run, and its OpenAPI document (decided from a step 5 gap)."}
 spec: {type: openapi, lifecycle: experimental, owner: group:operator, system: core, definition: "OpenAPI 3.1, generated from the routes it serves, at http://127.0.0.1:8080/wb/api/openapi.json."}
 ---
 apiVersion: backstage.io/v1alpha1
 kind: API
-metadata: {name: graph-api, description: "SPARQL 1.1 at /sparql over Workbench's tables, read-only, with OWL 2 QL reasoning at query time (spec step 7)."}
+metadata: {name: graph-api, annotations: {morphogen.dev/tests: "scripts/contract.sh graph-api"}, description: "SPARQL 1.1 at /sparql over Workbench's tables, read-only, with OWL 2 QL reasoning at query time (spec step 7)."}
 spec: {type: sparql, lifecycle: experimental, owner: group:operator, system: core, definition: "SPARQL 1.1 Protocol, query only; vocabulary from wb.term (Workbench's wb: terms and each plugin's, e.g. substrate's sub:)."}
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata: {name: database-api, annotations: {morphogen.dev/tests: "scripts/contract.sh database-api"}, description: "Postgres as the stack needs it: version 17, pgvector, pg_cron, pgmq and pgGraph available, Workbench's roles."}
+spec: {type: contract, lifecycle: production, owner: group:operator, system: core, definition: "SQL over the workbench database; resource postgres (deploy/postgres) fills it."}
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata: {name: tools-api, annotations: {morphogen.dev/tests: "scripts/contract.sh tools-api"}, description: "The tools container runs bin/ (Morphogen, gitleaks, Workbench's command) as the user, with the checkout mounted."}
+spec: {type: contract, lifecycle: production, owner: group:operator, system: core, definition: "bin/in-tools COMMAND; component tools fills it."}
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata: {name: sandbox-api, annotations: {morphogen.dev/tests: "scripts/contract.sh sandbox-api"}, description: "The container engine starts a locked-down container: no network, a read-only root, no capabilities."}
+spec: {type: contract, lifecycle: production, owner: group:operator, system: core, definition: "ENGINE run with those flags; resource sandbox (Podman) fills it."}
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata: {name: repository-api, annotations: {morphogen.dev/tests: "scripts/contract.sh repository-api"}, description: "A git repository Morphogen can judge in: a resolvable HEAD, history, its own git directory."}
+spec: {type: contract, lifecycle: production, owner: group:operator, system: core, definition: "git; resource git-repo fills it."}
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata: {name: evidence-api, annotations: {morphogen.dev/tests: "scripts/contract.sh evidence-api"}, description: "Morphogen's evidence log, its hash chain verifiable by Morphogen and independently."}
+spec: {type: contract, lifecycle: production, owner: group:operator, system: core, definition: "SQLite at <git common dir>/morphogen/evidence.db; resource evidence-log fills it."}

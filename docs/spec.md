@@ -147,8 +147,10 @@ Substrate is pluggable in two different senses, and the difference is the design
   interface can fill its slot: compose or a scheduler, `.env` or a secrets store, Ontop or another SPARQL engine.
   The `options` system lists the known alternatives for each slot, and section 5 is how one is chosen. A slot
   is real only when its interface has a contract test that any filler must pass, and the map says which test
-  that is; until then it is declared, not enforced (Morphogen's structure check reports each untested
-  interface). Step 9 closes that.
+  that is (`morphogen.dev/tests` on the API, `scripts/contract.sh`); Morphogen's structure check reports any
+  untested interface, and its judge runs these tests for any change that touches one. Since step 9 every core
+  interface has one, and so do the parts beneath them (database, tools, sandbox, repository, evidence log);
+  each run is recorded in Workbench as a contract item, pass or fail, against the filler it ran with.
 - **The judge is plugged in, not slotted.** Morphogen is reached through `judge-api` like any part, but it is
   not a slot substrate may fill: the loop cannot choose, swap, weaken or tune its own judge (section 7, "who
   decides a change"). Everything else can be replaced by evidence; the judge is replaced only by the owner.

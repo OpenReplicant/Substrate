@@ -121,7 +121,7 @@ steps:
       compares map and observation for every kind, not only skills and hooks; at least one real gap of a kind
       step 2 could not see reaches the review lane and is decided; and scripts/trace.sh follows a chain from a
       route to the container that serves it
-    notes: >- Done 2026-11-09 (S-62): observe.py on the host and substrate:observed, eleven observed types, observed-as on the map and drift for every kind; the Workbench server's API gap decided (declared as workbench-server-api); five old volumes left open for the owner.
+    notes: >-
       Added 2026-11-09 (S-61). Owner: "is Substrate modeling itself as an agent-system? like does it have a map
       of the machine its on, the processes/containers running it, and where they have settings/params, hooks,
       APIs, UIs, etc? that might be the better place to start than a hypothetical scenario." At S-61 the observed
@@ -130,6 +130,7 @@ steps:
       Secrets: settings are observed by name only, and gitleaks runs over anything an extractor stores as a
       source. This step comes before the graph view so that view is built and tested on real paths (route, API,
       service, container, image, volume) rather than on the map alone.
+      Done 2026-11-09 (S-62): observe.py on the host and substrate:observed, eleven observed types, observed-as on the map and drift for every kind; the Workbench server's API gap decided (declared as workbench-server-api); five old volumes left open for the owner.
 
   - id: 6
     title: "Generalist: a second domain"
@@ -164,12 +165,13 @@ steps:
       by hand; and an inference extractor applies OWL 2 RL rules, writing each new fact as a claim attributed to
       the reasoner that quotes the rule and its premises, retracted when a premise is.
       scripts/trials/rdf-endpoint/run.sh ontop still passes against the live endpoint
-    notes: >- Done 2026-11-09 (S-64, S-65): relations as claims with premises, generated vocabulary and mappings, Ontop at /sparql (run.sh live passes), substrate:reasoner (OWL 2 RL), pgGraph paths as the caller.
+    notes: >-
       Added as step 8 in S-60; renumbered and narrowed in S-61, taking in what step 7 (vocabularies) needed:
       substrate's own terms only. External vocabularies (PROV-O, SPDX, DOAP, SKOS, ontology registries) are an
       option in the map, for when data is exchanged with other tools or merged from other systems. Owner on the
       inference path: "a good symbolic place to start" for distilling fast, expert systems from what the LLM
       does (spec section 1, direction).
+      Done 2026-11-09 (S-64, S-65): relations as claims with premises, generated vocabulary and mappings, Ontop at /sparql (run.sh live passes), substrate:reasoner (OWL 2 RL), pgGraph paths as the caller.
 
   - id: 8
     title: "Engineer: the machine and its agents, a system beside substrate"
@@ -192,11 +194,12 @@ steps:
       sit for the interview and what of the machine is in scope; nothing outside what the owner names is read.
 
   - id: 9
+    status: done
+    done_on: 2026-11-09
     title: Slots enforced
     spec: "4, 8"
     where: substrate (contract tests per interface, catalog-info.yaml naming them), Morphogen's structure check
     after: [4]
-    status: todo
     check: >-
       each core interface on the map (runtime-api, secrets-api, workbench-api, workbench-mcp-api, judge-api, and
       the graph endpoint once it is core (step 7)) has a contract test that any filler must pass, the map names the test
@@ -208,3 +211,4 @@ steps:
       map of component slots with interfaces that anything could fit in if it passes the tests". Today slots are
       declared, not enforced: the structure check reports 13 untested interfaces and resources. Morphogen's own
       interface is tested from the outside only; nothing here changes the judge.
+      Done 2026-11-09 (S-66): contract tests for every core interface and the parts beneath them, named on the map; OpenBao passes the secrets slot's test; runs recorded as contract items.
