@@ -6,6 +6,7 @@
 #   scripts/map.sh export [DOMAIN [FILE]]  # the map as a catalog file (default: substrate, catalog-info.yaml)
 #   scripts/map.sh check [DOMAIN [FILE]]   # does the file still match the map (exit 1 if not)
 #   scripts/map.sh count [DOMAIN]          # how many entities stand in a domain's map
+#   scripts/map.sh owners [DOMAIN]         # the tracked files no part claims (morphogen.dev/change): the judge's
 #   scripts/map.sh import [FILE] [--force] # a catalog file into the map; refused if it would overwrite edits made in
 #                                          # Workbench, unless --force (a new machine's first up.sh does this)
 #   scripts/map.sh --hook                  # from the PostToolUse hook after an MCP write (JSON on stdin): quiet
@@ -33,7 +34,7 @@ case "${1:-}" in
     "$ROOT/scripts/tools.sh" status >/dev/null 2>&1 || exit 0
     derive >/dev/null 2>&1 || true
     exit 0 ;;
-  export|check|count)
+  export|check|count|owners)
     mapfile "$@" ;;
   import)
     file=catalog-info.yaml; force=""
@@ -45,5 +46,5 @@ case "${1:-}" in
   "")
     derive ;;
   *)
-    sed -n '2,17p' "$0"; exit 2 ;;
+    sed -n '2,18p' "$0"; exit 2 ;;
 esac

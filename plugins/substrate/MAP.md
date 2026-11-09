@@ -70,6 +70,7 @@ Three systems in the domain `substrate` (S-47):
 | `substrate.dev/step` | any part | the build step (`docs/build.yaml`) it belongs to |
 | `substrate.dev/filler` | a part filling a slot | which filler it is, as `scripts/contract.sh` names it (`compose`, `env`, `openbao`, ...) |
 | `substrate.dev/observed-as` | any part | how it is recognised running: `<type>:<slug>` items `substrate:observed` reads, comma-separated, a slug may be a glob; drift raises what no part accounts for (`OBSERVE.md`) |
+| `morphogen.dev/change` | any part | the files that are it, one glob per line (Morphogen's `change`): `morphogen change` finds the parts a diff belongs to from these, and refuses a file no part claims. Tests, contract scripts and the rules are claimed by no part on purpose, so a change cannot weaken what judges it (`scripts/map.sh owners` lists them) |
 | `morphogen.dev/tests` | an API | the slot's contract test, which any filler must pass; Morphogen runs it |
 | `substrate.dev/fits`, `interface`, `when`, `restore`, `evidence`, `candidates` | an option | where it would sit, what keeps it possible now, what would bring it back, the commit and paths to restore it from, what was learned running it, the candidates |
 | `substrate.dev/search`, `gives`, `limits`, `checked` | a source | how to search it, what metadata it returns, what to know first, when the endpoint last answered |

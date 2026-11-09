@@ -51,6 +51,7 @@ note "review lane: $gaps open"
 if [ -f "$ROOT/docs/build.yaml" ]; then
   note "spec: $(python3 "$ROOT/scripts/spec.py" next --short 2>&1)"
 m=$("$ROOT/scripts/map.sh" check 2>&1) && ok "map: $m" || note "map: $m"
+o=$("$ROOT/scripts/map.sh" owners 2>/dev/null | head -1) && note "files: ${o%%;*} (scripts/map.sh owners: the rest are the judge's)"
 if [ -f "$ROOT/docs/build.yaml" ]; then
   python3 -c 'import sys, yaml; yaml.safe_load(open(sys.argv[1]))' "$ROOT/docs/build.yaml" 2>/dev/null \
     && ok "docs/build.yaml parses as YAML" || bad "docs/build.yaml is not valid YAML (python3 -c 'import yaml; yaml.safe_load(open(\"docs/build.yaml\"))')"

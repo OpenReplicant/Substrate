@@ -9,10 +9,13 @@ and gate), which is why the map's export is committed for a system whose judge i
     python3 plugins/substrate/substrate_map.py export [DOMAIN] [FILE]   # needs WORKBENCH_ADMIN_URL (scripts/map.sh)
     python3 plugins/substrate/substrate_map.py check [DOMAIN] [FILE]    # exit 1 when FILE differs from the map
     python3 plugins/substrate/substrate_map.py count [DOMAIN]           # how many entities stand in it
+    python3 plugins/substrate/substrate_map.py owners [DOMAIN]          # tracked files no part claims (morphogen.dev/change)
 """
 from __future__ import annotations
 
 import os
+import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -105,6 +108,29 @@ def normalized(docs) -> dict:
     return out
 
 
+def glob_re(pattern: str) -> re.Pattern:
+    """A `morphogen.dev/change` path as Morphogen reads it (project._glob_re): ** spans folders, * does not."""
+    if pattern.endswith("/"):
+        pattern += "**"
+    out, i = "", 0
+    while i < len(pattern):
+        if pattern.startswith("**/", i):
+            out, i = out + "(?:.*/)?", i + 3
+        elif pattern.startswith("**", i):
+            out, i = out + ".*", i + 2
+        else:
+            out, i = out + {"*": "[^/]*", "?": "[^/]"}.get(pattern[i], re.escape(pattern[i])), i + 1
+    return re.compile(out + r"\Z")
+
+
+def owners(docs: list[dict], files: list[str]) -> dict[str, list[str]]:
+    """Each file and the parts whose morphogen.dev/change covers it (by the setting-free part of each entry)."""
+    claims = [(d["metadata"]["name"], glob_re(line.split("#")[0].split(":")[0].split(" in ")[0].strip()))
+              for d in docs for line in str((d["metadata"].get("annotations") or {}).get("morphogen.dev/change", "")).splitlines()
+              if line.strip()]
+    return {f: sorted({n for n, rx in claims if rx.match(f)}) for f in files}
+
+
 def main(argv: list[str]) -> int:
     cmd = argv[0] if argv else ""
     domain = argv[1] if len(argv) > 1 else "substrate"
@@ -116,6 +142,14 @@ def main(argv: list[str]) -> int:
         docs = entities(conn, domain)
     if cmd == "count":
         print(len(docs))
+        return 0
+    if cmd == "owners":
+        files = subprocess.run(["git", "-C", str(root), "ls-files"], capture_output=True, text=True).stdout.split()
+        bare = [f for f, o in owners(docs, files).items() if not o]
+        print(f"{len(files) - len(bare)} of {len(files)} tracked files belong to a part; the rest are the judge's "
+              "(no change may touch them without the owner):")
+        for f in bare:
+            print("  " + f)
         return 0
     if not docs:
         print(f"no live entities in domain {domain}")

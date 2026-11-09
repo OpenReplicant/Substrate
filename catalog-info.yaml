@@ -27,6 +27,18 @@ metadata:
   name: substrate
   description: A super-agent that models systems as cited claims, acts on them, and changes (itself included) only on evidence
     it cannot fake.
+  annotations:
+    morphogen.dev/change: 'README.md
+
+      DECISIONS.md
+
+      LICENSE
+
+      .gitignore
+
+      .env.example
+
+      repos.yaml'
 spec:
   owner: group:operator
 ---
@@ -64,6 +76,11 @@ metadata:
   name: claude-code
   description: The actor - explores, interviews, researches, builds and maps; one session is one turn of the loop.
   annotations:
+    morphogen.dev/change: 'CLAUDE.md
+
+      scripts/harness.py
+
+      scripts/workbench-mcp-headers.sh'
     substrate.dev/basis: Claude Code, with Workbench's MCP server (scripts/harness.py, a token per connection from scripts/workbench-mcp-headers.sh)
       and Morphogen's plugin (S-03, S-57)
     substrate.dev/fill: existing
@@ -100,6 +117,7 @@ metadata:
   description: Caddy at 127.0.0.1:8080 - Workbench's shell at /, its API at /api, its server at /wb/api; HTTPS when PUBLIC_HOST
     names a public host.
   annotations:
+    morphogen.dev/change: deploy/caddy/**
     substrate.dev/basis: deploy/compose.yaml service caddy, deploy/caddy/Caddyfile (the shell's page is a Caddy template);
       CADDY_IMAGE pins docker.io/library/caddy:2.11.7-alpine
     substrate.dev/fill: adopt
@@ -135,6 +153,7 @@ metadata:
   description: A SPARQL endpoint over Workbench's items, claims and relations, with reasoning - Ontop, a virtual knowledge
     graph over the live tables.
   annotations:
+    morphogen.dev/change: deploy/ontop/**
     substrate.dev/basis: deploy/ontop/Containerfile (Ontop 5.5.0 with PgJDBC 42.7.14), compose service graph, Caddy /sparql;
       its mapping and ontology generated from Workbench's terms (workbench/workbench/graph.py, scripts/graph.sh, .state/graph);
       reads as wb_reader
@@ -210,6 +229,13 @@ metadata:
   description: Reads a system as it runs - the host, its containers, images and volumes, setting names, routes, APIs, UIs,
     plugins, connections and Morphogen's cells - into claims, so drift can compare every kind with the map.
   annotations:
+    morphogen.dev/change: 'plugins/substrate/observe.py
+
+      plugins/substrate/OBSERVE.md
+
+      observe.yaml
+
+      scripts/observe.sh'
     substrate.dev/basis: plugins/substrate/observe.py (the collector, on the host, as observe.yaml says), substrate:observed
       and substrate:drift (plugins/substrate/substrate_plugin.py), scripts/observe.sh; plugins/substrate/OBSERVE.md
     substrate.dev/fill: build
@@ -231,6 +257,7 @@ metadata:
   name: postgres
   description: Postgres 17 with pgvector, pg_cron, pgmq, pgGraph (deploy/postgres; S-24, S-57); database workbench.
   annotations:
+    morphogen.dev/change: deploy/postgres/**
     substrate.dev/filler: postgres
     substrate.dev/observed-as: container:substrate-db, volume:substrate-db-data
 spec:
@@ -248,6 +275,13 @@ metadata:
   description: Draws what follows from stated relations by OWL 2 RL rules (transitive, inverse and symmetric properties in
     the vocabulary) and writes each conclusion back as a claim citing its premises.
   annotations:
+    morphogen.dev/change: 'plugins/substrate/vocab.py
+
+      plugins/substrate/vocabulary.yaml
+
+      plugins/substrate/vocabulary.axioms.yaml
+
+      scripts/graph.sh'
     substrate.dev/basis: substrate:reasoner (plugins/substrate/substrate_plugin.py); its terms from plugins/substrate/vocabulary.yaml
       (vocab.py, vocabulary.axioms.yaml); premises retract conclusions by Workbench's trigger (migration 009)
     substrate.dev/fill: build
@@ -269,6 +303,9 @@ metadata:
   name: researcher
   description: Searches the source catalogs, shortlists candidates as cited entries, and tests them.
   annotations:
+    morphogen.dev/change: 'docs/choices/**
+
+      scripts/trials/**'
     substrate.dev/basis: .claude/skills/research (the skill), docs/choices/*.yaml (each choice), scripts/trials/ (shortlist
       tests), substrate:choices (into Workbench with registry quotes)
     substrate.dev/fill: existing
@@ -290,6 +327,9 @@ metadata:
   name: runtime
   description: What runs the services - compose, through four verbs.
   annotations:
+    morphogen.dev/change: 'scripts/runtime/**
+
+      deploy/compose.yaml'
     substrate.dev/basis: scripts/runtime/compose.sh (rt_up, rt_down, rt_status, rt_logs) on Podman (S-13, S-16, S-41)
     substrate.dev/fill: adopt
     substrate.dev/filler: compose
@@ -325,6 +365,31 @@ metadata:
   name: scripts
   description: The glue - bootstrap, up, down, check, map, verdicts, spec - calling only the runtime and secrets verbs.
   annotations:
+    morphogen.dev/change: 'scripts/bootstrap.sh
+
+      scripts/build.sh
+
+      scripts/check.sh
+
+      scripts/down.sh
+
+      scripts/logs.sh
+
+      scripts/lib.sh
+
+      scripts/map.sh
+
+      scripts/trace.py
+
+      scripts/trace.sh
+
+      scripts/up.sh
+
+      scripts/verdicts.sh
+
+      scripts/workbench.sh
+
+      scripts/test.sh'
     substrate.dev/basis: scripts/ and scripts/lib.sh (S-16, S-31, S-41)
     substrate.dev/fill: build
     substrate.dev/intent: Bring the parts up and connect them, without knowing what runs them or where secrets live.
@@ -345,6 +410,13 @@ metadata:
   name: secrets
   description: Credentials in .env (mode 600), read through env_value and the sec_* verbs.
   annotations:
+    morphogen.dev/change: 'scripts/secrets/**
+
+      deploy/secrets.txt
+
+      deploy/openbao/**
+
+      scripts/settings.sh'
     substrate.dev/basis: scripts/secrets/env.sh, deploy/secrets.txt, scripts/settings.sh (S-31, S-41)
     substrate.dev/fill: existing
     substrate.dev/filler: env
@@ -363,6 +435,7 @@ metadata:
   name: skills
   description: Substrate's procedures - Claude Code skills, here and in Morphogen.
   annotations:
+    morphogen.dev/change: .claude/skills/**
     substrate.dev/basis: .claude/skills (setup, build-out, upstream, research); Morphogen's skills (morphogen, map)
     substrate.dev/fill: existing
     substrate.dev/intent: Hold how to do each kind of work; a skill is a text cell Morphogen can judge and improve.
@@ -378,9 +451,41 @@ spec:
 apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
+  name: substrate-plugin
+  description: 'Substrate''s Workbench plugin: the content types it models, its extractors (map, claude-code, observed, drift,
+    reasoner, contracts, morphogen, choices) and the Map view.'
+  annotations:
+    morphogen.dev/change: 'plugins/substrate/*.py
+
+      plugins/substrate/*.md
+
+      plugins/substrate/*.yaml
+
+      plugins/substrate/types/**
+
+      plugins/substrate/web/**'
+    substrate.dev/basis: plugins/substrate (plugin.yaml, MAP.md, OBSERVE.md)
+    substrate.dev/fill: build
+    substrate.dev/intent: Teach Workbench what substrate models and how to read it, as a plugin any Workbench can load.
+spec:
+  type: library
+  lifecycle: production
+  owner: group:operator
+  system: core
+  consumesApis:
+  - workbench-api
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
   name: tools
   description: The commands people, scripts and Claude Code run, inside one container (bin/).
   annotations:
+    morphogen.dev/change: 'deploy/tools/**
+
+      scripts/tools.sh
+
+      bin/**'
     substrate.dev/basis: deploy/tools/Containerfile (its own image since S-57), scripts/tools.sh, bin/ (S-19)
     substrate.dev/fill: build
     substrate.dev/filler: substrate-tools
@@ -405,6 +510,21 @@ metadata:
   description: A content system on Postgres - typed tables per content type, claims beside every value, vocabularies and SSSOM
     mappings, plugins.
   annotations:
+    morphogen.dev/change: 'workbench/workbench/**
+
+      workbench/web/**
+
+      workbench/README.md
+
+      workbench/BRIEF.md
+
+      workbench/Containerfile
+
+      workbench/pyproject.toml
+
+      workbench/LICENSE
+
+      workbench/LICENSES/**'
     substrate.dev/basis: workbench/ (BRIEF.md; W1 to W4 done), plugins/substrate
     substrate.dev/fill: build
     substrate.dev/intent: Hold what substrate knows about any system as typed items whose every value can say where it came
@@ -453,6 +573,11 @@ metadata:
   description: The Workbench server at /wb/api - plugins' Python, extractors off a pgmq queue, NOTIFY relayed as Server-Sent
     Events, MCP for agents.
   annotations:
+    morphogen.dev/change: 'workbench/workbench/server.py
+
+      workbench/workbench/extract.py
+
+      workbench/workbench/mcp.py'
     substrate.dev/basis: workbench/workbench/server.py, extract.py, mcp.py; compose service workbench (workbench/Containerfile)
     substrate.dev/fill: build
     substrate.dev/filler: workbench-server
@@ -866,6 +991,13 @@ metadata:
   name: build-out
   description: Work through docs/build.yaml one step at a time - brief, build, check, record - stopping at the owner's decisions.
   annotations:
+    morphogen.dev/change: '.claude/skills/build-out/SKILL.md
+
+      docs/spec.md
+
+      docs/build.yaml
+
+      scripts/spec.py'
     substrate.dev/basis: .claude/skills/build-out/SKILL.md
 spec:
   type: skill
@@ -880,6 +1012,7 @@ metadata:
   description: After a map edit through Workbench's MCP (save_item, retire_item or restore_item on a component), derives the
     map's relations, drift and inferences again (scripts/map.sh --hook).
   annotations:
+    morphogen.dev/change: .claude/settings.json
     substrate.dev/basis: .claude/settings.json hooks.PostToolUse (matcher mcp__workbench__(save_item|retire_item|restore_item))
 spec:
   type: hook
@@ -893,6 +1026,7 @@ metadata:
   name: posttooluse-verdicts
   description: After a Morphogen tool call, records its verdicts in Workbench (scripts/verdicts.sh --hook, substrate:morphogen).
   annotations:
+    morphogen.dev/change: .claude/settings.json
     substrate.dev/basis: .claude/settings.json hooks.PostToolUse (matcher mcp__.*morphogen.*)
 spec:
   type: hook
@@ -907,6 +1041,7 @@ metadata:
   description: Choose from the catalogs - write the need, search the sources, record candidates with registry quotes, test
     the shortlist, record the pick and the rejections.
   annotations:
+    morphogen.dev/change: .claude/skills/research/SKILL.md
     substrate.dev/basis: .claude/skills/research/SKILL.md
 spec:
   type: skill
@@ -921,6 +1056,7 @@ metadata:
   name: sessionstart-spec
   description: At session start, names the build plan's next step while docs/spec.md is in place (scripts/spec.py hook).
   annotations:
+    morphogen.dev/change: .claude/settings.json
     substrate.dev/basis: .claude/settings.json hooks.SessionStart
 spec:
   type: hook
@@ -934,6 +1070,7 @@ metadata:
   name: setup
   description: Bring the stack up on a machine and wire it, checking each step before the next.
   annotations:
+    morphogen.dev/change: .claude/skills/setup/SKILL.md
     substrate.dev/basis: .claude/skills/setup/SKILL.md
 spec:
   type: skill
@@ -947,6 +1084,7 @@ metadata:
   name: upstream
   description: Take a fix or improvement to Morphogen upstream, by branch and pull request in that repository.
   annotations:
+    morphogen.dev/change: .claude/skills/upstream/SKILL.md
     substrate.dev/basis: .claude/skills/upstream/SKILL.md
 spec:
   type: skill
