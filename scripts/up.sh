@@ -40,7 +40,6 @@ fi
 for x in map claude-code morphogen choices; do   # the map's relations, what the repository has, verdicts, choices
   "$ROOT/scripts/workbench.sh" extract "substrate:$x" | python3 -c 'import json, sys; d = json.load(sys.stdin); print("  substrate:'"$x"'", "ok" if d.get("ok") else "FAILED: " + str(d.get("error")), *(d.get("log") or []))'
 done
-"$ROOT/scripts/observe.sh" || echo "  observing stopped (above); the gaps are as they were"   # what runs, the gaps, inferences
 
 say "Agents and this project's Claude Code"
 "$ROOT/scripts/workbench.sh" user list | python3 -c 'import json, sys; sys.exit(0 if any(u["name"] == "claude-code" for u in json.load(sys.stdin)) else 1)' \
@@ -48,6 +47,11 @@ say "Agents and this project's Claude Code"
 echo "  agent claude-code (editor): it signs in by token"
 python3 "$ROOT/scripts/harness.py" status | python3 -c 'import json, sys; d = json.load(sys.stdin); sys.exit(0 if d["workbench_current"] else 1)' \
   || python3 "$ROOT/scripts/harness.py" apply | python3 -c 'import json, sys; d = json.load(sys.stdin); print("  wired: Workbench MCP in .mcp.json; backup in", d["backup"] or "(none: new file)")'
+
+say "What runs (observe.sh)"
+# last, so the observer reads the agent's MCP and the wiring just written (a first run otherwise misses both)
+"$ROOT/scripts/observe.sh" || echo "  observing stopped (above); the gaps are as they were"   # what runs, the gaps, inferences
+
 
 say "Up"
 "$ROOT/scripts/check.sh" || true

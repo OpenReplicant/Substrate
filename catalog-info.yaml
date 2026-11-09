@@ -265,7 +265,7 @@ metadata:
   annotations:
     morphogen.dev/change: deploy/postgres/**
     substrate.dev/filler: postgres
-    substrate.dev/observed-as: container:substrate-db, volume:substrate-db-data
+    substrate.dev/observed-as: container:substrate-db, volume:substrate*-db-data
 spec:
   type: database
   lifecycle: production
