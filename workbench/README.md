@@ -10,6 +10,7 @@ It lives inside Substrate for now and imports nothing from it; it is meant to le
 
 ```
 Caddy ──┬─ /api/*  PostgREST v16.5 ──▶ Postgres: database `workbench` (schemas api, content, wb, wb_private, wb_crypto)
+        ├─ /wb/api/*  the server: extractors (off the pgmq queue wb_jobs), live events (NOTIFY as Server-Sent Events)
         ├─ /plugins/<id>/web/*   each plugin's browser files (nothing else in a plugin folder is served)
         └─ /       the shell: index.html is a Caddy template that finds the installed plugins
 ```
@@ -59,6 +60,24 @@ A property's JSON type decides its column (`string` text, with `date-time`, `dat
 bigint; `number` double precision; `boolean`; anything else jsonb). Every type also has `id`, `slug`, `title`,
 `created_at`, `updated_at`, `created_by` and `updated_by`. Registering again adds new columns and never drops one.
 
+## The server and extractors
+
+`python -m workbench serve` (port 8100, behind Caddy at `/wb/api/`) does what SQL cannot:
+
+- **Extractors.** A plugin's `server` module has `register(wb)`; `wb.extractor(name, fn, description)` adds
+  `<plugin>:<name>`. `fn(ctx, inputs)` reads its sources and writes through `ctx` (`source`, `upsert`, `relate`,
+  `done`, `decision`, `log`; `workbench/extract.py`). A run is one transaction: all or nothing, recorded in
+  `wb.run`. Writes go through the same `api` views PostgREST serves, so the same triggers record each claim,
+  attributed to the extractor and carrying its source, quote and line span. Reading an unchanged source again adds
+  nothing; what a source no longer says is retracted (`ctx.done(type)`); a decision a run no longer raises is
+  withdrawn. `POST /wb/api/extract {extractor}` queues one on pgmq (`wb_jobs`) for editors and owners; the server's
+  worker runs it. `workbench extract PLUGIN:NAME` runs one from the command line.
+- **Live events.** Postgres announces every change on `NOTIFY wb_events`: `{kind: item|decision|run, type, id,
+  op, author}`, ids only. `GET /wb/api/events` relays them as Server-Sent Events to anyone with a valid token, the
+  same JWT PostgREST checks (HS256, `exp`, a `wb_*` role), verified the same way; the stream ends when the token
+  does. Subscribers refetch through PostgREST under their own token, so Postgres stays the one place that decides
+  who may see what. pgmq carries durable work; NOTIFY carries notices; neither is exposed directly.
+
 ## The shell
 
 An IDE-shaped desktop: a **sidebar** (where things live; plugins add entries, content types appear under
@@ -88,7 +107,8 @@ export default function myPlugin(wb) {
 widget uses either a `template` (Alpine) or `mount(el, wb)` (anything; return a cleanup function). `wb` also
 gives `api` (PostgREST), `open(viewId, params, {where})`, `select({type, id, field})`, `state` (types,
 selection), `on(event, fn)` (`saved`, `selection`, `claims-changed`, `signedin`), `notify`, `canEdit()`,
-`format` (`ago`, `when`, `show`) and `panelOf(el)` (a view's params and title).
+`format` (`ago`, `when`, `show`), `panelOf(el)` (a view's params and title), `onChange(match, fn)` (live
+changes, debounced; `fn` gets the events) and `api.server(method, path, body)` (the server, same token).
 
 Apps: a web UI that allows framing from Workbench's origin opens as a tab (`embed: 'frame'`; another origin must
 be listed in `WB_FRAME_SRC`); one that refuses (`X-Frame-Options`, `frame-ancestors`) opens in its own window
@@ -97,7 +117,8 @@ be listed in `WB_FRAME_SRC`); one that refuses (`X-Frame-Options`, `frame-ancest
 ## Tests
 
 ```sh
-WORKBENCH_ADMIN_URL=postgresql://postgres:...@127.0.0.1:5432/postgres python3 tests/test_w1.py
+WORKBENCH_ADMIN_URL=postgresql://postgres:...@127.0.0.1:5432/postgres python3 tests/test_w1.py   # store, rules, sign-in
+WORKBENCH_ADMIN_URL=... python3 tests/test_w3.py                                                  # extractors, events, tokens
 ```
 
 They run in a throwaway database, which they drop.
@@ -108,7 +129,10 @@ They run in a throwaway database, which they drop.
 - Rights are per role, not per item; row-level security per item comes when a plugin needs it.
 - Conflicting claims from different authors sit side by side, but nothing marks them `disputed` yet; the item
   editor shows "N sources disagree" beside such a field.
-- No live updates yet: views reload on their own saves; events from other people arrive with the server (W3).
+- Every signed-in role receives every change event; that is right while rights are per role, and becomes a filter
+  when rights are per item.
+- The server runs on kernel's image inside Substrate (Starlette 1.8.0); `Containerfile` is its own image, unused yet.
+- No MCP server yet: agents use the HTTP API with a token.
 - Content types are read-only in the UI; a plugin registers them.
 
 ## Licence

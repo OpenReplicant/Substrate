@@ -1,5 +1,6 @@
 # The front door (workbench/BRIEF.md section 7):
 #   /api/*            PostgREST; the prefix is stripped, so /api/note is PostgREST's /note
+#   /wb/api/*         the Workbench server: live events (streamed, so never buffered), extractors
 #   /ui/*, /mcp*      kernel, parked until Workbench's W4 (repos/kernel/deploy/Caddyfile had only these)
 #   /plugins/*/web/*  each installed plugin's browser files; nothing else in a plugin folder is served
 #   everything else   Workbench's shell from workbench/web; / is index.html, a template that finds the plugins
@@ -10,6 +11,12 @@
 	redir /api /api/
 	handle_path /api/* {
 		reverse_proxy postgrest:3000
+	}
+
+	handle /wb/api/* {
+		reverse_proxy workbench:8100 {
+			flush_interval -1
+		}
 	}
 
 	@kernel path /ui /ui/* /mcp /mcp/*

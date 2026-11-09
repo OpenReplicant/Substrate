@@ -194,6 +194,55 @@ function setTheme(theme) {
   dock?.updateOptions({theme: theme === 'dark' ? themeDark : themeLight});
 }
 
+// ------------------------------------------------------------------ live updates
+// The server relays Postgres's NOTIFY as Server-Sent Events, behind the same token PostgREST checks. fetch()
+// rather than EventSource, so the token travels in a header and never in a URL. Events name what changed
+// ({kind: item|decision|run, type, id, op, author}); views refetch through the API under the person's own token.
+let stopEvents = null;
+async function subscribe() {
+  if (stopEvents || !api.signedIn()) return;
+  const ctl = new AbortController();
+  stopEvents = () => ctl.abort();
+  const s = Alpine.store('wb');
+  try {
+    const r = await fetch('/wb/api/events', {headers: {Authorization: `Bearer ${api.session.token}`, Accept: 'text/event-stream'}, signal: ctl.signal});
+    if (!r.ok || !r.body) throw new Error(`events: ${r.status}`);
+    s.live = true;
+    const reader = r.body.pipeThrough(new TextDecoderStream()).getReader();
+    let buf = '';
+    for (;;) {
+      const {value, done} = await reader.read();
+      if (done) break;
+      buf += value;
+      let at;
+      while ((at = buf.indexOf('\n\n')) >= 0) {
+        const chunk = buf.slice(0, at); buf = buf.slice(at + 2);
+        let event = 'message'; let data = '';
+        for (const line of chunk.split('\n')) {
+          if (line.startsWith('event:')) event = line.slice(6).trim();
+          else if (line.startsWith('data:')) data += line.slice(5).trim();
+        }
+        if (event === 'change') { try { emit('change', JSON.parse(data)); } catch { /* ignore a bad line */ } }
+        if (event === 'expired') { api.signOut(); return; }
+      }
+    }
+  } catch (e) {
+    if (ctl.signal.aborted) return;
+  } finally {
+    s.live = false;
+    stopEvents = null;
+  }
+  if (api.signedIn()) setTimeout(subscribe, 3000);
+}
+function unsubscribe() { if (stopEvents) stopEvents(); stopEvents = null; }
+
+// Debounced: many writes in one run arrive as one refresh. fn(events) gets the events since the last call.
+wb.onChange = (match, fn, ms = 300) => {
+  let pending = [];
+  const flush = debounce(() => { const evs = pending; pending = []; fn(evs); }, ms);
+  return wb.on('change', (e) => { if (match(e)) { pending.push(e); flush(); } });
+};
+
 // ------------------------------------------------------------------ the page's own components
 Alpine.store('wb', {
   signedIn: api.signedIn(),
@@ -203,6 +252,7 @@ Alpine.store('wb', {
   navCollapsed: stored('wb.nav.collapsed', false),
   inspectorOpen: stored('wb.inspector.open', true),
   paletteOpen: false,
+  live: false,
 });
 
 Alpine.data('shell', () => ({
@@ -236,10 +286,12 @@ Alpine.data('shell', () => ({
     } catch (e) { wb.notify(`Could not load content types: ${e.message}`, 'error'); }
     await this.$nextTick();
     if (!dock) mountWorkspace(this.$refs.workspace);
+    subscribe();
     emit('signedin', api.session);
   },
 
   signOut() {
+    unsubscribe();
     dock?.dispose?.(); dock = null; panels.clear();
     api.signOut();
   },
@@ -251,6 +303,7 @@ Alpine.data('shell', () => ({
   get inspectorOpen() { return Alpine.store('wb').inspectorOpen; },
   get toasts() { return Alpine.store('wb').toasts; },
   get isDark() { return document.documentElement.dataset.theme === 'dark'; },
+  get live() { return Alpine.store('wb').live; },
 
   toggleNav() { const s = Alpine.store('wb'); s.navCollapsed = !s.navCollapsed; store('wb.nav.collapsed', s.navCollapsed); },
   toggleInspector() { wb.toggleInspector(); },

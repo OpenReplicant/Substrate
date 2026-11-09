@@ -3,3 +3,4 @@ version: 0.1.0
 licence: Apache-2.0
 requires: {workbench: "1"}
 content_types: [types/*.json]
+server: fixture_plugin

@@ -38,6 +38,15 @@ until curl -fsS -o /dev/null "http://127.0.0.1:8080/api/" 2>/dev/null; do
   sleep 2
 done
 echo "  API ok: http://127.0.0.1:8080/api/ (a person: scripts/workbench.sh user add NAME)"
+i=0
+until curl -fsS -o /dev/null "http://127.0.0.1:8080/wb/api/health" 2>/dev/null; do
+  i=$((i + 1)); [ $i -gt 60 ] && { echo "  the Workbench server did not answer: scripts/logs.sh workbench" >&2; exit 1; }
+  sleep 2
+done
+echo "  server ok: http://127.0.0.1:8080/wb/api/health"
+for x in catalog claude-code drift; do      # substrate's own map, what the repository has, and the gaps between them
+  "$ROOT/scripts/workbench.sh" extract "substrate:$x" | python3 -c 'import json, sys; d = json.load(sys.stdin); print("  substrate:'"$x"'", "ok" if d.get("ok") else "FAILED: " + str(d.get("error")), *(d.get("log") or []))'
+done
 
 say "Kernel: logins and the project ($project)"
 KK_ADMIN_URL="postgresql://postgres:$(env_value POSTGRES_PASSWORD)@127.0.0.1:$(env_value KK_DB_PORT)/kk" \

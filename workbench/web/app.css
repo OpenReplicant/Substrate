@@ -72,6 +72,8 @@ textarea.wb-input { resize: vertical; line-height: 1.5; }
 .wb-pill.is-disputed { background: var(--warn-soft); color: var(--warn); }
 .wb-pill.is-retracted { background: var(--danger-soft); color: var(--danger); }
 .wb-error { margin: 0 var(--pad) var(--gap); padding: 8px 12px; border-radius: var(--radius-sm); background: var(--danger-soft); color: var(--danger); }
+.wb-note.is-warn { background: var(--warn-soft); color: var(--warn); }
+.wb-section-title { margin: 22px var(--pad) 10px; font-size: var(--fs-md); }
 .wb-note { margin: 0 var(--pad) var(--gap); padding: 8px 12px; border-radius: var(--radius-sm); background: var(--surface-3); color: var(--text-muted); }
 
 /* ------------------------------------------------------------ sign-in */
@@ -102,6 +104,10 @@ textarea.wb-input { resize: vertical; line-height: 1.5; }
 .wb-search span { flex: 1; text-align: left; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .wb-search:hover { border-color: var(--border-strong); color: var(--text-muted); }
 .wb-search svg { width: 16px; height: 16px; }
+.wb-live { display: inline-flex; align-items: center; gap: 6px; padding: 0 8px; color: var(--text-faint); font-size: var(--fs-xs); }
+.wb-live::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--text-faint); }
+.wb-live.is-live { color: var(--ok); }
+.wb-live.is-live::before { background: var(--ok); box-shadow: 0 0 0 3px var(--ok-soft); }
 .wb-user { display: flex; align-items: center; gap: 8px; padding: 0 6px; font-size: var(--fs-sm); }
 .wb-avatar { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font-weight: 600; text-transform: uppercase; }
 

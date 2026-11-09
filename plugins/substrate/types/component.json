@@ -1,14 +1,34 @@
 {
   "title": "Component",
-  "description": "Anything in a system that can be modified: a service, library, website, or a part of one (Backstage's Component and Resource kinds).",
+  "description": "An entry in a system's catalog: a Component, Resource, AiResource (a skill or hook), API, System, Domain or Group, as its kind says. Read from catalog-info.yaml in Backstage's entity model.",
   "type": "object",
   "properties": {
-    "kind": {"type": "string", "description": "Backstage kind: Component, Resource, AiResource, System, API"},
-    "type": {"type": "string", "description": "spec.type: service, library, website, skill, hook, database, ..."},
-    "lifecycle": {"type": "string", "description": "spec.lifecycle: production, experimental, option, listed, deprecated"},
-    "description": {"type": "string"},
-    "owner": {"type": "string", "description": "an entity ref, e.g. group:operator"},
-    "system": {"type": "string", "description": "the system it belongs to: core, options, sources"},
-    "annotations": {"type": "object", "description": "metadata.annotations as written"}
+    "kind": {
+      "type": "string",
+      "description": "Backstage kind: Component, Resource, AiResource, System, API"
+    },
+    "type": {
+      "type": "string",
+      "description": "spec.type: service, library, website, skill, hook, database, ..."
+    },
+    "lifecycle": {
+      "type": "string",
+      "description": "spec.lifecycle: production, experimental, option, listed, deprecated"
+    },
+    "description": {
+      "type": "string"
+    },
+    "owner": {
+      "type": "string",
+      "description": "an entity ref, e.g. group:operator"
+    },
+    "system": {
+      "type": "string",
+      "description": "the system it belongs to: core, options, sources"
+    },
+    "annotations": {
+      "type": "object",
+      "description": "metadata.annotations as written"
+    }
   }
 }

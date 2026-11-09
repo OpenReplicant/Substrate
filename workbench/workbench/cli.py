@@ -7,12 +7,16 @@
     workbench user reset NAME                               prints a new password once
     workbench user disable NAME                             signs them out of new sessions; nothing is deleted
     workbench user list
+    workbench serve [--port 8100]                           the server: plugins, extractors, live events
+    workbench extract PLUGIN:NAME [--input KEY=VALUE ...] [--queue]   run an extractor now, or queue it
 
 Settings (environment):
     WORKBENCH_ADMIN_URL              a Postgres superuser URL for the server (its database part is ignored)
     WORKBENCH_DB                     the database (default: workbench)
     WORKBENCH_AUTHENTICATOR_PASSWORD the password PostgREST's login, wb_authenticator, gets
     WORKBENCH_JWT_SECRET             signs sign-in tokens; PostgREST verifies them with the same value (32+ chars)
+    WORKBENCH_SERVER_PASSWORD        the password the server's login, wb_server, gets
+    WB_PLUGINS_DIR                   where installed plugins are (serve, extract)
 """
 from __future__ import annotations
 
@@ -57,6 +61,12 @@ def migrate() -> dict:
                 conn.execute(sql.SQL("create role {} nologin").format(sql.Identifier(role)))
         if not conn.execute("select 1 from pg_roles where rolname = 'wb_authenticator'").fetchone():
             conn.execute("create role wb_authenticator login noinherit")
+        if not conn.execute("select 1 from pg_roles where rolname = 'wb_server'").fetchone():
+            conn.execute("create role wb_server login")      # the Workbench server: plugins, extractors, events
+        server_pw = os.environ.get("WORKBENCH_SERVER_PASSWORD")
+        if server_pw:
+            conn.execute(sql.SQL("alter role wb_server password {}").format(sql.Literal(server_pw)))
+        conn.execute("grant wb_editor to wb_server")
         password = os.environ.get("WORKBENCH_AUTHENTICATOR_PASSWORD")
         if password:
             conn.execute(sql.SQL("alter role wb_authenticator password {}").format(sql.Literal(password)))
@@ -78,7 +88,12 @@ def migrate() -> dict:
             conn.execute(body)
             conn.execute("insert into public.wb_migration (id, sha256) values (%s, %s)", (f.name, sha))
             out["applied"].append(f.name)
-        conn.execute("grant connect on database " + sql.Identifier(db).as_string(conn) + " to wb_authenticator")
+        conn.execute("grant connect on database " + sql.Identifier(db).as_string(conn) + " to wb_authenticator, wb_server")
+        # every content type registered before migration 004 gains its live-event trigger
+        if any(f.startswith("004") for f in out["applied"]):
+            with conn.cursor() as cur:
+                for type_id, schema, plugin in cur.execute("select id, schema, plugin from wb.content_type").fetchall():
+                    types.register(cur, type_id, schema, plugin)
         secret = os.environ.get("WORKBENCH_JWT_SECRET")
         if secret:
             if len(secret) < 32:
@@ -155,7 +170,26 @@ def main(argv=None) -> int:
     t.add_argument("--plugin")
     u = sub.add_parser("user"); u.add_argument("action", choices=["add", "reset", "disable", "list"])
     u.add_argument("name", nargs="?"); u.add_argument("--role", choices=sorted(ROLES), default="owner")
+    s = sub.add_parser("serve"); s.add_argument("--port", type=int, default=8100); s.add_argument("--host", default="0.0.0.0")
+    e = sub.add_parser("extract"); e.add_argument("extractor"); e.add_argument("--input", action="append", default=[])
+    e.add_argument("--queue", action="store_true", help="put it on the server's queue instead of running it here")
     a = ap.parse_args(argv)
+    if a.cmd == "serve":
+        import uvicorn
+        uvicorn.run("workbench.server:app", host=a.host, port=a.port, log_level="info")
+        return 0
+    if a.cmd == "extract":
+        from .extract import Plugins, run_extractor
+        inputs = dict(kv.split("=", 1) for kv in a.input)
+        if a.queue:
+            with connect() as conn:
+                msg = conn.execute("select pgmq.send('wb_jobs', %s)", (json.dumps({"extractor": a.extractor, "inputs": inputs, "requested_by": "cli"}),)).fetchone()[0]
+            print(json.dumps({"queued": msg}))
+            return 0
+        plugins = Plugins().load(Path(os.environ.get("WB_PLUGINS_DIR", "plugins")))
+        result = run_extractor(connect, plugins, a.extractor, inputs)
+        print(json.dumps(result, indent=2, default=str))
+        return 0 if result.get("ok") else 1
     if a.cmd == "migrate":
         result = migrate()
     elif a.cmd == "plugin":

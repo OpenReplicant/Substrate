@@ -103,6 +103,7 @@
               x-text="saving ? 'Saving…' : (isNew ? 'Create' : 'Save')"></button>
     </header>
     <p class="wb-error" x-show="error" x-text="error"></p>
+    <p class="wb-note is-warn" x-show="stale" x-text="stale"></p>
     <p class="wb-note" x-show="readOnly && !loading">You can read this. Your role cannot change it.</p>
     <form class="wb-form" @submit.prevent="save()" x-show="!loading">
       <template x-for="f in fields" :key="f.name">
@@ -253,5 +254,36 @@
     </div>
     <iframe x-ref="frame" :src="url" :title="title" referrerpolicy="same-origin"
             sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-downloads allow-modals"></iframe>
+  </div>
+</template>
+
+<!-- ============================================================ extractors -->
+<template id="wb-tpl-extractors">
+  <div class="wb-page" x-data="extractorsView">
+    <header class="wb-page-head"><h1>Extractors</h1></header>
+    <p class="wb-lede">Extractors read sources (files, logs, APIs, conversations) into items, relations and claims, each claim citing what it read. Plugins provide them. A run is all or nothing; running one again on an unchanged source adds nothing.</p>
+    <p class="wb-error" x-show="error" x-text="error"></p>
+    <div class="wb-grid">
+      <template x-for="x in extractors" :key="x.key">
+        <section class="wb-card wb-size-m">
+          <h2 class="wb-card-title wb-mono" x-text="x.key"></h2>
+          <p class="wb-muted" x-text="x.description"></p>
+          <button class="wb-btn primary" x-show="canRun" :disabled="isBusy(x)" @click="run(x)" x-text="isBusy(x) ? 'Queued…' : 'Run'"></button>
+        </section>
+      </template>
+    </div>
+    <h2 class="wb-section-title">Recent runs</h2>
+    <div class="wb-table-wrap">
+      <table class="wb-table">
+        <thead><tr><th>Extractor</th><th>State</th><th>What it did</th><th>Asked by</th><th>When</th></tr></thead>
+        <tbody>
+          <template x-for="r in runs" :key="r.id">
+            <tr><td class="wb-mono" x-text="r.extractor"></td><td><span :class="stateClass(r)" x-text="state(r)"></span></td>
+                <td x-text="summary(r)"></td><td x-text="by(r)"></td><td x-text="ago(r)"></td></tr>
+          </template>
+        </tbody>
+      </table>
+      <p class="wb-empty" x-show="!runs.length">No runs yet.</p>
+    </div>
   </div>
 </template>

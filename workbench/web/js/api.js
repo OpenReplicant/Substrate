@@ -73,4 +73,16 @@ export const api = {
   patch(path, query, body) { return this.request('PATCH', path, {query, body, prefer: 'return=representation'}).then((r) => r[0]); },
   rpc(name, args) { return this.request('POST', `rpc/${name}`, {body: args || {}}); },
   async count(path, query) { return (await this.get(path, {...query, limit: 0}, {count: true})).total; },
+
+  // The Workbench server (/wb/api): the same token, for what PostgREST does not do.
+  async server(method, path, body) {
+    const headers = {Accept: 'application/json'};
+    if (this.session) headers.Authorization = `Bearer ${this.session.token}`;
+    if (body !== undefined) headers['Content-Type'] = 'application/json';
+    const r = await fetch(`/wb/api/${path}`, {method, headers, body: body === undefined ? undefined : JSON.stringify(body)});
+    if (r.status === 401) { this.signOut(); throw new ApiError(401, null); }
+    const data = await r.json().catch(() => null);
+    if (!r.ok) throw new ApiError(r.status, data);
+    return data;
+  },
 };

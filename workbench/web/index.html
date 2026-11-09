@@ -60,6 +60,7 @@
         <div class="wb-brand"><span class="wb-mark"></span><span class="wb-brand-name">Workbench</span></div>
         <button class="wb-search" @click="togglePalette()"><svg><use href="#i-search"/></svg><span>Search or run a command</span><kbd>Ctrl K</kbd></button>
         <span class="wb-spacer"></span>
+        <span class="wb-live" :class="live ? 'is-live' : ''" :title="live ? 'Live: changes appear as they happen' : 'Not live: reconnecting'" x-text="live ? 'Live' : 'Offline'"></span>
         <button class="wb-icon-btn" @click="toggleInspector()" :class="inspectorOpen ? 'is-on' : ''" title="Inspector"><svg><use href="#i-sidebar"/></svg></button>
         <button class="wb-icon-btn" @click="toggleTheme()" :title="isDark ? 'Light theme' : 'Dark theme'">
           <svg x-show="isDark"><use href="#i-sun"/></svg><svg x-show="!isDark"><use href="#i-moon"/></svg>

@@ -1,0 +1,11 @@
+{
+  "title": "Hook",
+  "description": "A Claude Code hook: a command run at an event (.claude/settings.json), named <event>-<script>.",
+  "type": "object",
+  "properties": {
+    "event": {"type": "string", "description": "SessionStart, PostToolUse, ..."},
+    "matcher": {"type": "string", "description": "which tool calls it runs after, when the event has one"},
+    "command": {"type": "string", "description": "the command as written"},
+    "path": {"type": "string", "description": "the settings file it is in"}
+  }
+}

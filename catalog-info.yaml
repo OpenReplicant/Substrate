@@ -523,8 +523,8 @@ metadata:
   annotations:
     substrate.dev/intent: Hold what substrate knows about any system as typed items whose every value can say where it came from; replaces kernel at W4.
     substrate.dev/fill: build
-    substrate.dev/basis: workbench/ (BRIEF.md; W1 done - store, rules in SQL, sign-in), plugins/substrate
-    substrate.dev/step: "W1"
+    substrate.dev/basis: workbench/ (BRIEF.md; W1 to W3 done - store, shell, server and extractors), plugins/substrate
+    substrate.dev/step: "W3"
 spec:
   type: service
   lifecycle: experimental
@@ -550,6 +550,25 @@ spec:
   system: core
   subcomponentOf: workbench
   providesApis: [workbench-api]
+  dependsOn: [resource:postgres]
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: workbench-server
+  description: The Workbench server at /wb/api - plugins' Python, extractors off a pgmq queue, NOTIFY relayed as Server-Sent Events.
+  annotations:
+    substrate.dev/intent: Do what SQL cannot - run extractors and relay live changes - behind the same token check as the API.
+    substrate.dev/fill: build
+    substrate.dev/basis: workbench/workbench/server.py and extract.py; compose service workbench (kernel's image for now)
+    substrate.dev/step: "W3"
+spec:
+  type: service
+  lifecycle: experimental
+  owner: group:operator
+  system: core
+  subcomponentOf: workbench
+  consumesApis: [workbench-api]
   dependsOn: [resource:postgres]
 ---
 # ================================================================ CORE: glue

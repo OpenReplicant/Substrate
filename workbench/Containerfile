@@ -1,0 +1,10 @@
+# Workbench's server image, for when it leaves Substrate (inside Substrate it runs on kernel's image, which has
+# these libraries). Pins as BRIEF.md section 7 records them.
+FROM docker.io/library/python:3.13-slim
+RUN pip install --no-cache-dir starlette==1.10.0 uvicorn==0.54.0 psycopg[binary]==3.3.6 PyYAML==6.0.3
+COPY workbench /srv/workbench/workbench
+WORKDIR /srv/workbench
+ENV PYTHONPATH=/srv/workbench PYTHONDONTWRITEBYTECODE=1
+USER nobody
+EXPOSE 8100
+CMD ["python3", "-m", "workbench", "serve", "--port", "8100"]

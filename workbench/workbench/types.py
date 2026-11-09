@@ -70,7 +70,11 @@ def register(cur, type_id: str, schema: dict, plugin: str | None) -> dict:
         if prop.get("description"):
             cur.execute(sql.SQL("comment on column {t}.{c} is {d}").format(
                 t=table, c=sql.Identifier(name), d=sql.Literal(prop["description"])))
-    for trigger, when, fn in (("wb_touch", "before", "wb.touch"), ("wb_claims", "after", "wb.record_claims")):
+    triggers = [("wb_touch", "before", "wb.touch"), ("wb_claims", "after", "wb.record_claims")]
+    cur.execute("select 1 from pg_proc where proname = 'notify_item' and pronamespace = 'wb'::regnamespace")
+    if cur.fetchone():                                        # live events, from migration 004 on
+        triggers.append(("wb_events", "after", "wb.notify_item"))
+    for trigger, when, fn in triggers:
         cur.execute(sql.SQL("drop trigger if exists {g} on {t}").format(g=sql.Identifier(trigger), t=table))
         cur.execute(sql.SQL("create trigger {g} " + when + " insert or update on {t} for each row execute function "
                             + fn + "()").format(g=sql.Identifier(trigger), t=table))

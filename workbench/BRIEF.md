@@ -1,6 +1,6 @@
 # Workbench: brief
 
-*Working name. Status: W1 and W2 done (2026-11-08, S-54, S-55); W3 next. The owner agreed the decisions in section 10.*
+*Working name. Status: W1 to W3 done (2026-11-08/09, S-54 to S-56); W4 next. The owner agreed the decisions in section 10.*
 
 A small content system on Postgres with a desktop-like UI, extended by plugins. Content types are real tables;
 every value can say where it came from, through a claims table beside them; vocabularies and their mappings are
@@ -221,8 +221,8 @@ All of them are allowed by kernel D-11's posture (permissive, or LGPL as a libra
 | --- | --- | --- |
 | W1 | Store, API, sign-in | migrations create `wb.*`; a content type registered from a plugin gets its table; PostgREST creates, edits and lists items behind Caddy, a trigger records a claim for every write, and a viewer cannot write; `workbench user add owner` and signing in through `/api/rpc/login` work |
 | W2 | Shell and core panels | the sidebar, Dockview workspace, inspector, dashboard, command palette, content list, item editor with claims beside each field, claims, review lane, content types and apps run under a strict CSP; plugins are found by Caddy's template; a layout survives a reload |
-| W3 | Plugin loader and Substrate's plugin | `plugins/substrate` loads; its extractors read `catalog-info.yaml` and `.claude/`, and the drift panel shows declared against observed |
-| W4 | Kernel leaves the stack | everything Substrate used kernel for runs on Workbench, including Morphogen's verdicts as claims; kernel stops in `deploy/compose.yaml` and becomes an option |
+| W3 | Server, extractors, live events, Substrate's plugin | the server loads plugins' Python; extractors run from the command line and off a pgmq queue, writing claims with source, quote and span; NOTIFY reaches the browser as Server-Sent Events behind the same JWT; `plugins/substrate` reads `catalog-info.yaml` and `.claude/`, and its drift raises gaps the Map and the review lane show |
+| W4 | Kernel leaves the stack | everything Substrate used kernel for runs on Workbench: Morphogen's verdicts as claims (an extractor over its evidence log), recall (full-text, then pgvector), and an MCP server for agents over the same API; kernel stops in `deploy/compose.yaml` and becomes an option |
 
 ## 10. For the owner
 

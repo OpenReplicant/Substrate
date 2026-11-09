@@ -27,7 +27,7 @@ services:
       - ../../../plugins:/srv/plugins:ro           # installed plugins; only each one's web/ is served
     environment:
       WB_FRAME_SRC: ${WB_FRAME_SRC:-}              # origins apps may be framed from, beyond this one
-    depends_on: [kernel, postgrest]
+    depends_on: [kernel, postgrest, workbench]
 
   # Workbench's API (workbench/BRIEF.md section 7): PostgREST over the `api` schema of the workbench database,
   # which `scripts/workbench.sh migrate` creates. It switches each request to the role in its JWT; requests
@@ -44,5 +44,31 @@ services:
       PGRST_DB_ANON_ROLE: wb_anon
       PGRST_JWT_SECRET: ${WORKBENCH_JWT_SECRET:?set in .env}
       PGRST_OPENAPI_SERVER_PROXY_URI: http://127.0.0.1:8080/api
+    depends_on:
+      db: {condition: service_healthy}
+
+  # Workbench's server (workbench/workbench/server.py): plugins' Python, extractors off the pgmq queue `wb_jobs`,
+  # and Postgres's NOTIFY relayed as Server-Sent Events at /wb/api/events behind the same JWT PostgREST checks.
+  # It runs on kernel's image, which has its libraries, until Workbench leaves with its own (workbench/Containerfile).
+  workbench:
+    image: knowledge-kernel:local
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+    user: nobody
+    tmpfs: [/tmp]
+    command: ["python3", "-m", "workbench", "serve", "--port", "8100"]
+    working_dir: /srv/workbench
+    environment:
+      PYTHONPATH: /srv/workbench
+      PYTHONDONTWRITEBYTECODE: "1"
+      WORKBENCH_DATABASE_URL: postgresql://wb_server:${WORKBENCH_SERVER_PASSWORD:?set in .env}@db:5432/workbench
+      WORKBENCH_JWT_SECRET: ${WORKBENCH_JWT_SECRET:?set in .env}
+      WB_PLUGINS_DIR: /srv/substrate/plugins
+      WB_SUBSTRATE_ROOT: /srv/substrate        # what substrate's extractors read: this checkout, read-only
+    volumes:
+      - ../../../workbench:/srv/workbench:ro
+      - ../../..:/srv/substrate:ro
     depends_on:
       db: {condition: service_healthy}

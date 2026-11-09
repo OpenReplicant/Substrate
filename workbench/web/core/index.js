@@ -52,6 +52,7 @@ export default function core(wb) {
   wb.view({id: 'claims', title: () => 'Claims', template: 'wb-tpl-claims', key: () => 'claims'});
   wb.view({id: 'review', title: () => 'Review', template: 'wb-tpl-review', key: () => 'review'});
   wb.view({id: 'types', title: () => 'Content types', template: 'wb-tpl-types', key: () => 'types'});
+  wb.view({id: 'extractors', title: () => 'Extractors', template: 'wb-tpl-extractors', key: () => 'extractors'});
   wb.view({id: 'app', title: (p) => wb.registry.get('app', p.app)?.title || 'App', template: 'wb-tpl-app', key: (p) => `app:${p.app}`});
 
   // ---------------------------------------------------------------- sidebar
@@ -59,6 +60,7 @@ export default function core(wb) {
   wb.menu({id: 'review', section: 'Review', title: 'Decisions', icon: 'check', open: ['review'], order: 1});
   wb.menu({id: 'claims', section: 'Review', title: 'Claims', icon: 'quote', open: ['claims'], order: 2});
   wb.menu({id: 'types', section: 'System', title: 'Content types', icon: 'schema', open: ['types'], order: 1});
+  wb.menu({id: 'extractors', section: 'System', title: 'Extractors', icon: 'refresh', open: ['extractors'], order: 2});
 
   // ---------------------------------------------------------------- inspector
   wb.inspector({id: 'provenance', title: 'Where this came from', template: 'wb-tpl-provenance', order: 1,
@@ -78,6 +80,7 @@ export default function core(wb) {
   cmd('claims', 'Open claims', () => wb.open('claims'));
   cmd('review', 'Open the review lane', () => wb.open('review'));
   cmd('types', 'Open content types', () => wb.open('types'));
+  cmd('extractors', 'Open extractors', () => wb.open('extractors'));
   cmd('split-right', 'Split the active tab to the right', () => wb.split('right'));
   cmd('split-below', 'Split the active tab below', () => wb.split('below'));
   cmd('float', 'Float the active tab', () => wb.float());
@@ -114,7 +117,9 @@ export default function core(wb) {
 
   wb.data('contentWidget', () => ({
     rows: [],
-    async init() {
+    async init() { await this.load(); this.off = wb.onChange((e) => e.kind === 'item' && e.op === 'insert', () => this.load(), 800); },
+    destroy() { this.off && this.off(); },
+    async load() {
       this.rows = await Promise.all(wb.state.types.map(async (t) => ({id: t.id, label: t.label, n: await wb.api.count(t.id).catch(() => '?')})));
     },
     open(r) { wb.open('list', {type: r.id}); },
@@ -122,7 +127,9 @@ export default function core(wb) {
 
   wb.data('recentWidget', () => ({
     rows: [], loaded: false,
-    async init() {
+    init() { this.load(); this.off = wb.onChange((e) => e.kind === 'item', () => this.load(), 600); },
+    destroy() { this.off && this.off(); },
+    async load() {
       const claims = await wb.api.get('claims', {select: 'subject_type,subject_id,field,value,author,observed_at', order: 'observed_at.desc', limit: 12}).catch(() => []);
       this.rows = claims.map((c, i) => ({...c, key: i}));
       this.loaded = true;
@@ -135,7 +142,9 @@ export default function core(wb) {
 
   wb.data('decisionsWidget', () => ({
     n: null,
-    async init() { this.n = await wb.api.count('decisions', {status: 'eq.open'}).catch(() => null); },
+    init() { this.load(); this.off = wb.onChange((e) => e.kind === 'decision', () => this.load()); },
+    destroy() { this.off && this.off(); },
+    async load() { this.n = await wb.api.count('decisions', {status: 'eq.open'}).catch(() => null); },
     get text() { return this.n === null ? '…' : this.n === 0 ? 'Nothing is waiting.' : `${this.n} waiting`; },
     open() { wb.open('review'); },
   }));
@@ -153,7 +162,7 @@ export default function core(wb) {
       this.schema = this.type.schema || {};
       this.$watch('q', () => { this.page = 0; this.load(); });
       this.load();
-      this.off = wb.on('saved', (e) => { if (e.type === this.type.id) this.load(); });
+      this.off = wb.onChange((e) => e.kind === 'item' && e.type === this.type.id, () => this.load());
     },
     destroy() { this.off && this.off(); },
     // title, then up to three short fields, then when and by whom
@@ -193,7 +202,7 @@ export default function core(wb) {
   }));
 
   wb.data('itemView', () => ({
-    type: null, id: null, item: null, values: {}, original: {}, fields: [], claims: {}, saving: false, error: '', loading: true, focused: null,
+    type: null, id: null, item: null, values: {}, original: {}, fields: [], claims: {}, saving: false, error: '', loading: true, focused: null, stale: '',
     async init() {
       const panel = wb.panelOf(this.$el);
       this.panel = panel;
@@ -209,7 +218,12 @@ export default function core(wb) {
         }),
       ];
       await this.load();
-      this.off = wb.on('claims-changed', (e) => { if (e.id === this.id) this.loadClaims(); });
+      this.off = wb.onChange((e) => e.kind === 'item' && e.id === this.id, (evs) => {
+        const others = evs.filter((e) => e.author !== (wb.user && wb.user.name));
+        if (!others.length || this.saving) { this.loadClaims(); return; }
+        if (this.dirty) { this.stale = `Changed by ${others[others.length - 1].author} while you were editing. Save to keep yours, or revert to see theirs.`; this.loadClaims(); return; }
+        this.load();
+      });
     },
     destroy() { this.off && this.off(); },
     async load() {
@@ -284,21 +298,21 @@ export default function core(wb) {
         this.panel.setTitle(this.item.title);
         const v = {};
         for (const f of this.fields) v[f.name] = this.toInput(f, this.item[f.name]);
-        this.values = v; this.original = {...v};
+        this.values = v; this.original = {...v}; this.stale = '';
         await this.loadClaims();
         wb.emit('saved', {type: this.type.id, id: this.id});
         wb.emit('claims-changed', {id: this.id});
         wb.notify('Saved');
       } catch (e) { this.error = e.message; } finally { this.saving = false; }
     },
-    revert() { this.values = {...this.original}; },
+    revert() { this.values = {...this.original}; if (this.stale) { this.stale = ''; this.load(); } },
   }));
 
   wb.data('provenance', () => ({
     rows: [], loading: false, seq: 0,
     init() {
       this.$watch('sel', () => this.load());
-      this.off = wb.on('claims-changed', () => this.load());
+      this.off = wb.onChange((e) => e.kind === 'item' && this.sel && e.id === this.sel.id, () => this.load());
       this.load();
     },
     destroy() { this.off && this.off(); },
@@ -323,7 +337,7 @@ export default function core(wb) {
 
   wb.data('itemInfo', () => ({
     item: null,
-    init() { this.$watch('sel', () => this.load()); this.off = wb.on('saved', () => this.load()); this.load(); },
+    init() { this.$watch('sel', () => this.load()); this.off = wb.onChange((e) => e.kind === 'item' && this.sel && e.id === this.sel.id, () => this.load()); this.load(); },
     destroy() { this.off && this.off(); },
     get sel() { return wb.state.selection; },
     async load() {
@@ -339,7 +353,11 @@ export default function core(wb) {
 
   wb.data('claimsView', () => ({
     rows: [], author: '', status: 'current', type: '', loading: true,
-    init() { this.load(); this.$watch('author', () => this.load()); this.$watch('status', () => this.load()); this.$watch('type', () => this.load()); },
+    init() {
+      this.load(); this.$watch('author', () => this.load()); this.$watch('status', () => this.load()); this.$watch('type', () => this.load());
+      this.off = wb.onChange((e) => e.kind === 'item', () => this.load(), 800);
+    },
+    destroy() { this.off && this.off(); },
     get types() { return wb.state.types; },
     async load() {
       this.loading = true;
@@ -358,7 +376,8 @@ export default function core(wb) {
 
   wb.data('reviewView', () => ({
     rows: [], status: 'open', notes: {}, loading: true,
-    init() { this.load(); this.$watch('status', () => this.load()); },
+    init() { this.load(); this.$watch('status', () => this.load()); this.off = wb.onChange((e) => e.kind === 'decision', () => this.load()); },
+    destroy() { this.off && this.off(); },
     async load() {
       this.loading = true;
       this.rows = await wb.api.get('decisions', {order: 'created_at.desc', limit: 200, ...(this.status ? {status: `eq.${this.status}`} : {})}).catch(() => []);
@@ -373,7 +392,6 @@ export default function core(wb) {
       try {
         await wb.api.rpc('decide', {id: d.id, approve, note: this.notes[d.id] || null});
         wb.notify(approve ? 'Approved' : 'Declined');
-        this.load();
       } catch (e) { wb.notify(e.message, 'error'); }
     },
     get canEdit() { return wb.canEdit(); },
@@ -384,5 +402,35 @@ export default function core(wb) {
     get types() { return wb.state.types; },
     props(t) { return Object.entries((t.schema || {}).properties || {}).map(([name, p]) => ({name, type: p.format ? `${p.type} (${p.format})` : p.type || 'any', description: p.description || ''})); },
     open(t) { wb.open('list', {type: t.id}); },
+  }));
+
+  wb.data('extractorsView', () => ({
+    extractors: [], runs: [], error: '', busy: {},
+    init() { this.load(); this.off = wb.onChange((e) => e.kind === 'run', () => this.loadRuns(), 200); },
+    destroy() { this.off && this.off(); },
+    async load() {
+      try { this.extractors = await wb.api.server('GET', 'extractors'); } catch (e) { this.error = `The Workbench server did not answer: ${e.message}`; }
+      this.loadRuns();
+    },
+    async loadRuns() { this.runs = await wb.api.get('runs', {order: 'started_at.desc', limit: 30}).catch(() => []); },
+    get canRun() { return wb.canEdit(); },
+    isBusy(x) { return Boolean(this.busy[x.key]); },
+    async run(x) {
+      const b = {...this.busy}; b[x.key] = true; this.busy = b;
+      try { await wb.api.server('POST', 'extract', {extractor: x.key, inputs: {}}); wb.notify(`Queued ${x.key}`); }
+      catch (e) { wb.notify(e.message, 'error'); }
+      setTimeout(() => { const n = {...this.busy}; delete n[x.key]; this.busy = n; }, 1500);
+    },
+    state(r) { return !r.ended_at ? 'running' : r.outcome && r.outcome.ok ? 'done' : 'failed'; },
+    stateClass(r) { const s = this.state(r); return 'wb-pill ' + (s === 'done' ? 'is-current' : s === 'failed' ? 'is-retracted' : 'is-disputed'); },
+    summary(r) {
+      const o = r.outcome || {};
+      if (o.ok === false) return o.error || 'failed';
+      const parts = [];
+      for (const k of ['items', 'sources', 'relations', 'decisions', 'withdrawn']) if (o[k]) parts.push(`${o[k]} ${k}`);
+      return [parts.join(', '), ...(o.log || [])].filter(Boolean).join(' · ') || 'nothing new';
+    },
+    ago(r) { return ago(r.started_at); },
+    by(r) { return (r.inputs && r.inputs.requested_by) || 'command line'; },
   }));
 }

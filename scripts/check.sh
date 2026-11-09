@@ -19,11 +19,14 @@ code=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:8080/api/")
 shell=$(curl -s "http://127.0.0.1:8080/")
 case "$shell" in *'name="wb-plugin"'*) ok "workbench   http://127.0.0.1:8080/ (the shell, $(printf '%s' "$shell" | grep -c 'name="wb-plugin"') plugin modules)" ;;
   *) bad "the workbench shell is not served at / (scripts/logs.sh caddy)" ;; esac
-for s in db kernel caddy postgrest; do
+if h=$(curl -fsS "http://127.0.0.1:8080/wb/api/health" 2>/dev/null); then
+  ok "workbench   http://127.0.0.1:8080/wb/api/ ($(printf '%s' "$h" | python3 -c 'import json, sys; d = json.load(sys.stdin); print(("events relayed" if d["listening"] else "NOT listening") + ", jobs " + ("taken" if d["worker"] else "NOT taken") + ", plugins: " + ", ".join(p["id"] + (" (" + p["error"] + ")" if p.get("error") else "") for p in d["plugins"]))'))"
+else bad "the Workbench server does not answer (scripts/logs.sh workbench)"; fi
+for s in db kernel caddy postgrest workbench; do
   case "$running" in *"-$s-"*) ;; *) bad "service $s is not running (scripts/logs.sh $s)" ;; esac
 done
-extra=$(printf '%s\n' $running | grep -v -e '-db-' -e '-kernel-' -e '-caddy-' -e '-init-' -e '-postgrest-' || true)
-[ -z "$extra" ] && ok "only the core runs (db, kernel, caddy, postgrest)" || note "also running, outside the core: $(echo $extra)"
+extra=$(printf '%s\n' $running | grep -v -e '-db-' -e '-kernel-' -e '-caddy-' -e '-init-' -e '-postgrest-' -e '-workbench-' || true)
+[ -z "$extra" ] && ok "only the core runs (db, kernel, caddy, postgrest, workbench)" || note "also running, outside the core: $(echo $extra)"
 
 say "Wiring"
 if st=$(sec_status 2>&1); then ok "secrets ($SECRETS): $st"; else bad "secrets ($SECRETS): $st"; fi

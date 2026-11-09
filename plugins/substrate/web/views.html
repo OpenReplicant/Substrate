@@ -1,0 +1,34 @@
+<!-- Substrate's plugin views (web/index.js registers them). -->
+<template id="substrate-tpl-map">
+  <div class="wb-page wb-page-fill" x-data="substrateMap">
+    <header class="wb-page-head">
+      <h1>Map</h1>
+      <span class="wb-faint" x-text="summary"></span>
+      <span class="wb-spacer"></span>
+      <select class="wb-input wb-narrow" x-model="filter" aria-label="Show">
+        <option value="all">Every part</option><option value="gaps">Only gaps</option>
+      </select>
+      <button class="wb-btn" @click="review()">Review lane</button>
+      <button class="wb-btn" @click="extractors()">Extractors</button>
+    </header>
+    <p class="wb-lede">Each skill and hook as the catalog declares it (catalog-info.yaml, read by substrate:catalog) and as the repository has it (.claude/, read by substrate:claude-code). Where they differ, substrate:drift raises a gap in the review lane: revise the map, or change the repository.</p>
+    <div class="wb-table-wrap">
+      <table class="wb-table">
+        <thead><tr><th>Part</th><th>Type</th><th>Declared</th><th>Found</th><th>Where</th><th>State</th></tr></thead>
+        <tbody>
+          <template x-for="r in shown" :key="r.key">
+            <tr>
+              <td class="wb-mono" x-text="r.slug"></td>
+              <td x-text="r.type"></td>
+              <td><button class="wb-link" @click="openDeclared(r)" x-text="mark(r.declared)"></button></td>
+              <td><button class="wb-link" @click="openObserved(r)" x-text="mark(r.observed)"></button></td>
+              <td class="wb-faint wb-mono" x-text="where(r)"></td>
+              <td><span :class="stateClass(r)" x-text="state(r)"></span></td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+      <p class="wb-empty" x-show="!loading && !rows.length">Nothing read yet. Run substrate:catalog and substrate:claude-code from Extractors.</p>
+    </div>
+  </div>
+</template>

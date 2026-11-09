@@ -46,7 +46,7 @@ def unb64(s):
 
 try:
     out = cli.migrate()
-    check("migrate creates the database and applies the core", out["created"] and out["applied"] == ["001_core.sql", "002_jwt.sql", "003_decisions_api.sql"])
+    check("migrate creates the database and applies the core", out["created"] and out["applied"] == sorted(f.name for f in (HERE.parent / "workbench/sql").glob("*.sql")))
     check("migrate again applies nothing", cli.migrate()["applied"] == [])
     loaded = cli.load_plugin(HERE / "fixtures/plugin")
     check("a plugin's content type gets its table", loaded["types"][0]["type"] == "note"
