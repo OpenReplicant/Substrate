@@ -77,23 +77,31 @@ steps:
       and aliases: wb.term and wb.mapping (SSSOM) exist; no vocabulary has been loaded into them yet.
 
   - id: 4
+    status: done
+    done_on: 2026-11-09
     title: Catalogs to choose from
     spec: "2, 5"
-    where: substrate (catalog-info.yaml systems options and sources), a research skill, kernel content types
+    where: substrate (catalog-info.yaml systems options and sources), the research skill, docs/choices, substrate:choices
     after: [3]
-    status: todo
     check: >-
       one real choice a later step needs (a component, library or service) is made this way: the source catalogs
       are searched; at least three candidates become catalog entries with cited claims (licence, release age,
       maintenance, fit, each quoting where it came from); the shortlist is tested against the need, with a
-      Morphogen verdict where the question is which is better; the pick and the rejections stay in kernel with
+      Morphogen verdict where the question is which is better; the pick and the rejections stay in Workbench with
       their evidence, and recall answers "why this one?" from them
     notes: >-
       Owner, 2026-11-08: "catalogs of components it could choose from rather than 'best guess' and sometimes
       'catalogs of searchable-catalogs' (npm, pip, github, apt, etc) is the best way to go", with the agent
       "curating and researching and testing". The first skill here is a research skill: search a registry, record
       candidates as claims. If a registry needs an encoder of its own (deps.dev, say), build it as a kernel module
-      upstream.
+      upstream. (2026-11-09: kernel has left the stack, S-57, so the record is in Workbench and registry reading is
+      substrate:choices in substrate's plugin; the check is otherwise unchanged.) Done 2026-11-09 (S-59): owner
+      asked for search and reasoners, "keep it simple"; the choice was the SPARQL endpoint over Workbench
+      (docs/choices/rdf-endpoint.yaml). GitHub topics, deps.dev and image registries searched; 8 candidates with
+      licence, releases, last push and stars quoted from GitHub and deps.dev; 4 shortlisted and tried on the same
+      three queries over the live tables (scripts/trials/rdf-endpoint/run.sh); Ontop picked as the only one with
+      right reasoning answers and current data; no Morphogen verdict, since the need decided it and no two met it.
+      Recall: search "ontop sparql" finds choice rdf-endpoint and its candidates, each with its reason.
 
   - id: 5
     title: "Engineer: another system beside itself"

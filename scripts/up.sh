@@ -32,7 +32,7 @@ wait_for() {   # what url logs
 wait_for API "http://127.0.0.1:8080/api/" postgrest
 wait_for server "http://127.0.0.1:8080/wb/api/health" workbench
 wait_for shell "http://127.0.0.1:8080/" caddy
-for x in catalog claude-code morphogen drift; do      # the map, what the repository has, verdicts, and the gaps
+for x in catalog claude-code morphogen choices drift; do   # the map, what the repository has, verdicts, choices, the gaps
   "$ROOT/scripts/workbench.sh" extract "substrate:$x" | python3 -c 'import json, sys; d = json.load(sys.stdin); print("  substrate:'"$x"'", "ok" if d.get("ok") else "FAILED: " + str(d.get("error")), *(d.get("log") or []))'
 done
 

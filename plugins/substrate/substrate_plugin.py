@@ -19,6 +19,9 @@ import re
 import shutil
 import sqlite3
 import tempfile
+import urllib.error
+import urllib.parse
+import urllib.request
 from pathlib import Path, PurePosixPath
 
 import yaml
@@ -60,6 +63,71 @@ def evidence(lines, spans, path):
     if not a:
         return None
     return {"quote": "\n".join(lines[a - 1:min(b, a + 2)]).strip(), "span": {"start_line": a, "end_line": b}}
+
+
+def fetch_json(url: str):
+    """(raw bytes, parsed) from a registry's JSON API, or None if it does not answer."""
+    req = urllib.request.Request(url, headers={"User-Agent": "substrate-workbench", "Accept": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=15) as r:
+            raw = r.read()
+        return raw, json.loads(raw)
+    except (urllib.error.URLError, TimeoutError, ValueError):
+        return None
+
+
+def quoted(key, value, pointer):
+    return {"quote": f"{json.dumps(key)}: {json.dumps(value)}", "span": {"pointer": pointer}}
+
+
+def registry_facts(c: dict) -> list[tuple[str, bytes, dict, dict]]:
+    """A candidate's licence, releases and activity, as its registries state them: one (url, raw answer, values,
+    evidence) per answer, each value quoting the key it was read from. Missing answers are left out."""
+    out = []
+    repo = c.get("repository")
+    if repo:
+        url = f"https://api.github.com/repos/{repo}"
+        got = fetch_json(url)
+        if got:
+            raw, d = got
+            lic = (d.get("license") or {}).get("spdx_id")
+            values = {"licence": lic, "last_push": (d.get("pushed_at") or "")[:10] or None,
+                      "stars": d.get("stargazers_count"), "archived": d.get("archived")}
+            quotes = {"licence": quoted("spdx_id", lic, "/license/spdx_id"),
+                      "last_push": quoted("pushed_at", d.get("pushed_at"), "/pushed_at"),
+                      "stars": quoted("stargazers_count", d.get("stargazers_count"), "/stargazers_count"),
+                      "archived": quoted("archived", d.get("archived"), "/archived")}
+            out.append((url, raw, {k: v for k, v in values.items() if v is not None}, quotes))
+        if not c.get("package"):
+            url = f"https://api.github.com/repos/{repo}/releases?per_page=20"
+            got = fetch_json(url)
+            if got:
+                raw, rels = got
+                for n, r in enumerate(rels if isinstance(rels, list) else []):
+                    if not r.get("prerelease") and not r.get("draft"):
+                        out.append((url, raw, {"latest_release": r.get("tag_name"), "released_on": (r.get("published_at") or "")[:10]},
+                                    {"latest_release": quoted("tag_name", r.get("tag_name"), f"/{n}/tag_name"),
+                                     "released_on": quoted("published_at", r.get("published_at"), f"/{n}/published_at")}))
+                        break
+    pkg = c.get("package")
+    if pkg:
+        url = f"https://api.deps.dev/v3/systems/{pkg['system']}/packages/{urllib.parse.quote(pkg['name'], safe='')}"
+        got = fetch_json(url)
+        if got:
+            raw, d = got
+            versions = [(n, v) for n, v in enumerate(d.get("versions") or []) if v.get("publishedAt")]
+            if versions:
+                n, v = max(versions, key=lambda nv: nv[1]["publishedAt"])
+                ver = v["versionKey"]["version"]
+                out.append((url, raw, {"latest_release": ver, "released_on": v["publishedAt"][:10]},
+                            {"latest_release": quoted("version", ver, f"/versions/{n}/versionKey/version"),
+                             "released_on": quoted("publishedAt", v["publishedAt"], f"/versions/{n}/publishedAt")}))
+                vurl = f"{url}/versions/{urllib.parse.quote(ver, safe='')}"
+                got = fetch_json(vurl)
+                if got and got[1].get("licenses"):
+                    lic = " AND ".join(got[1]["licenses"])
+                    out.append((vurl, got[0], {"licence": lic}, {"licence": quoted("licenses", got[1]["licenses"], "/licenses")}))
+    return out
 
 
 GENESIS = "0" * 64
@@ -255,6 +323,49 @@ def register(wb):
         ctx.done("verdict")
         ctx.log(f"{len(records)} records in a sound chain, {len(verdicts)} verdicts")
 
+    def choices(ctx, inputs):
+        folder = root / inputs.get("folder", "docs/choices")
+        counts = {"choices": 0, "candidates": 0, "registry": 0, "unreached": 0}
+        for path in sorted(folder.glob("*.yaml")):
+            rel = str(path.relative_to(root))
+            data = path.read_bytes()
+            text = data.decode()
+            lines = text.splitlines()
+            node = yaml.compose(text)
+            doc = yaml.safe_load(text) or {}
+            spans = line_spans(node)
+            src = ctx.source(f"file:{rel}", data, "application/yaml")
+            fields = {k: doc.get(k) for k in ("question", "asked_by", "need", "searched", "trial", "verdict", "pick", "reason")}
+            ev = {k: e for k in fields if (e := evidence(lines, spans, (k,)))}
+            if (e := evidence(lines, spans, ("question",))):
+                ev["title"] = e
+            choice = ctx.upsert("choice", path.stem, {k: v for k, v in fields.items() if v is not None},
+                                title=doc.get("question") or path.stem, source=src, evidence=ev)
+            counts["choices"] += 1
+            for i, c in enumerate(doc.get("candidates") or []):
+                name = c["name"]
+                facts = registry_facts(c)
+                item = None
+                for url, raw, values, quotes in facts:
+                    rsrc = ctx.source(url, raw, "application/json")
+                    item = ctx.upsert("candidate", name, values, title=c.get("title") or name, source=rsrc, evidence=quotes)
+                    counts["registry"] += 1
+                if not facts:
+                    counts["unreached"] += 1
+                own = {k: c.get(k) for k in ("registry", "repository", "image", "fit", "trial", "shortlisted", "outcome", "reason")}
+                cev = {k: e for k in own if (e := evidence(lines, spans, ("candidates", i, k)))}
+                item = ctx.upsert("candidate", name, {k: v for k, v in own.items() if v is not None},
+                                  title=c.get("title") or name, source=src, evidence=cev)
+                ctx.relate("choice", choice, "considered", "candidate", item)
+                if c.get("outcome") == "picked" or name == doc.get("pick"):
+                    ctx.relate("choice", choice, "picks", "candidate", item)
+                counts["candidates"] += 1
+        ctx.done("choice")
+        ctx.done("candidate")
+        ctx.log(f"{counts['choices']} choices, {counts['candidates']} candidates, {counts['registry']} registry answers"
+                + (f"; {counts['unreached']} candidates' registries did not answer (their earlier claims stand)" if counts["unreached"] else ""))
+
+    wb.extractor("choices", choices, "docs/choices/*.yaml: each choice and its candidates, licence and releases quoted from the registry")
     wb.extractor("catalog", catalog, "catalog-info.yaml: every entity as a component item, citing its line, with its relations")
     wb.extractor("claude-code", claude_code, "Claude Code's .claude/: skills and hooks as items")
     wb.extractor("morphogen", morphogen, "Morphogen's evidence log: each verdict, after checking the whole hash chain")

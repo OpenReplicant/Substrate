@@ -1,0 +1,107 @@
+# A choice made from the catalogs (spec section 5, build step 4). substrate:choices reads this file into
+# Workbench: a `choice` item, and a `candidate` item per candidate whose licence, releases and activity come from
+# the registry named here (each claim quoting the registry's answer) and whose fit and outcome come from this file.
+question: Which SPARQL endpoint should give Workbench's items, claims and relations a graph view for search and reasoners?
+asked_by: owner
+asked_on: "2026-11-09"
+quote: "keep it simple... i'm still not sure of all the ways we'd use this but planning for search and reasoners. maybe this is where the CMS gains super powers?"
+need:
+  - SPARQL 1.1 over Workbench's items, their current claims (field, quote, author, source) and their relations
+  - answers from current data, with no rebuild after a write (Postgres stays the one truth, S-57)
+  - reasoning at least over subclasses and subproperties, so a query for a broader class finds the narrower ones
+  - one container under Podman; a permissive or LGPL licence; a release at least two weeks old, pinned exactly
+searched:
+  - "github: search/repositories q=topic:sparql (sorted by stars) and q=topic:r2rml, 2026-11-09"
+  - "github: releases of each candidate; deps.dev: maven org.apache.jena:jena-fuseki-server, org.postgresql:postgresql"
+  - "container-images: podman search --list-tags for docker.io/ontop/ontop, ghcr.io/oxigraph/oxigraph"
+trial:
+  script: scripts/trials/rdf-endpoint/run.sh
+  queries: [scripts/trials/rdf-endpoint/q1-parts.rq, scripts/trials/rdf-endpoint/q2-why.rq, scripts/trials/rdf-endpoint/q3-related.rq]
+  run_on: "2026-11-09"
+  expected: "q1 85 parts (78 components, 4 skills, 3 hooks, none typed Part directly); q2 5 claims; q3 110 relations (16 dependsOn, 94 partOf, none stated as relatedTo)"
+  fresh: "a dependsOn relation is inserted in Postgres, q3 is asked again, then the relation is removed"
+verdict: >-
+  No Morphogen verdict: the shortlist was decided by requirements each candidate met or failed on the same
+  queries (right answers, current data), not by a measured "better". A verdict is the test when two endpoints
+  both meet the need and the question becomes speed or answer quality.
+pick: ontop
+reason: >-
+  Ontop is the only candidate that met every need in the trial: it answered all three queries correctly,
+  including both that need reasoning, and it saw a new relation the moment Postgres had it, because it rewrites
+  SPARQL into SQL over the live tables (a virtual knowledge graph) instead of holding a copy. Apache-2.0, release
+  5.5.0 of 2026-02-14, active. Costs it brings: a JVM of about 430 MB; a mapping from tables to RDF to keep
+  (to be generated from content types once they carry terms); one database role for every query, so it needs a
+  read-only role; reasoning is OWL 2 QL, which covers subclasses, subproperties, domains and ranges but not
+  transitive properties or rules.
+candidates:
+  - name: ontop
+    title: Ontop
+    registry: github
+    repository: ontop/ontop
+    image: docker.io/ontop/ontop:5.5.0
+    outcome: picked
+    shortlisted: true
+    fit: "SPARQL over Postgres through an R2RML or .obda mapping, with OWL 2 QL reasoning by query rewriting"
+    trial: "q1 85, q2 5, q3 110; fresh (q3 110 then 111); ready in 4-14 s; 418-433 MB"
+  - name: jena-fuseki
+    title: Apache Jena Fuseki
+    registry: deps-dev
+    package: {system: maven, name: "org.apache.jena:jena-fuseki-server"}
+    repository: apache/jena
+    outcome: rejected
+    shortlisted: true
+    fit: "A SPARQL server over a loaded dataset; --rdfs applies RDFS reasoning on top"
+    trial: "q1 85, q2 5, q3 110; not fresh (q3 stayed 110); ready in 2-12 s; 261-271 MB"
+    reason: "Answers from a copy, so every write means a reload. The runner-up: the pick if a materialised graph with Jena's rule reasoners is ever wanted."
+  - name: oxigraph
+    title: Oxigraph
+    registry: github
+    repository: oxigraph/oxigraph
+    image: ghcr.io/oxigraph/oxigraph:0.5.13
+    outcome: rejected
+    shortlisted: true
+    fit: "A small, fast SPARQL store over a loaded dataset; no reasoning"
+    trial: "q1 0, q2 5, q3 0 (no reasoning); not fresh; ready in 4 s; 9.5 MB"
+    reason: "No reasoning (q1 and q3 found nothing) and answers from a copy. Its size makes it the pick for a plain SPARQL projection if reasoning is dropped."
+  - name: rdflib-owlrl
+    title: RDFLib with OWL-RL
+    registry: deps-dev
+    package: {system: pypi, name: rdflib}
+    repository: RDFLib/rdflib
+    outcome: rejected
+    shortlisted: true
+    fit: "A Python library: an in-process graph, SPARQL, and OWL-RL's RDFS or OWL 2 RL closure; not a server"
+    trial: "q1 85, q2 5, q3 110 after the RDFS closure (0.34 s for 4391 triples); not fresh"
+    reason: "Not an endpoint, and its graph is a copy. Kept in mind for Workbench's vocabulary loader (parsing SKOS and Turtle), a different need."
+  - name: qlever
+    title: QLever
+    registry: github
+    repository: ad-freiburg/qlever
+    outcome: rejected
+    shortlisted: false
+    fit: "A SPARQL engine for very large datasets, over an index built ahead of time; no reasoning"
+    reason: "Built for billions of triples over a prebuilt index, which a store of thousands that changes on every write does not need; no reasoning."
+  - name: virtuoso
+    title: Virtuoso Open-Source
+    registry: github
+    repository: openlink/virtuoso-opensource
+    outcome: rejected
+    shortlisted: false
+    fit: "A multi-model database with SPARQL, linked data views over SQL and rule reasoning"
+    reason: "Licence: its LICENSE says \"licensed under the GNU General Public License\", version 2 only, outside the default stack's permissive or LGPL rule."
+  - name: blazegraph
+    title: Blazegraph
+    registry: github
+    repository: blazegraph/database
+    outcome: rejected
+    shortlisted: false
+    fit: "A SPARQL store with RDFS inference"
+    reason: "GPL-2.0, and no release since 2.1.6 RC of 2020-02-03."
+  - name: morph-kgc
+    title: Morph-KGC
+    registry: github
+    repository: morph-kgc/morph-kgc
+    outcome: rejected
+    shortlisted: false
+    fit: "Generates RDF from relational data with R2RML or RML mappings; a materialiser, not an endpoint"
+    reason: "Makes a copy rather than answering queries; the tool for an RDF export (N-Quads) if one is wanted beside Ontop, since it reads the same R2RML."

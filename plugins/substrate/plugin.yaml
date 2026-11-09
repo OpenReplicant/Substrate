@@ -1,8 +1,9 @@
 # Substrate's plugin for Workbench (workbench/BRIEF.md section 6): the kinds of thing Substrate models
-# (component, skill, hook), the extractors that read them (catalog-info.yaml; Claude Code's .claude/) and compare
-# them (drift, raising gaps for review), and a Map view. Morphogen's verdicts come with W4.
+# (component, skill, hook, verdict, and choice and candidate for choices made from the catalogs), the extractors
+# that read them (catalog-info.yaml; Claude Code's .claude/; docs/choices with the registries they cite) and compare
+# them (drift, raising gaps for review), and a Map view.
 id: substrate
-version: 0.2.0
+version: 0.3.0
 licence: Apache-2.0
 requires: {workbench: "1"}
 content_types: [types/*.json]
