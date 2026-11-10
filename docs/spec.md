@@ -288,8 +288,25 @@ Each step ends with a check anyone can run. [`build.yaml`](build.yaml) holds the
 | 7 | A graph view: traversal, SPARQL, inference | on step 5's data and over the same tables: substrate's own terms on its content types; pgGraph answers a transitive path; Ontop answers SPARQL with reasoning behind Caddy as a read-only role, its mapping generated from the terms; OWL 2 RL inferences land as claims attributed to the reasoner and leave when a premise is retracted |
 | 8 | Engineer: a first system beside substrate | a second system, one that exists or one that is wanted, is a domain of its own on the same map, observed as far as its owner allows or mapped before it exists, with its owner interviewed (each statement their claim, quoting them); the relations between it and substrate are claims; one change closing a gap is judged and applied the same way step 2 changed substrate; the test run is the owner's machine (needs the owner) |
 | 9 | Slots enforced | each core interface on the map has a contract test, the map names it, and an option enters a slot only by passing it; Morphogen's structure check reports no untested core interface |
+| 10 | A business vocabulary, adopted | an organisation's parts (organisation, unit, role, person, resource, process, activity, event, decision, document, measure, goal) are content types whose terms come from published models chosen through section 5 (candidates: W3C ORG, schema.org, REA, a BPMN 2.0 ontology, DMN, OCEL 2.0), with SSSOM mappings; a demo business's map round-trips, and a BPMN 2.0 process imports and exports |
+| 11 | The organisation interview | a skill of its own, on the interview's transcript format and extractor, maps a whole organisation (people, roles, resources, processes, handoffs, pain points, time spent) from several people; each statement is that person's claim, and where two people disagree the difference reaches review |
+| 12 | Processes as they run | events from the tools a business uses (CSV or tool exports, and OpenTelemetry logs and spans where a tool emits them) land in Workbench as OCEL 2.0 events and objects; a process is discovered from them and checked against the described one; a planted deviation in the demo business's logs reaches review, traced to the statement it contradicts |
+| 13 | A baseline, and a judged improvement | measures (cycle time, rework, cost per case) are defined over the events; a process change is judged by Morphogen on time windows it was not tuned on, with an A/A check on the measure, and "no verdict yet" where the data is too thin (a change to how the judge holds out cases: needs the owner) |
+| 14 | Deliverables from the map | a current-state report, process diagrams, a prioritised roadmap and staff procedures are generated from the map, each line traceable to its claims |
+| 15 | One step automated | an automation engine, picked through section 5 (licence checked), fills a slot with a contract test; one process step in the demo business is automated, its events are observed back, and step 13 judges it |
+| 16 | An engagement, packaged | a new client is a new instance (`DB_VOLUME`) with a consultant's role in Workbench, written rules for consent, minimisation and retention of a client's data, and an onboarding path from first interview to first report; tried on one real business (needs the owner) |
 
-Step 6, a second unlike domain, was dropped (S-49): the generalist level stays a direction. Steps 7 to 9 were added with S-60 and reordered with S-61: observe first, so the graph view is built on real data; 7 and 8 need 5, 9 needs only 4. External vocabularies became an option.
+Step 6, a second unlike domain, was dropped (S-49): the generalist level stays a direction. Steps 7 to 9 were added with S-60 and reordered with S-61: observe first, so the graph view is built on real data; 7 and 8 need 5, 9 needs only 4.
+
+Steps 10 to 16 (S-73) point the engineer level at a business: a small one, open to changing how it works, with
+substrate taking it through the change in place of a consultant or beside one. Nothing new is needed in the
+loop. The interview gets what is meant to happen out of people's heads, the events show what does happen, the
+difference is drift, the owner of the business decides in the review lane, and the judge says whether a change
+improved a measure on time it was not tuned on. What is new is content: terms adopted from published business
+models rather than invented, an interview for a whole organisation, and events as the observed half.
+OpenTelemetry and OCEL 2.0 sit at different layers: OpenTelemetry carries events from tools that emit it,
+OCEL 2.0 says what an event means for a process (which activity, which objects: this order, this invoice). The
+demo business comes first, with synthetic events, so the steps have data without a client's privacy at stake. External vocabularies became an option.
 
 ## 10. Limitations
 

@@ -174,11 +174,12 @@ steps:
       Done 2026-11-09 (S-64, S-65): relations as claims with premises, generated vocabulary and mappings, Ontop at /sparql (run.sh live passes), substrate:reasoner (OWL 2 RL), pgGraph paths as the caller.
 
   - id: 8
+    status: blocked
+    waiting_on: "owner: when to sit for the interview (deferred 2026-11-09)"
     title: "Engineer: a first system beside substrate, one that exists or one that is wanted"
     spec: "1, 6, 7"
     where: substrate (the interview skill, substrate:interview, observe.local.yaml), Workbench (statements, a second domain)
     after: [5]
-    status: todo
     needs_owner: true
     check: >-
       a second system is a domain of its own on the same Workbench map, beside substrate's: one that exists
@@ -215,3 +216,106 @@ steps:
       declared, not enforced: the structure check reports 13 untested interfaces and resources. Morphogen's own
       interface is tested from the outside only; nothing here changes the judge.
       Done 2026-11-09 (S-66): contract tests for every core interface and the parts beneath them, named on the map; OpenBao passes the secrets slot's test; runs recorded as contract items.
+
+  - id: 10
+    title: A business vocabulary, adopted
+    spec: "1, 5, 9"
+    where: substrate (a business plugin beside plugins/substrate, docs/choices), Workbench (terms, SSSOM mappings)
+    after: [7]
+    status: todo
+    check: >-
+      docs/choices/business-vocabulary.yaml records the candidates searched (at least W3C ORG, schema.org, REA
+      (ISO/IEC 15944-4), a BPMN 2.0 ontology, DMN and OCEL 2.0), each with cited claims and its licence, and the
+      pick and rejections; content types for organisation, unit, role, person, resource, process, activity, event,
+      decision, document, measure and goal carry x-term from the picked models and SSSOM mappings to the rest;
+      a demo business's map (one domain, written as items) exports and re-imports to the same entities; a BPMN 2.0
+      XML process imports as items and exports back to a file a BPMN tool opens; scripts/check.sh passes
+    notes: >-
+      Added 2026-11-09 (S-73). Owner: "i was concerned we were inventing ontologies when we could be adopting".
+      Nothing here may assume substrate's own content types; a business is a domain like any other.
+
+  - id: 11
+    title: The organisation interview
+    spec: "1, 6"
+    where: substrate (a skill beside .claude/skills/interview, sharing INTERVIEW.md and substrate:interview)
+    after: [10]
+    status: todo
+    check: >-
+      the skill maps a whole organisation from several people (people, roles, resources, processes, handoffs,
+      pain points, frequency and time spent), asking from the gaps in that organisation's map; two people's
+      transcripts about the demo business land as their own claims quoting them; a point where they disagree
+      reaches review naming both; scripts/check.sh passes
+    notes: >-
+      Added 2026-11-09 (S-73). A separate skill rather than a mode of the interview: the questions and the people
+      differ (many, across an organisation), the transcript format, the extractor and the review lane do not.
+
+  - id: 12
+    title: Processes as they run
+    spec: "1, 6, 8"
+    where: substrate (event importers, a process-mining extractor; library through docs/choices), Workbench (events and objects)
+    after: [10]
+    status: todo
+    check: >-
+      events from a CSV export and from OpenTelemetry logs or spans land as OCEL 2.0 events and objects in
+      Workbench, each a claim citing its source file or batch; a process is discovered from them and checked
+      against the process the interview described; a deviation planted in the demo business's synthetic events
+      reaches review, traced to the statement it contradicts; the mining library's licence is recorded and fits
+      rule 6; scripts/check.sh passes
+    notes: >-
+      Added 2026-11-09 (S-73). OpenTelemetry (an option, spec section 8) carries events; OCEL 2.0 says what they
+      mean for a process. Several well-known process-mining tools are AGPL or GPL; research settles which fit.
+
+  - id: 13
+    title: A baseline, and a judged improvement
+    spec: "2, 7"
+    where: substrate (measures over events), Morphogen upstream (holding out time windows)
+    after: [12]
+    status: todo
+    needs_owner: true
+    check: >-
+      measures (cycle time, rework rate, cost per case) are defined over the events and baselined; a process
+      change in the demo business is judged by Morphogen on time windows the change was not tuned on, with an
+      A/A check on the measure showing its noise; with too little data the verdict is "no verdict yet", not a
+      result; the verdict lands in Workbench as claims
+    notes: >-
+      Added 2026-11-09 (S-73). Holding out time windows is a change to how the judge works: upstream, by PR, and
+      the owner's decision.
+
+  - id: 14
+    title: Deliverables from the map
+    spec: "1, 7"
+    where: substrate (a report generator and Workbench views)
+    after: [11, 12]
+    status: todo
+    check: >-
+      a current-state report, BPMN diagrams of the processes, a roadmap ordered by what the business's owner
+      decided in review, and step-by-step procedures for staff are generated from the demo business's map;
+      every line traces to the claims behind it; regenerating after an edit changes only what the edit touched
+    notes: Added 2026-11-09 (S-73).
+
+  - id: 15
+    title: One step automated
+    spec: "4, 5, 7"
+    where: substrate (an automation slot with a contract test; engine through docs/choices)
+    after: [13]
+    status: todo
+    check: >-
+      an automation engine picked through the research skill (licence fits rule 6) fills a slot whose contract
+      test it passes; one step of a demo business process is automated; its events are observed back into
+      Workbench; step 13 judges the change on held-out windows
+    notes: Added 2026-11-09 (S-73).
+
+  - id: 16
+    title: An engagement, packaged
+    spec: "1, 10"
+    where: substrate (instances, roles, onboarding, data handling)
+    after: [14, 15]
+    status: todo
+    needs_owner: true
+    check: >-
+      a new client is a new instance (DB_VOLUME) with a consultant's role in Workbench; written rules for consent,
+      minimisation and retention of client data are in place and checked (events are scanned for personal data
+      before import); an onboarding path goes from first interview to first report; one real business tries it
+    notes: >-
+      Added 2026-11-09 (S-73). The owner's decisions: who the first user is (a business's owner, or a consultant
+      using substrate; recommended: a consultant), and which real business pilots it.
