@@ -356,7 +356,8 @@ steps:
       which side changes.
 
   - id: 22
-    status: doing
+    status: done
+    done_on: 2026-11-11
     title: Model calls counted inside Morphogen's judged runs
     spec: "7, 10"
     where: Morphogen upstream (PLAN.md phase 7c), then substrate (a judged run of a model handler)
