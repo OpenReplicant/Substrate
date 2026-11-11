@@ -1,0 +1,92 @@
+# A choice made from the catalogs (spec section 5, build step 18). substrate:choices reads this file into
+# Workbench: a `choice` item and a `candidate` item per candidate (licence, releases and activity quoted from the
+# registry named here; fit and outcome from this file).
+question: Which model gateway should every model call go through, so a call is counted by something other than its caller?
+asked_by: owner
+asked_on: "2026-11-11"
+quote: "write the plan as phase 7, and go ahead with the gateway"
+need:
+  - one endpoint for OpenRouter's models (the owner's key, capped at $0.01) and a local server (Ollama, later), the model picked per call by name
+  - the gateway's own record of every call (model, tokens in and out, cost, latency, status, which caller), in a store substrate reads without asking the caller
+  - a key per caller, so each handler's calls are its own; a call with no key is refused; a per-key limit the gateway enforces
+  - no message content kept by default (the assistant's personal streams come later, step 21)
+  - one container under Podman; a permissive or LGPL licence; a release at least two weeks old, pinned exactly
+searched:
+  - "github: search/repositories q=topic:llm-gateway and q=topic:ai-gateway (sorted by stars), 2026-11-11"
+  - "github: releases of each candidate, 2026-11-11 (two weeks old: on or before 2026-10-28)"
+  - "container-images: podman search --list-tags docker.io/maximhq/bifrost, ghcr.io/berriai/litellm, ghcr.io/berriai/litellm-database"
+  - "options: model-gateway on the map (Bifrost v2.3.2, S-04, S-14, S-34, S-40; restorable from a00fb61)"
+trial:
+  script: scripts/trials/model-gateway/run.py
+  run_on: "2026-11-11"
+  cases: >-
+    the same for each candidate, against a fake OpenAI-style model server (fixed usage: 7 prompt and 3 completion
+    tokens) and one real call to a free OpenRouter model: answer, real, unkeyed, rate (a key limited to 2 calls a
+    minute makes 3), record (the gateway's own rows, with the fake's token counts), attribution (two keys, two
+    callers), no-content (a marker sent in a prompt is nowhere in the gateway's store), footprint (memory, seconds
+    to ready)
+  expected: every case passes for a candidate that meets the need
+  results: .state/trials/model-gateway/results.jsonl (two runs; the second with three minutes for batched log writes)
+verdict: >-
+  No Morphogen verdict: the need decided it. Bifrost met every case in both runs; LiteLLM missed the record case in
+  both (four log rows for five answered calls, one with no caller), so only one candidate meets the need.
+pick: bifrost
+reason: >-
+  Bifrost v2.3.2 passed all ten cases twice: the fake model's 7 and 3 tokens in its own Postgres rows with latency
+  and the virtual key of each caller, refused calls logged too (401 and 429 rows), no prompt or answer text anywhere
+  in its database, 142 MB and 14 s to ready. Costs it brings: v2.3.2 refuses provider addresses on private networks
+  unless allow_private_network is set on that provider (seen in the trial: the fake model on the compose network),
+  a model is allowed for a key only by name or regex, not by "*" for unknown models, and its admin account locks
+  its own API (S-34). v2.4.0 and later were under two weeks old on 2026-11-11.
+candidates:
+  - name: bifrost
+    title: Bifrost
+    registry: github
+    repository: maximhq/bifrost
+    image: docker.io/maximhq/bifrost:v2.3.2
+    shortlisted: true
+    outcome: picked
+    trial: "all 10 cases pass in both runs; 7 rows for 7 calls (refused ones included); 134-167 MB; ready in 14-25 s"
+    fit: "Go gateway, one OpenAI-style API over many providers (OpenRouter and Ollama among them); virtual keys with budgets and rate limits; a log store in SQLite or Postgres with tokens and cost per call; content logging can be off. Ran here before (S-04, S-40)."
+  - name: litellm
+    title: LiteLLM proxy
+    registry: github
+    repository: BerriAI/litellm
+    image: ghcr.io/berriai/litellm-database:v1.106.4
+    shortlisted: true
+    outcome: rejected
+    trial: "9 of 10 cases; record fails in both runs (4 rows for 5 answered calls, refused calls not logged); 633 MB; ready in 16-40 s"
+    reason: "Lost a call's row in both runs, which is the need this gateway exists for, and logs no refused calls. The runner-up: the pick if Bifrost's licence or upkeep changed, re-tried on a later release."
+    fit: "Python proxy over many providers; virtual keys with budgets and rpm limits; spend logs per call in Postgres (LiteLLM_SpendLogs: tokens, spend, duration, hashed key). MIT outside enterprise/ (its LICENSE)."
+  - name: portkey-gateway
+    title: Portkey AI Gateway
+    registry: github
+    repository: Portkey-AI/gateway
+    shortlisted: false
+    outcome: rejected
+    fit: "Node gateway with routing and guardrails"
+    reason: "Its README marks logging, tracing and observability as \"Available on the hosted app\"; the local console shows recent logs but names no store substrate could read, and its last release (v1.15.2) is of 2026-01-12. Would be looked at again if a store of calls came to the open-source gateway."
+  - name: omniroute
+    title: OmniRoute
+    registry: github
+    repository: cheaper-inference/OmniRoute
+    shortlisted: false
+    outcome: rejected
+    fit: "A router for coding tools that pools many providers' free tiers"
+    reason: "Built to pool third-party free tiers for coding tools, not to give a record of calls per caller; its README's headline is the free-token aggregate. Not the need."
+  - name: plano
+    title: Plano
+    registry: github
+    repository: katanemo/plano
+    shortlisted: false
+    outcome: rejected
+    fit: "Envoy-based proxy and data plane for agent apps: routing, orchestration, guardrails"
+    reason: "An agent data plane (Envoy plus its own services) more than a call counter; more parts than the need asks for. Would be looked at again if substrate's handlers needed routing by prompt."
+  - name: helicone-ai-gateway
+    title: Helicone AI Gateway
+    registry: github
+    repository: Helicone/ai-gateway
+    shortlisted: false
+    outcome: rejected
+    fit: "Rust gateway"
+    reason: "GPL-3.0 (the house rule is permissive or LGPL), and its last push was 2025-11-21."

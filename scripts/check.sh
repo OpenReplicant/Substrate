@@ -28,12 +28,14 @@ if n=$(curl -fsS --max-time 30 -H 'Accept: application/sparql-results+json' --da
      | python3 -c 'import json, sys; print(json.load(sys.stdin)["results"]["bindings"][0]["n"]["value"])' 2>/dev/null); then
   ok "sparql      http://127.0.0.1:8080/sparql (Ontop, read-only; $n items, by reasoning over their classes)"
 else bad "the graph endpoint does not answer at /sparql (scripts/logs.sh graph; scripts/graph.sh)"; fi
+code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "http://127.0.0.1:$(env_value GATEWAY_PORT)/v1/chat/completions" -H 'Content-Type: application/json' -d '{"model":"openrouter/x:free","messages":[{"role":"user","content":"hi"}]}')
+[ "$code" = "401" ] && ok "gateway     http://127.0.0.1:$(env_value GATEWAY_PORT)/ (Bifrost; a call without a key is refused)" || bad "the model gateway returned $code to a call without a key (scripts/logs.sh gateway)"
 running=$(rt_status 2>/dev/null | awk 'NR > 1 {print $1}' | tr '\n' ' ')
-for s in db caddy postgrest workbench graph; do
+for s in db caddy postgrest workbench graph gateway; do
   case "$running" in *"-$s-"*) ;; *) bad "service $s is not running (scripts/logs.sh $s)" ;; esac
 done
-extra=$(printf '%s\n' $running | grep -v -e '-db-' -e '-caddy-' -e '-postgrest-' -e '-workbench-' -e '-graph-' || true)
-[ -z "$extra" ] && ok "only the core runs (db, caddy, postgrest, workbench, graph)" || note "also running, outside the core: $(echo $extra)"
+extra=$(printf '%s\n' $running | grep -v -e '-db-' -e '-caddy-' -e '-postgrest-' -e '-workbench-' -e '-graph-' -e '-gateway-' || true)
+[ -z "$extra" ] && ok "only the core runs (db, caddy, postgrest, workbench, graph, gateway)" || note "also running, outside the core: $(echo $extra)"
 
 say "Wiring"
 if st=$(sec_status 2>&1); then ok "secrets ($SECRETS): $st"; else bad "secrets ($SECRETS): $st"; fi

@@ -77,7 +77,7 @@ Each of these is small and uses only what is already here:
   admin API is the example). Postgres, nginx, Kubernetes and systemd units are all open.
 - **Fill a slot differently.** Write a filler for the runtime (Docker, Nomad, systemd) or for the secrets
   store, and run `scripts/contract.sh` against it. If it passes, it fits.
-- **Bring an option back.** Prometheus, OpenTelemetry, a model gateway and Backstage are in the map with
+- **Bring an option back.** Prometheus, OpenTelemetry and Backstage are in the map with
   where they fit and the commit to restore them from. Each would give the observer more to read.
 - **Add a domain.** Workbench is a general store. A plugin with its own content types and one extractor
   (`plugins/substrate/` is the example) makes a new kind of thing modellable: a home lab, a research

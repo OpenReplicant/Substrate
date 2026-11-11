@@ -207,6 +207,7 @@ spec:
   system: core
   consumesApis:
   - workbench-api
+  - model-api
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Component
@@ -232,6 +233,39 @@ spec:
   subcomponentOf: claude-code
   consumesApis:
   - workbench-mcp-api
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: model-gateway
+  description: Bifrost v2.3.2 - every model call goes through one gateway with its caller's own key, and the gateway, not
+    the caller, records it (tokens, cost, latency, caller), without content.
+  annotations:
+    morphogen.dev/change: 'scripts/gateway.py
+
+      scripts/trials/model-gateway/**'
+    substrate.dev/basis: deploy/compose.yaml service gateway; scripts/gateway.py (config from .env and streams.yaml, its database
+      and logins, the meter); docs/choices/model-gateway.yaml
+    substrate.dev/candidates: Bifrost v2.3.2 (Apache-2.0), picked; LiteLLM proxy v1.106.4 (MIT outside enterprise/), rejected
+      on the trial (docs/choices/model-gateway.yaml)
+    substrate.dev/evidence: 'Trial 2026-11-11 (scripts/trials/model-gateway/run.py): all ten cases twice. Contract model-api
+      passes. Earlier runs 2026-11-08 (S-34, S-40).'
+    substrate.dev/fill: adopt
+    substrate.dev/fits: 'Between anything that calls a model (the handlers plugin''s model handlers) and the providers: OpenRouter
+      (free models by default), Ollama when OLLAMA_URL is set.'
+    substrate.dev/intent: Count every model call from outside its caller, so a handler's cost per call is measured, never
+      reported (spec section 10, step 18).
+    substrate.dev/observed-as: container:substrate-gateway
+    substrate.dev/step: '18'
+spec:
+  type: service
+  lifecycle: experimental
+  owner: group:operator
+  system: core
+  providesApis:
+  - model-api
+  consumesApis:
+  - database-api
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Component
@@ -759,32 +793,6 @@ spec:
 apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
-  name: model-gateway
-  description: Bifrost - every model call through one gateway, so tokens and cost are measured outside the agent.
-  annotations:
-    substrate.dev/candidates: Bifrost v2.3.2 (Apache-2.0); LiteLLM proxy (MIT core) not tried
-    substrate.dev/evidence: Ran on the owner's machine 2026-11-08. v2.3.2 locks /api and /metrics until an admin account exists
-      (S-34); its data volume kept providers after .env removed them until source_of_truth was set (S-40). Its volume was
-      removed (S-63).
-    substrate.dev/fits: Between Claude Code (and anything else that calls models) and the model providers - Anthropic, OpenRouter,
-      local models.
-    substrate.dev/interface: Claude Code reads ANTHROPIC_BASE_URL (and ANTHROPIC_CUSTOM_HEADERS for the virtual key); nothing
-      in substrate assumes direct access.
-    substrate.dev/restore: a00fb61 - deploy/compose.yaml service bifrost, scripts/render_bifrost.py, scripts/gateway.py, .env.example's
-      gateway block (S-04, S-14, S-34, S-40)
-    substrate.dev/when: Cost must be measured outside the agent (Morphogen judging cost, budgets), or several providers routed
-      behind one key.
-spec:
-  type: service
-  lifecycle: option
-  owner: group:operator
-  system: options
-  providesApis:
-  - model-api
----
-apiVersion: backstage.io/v1alpha1
-kind: Component
-metadata:
   name: remote-judge
   description: Morphogen on another machine, so the changer cannot even reach the judge's host.
   annotations:
@@ -1203,6 +1211,22 @@ spec:
 apiVersion: backstage.io/v1alpha1
 kind: API
 metadata:
+  name: model-api
+  description: One OpenAI-style chat endpoint; a call needs its caller's key; only allowed models; each call kept in the gateway's
+    own record with its caller and the call id it carried, without content; the record read-only to the meter.
+  annotations:
+    morphogen.dev/tests: scripts/contract.sh model-api
+spec:
+  type: contract
+  lifecycle: experimental
+  owner: group:operator
+  system: core
+  definition: 'POST /v1/chat/completions with x-bf-vk (the caller''s virtual key) and x-wb-call (the call id); the record:
+    database gateway, table logs, read as gateway_meter.'
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
   name: repository-api
   description: 'A git repository Morphogen can judge in: a resolvable HEAD, history, its own git directory.'
   annotations:
@@ -1327,18 +1351,6 @@ spec:
   owner: group:operator
   system: options
   definition: GET /api/v1/query - queries in the observer's queries.yaml.
----
-apiVersion: backstage.io/v1alpha1
-kind: API
-metadata:
-  name: model-api
-  description: An Anthropic-compatible endpoint Claude Code can be pointed at (ANTHROPIC_BASE_URL).
-spec:
-  type: http
-  lifecycle: option
-  owner: group:operator
-  system: options
-  definition: 'POST /anthropic/v1/messages (Bifrost: with a virtual key in x-bf-vk).'
 ---
 apiVersion: backstage.io/v1alpha1
 kind: API

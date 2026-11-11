@@ -17,4 +17,6 @@ exec "$ROOT/bin/in-tools" env PYTHONPATH="$ROOT/workbench" \
   WORKBENCH_SERVER_PASSWORD="$(env_value WORKBENCH_SERVER_PASSWORD)" \
   WORKBENCH_READER_PASSWORD="$(env_value WORKBENCH_READER_PASSWORD)" \
   WB_PLUGINS_DIR="$ROOT/plugins" WB_HANDLERS_ROOT="$ROOT" \
+  WB_HANDLERS_GATEWAY_URL="http://127.0.0.1:$(env_value GATEWAY_PORT)" WB_HANDLERS_GATEWAY_SECRET="$(env_value GATEWAY_KEY_SECRET)" \
+  WB_HANDLERS_METER_URL="postgresql://gateway_meter:$(env_value GATEWAY_METER_PASSWORD)@127.0.0.1:$(env_value DB_PORT)/gateway" \
   python3 -m workbench "$@"

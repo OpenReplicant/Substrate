@@ -1,0 +1,76 @@
+# A choice made from the catalogs (spec section 5, build step 18): the small and the large model handlers.
+question: Which free OpenRouter models should be the small and the large model handlers?
+asked_by: owner
+asked_on: "2026-11-11"
+quote: "openrouter free API key limited to $0.01 and huggingface... quantized models for ollama (select based on scoreboards)"
+need:
+  - free on OpenRouter (the owner's key is capped at $0.01), listed in its /api/v1/models with a prompt price of 0
+  - scored on a public leaderboard, so the pick rests on a number someone else measured
+  - the small one fast (no long reasoning before its first token); the large one the best scored of those listed
+  - answers a short JSON decision (one of a few labels, a confidence, a reason) through the gateway
+searched:
+  - "openrouter: GET https://openrouter.ai/api/v1/models, 2026-11-11: 466 models, 13 ending in :free"
+  - "leaderboard: https://artificialanalysis.ai/leaderboards/models (Artificial Analysis Intelligence Index; no as-of date shown), read 2026-11-11"
+  - "leaderboard: https://arena.ai/leaderboard/text (Text Arena: Overall, page dated Nov 9, 2026), read to rank 152, 2026-11-11"
+trial:
+  script: scripts/trials/model-gateway/run.py (the gateway's trial makes the real call); the handlers' own check makes the rest
+  run_on: "2026-11-11"
+verdict: >-
+  No Morphogen verdict yet: the pick rests on the two leaderboards. Which handler is better on substrate's own inputs
+  is the question the ladder's scoring answers over time (each answer scored against the person's decision).
+pick: "small: google/gemma-4-31b-it:free; large: nvidia/nemotron-3.5-super-vl:free"
+reason: >-
+  Chosen first by the leaderboards (small: Gemma 4 26B A4B, Arena 1437; large: Inkling 2 Small, AA index 31), then
+  changed by what they did through the gateway on 2026-11-11: Inkling 2 Small refused every call (403, "only
+  available on agentic harnesses"), and Gemma 4 26B A4B was rate-limited upstream (429 from Google AI Studio) on all
+  14 calls and again on a probe. So each rank went to its runner-up. Small: Gemma 4 31B, Arena score 1452±7 (rank
+  78, the best Arena score of the free models), which answered the probe's gap in 1.8 s with 31 tokens. Large:
+  Nemotron 3.5 Super VL (120B, 12B active), AA Intelligence Index 14 (the next after Inkling 2 Small), Arena
+  1415±10 (preliminary), which answered in 25.5 s after reasoning (298 tokens). Free models can be withdrawn or
+  limited by their providers at any time; a gateway error is retried on the next run, and the ladder's scores say
+  which is right more often. Both are the owner's to change (step 18's notes).
+probe: >-
+  2026-11-11, one gap through the gateway with the small handler's key: gemma-4-31b 200 (1.8 s), gemma-4-26b-a4b 429,
+  nemotron-3.5-super-vl 200 (25.5 s), nemotron-3-ultra 200 with an empty answer, nemotron-3.5-lightning 200 (16.2 s,
+  891 tokens), ernie-5.5-flash 200 (2.9 s), lfm-2.5-2.6b 200 (2.0 s), dots-3-note 200 (24.7 s); all said declined.
+candidates:
+  - name: gemma-4-26b-a4b
+    title: Gemma 4 26B A4B (google/gemma-4-26b-a4b-it:free)
+    registry: openrouter
+    outcome: rejected
+    reason: "Picked first by the leaderboards; rate-limited upstream (429, Google AI Studio) on every call made on 2026-11-11. The pick again if its free tier becomes reachable."
+    shortlisted: true
+    fit: "Arena 1437±7, rank 101; AA index not shown; non-reasoning first token 1.50 s; Apache 2.0 (Arena)"
+  - name: inkling-2-small
+    title: Inkling 2 Small (thinkingmachines/inkling-2-small:free)
+    registry: openrouter
+    outcome: rejected
+    reason: "Picked first (the best AA index); its free tier refuses calls from outside agentic harnesses (403 on all 14 calls on 2026-11-11)."
+    shortlisted: true
+    fit: "AA Intelligence Index 31; Arena 1412±12 (preliminary), rank 151; first answer token 46.89 s; proprietary"
+  - name: gemma-4-31b
+    title: Gemma 4 31B (google/gemma-4-31b-it:free)
+    registry: openrouter
+    outcome: picked
+    shortlisted: true
+    fit: "Arena 1452±7, rank 78, the best Arena score of the free models; AA index 4; answered the probe in 1.8 s"
+  - name: nemotron-3-5-super-vl
+    title: Nemotron 3.5 Super VL (nvidia/nemotron-3.5-super-vl:free)
+    registry: openrouter
+    outcome: picked
+    shortlisted: true
+    fit: "AA index 14 (second of the free models); Arena 1415±10 (preliminary); answered the probe in 25.5 s"
+  - name: nemotron-3-ultra
+    title: Nemotron 3 Ultra 550B A55B (nvidia/nemotron-3-ultra-550b-a55b:free)
+    registry: openrouter
+    outcome: rejected
+    shortlisted: false
+    fit: "AA index 12; Arena 1426±7"
+    reason: "Largest by parameters, scored below the picks on both boards."
+  - name: unscored
+    title: "ERNIE 5.5 Flash, LFM 3 1.7B, LFM 2.5 2.6B, Flint 1.0, Dots 3 Note, Nemotron 3.5 Lightning, North Mini Code, Nemotron 3 Nano Omni"
+    registry: openrouter
+    outcome: rejected
+    shortlisted: false
+    fit: "free on OpenRouter"
+    reason: "Not scored on either leaderboard where read, or scored low (Lightning 6, North Mini Code 3 on the AA index). LFM 2.5 2.6B answered the gateway trial's real call; it stays the trial's model because it is small and quick."

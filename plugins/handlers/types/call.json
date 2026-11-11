@@ -50,6 +50,14 @@
     "escalate_to": {
       "type": "string",
       "description": "where it escalated to, if it said"
+    },
+    "meta": {
+      "type": "object",
+      "description": "what a tool the handler used reported, e.g. the gateway call id it sent; never its cost"
+    },
+    "metered": {
+      "type": "boolean",
+      "description": "for a model call: whether the gateway's own record of it was found (its cost is then the gateway's)"
     }
   }
 }

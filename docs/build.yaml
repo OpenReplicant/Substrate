@@ -247,23 +247,25 @@ steps:
       plugins/handlers/tests (17 and 22 checks), workbench/tests/test_w3.py (as_author).
 
   - id: 18
+    status: done
+    done_on: 2026-11-11
     title: Model calls through one gateway, counted outside the candidate
     spec: "5, 8, 10"
-    where: substrate (the gateway back as a slot with a contract test; model handlers), Morphogen upstream (counting calls in judged runs)
+    where: substrate (the gateway in core with a contract test; model handlers in the handlers plugin, metered by the gateway)
     after: [17]
-    status: todo
     needs_owner: true
     check: >-
       a model gateway is picked through the research skill (Bifrost v2.3.2 is the option on the map, restorable
       from a00fb61; re-check versions and licence) and fills a model-gateway slot whose contract test it passes;
-      a small and a large model are handlers behind it, each with its cost per call measured by the gateway; in a
-      judged run every model call is counted from outside the candidate, and a red-team test in Morphogen shows a
-      handler that calls a model around the gateway fails the run (upstream, red team first); the map's option
-      becomes a component; scripts/check.sh passes
+      a small and a large model are handlers behind it, each with its cost per call measured by the gateway (the
+      gateway's own record, joined to each call, never the handler's report); a model handler's call the gateway
+      has no record of, or records under another caller, is refused; the map's option becomes a component;
+      scripts/check.sh passes
     notes: >-
-      Added 2026-11-10 (S-74). The owner's: which small and large models (a local one for personal data later),
-      and a monthly ceiling for model calls and the idle tier. The change to how Morphogen counts is the judge's,
-      so it goes upstream by PR the owner reviews.
+      Added 2026-11-10 (S-74). Split on 2026-11-11 (S-77; owner: "go ahead with the gateway", after the proposal to
+      do the gateway now and Morphogen's counting after its phase 7): counting model calls inside Morphogen's
+      judged runs, with its red-team test, is step 22. The owner's: which models (docs/choices/models.yaml picks
+      from leaderboards, then from what answered) and a monthly ceiling (the OpenRouter key's own cap holds now).
 
   - id: 19
     title: A game stream, and one judged compile-down
@@ -314,6 +316,22 @@ steps:
       Added 2026-11-10 (S-74). The owner's: which personal streams first (email, calendar, messages, files,
       notes). Gaps between what the person says they want and what they do go to review, and the person decides
       which side changes.
+
+  - id: 22
+    title: Model calls counted inside Morphogen's judged runs
+    spec: "7, 10"
+    where: Morphogen upstream (PLAN.md phase 7c), then substrate (a judged run of a model handler)
+    after: [18]
+    status: blocked
+    waiting_on: "Morphogen PR #75 (PLAN phase 7) reviewed by the owner, then phase 7c built upstream, red team first"
+    needs_owner: true
+    check: >-
+      in a judged run the candidate reaches models only through the gateway the operator names (the sandbox's
+      network allows that one address); calls, tokens and cost per round come from the gateway's own record as
+      measured metrics; a red-team test in Morphogen shows a candidate that calls a model around the gateway, or
+      reports its own token counts, cannot move a verdict; one model handler's change in substrate is judged that way
+    notes: >-
+      Split from step 18 on 2026-11-11 (S-77). A change to the judge: upstream, by a pull request the owner reviews.
 
   - id: 10
     title: A business vocabulary, adopted

@@ -58,6 +58,10 @@
     "correct": {
       "type": "integer",
       "description": "scored answers that matched the outcome"
+    },
+    "config": {
+      "type": "object",
+      "description": "the handler's own settings from the streams file (a model handler: model, answers, sure_at, max_tokens)"
     }
   }
 }

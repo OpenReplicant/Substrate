@@ -13,6 +13,23 @@ streams:
       precedent:
         kind: rule
         description: what a person decided before on gaps of the same kind (undeclared:volume:*, say)
+      # two models through the gateway (S-77; docs/choices/models.yaml): each sees the gap and the earlier
+      # decisions, never the outcome, and answers only with JSON; the gateway counts every call (spec step 18)
+      small-model:
+        kind: model
+        entry: model
+        description: a small free model through the gateway
+        model: openrouter/google/gemma-4-31b-it:free
+        answers: [approved, declined]
+        sure_at: 0.8
+      large-model:
+        kind: model
+        entry: model
+        description: a large free model through the gateway
+        model: openrouter/nvidia/nemotron-3.5-super-vl:free
+        answers: [approved, declined]
+        sure_at: 0.8
+        max_tokens: 4000
       review-lane:
         kind: person
         description: the owner, or an agent the owner delegated to, deciding in Workbench's review lane

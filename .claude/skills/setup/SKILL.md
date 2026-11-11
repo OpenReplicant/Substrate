@@ -1,6 +1,6 @@
 ---
 name: setup
-description: Bring the substrate up on this machine and wire it - the tools container, the stack (Postgres, PostgREST, the Workbench server, Caddy), Workbench's schema and substrate's plugin, the owner's account, and Claude Code's MCP connections (Workbench, Morphogen). Use when the owner asks to set up, start, restart or repair the stack, or when scripts/check.sh fails.
+description: Bring the substrate up on this machine and wire it - the tools container, the stack (Postgres, PostgREST, the Workbench server, the model gateway, Caddy), Workbench's schema and substrate's plugin, the owner's account, and Claude Code's MCP connections (Workbench, Morphogen). Use when the owner asks to set up, start, restart or repair the stack, or when scripts/check.sh fails.
 ---
 
 # Set up the substrate
@@ -9,7 +9,7 @@ Work through the steps in order. Each ends with a check; do not start the next u
 has decided to skip it. Tell the owner, in a line, what each step did. Use the container engine set in
 `.env` (`CONTAINER_ENGINE`, podman by default).
 
-The stack is the core only (S-41, S-57): Postgres (`deploy/postgres`), PostgREST, the Workbench server and Caddy
+The stack is the core only (S-41, S-57, S-77): Postgres (`deploy/postgres`), PostgREST, the Workbench server, the model gateway (Bifrost) and Caddy
 at http://127.0.0.1:8080, plus the `substrate-tools` container. Anything else is an option on the
 map, system `options`; each entry says how to bring it back. Do not set one up here unless a
 build step needs it.

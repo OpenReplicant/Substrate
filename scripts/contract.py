@@ -20,6 +20,7 @@ import socket
 import subprocess
 import sys
 import tempfile
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -31,7 +32,7 @@ OUT = ROOT / ".state" / "contracts"
 CURRENT = {"runtime-api": "compose", "secrets-api": "env", "workbench-api": "postgrest", "workbench-mcp-api": "workbench-server",
            "workbench-server-api": "workbench-server", "graph-api": "ontop", "judge-api": "morphogen",
            "database-api": "postgres", "tools-api": "substrate-tools", "sandbox-api": "podman", "repository-api": "git",
-           "evidence-api": "morphogen-evidence"}
+           "evidence-api": "morphogen-evidence", "model-api": "bifrost"}
 
 
 class Run:
@@ -302,10 +303,64 @@ def evidence_api(r: Run):
         r.check("an independent reader verifies the same chain", False, e)
 
 
+def model_api(r: Run):
+    """The model gateway (S-77): one OpenAI-style endpoint; a call needs a caller's key; only allowed models; every
+    call kept in the gateway's own record with its caller and the call id it carried, without its content; the
+    record readable, not writable, by the meter's login."""
+    sys.path.insert(0, str(ROOT / "scripts"))
+    import gateway as g
+    env = g.settings()
+    port = sh("env_value GATEWAY_PORT")[1].strip() or "8090"
+    url = f"http://127.0.0.1:{port}/v1/chat/completions"
+    callers = g.callers()
+    r.check("the map's model handlers each have a caller (streams.yaml)", callers, callers)
+    caller = callers[0]
+    key = g.caller_key(env["GATEWAY_KEY_SECRET"], caller)
+    marker = "probe-" + secrets.token_hex(6)
+
+    def call(model, key, cid):
+        body = json.dumps({"model": model, "messages": [{"role": "user", "content": f"Say ok. {marker}"}], "max_tokens": 20}).encode()
+        headers = {"Content-Type": "application/json", "x-wb-call": cid, **({"x-bf-vk": key} if key else {})}
+        try:
+            with urllib.request.urlopen(urllib.request.Request(url, body, headers), timeout=120) as resp:
+                return resp.status, json.loads(resp.read() or b"{}")
+        except urllib.error.HTTPError as e:
+            return e.code, js(e.read().decode(errors="replace")) or {}
+
+    ids = {k: f"contract-{k}-{secrets.token_hex(4)}" for k in ("unkeyed", "stranger", "paid", "free")}
+    code, _ = call("openrouter/google/gemma-4-26b-a4b-it:free", None, ids["unkeyed"])
+    r.check("a call without a key is refused", code == 401, code)
+    code, _ = call("openrouter/google/gemma-4-26b-a4b-it:free", "sk-bf-" + secrets.token_hex(20), ids["stranger"])
+    r.check("a key the gateway did not issue is refused", code in (401, 403), code)
+    code, out = call("openrouter/openai/gpt-4o", key, ids["paid"])
+    r.check("a model outside the allowed ones (free only, by default) is refused", code in (400, 403), (code, str(out)[:160]))
+    code, out = call("openrouter/google/gemma-4-26b-a4b-it:free", key, ids["free"])
+    upstream = code == 429 and "upstream" in json.dumps(out).lower()
+    r.check("an allowed model answers through it (or its provider's own rate limit comes back as such)", code == 200 or upstream, (code, str(out)[:160]))
+
+    seen = {"rows": {}, "writable": None}
+    for _ in range(15):     # the gateway writes its log in batches
+        p = subprocess.run([str(ROOT / "bin/in-tools"), "python3", str(ROOT / "scripts/gateway.py"), "meter", *ids.values()],
+                           capture_output=True, text=True, timeout=60)
+        seen = js(p.stdout) or seen
+        if ids["free"] in seen["rows"] and ids["paid"] in seen["rows"]:
+            break
+        time.sleep(2)
+    rows = seen["rows"]
+    r.check("the gateway keeps its own record of each keyed call, with the call id it carried",
+            ids["free"] in rows and ids["paid"] in rows, sorted(rows) or p.stderr[-200:])
+    r.check("the record says whose call it was", rows and all(rows[i]["caller"] == caller for i in (ids["free"], ids["paid"]) if i in rows),
+            {k: v["caller"] for k, v in rows.items()})
+    r.check("the record has the call's time", (rows.get(ids["free"]) or {}).get("latency") is not None, rows.get(ids["free"]))
+    r.check("no prompt or answer is kept", rows and not any(marker in v["content"] for v in rows.values()), "the probe's text is in the log")
+    wrote = seen["writable"] is not False
+    r.check("the meter's login can read the record and not change it", not wrote, "gateway_meter may delete from logs")
+
+
 TESTS = {"runtime-api": runtime, "secrets-api": secrets_api, "workbench-api": workbench_api, "workbench-mcp-api": workbench_mcp,
          "workbench-server-api": workbench_server, "graph-api": graph_api, "judge-api": judge_api,
          "database-api": database_api, "tools-api": tools_api, "sandbox-api": sandbox_api, "repository-api": repository_api,
-         "evidence-api": evidence_api}
+         "evidence-api": evidence_api, "model-api": model_api}
 
 
 def one(interface: str, filler: str) -> bool:

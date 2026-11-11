@@ -1,5 +1,5 @@
 #!/bin/sh
-# Bring up the stack (S-57): Postgres, PostgREST, the Workbench server, Caddy; then Workbench's schema, substrate's
+# Bring up the stack (S-57, S-77): Postgres, PostgREST, the Workbench server, the model gateway, Caddy; then Workbench's schema, substrate's
 # plugin and its extractors, the claude-code agent's account, and this project's Claude Code wiring.
 #
 #   scripts/up.sh
@@ -8,6 +8,8 @@ set -eu
 
 "$ROOT/scripts/settings.sh"
 "$ROOT/scripts/build.sh"
+say "The model gateway's config (scripts/gateway.py: providers from .env, a key per model handler in streams.yaml)"
+python3 "$ROOT/scripts/gateway.py" render
 
 say "Services ($RUNTIME)"
 rt_up
@@ -20,6 +22,7 @@ until "$ROOT/scripts/workbench.sh" migrate >/dev/null 2>&1; do
   sleep 2
 done
 echo "  migrated"
+"$ROOT/bin/in-tools" python3 "$ROOT/scripts/gateway.py" init   # its database and logins; it retries until they exist
 for p in handlers substrate; do   # handlers: streams and ranked handlers (spec section 10); substrate: its own types
   "$ROOT/scripts/workbench.sh" plugin load "$ROOT/plugins/$p" | python3 -c 'import json, sys; d = json.load(sys.stdin); print("  plugin", d["plugin"], d["version"], "types:", ", ".join(t["type"] for t in d["types"]))'
 done

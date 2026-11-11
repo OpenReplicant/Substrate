@@ -31,12 +31,14 @@ class Answer:
     value: Any
     confidence: float | None = None
     note: str | None = None
+    meta: dict | None = None       # what a tool it used reported (a gateway's call id); never its cost
 
 
 @dataclass
 class Escalate:
     reason: str
     to: str | None = None
+    meta: dict | None = None
 
 
 @dataclass
@@ -82,6 +84,7 @@ class Call:
     seconds: float = 0.0
     parent: int | None = None      # index of the call that asked for this one
     note: str | None = None
+    meta: dict | None = None
 
 
 def check(result) -> str | None:
@@ -142,9 +145,9 @@ class Runner:
             call = Call(slug, "refused", reason=problem, seconds=seconds, parent=parent)
         elif isinstance(result, Answer):
             call = Call(slug, "answer", value=result.value, confidence=float(result.confidence), seconds=seconds,
-                        parent=parent, note=result.note)
+                        parent=parent, note=result.note, meta=result.meta)
         elif isinstance(result, Escalate):
-            call = Call(slug, "escalate", reason=result.reason, to=result.to, seconds=seconds, parent=parent)
+            call = Call(slug, "escalate", reason=result.reason, to=result.to, seconds=seconds, parent=parent, meta=result.meta)
         else:
             call = Call(slug, "waiting" if isinstance(result, Waiting) else "dropped", reason=result.reason,
                         seconds=seconds, parent=parent)
