@@ -1,0 +1,17 @@
+# The NVIDIA GPU for Ollama (S-84), added to deploy/compose.yaml when .env sets OLLAMA_GPU=nvidia (scripts/lib.sh).
+# The device nodes and the driver's own libraries are passed in directly, rather than through the machine's CDI
+# spec: Podman 4.9 cannot read the spec the NVIDIA toolkit writes (cdiVersion 0.7.0), and this needs no root.
+# The libraries are bound by their stable names (libcuda.so.1 and so on, symlinks the driver keeps current), so a
+# driver upgrade needs nothing here; Ollama's image carries the CUDA runtime itself.
+services:
+  ollama:
+    devices:
+      - /dev/nvidia0
+      - /dev/nvidiactl
+      - /dev/nvidia-uvm
+      - /dev/nvidia-uvm-tools
+    volumes:
+      - ${NVIDIA_LIB_DIR:-/usr/lib/x86_64-linux-gnu}/libcuda.so.1:/usr/lib/x86_64-linux-gnu/libcuda.so.1:ro
+      - ${NVIDIA_LIB_DIR:-/usr/lib/x86_64-linux-gnu}/libcuda.so.1:/usr/lib/x86_64-linux-gnu/libcuda.so:ro
+      - ${NVIDIA_LIB_DIR:-/usr/lib/x86_64-linux-gnu}/libnvidia-ml.so.1:/usr/lib/x86_64-linux-gnu/libnvidia-ml.so.1:ro
+      - ${NVIDIA_LIB_DIR:-/usr/lib/x86_64-linux-gnu}/libnvidia-ptxjitcompiler.so.1:/usr/lib/x86_64-linux-gnu/libnvidia-ptxjitcompiler.so.1:ro

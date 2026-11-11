@@ -128,7 +128,7 @@ services:
 
   # Local models (spec steps 21 and 24, S-83; Ollama, MIT): embeddings for recall now, a person's models later. Reached
   # only through the gateway (OLLAMA_URL=http://ollama:11434), so every call is counted and nothing personal leaves
-  # this machine. CPU for now; the GPU when Podman can read the machine's NVIDIA device spec (S-83).
+  # this machine. On the CPU, or a GPU when .env sets OLLAMA_GPU (deploy/compose.nvidia.yaml, S-84).
   ollama:
     image: ${OLLAMA_IMAGE:-docker.io/ollama/ollama:0.40.12}
     cap_drop: [ALL]

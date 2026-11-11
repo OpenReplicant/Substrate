@@ -56,6 +56,18 @@ note "ladder: $ladder"
 vecs=$(curl -s "http://127.0.0.1:8080/api/rpc/recall" -H 'Content-Type: application/json' -H "Authorization: Bearer $("$ROOT/scripts/workbench.sh" token claude-code --hours 0.02 2>/dev/null)" \
   -d '{"q": "model gateway", "lim": 5, "depth": 2}' | python3 -c 'import json, sys; d = json.load(sys.stdin); print(len(d), "hits for \"model gateway\" by words and the graph")' 2>/dev/null || echo "?")
 note "recall: $vecs (scripts/recall.sh QUERY adds meaning)"
+# where the local model server computes: its last device report (S-84)
+dev=$(rt_logs ollama 2>/dev/null | grep 'msg="inference compute"' | tail -1 | sed -n 's/.*library=\([^ ]*\).*description="\([^"]*\)".*total="\([^"]*\)".*/\1 on \2, \3/p')
+# or, once its start is out of the log's tail, what share of its loaded models sits in GPU memory
+[ -n "$dev" ] || dev=$(curl -fsS --max-time 5 "http://127.0.0.1:$(env_value OLLAMA_PORT)/api/ps" 2>/dev/null | python3 -c '
+import json, sys
+ms = json.load(sys.stdin).get("models") or []
+size, vram = sum(m.get("size", 0) for m in ms), sum(m.get("size_vram", 0) for m in ms)
+print("%d%% of %d loaded model(s) in GPU memory" % (round(100 * vram / size), len(ms)) if size and vram else "")' 2>/dev/null)
+gpu=$(env_value OLLAMA_GPU)
+if [ -n "$dev" ]; then note "local models: $dev${gpu:+ (OLLAMA_GPU=$gpu)}"
+elif [ -n "$gpu" ]; then note "local models: OLLAMA_GPU=$gpu, but Ollama reported no GPU (scripts/logs.sh ollama)"
+else note "local models: on the CPU (OLLAMA_GPU is empty)"; fi
 
 if [ -f "$ROOT/docs/build.yaml" ]; then
   note "spec: $(python3 "$ROOT/scripts/spec.py" next --short 2>&1)"

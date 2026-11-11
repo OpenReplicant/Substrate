@@ -241,10 +241,11 @@ metadata:
   description: 'Ollama 0.40.12 - models that run on this machine: the embedding model for recall now, a person''s models later;
     reached only through the gateway.'
   annotations:
-    substrate.dev/basis: deploy/compose.yaml service ollama (volume substrate_ollama-models); scripts/recall.sh pulls the
-      model
-    substrate.dev/evidence: 'CPU for now: Podman 4.9.3 cannot parse this machine''s CDI spec (cdiVersion 0.7.0, additionalGids),
-      so the GTX 1070 is not passed in (S-83).'
+    substrate.dev/basis: deploy/compose.yaml service ollama (volume substrate_ollama-models), with deploy/compose.nvidia.yaml
+      when .env sets OLLAMA_GPU=nvidia; scripts/recall.sh pulls the model
+    substrate.dev/evidence: 'On the GTX 1070 (S-84): the device nodes and the driver''s libraries passed in directly, since
+      Podman 4.9.3 cannot parse the machine''s CDI spec (cdiVersion 0.7.0); all 488 items embedded in 21 s, against about
+      a minute for 422 on the CPU.'
     substrate.dev/fill: adopt
     substrate.dev/intent: Run models where the data is, so nothing personal leaves this machine (docs/assistant/PRIVACY.md
       P3).

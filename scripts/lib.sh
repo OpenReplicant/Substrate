@@ -56,7 +56,15 @@ SECRETS=${SECRETS:-env}
 
 compose() {
   secrets_export || return 1
-  "$ENGINE" compose -f "$ROOT/deploy/compose.yaml" --env-file "$ENV_FILE" "$@"
+  # a GPU for Ollama, when this machine has one and .env says so (S-84): deploy/compose.<OLLAMA_GPU>.yaml as well
+  _gpu=$(env_value OLLAMA_GPU)
+  if [ -z "$_gpu" ]; then
+    "$ENGINE" compose -f "$ROOT/deploy/compose.yaml" --env-file "$ENV_FILE" "$@"
+  elif [ -f "$ROOT/deploy/compose.$_gpu.yaml" ]; then
+    "$ENGINE" compose -f "$ROOT/deploy/compose.yaml" -f "$ROOT/deploy/compose.$_gpu.yaml" --env-file "$ENV_FILE" "$@"
+  else
+    echo "OLLAMA_GPU '$_gpu' has no deploy/compose.$_gpu.yaml" >&2; return 1
+  fi
 }
 
 say() { printf '\n== %s\n' "$*"; }
