@@ -15,6 +15,15 @@ streams:
         description: what a person decided before on gaps of the same kind (undeclared:volume:*, say)
       # two models through the gateway (S-77; docs/choices/models.yaml): each sees the gap and the earlier
       # decisions, never the outcome, and answers only with JSON; the gateway counts every call (spec step 18)
+      # the cheapest model rank: a local model on this machine's GPU, through the gateway (S-87;
+      # docs/choices/local-model.yaml); its prompt is the cell Morphogen judges (morphogen.yaml)
+      local-model:
+        kind: model
+        entry: model
+        description: a small local model on this machine's GPU, through the gateway
+        model: ollama/granite4:3b
+        answers: [approved, declined]
+        sure_at: 0.8
       small-model:
         kind: model
         entry: model

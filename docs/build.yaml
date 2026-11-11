@@ -356,12 +356,11 @@ steps:
       which side changes.
 
   - id: 22
+    status: doing
     title: Model calls counted inside Morphogen's judged runs
     spec: "7, 10"
     where: Morphogen upstream (PLAN.md phase 7c), then substrate (a judged run of a model handler)
     after: [18]
-    status: blocked
-    waiting_on: "Morphogen PLAN phase 7c built upstream, red team first (the plan is on Morphogen's main, #75, merged 2026-11-11)"
     needs_owner: true
     check: >-
       in a judged run the candidate reaches models only through the gateway the operator names (the sandbox's

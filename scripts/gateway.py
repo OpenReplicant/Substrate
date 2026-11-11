@@ -5,6 +5,7 @@
     python3 scripts/gateway.py keys       # the callers that get a key (each model handler in streams.yaml)
     bin/in-tools python3 scripts/gateway.py init   # its database and logins, in the tools container (up.sh runs it)
     bin/in-tools python3 scripts/gateway.py meter CALL_ID...   # what the meter's login sees of these calls (the contract test)
+    bin/in-tools python3 scripts/gateway.py judge-meter open|close RUN_ID   # Morphogen's meter for judged runs (S-87)
 
 Providers are the ones this machine has: OpenRouter when OPENROUTER_API_KEY is set (free models only, unless
 GATEWAY_OPENROUTER_MODELS says otherwise), Ollama when OLLAMA_URL is set. Every call is logged by the gateway in its
@@ -19,8 +20,10 @@ import base64
 import hashlib
 import hmac
 import json
+import re
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 import yaml
@@ -30,7 +33,8 @@ OUT = ROOT / ".state/gateway/config.json"
 
 
 NAMES = ("POSTGRES_PASSWORD", "DB_PORT", "OPENROUTER_API_KEY", "OLLAMA_URL", "GATEWAY_OPENROUTER_MODELS",
-         "GATEWAY_REQUESTS_PER_HOUR", "GATEWAY_DB_PASSWORD", "GATEWAY_METER_PASSWORD", "GATEWAY_KEY_SECRET")
+         "GATEWAY_REQUESTS_PER_HOUR", "GATEWAY_DB_PASSWORD", "GATEWAY_METER_PASSWORD", "GATEWAY_KEY_SECRET",
+         "GATEWAY_PORT", "WORKBENCH_EMBED_MODEL")
 
 
 def settings() -> dict[str, str]:
@@ -46,7 +50,11 @@ def caller_key(secret: str, caller: str) -> str:
 
 
 # Callers that are not handlers, and the only providers each may use (S-83): Workbench's embeddings stay local.
-FIXED = {"workbench:embed": ("ollama",), "contract:model-api": ("openrouter", "ollama")}
+FIXED = {"workbench:embed": ("ollama",), "contract:model-api": ("openrouter", "ollama"),
+         # Morphogen's judged runs (S-87): the one key a judged run is given, by the meter below; local models only,
+         # so a verdict's hundred-odd calls spend no provider's quota and need no hourly cap
+         "judge:morphogen": ("ollama",)}
+JUDGE = "judge:morphogen"
 LOCAL = ("ollama",)
 FIXED_KEYS = {"workbench:embed": "WORKBENCH_EMBED_KEY"}   # read from .env by the gateway, the server and the tools
 
@@ -140,10 +148,61 @@ def meter(env: dict[str, str], ids: list[str]) -> dict:
                      for r in rows}, "writable": writable}
 
 
+def judge_meter(env: dict[str, str], op: str, run_id: str) -> dict:
+    """Morphogen's meter for a judged run (its PLAN.md 7c; morphogen.local.yaml's gateway.meter):
+    `open RUN_ID` gives the run the judge's key, the only one it holds; `close RUN_ID` counts, from the gateway's
+    own record, every call made with that key since the run opened (runs are judged one at a time). In the tools
+    container: it needs psycopg."""
+    state = ROOT / ".state/gateway/judge"
+    if not re.fullmatch(r"[A-Za-z0-9-]{1,64}", run_id):
+        raise SystemExit(f"bad run id {run_id!r}")
+    f = state / run_id
+    if op == "open":
+        state.mkdir(parents=True, exist_ok=True)
+        f.write_text(repr(time.time()))
+        return {"env": {"WB_GATEWAY_KEY": caller_key(env["GATEWAY_KEY_SECRET"], JUDGE)}}
+    if op != "close":
+        raise SystemExit("judge-meter open|close RUN_ID")
+    import psycopg
+    import secrets as _secrets
+    import urllib.request
+    start = float(f.read_text())
+    # the gateway writes its record a few seconds after each call: a marker call of the meter's own, made once the
+    # run is over, under an id the run cannot know, closes the window once it is in the record
+    marker = "judge-meter-" + _secrets.token_hex(12)
+    key = caller_key(env["GATEWAY_KEY_SECRET"], JUDGE)
+    req = urllib.request.Request(f"http://127.0.0.1:{env.get('GATEWAY_PORT') or 8090}/v1/embeddings",
+                                 json.dumps({"model": env.get("WORKBENCH_EMBED_MODEL") or "ollama/qwen3-embedding:0.6b",
+                                             "input": "x"}).encode(),
+                                 {"Content-Type": "application/json", "x-bf-vk": key, "x-wb-call": marker})
+    urllib.request.urlopen(req, timeout=60).read()
+    url = f"postgresql://gateway_meter:{env['GATEWAY_METER_PASSWORD']}@127.0.0.1:{env.get('DB_PORT') or 5432}/gateway"
+    q = """with w as (select timestamp as until from logs where metadata::jsonb->>'x-wb-call' = %s)
+           select count(*), count(*) filter (where status = 'processing'), coalesce(sum(prompt_tokens), 0),
+                  coalesce(sum(completion_tokens), 0), coalesce(sum(cost), 0), count(*) filter (where status = 'success'),
+                  (select count(*) from w)
+             from logs where virtual_key_name = %s and timestamp >= to_timestamp(%s)
+              and timestamp <= coalesce((select until from w), 'infinity')
+              and coalesce(metadata::jsonb->>'x-wb-call', '') <> %s"""
+    with psycopg.connect(url, connect_timeout=5) as c:
+        for _ in range(120):
+            calls, busy, tin, tout, usd, ok, seen = c.execute(q, (marker, JUDGE, start, marker)).fetchone()
+            if seen and not busy:
+                break
+            time.sleep(0.5)
+        else:
+            raise SystemExit("the gateway's record did not show the meter's marker call within a minute")
+    f.unlink(missing_ok=True)
+    return {"calls": calls, "answered": ok, "tokens": int(tin) + int(tout), "tokens_in": int(tin),
+            "tokens_out": int(tout), "cost": float(usd)}
+
+
 def main() -> None:
     cmd = sys.argv[1] if len(sys.argv) > 1 else ""
     if cmd == "meter":
         print(json.dumps(meter(settings(), sys.argv[2:])))
+    elif cmd == "judge-meter" and len(sys.argv) == 4:
+        print(json.dumps(judge_meter(settings(), sys.argv[2], sys.argv[3])))
     elif cmd == "init":
         init(settings())
     elif cmd == "keys":

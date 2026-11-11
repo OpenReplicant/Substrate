@@ -323,6 +323,26 @@ spec:
 apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
+  name: model-handler
+  description: 'A model handler: what it shows a model of each input, and how it reads the reply (handlers_plugin.model_handler).
+    The first part judged by Morphogen on held-out cases, its model calls counted at the gateway.'
+  annotations:
+    substrate.dev/basis: plugins/handlers/handlers_plugin.py (model_handler, Gateway); plugins/handlers/bench (run.py, score.py);
+      morphogen.yaml cell component:model-handler
+    substrate.dev/fill: build
+    substrate.dev/intent: 'Answer each input as well as before for fewer tokens, on evidence the handler cannot reach: held-out
+      decided cases, calls counted by the gateway (spec step 22).'
+    substrate.dev/step: '22'
+spec:
+  type: library
+  lifecycle: experimental
+  owner: group:agents
+  system: core
+  subcomponentOf: handlers-plugin
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
   name: morphogen
   description: The judge - rules from the base, outside measurement, held-out cases, A/A checks, the red team, the evidence
     log.

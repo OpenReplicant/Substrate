@@ -1,0 +1,89 @@
+# A choice made from the catalogs (spec section 5, build step 22): a local chat model for model handlers.
+question: Which local model should be the model handlers' cheapest model rank, on this machine's GPU?
+asked_by: owner
+asked_on: "2026-11-11"
+quote: "Hugging Face quantized models for Ollama should be selected based on scoreboards ... you can run embedding models locally on my CPU or GPU"
+need:
+  - runs in Ollama on this machine (a GTX 1070, 8 GB, beside the 1.2 GB embedding model), reached only through the gateway, so a person's text never leaves it (docs/assistant/PRIVACY.md P3) and a judged run spends no provider's quota
+  - follows a JSON-only instruction (one object with an answer, a confidence and a reason) in a second or two
+  - a public score to shortlist on (instruction following: IFEval; structured output: BFCL), then readable answers on substrate's own inputs
+  - a permissive or LGPL licence; a release at least two weeks old, its Ollama tag pinned exactly
+searched:
+  - "ollama: https://ollama.com/search?o=newest and the tags pages of qwen3, qwen3.5, granite4, ministral-3, phi4-mini, lfm3, d3, 2026-11-11"
+  - "huggingface: model cards of Qwen3.5-4B, Qwen3.5-2B, Granite 4.0 Micro, Qwen3-4B-Instruct-2507, Ministral-3-3B-Instruct-2512, 2026-11-11 (Artificial Analysis' small-model page listed one model; LMArena and the Open LLM Leaderboard were not reached, so the scores are the vendors' own)"
+trial:
+  script: scripts/trials/local-model/run.py
+  run_on: "2026-11-11"
+  cases: >-
+    the 17 drift gaps that were withdrawn (no outcome, so no held-out case is read), each asked as the drift-gaps
+    model handler asks (handlers_plugin.model_handler), through the gateway on the GTX 1070, after one warm-up call
+  expected: every reply a readable answer, in about a second
+  results: .state/trials/local-model/results.json
+pick: granite4-3b
+reason: >-
+  Every reply readable (17 of 17), the fastest (median 0.98 s a call) and the fewest tokens (335 a call), at 2.1 GB.
+  Qwen3-4B-Instruct-2507 was as readable, 40% slower; Qwen3.5-4B, the best on its card, spent its 400 tokens
+  thinking and answered none, since the gateway's OpenAI-style endpoint gives no way to turn its thinking off.
+candidates:
+  - name: granite4-3b
+    title: Granite 4.0 Micro (ollama granite4:3b)
+    registry: huggingface
+    repository: ibm-granite/granite-4.0-micro
+    tasks: [text-generation]
+    model: ollama/granite4:3b
+    licence: Apache-2.0
+    scores: {ifeval: {mean: 82.31, instruct_strict: 85.5, prompt_strict: 79.12, source: "huggingface.co/ibm-granite/granite-4.0-micro"}, bfcl-v3: {overall: 59.98, source: "huggingface.co/ibm-granite/granite-4.0-micro"}}
+    outcome: picked
+    shortlisted: true
+    fit: "3B dense, 2.1 GB (Q4), released 2025-10-02; Apache-2.0 (model card)"
+    trial: "17/17 readable; median 0.98 s; 335 tokens a call"
+  - name: qwen3-4b-instruct-2507
+    title: Qwen3-4B-Instruct-2507 (ollama qwen3:4b-instruct-2507-q4_K_M)
+    registry: huggingface
+    repository: QwenLM/Qwen3
+    tasks: [text-generation]
+    model: ollama/qwen3:4b-instruct-2507-q4_K_M
+    licence: Apache-2.0
+    scores: {ifeval: {score: 83.4, source: "huggingface.co/Qwen/Qwen3-4B-Instruct-2507"}, bfcl-v3: {overall: 61.9, source: "huggingface.co/Qwen/Qwen3-4B-Instruct-2507"}}
+    outcome: rejected
+    shortlisted: true
+    fit: "4B, 2.5 GB (Q4_K_M), non-thinking; Apache-2.0"
+    trial: "17/17 readable; median 1.41 s; 378 tokens a call"
+    reason: "As readable as Granite, slower and wordier. The second rank to try if Granite's answers prove poor."
+  - name: qwen3-5-4b
+    title: Qwen3.5-4B (ollama qwen3.5:4b-q4_K_M)
+    registry: huggingface
+    repository: QwenLM/Qwen3.5
+    tasks: [text-generation]
+    model: ollama/qwen3.5:4b-q4_K_M
+    licence: Apache-2.0
+    scores: {ifeval: {score: 89.8, source: "huggingface.co/Qwen/Qwen3.5-4B (mode not stated)"}, bfcl-v4: {overall: 50.3, source: "huggingface.co/Qwen/Qwen3.5-4B"}}
+    outcome: rejected
+    shortlisted: true
+    fit: "4B, 3.3 GB with a vision projector, thinking by default; Apache-2.0"
+    trial: "0/17 readable: each reply's 400 tokens spent thinking; median 10.25 s"
+    reason: "Thinks by default, and the gateway's chat endpoint passes no switch to stop it. The pick to try again if Bifrost passes Ollama's think: false."
+  - name: ministral-3-3b
+    title: Ministral 3 3B Instruct 2512
+    registry: huggingface
+    tasks: [text-generation]
+    licence: Apache-2.0
+    scores: {arena-hard: {score: 0.305, source: "huggingface.co/mistralai/Ministral-3-3B-Instruct-2512"}}
+    outcome: rejected
+    shortlisted: false
+    reason: "Its card gives no instruction-following score to shortlist on beside the others."
+  - name: lfm3-1-7b
+    title: LFM3 1.7B
+    registry: ollama
+    tasks: [text-generation]
+    outcome: rejected
+    shortlisted: false
+    reason: "A week old, and its LFM Open License v1.0 is a custom licence (ollama.com/library/lfm3)."
+  - name: d3
+    title: d3 (a decision model)
+    registry: ollama
+    tasks: [text-classification]
+    licence: Apache-2.0
+    outcome: rejected
+    shortlisted: false
+    reason: "Made for yes-or-no answers, but released within the last two weeks and served on its own API rather than chat; the one to look at again after 2026-11-25."

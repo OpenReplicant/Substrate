@@ -2,3 +2,21 @@
 # Cells gain `change`, `run`, `better` and `tests` (as morphogen.dev/* annotations in catalog-info.yaml,
 # or here by ref) as each part gets a measure; until then `morphogen structure check` maps the whole.
 backstage: catalog-info.yaml
+
+# The first measured cell (spec step 22, S-87): a model handler's prompt, judged on the drift-gaps stream's decided
+# gaps (held out, outside the repository: scripts/judged.py drift-gaps), with every model call counted at the
+# gateway by the operator's meter (scripts/gateway.py judge-meter; morphogen.local.yaml's gateway). Only
+# handlers_plugin.py may change; the bench and its scorer are the base's. Fewer tokens must not cost answers:
+# balanced accuracy (a constant answer scores 0.5) may not fall.
+sandbox: podman
+cells:
+  component:model-handler:
+    dir: plugins/handlers
+    change: plugins/handlers/handlers_plugin.py
+    run: python3 bench/run.py
+    score: python3 bench/score.py
+    better:
+      metered.tokens: {lower: true, min: 0.05}
+      scored.balanced: {higher: true, gain: absolute, max_regression: 0}
+    rounds: {warmup: 0, repeats: 7, max_repeats: 10}
+    timeout: 900

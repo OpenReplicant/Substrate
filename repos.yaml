@@ -7,4 +7,4 @@
 morphogen:
   url: https://github.com/OpenReplicant/Morphogen
   branch: main
-  checked: 25b2c3628096ea977aac6fe452550610e523d3e6   # 2026-11-11 (#79: env values and services a judged run is given, phase 7b)
+  checked: 52385afe8026cb8549714636090c31b1925f833e   # 2026-11-11 (#80: model calls counted at the gateway, phase 7c)

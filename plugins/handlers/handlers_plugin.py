@@ -75,13 +75,18 @@ class Gateway:
     connection to that record (the meter). The caller's key says whose call it is; a call id sent in a header
     joins the call to the gateway's row."""
 
-    def __init__(self, url: str | None, secret: str | None, meter_url: str | None):
-        self.url, self.secret, self.meter_url = (url or "").rstrip("/"), secret, meter_url
+    def __init__(self, url: str | None, secret: str | None, meter_url: str | None, key: str | None = None):
+        """`secret` derives each caller's key; `key`, given instead, is the one key every call uses (a judged run
+        holds only the key its meter gave it, never the secret that would derive anyone's)."""
+        self.url, self.secret, self.meter_url, self.key = (url or "").rstrip("/"), secret, meter_url, key
+
+    def ready(self) -> bool:
+        return bool(self.url and (self.key or self.secret))
 
     def chat(self, caller: str, model: str, messages: list, max_tokens: int, call_id: str) -> tuple[int, dict]:
         body = json.dumps({"model": model, "messages": messages, "max_tokens": max_tokens, "temperature": 0}).encode()
         req = urllib.request.Request(f"{self.url}/v1/chat/completions", body, {
-            "Content-Type": "application/json", "x-bf-vk": caller_key(self.secret, caller), "x-wb-call": call_id})
+            "Content-Type": "application/json", "x-bf-vk": self.key or caller_key(self.secret, caller), "x-wb-call": call_id})
         try:
             with urllib.request.urlopen(req, timeout=300) as r:
                 return r.status, json.loads(r.read() or b"{}")
@@ -129,6 +134,10 @@ def parse_json(text: str):
     return first
 
 
+# how many of the earlier decisions a model handler is shown with each input (the most recent ones)
+HISTORY = 20
+
+
 def model_handler(slug: str, cfg: dict, about: str, gateway: Gateway):
     """Register `slug` as a model handler: it asks its model, through the gateway, for one of `answers` with a
     confidence, and escalates below `sure_at`, on an answer it cannot read, or when the gateway refuses."""
@@ -137,12 +146,12 @@ def model_handler(slug: str, cfg: dict, about: str, gateway: Gateway):
 
     @handler(slug)
     def ask_model(item, ask):
-        if not (gateway.url and gateway.secret):
+        if not gateway.ready():
             return Escalate("no gateway configured (gateway_url, gateway_secret)")
         call_id = secrets.token_hex(12)
         meta = {"gateway_call": call_id, "model": cfg["model"]}
         shown = {k: item.get(k) for k in ("key", "payload")}
-        shown["earlier decisions"] = (item.get("history") or [])[-20:]
+        shown["earlier decisions"] = (item.get("history") or [])[-HISTORY:] if HISTORY else []
         system = (f"You handle one input of this stream: {about}\n"
                   f"Reply with one JSON object and nothing else: {{\"answer\": one of {json.dumps(answers)}, "
                   f"\"confidence\": a number from 0 to 1, \"reason\": one short sentence}}. "
