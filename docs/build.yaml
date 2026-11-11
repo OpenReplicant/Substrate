@@ -270,8 +270,8 @@ steps:
   - id: 19
     title: A game stream, and one judged compile-down
     spec: "2, 5, 10"
-    where: a game picked through docs/choices (its own repo or a plugin), substrate (the stream, the ranks), Morphogen (the verdicts)
-    after: [18]
+    where: a game picked through docs/choices (its own repo or a plugin), substrate (the stream, the ranks, a model handler's prompt as a file), Morphogen (the verdicts; a search over model and prompt together, upstream)
+    after: [18, 22]
     status: todo
     check: >-
       docs/choices records the game picked (seeded, scored, permissive licence) and the rejections; the game is a
@@ -280,10 +280,18 @@ steps:
       compile-down proposed from the escalations is judged by Morphogen on seeds the change never saw, by score,
       cost per game and escalations per game, with an A/A check; over a handful of judged cycles held-out score
       holds or rises while cost and escalations fall, with no regressions, and the evidence log holds at least one
-      refused cheat (never escalating, always escalating, or a call around the gateway)
+      refused cheat (never escalating, always escalating, or a call around the gateway); a model handler's prompt
+      is a file of its own, and a cell names its model (choices from the gateway's allowed models) and its prompt
+      (text) as what may change together: Morphogen searches the pairs (the model outside, the prompt tuned for
+      each model inside) on search seeds, scores each by held-out score with cost and seconds from the gateway's
+      record, and the judge passes or refuses the best pair against the handler as it is, with an A/A check
     notes: >-
       Added 2026-11-10 (S-74). Ground truth is the score, never the large model's opinion. Use an existing
-      environment, or an original game; never a recreation of a specific existing game.
+      environment, or an original game; never a recreation of a specific existing game. Model and prompt searched
+      together added 2026-11-11 (S-79): a prompt tuned for one model often does not carry to another, so neither is
+      chosen alone; LLMSelector (arXiv 2502.14815) chooses models per module without prompts, DSPy and GEPA tune
+      prompts for a fixed model. Waits on step 22 (judged runs count model calls), which waits on Morphogen's phase
+      7c; the owner chose to start Morphogen's phase 7 first (2026-11-11).
 
   - id: 20
     title: The idle tier
