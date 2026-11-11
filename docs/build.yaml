@@ -326,8 +326,15 @@ steps:
       proposed compile-downs, practises on fresh cases, prunes and re-ranks handlers, and proposes streams to
       subscribe to (each subscription a map change, to the review lane); its spending is recorded and stays inside
       the budget; a red-team test shows it cannot reach held-out seeds or windows; one compile-down it proposed is
-      judged and kept or refused; scripts/check.sh passes
-    notes: Added 2026-11-10 (S-74). Section 8's held ideas (episodes, skill promotion, a dispatcher) land here.
+      judged and kept or refused; "what to change next" is a stream: each proposal cites its source (a gap, an
+      escalation, a failing check, a cost hot spot, a catalog release, the owner), its generators are handlers
+      ranked by cost per change that lands, and the budget follows the ranks, with a fixed small share for an
+      archive of judged variants; one component compiled down on one stream is tried on another's ladder and
+      kept or refused on that stream's held-out cases, and a red-team test shows one stream's held-out cases
+      never reach another's knowledge; scripts/check.sh passes
+    notes: >-
+      Added 2026-11-10 (S-74). Section 8's held ideas (episodes, skill promotion, a dispatcher) land here.
+      Proposals as a stream, and transfer between streams, added 2026-11-11 (S-81).
 
   - id: 21
     title: A person at the top of a stream

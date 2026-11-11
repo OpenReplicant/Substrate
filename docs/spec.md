@@ -366,6 +366,27 @@ escalations into compile-downs, practises on fresh cases, prunes and re-ranks ha
 parts, and chooses which streams to attend to. A new subscription is a map change, so it goes to review. Section
 8's held ideas (episodes, skill utility and promotion, a dispatcher of headless sessions) land here.
 
+**What to change next is a stream too.** The space of changes substrate could make to itself has no edge,
+so it is never listed; the idle tier spends its budget on proposals instead. Each proposal cites what it comes
+from: a gap drift found, an escalation, a failing check, a cost hot spot, a new release in a catalog, or the
+owner. The generators of proposals (drift, the escalation miner, a release watcher, a session asked what would
+most improve a stream, the owner) are handlers on that stream, and a proposal's outcome is whether it earned a
+passing verdict that held afterwards. So generators are ranked by their cost per change that lands, and the
+budget goes where proposals pay. Open-ended search (an archive of judged variants kept as stepping stones, as
+the Darwin Gödel Machine does) is one generator with a small fixed share, so it can find what the others would
+not without starving them.
+
+**Transfer between streams.** What one stream learns can help another in three ways, each judged on the
+receiving stream's held-out cases before it stays, so negative transfer is caught like any regression:
+- a component compiled down on one stream (a rule, a script, a knowledge file, a prompt) joins another
+  stream's ladder as a handler, and is asked on inputs already seen there and scored against their outcomes;
+- what Workbench holds (earlier decisions, facts, recipes, each with its claims) is shown to a handler as part
+  of its input, so the ladder records what it saw;
+- Morphogen's selector starts from earlier verdicts on similar cells.
+
+Two limits hold whatever is judged: a stream's held-out cases never become another stream's knowledge, and
+nothing crosses out of a person's domain (step 21's privacy rules).
+
 **Measures and cheats.** For each stream, the measures are inputs by resolving rank, cost per input, outcome,
 and escalations per input. Success is resolution moving down while outcomes hold, on held-out cases: seeds for
 a game, time windows for a person's streams (as step 13 holds out windows for a business). The red team tries
