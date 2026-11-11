@@ -7,4 +7,4 @@
 morphogen:
   url: https://github.com/OpenReplicant/Morphogen
   branch: main
-  checked: d4714cfe794b8d829a9a3fceb562ab9b938b81a8   # 2026-11-09 (#74: morphogen change)
+  checked: 865d4ea8c05eac11642a88daaaa1a51c2a045aa2   # 2026-11-11 (#75: PLAN phase 7)
