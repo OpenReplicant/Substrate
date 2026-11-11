@@ -1,6 +1,7 @@
 """Contract tests for substrate's core interfaces (spec section 4, step 9): what any filler of a slot must do, checked
-from outside. The map names each test on its API (morphogen.dev/tests), so Morphogen's judge runs it for any change
-that touches the interface, and a filler from the options fills a slot only by passing it.
+from outside, against the running stack. The map names each test on its API (substrate.dev/contract), and a filler
+from the options fills a slot only by passing it. Morphogen's judged runs use morphogen.dev/tests instead: tests of
+the code in the tree, which can run in its sandbox (S-87).
 
     scripts/contract.sh INTERFACE [FILLER]    # e.g. secrets-api openbao; prints each check, exits 0 only on a pass
     scripts/contract.sh all                   # every core interface with its current filler

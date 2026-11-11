@@ -1261,7 +1261,7 @@ metadata:
   name: database-api
   description: 'Postgres as the stack needs it: version 17, pgvector, pg_cron, pgmq and pgGraph available, Workbench''s roles.'
   annotations:
-    morphogen.dev/tests: scripts/contract.sh database-api
+    substrate.dev/contract: scripts/contract.sh database-api
 spec:
   type: contract
   lifecycle: production
@@ -1276,7 +1276,7 @@ metadata:
   description: 'Embeddings at the gateway under Workbench''s own key, local models only: the same text gives the same vector,
     of one size, with meaning in it.'
   annotations:
-    morphogen.dev/tests: scripts/contract.sh embedding-api
+    substrate.dev/contract: scripts/contract.sh embedding-api
 spec:
   type: contract
   lifecycle: experimental
@@ -1290,7 +1290,7 @@ metadata:
   name: evidence-api
   description: Morphogen's evidence log, its hash chain verifiable by Morphogen and independently.
   annotations:
-    morphogen.dev/tests: scripts/contract.sh evidence-api
+    substrate.dev/contract: scripts/contract.sh evidence-api
 spec:
   type: contract
   lifecycle: production
@@ -1305,7 +1305,7 @@ metadata:
   description: SPARQL 1.1 at /sparql over Workbench's tables, read-only, with OWL 2 QL reasoning at query time (spec step
     7).
   annotations:
-    morphogen.dev/tests: scripts/contract.sh graph-api
+    substrate.dev/contract: scripts/contract.sh graph-api
 spec:
   type: sparql
   lifecycle: experimental
@@ -1320,7 +1320,7 @@ metadata:
   name: judge-api
   description: Morphogen's MCP tools and CLI - status, measure, probe, judge, tune, evidence.
   annotations:
-    morphogen.dev/tests: scripts/contract.sh judge-api
+    substrate.dev/contract: scripts/contract.sh judge-api
 spec:
   type: mcp-server
   lifecycle: production
@@ -1335,7 +1335,8 @@ metadata:
   description: One OpenAI-style chat endpoint; a call needs its caller's key; only allowed models; each call kept in the gateway's
     own record with its caller and the call id it carried, without content; the record read-only to the meter.
   annotations:
-    morphogen.dev/tests: scripts/contract.sh model-api
+    morphogen.dev/tests: python3 plugins/handlers/tests/test_models.py
+    substrate.dev/contract: scripts/contract.sh model-api
 spec:
   type: contract
   lifecycle: experimental
@@ -1350,7 +1351,7 @@ metadata:
   name: repository-api
   description: 'A git repository Morphogen can judge in: a resolvable HEAD, history, its own git directory.'
   annotations:
-    morphogen.dev/tests: scripts/contract.sh repository-api
+    substrate.dev/contract: scripts/contract.sh repository-api
 spec:
   type: contract
   lifecycle: production
@@ -1364,7 +1365,7 @@ metadata:
   name: runtime-api
   description: The runtime's four verbs; compose answers them now, a scheduler could.
   annotations:
-    morphogen.dev/tests: scripts/contract.sh runtime-api
+    substrate.dev/contract: scripts/contract.sh runtime-api
 spec:
   type: shell
   lifecycle: production
@@ -1378,7 +1379,7 @@ metadata:
   name: sandbox-api
   description: 'The container engine starts a locked-down container: no network, a read-only root, no capabilities.'
   annotations:
-    morphogen.dev/tests: scripts/contract.sh sandbox-api
+    substrate.dev/contract: scripts/contract.sh sandbox-api
 spec:
   type: contract
   lifecycle: production
@@ -1392,7 +1393,7 @@ metadata:
   name: secrets-api
   description: The secrets verbs; .env answers them now, a store could.
   annotations:
-    morphogen.dev/tests: scripts/contract.sh secrets-api
+    substrate.dev/contract: scripts/contract.sh secrets-api
 spec:
   type: shell
   lifecycle: production
@@ -1406,7 +1407,7 @@ metadata:
   name: tools-api
   description: The tools container runs bin/ (Morphogen, gitleaks, Workbench's command) as the user, with the checkout mounted.
   annotations:
-    morphogen.dev/tests: scripts/contract.sh tools-api
+    substrate.dev/contract: scripts/contract.sh tools-api
 spec:
   type: contract
   lifecycle: production
@@ -1420,7 +1421,7 @@ metadata:
   name: workbench-api
   description: Workbench's JSON API at /api - a view per content type, claims, content_types, rpc/login, rpc/whoami.
   annotations:
-    morphogen.dev/tests: scripts/contract.sh workbench-api
+    substrate.dev/contract: scripts/contract.sh workbench-api
     substrate.dev/observed-as: api:workbench-rest-openapi
 spec:
   type: openapi
@@ -1435,7 +1436,7 @@ metadata:
   name: workbench-mcp-api
   description: Workbench over MCP for agents at /wb/api/mcp - search, items with their claims, save, decisions, extractors.
   annotations:
-    morphogen.dev/tests: scripts/contract.sh workbench-mcp-api
+    substrate.dev/contract: scripts/contract.sh workbench-mcp-api
     substrate.dev/observed-as: api:workbench-mcp-tools
 spec:
   type: mcp-server
@@ -1451,7 +1452,7 @@ metadata:
   description: The Workbench server's own HTTP API at /wb/api - health, live events, extractors, queueing a run, and its OpenAPI
     document (decided from a step 5 gap).
   annotations:
-    morphogen.dev/tests: scripts/contract.sh workbench-server-api
+    substrate.dev/contract: scripts/contract.sh workbench-server-api
     substrate.dev/observed-as: api:workbench-server-openapi
 spec:
   type: openapi

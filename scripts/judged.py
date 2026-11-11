@@ -2,6 +2,7 @@
 """Cases for Morphogen's judged runs of a model handler (spec step 22, S-87), written outside the repository.
 
     python3 scripts/judged.py drift-gaps [HANDLER]   # the drift-gaps stream's decided gaps, for HANDLER's settings
+    python3 scripts/judged.py env                    # the values judged runs are served: their database's password
 
 Writes, under JUDGED_DIR (default ~/.local/share/substrate/judged)/STREAM:
     inputs/handler.json   the handler's slug, the stream's description and the handler's settings (streams.yaml)
@@ -54,7 +55,23 @@ def drift_gaps(handler: str) -> tuple[dict, list, dict]:
     return {"slug": handler, "about": spec["description"], "config": config}, cases, outcomes
 
 
+def run_env() -> None:
+    """The values a judged run is served (Morphogen's env and services, morphogen.local.yaml): a password for the
+    fresh database each run gets, and the URL its tests reach it by. Made once, mode 600; never in the repository."""
+    import secrets
+    f = Path(os.environ.get("JUDGED_DIR") or Path.home() / ".local/share/substrate/judged") / "run.env"
+    if not f.exists():
+        f.parent.mkdir(parents=True, exist_ok=True)
+        pw = secrets.token_hex(16)
+        f.touch(mode=0o600)
+        f.write_text(f"POSTGRES_PASSWORD={pw}\nWORKBENCH_ADMIN_URL=postgresql://postgres:{pw}@db:5432/postgres\n")
+    f.chmod(0o600)
+    print(f"  {f}: POSTGRES_PASSWORD (the run's database), WORKBENCH_ADMIN_URL (its tests' way in)")
+
+
 def main() -> None:
+    if len(sys.argv) == 2 and sys.argv[1] == "env":
+        return run_env()
     if len(sys.argv) < 2 or sys.argv[1] != "drift-gaps":
         print(__doc__)
         sys.exit(2)
