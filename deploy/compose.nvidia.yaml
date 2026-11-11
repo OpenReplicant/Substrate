@@ -3,6 +3,9 @@
 # spec: Podman 4.9 cannot read the spec the NVIDIA toolkit writes (cdiVersion 0.7.0), and this needs no root.
 # The libraries are bound by their stable names (libcuda.so.1 and so on, symlinks the driver keeps current), so a
 # driver upgrade needs nothing here; Ollama's image carries the CUDA runtime itself.
+# This machine's GPU is a GTX 1070 (Pascal, compute 6.1), which NVIDIA and Ollama are dropping: only Ollama's
+# cuda_v12 runner still takes it (cuda_v13 skips it). When upgrading Ollama, check scripts/check.sh's "local
+# models" note still says GPU; if it falls back to the CPU, recall still works, only slower.
 services:
   ollama:
     devices:
