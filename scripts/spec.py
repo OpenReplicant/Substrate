@@ -105,7 +105,22 @@ def first_session() -> bool:
 
 def hook() -> int:
     """SessionStart: say where the build-out stands, briefly (well under the 2,000-character preview), and on a
-    first session offer the ways to start."""
+    first session offer the ways to start. Each run is recorded for handlers:run (stream claude-code-session,
+    scripts/calls.py)."""
+    import time
+    started = time.time()
+    try:
+        return _hook()
+    finally:
+        sys.path.insert(0, str(ROOT / "scripts"))
+        try:
+            import calls
+            calls.record("claude-code-session", "sessionstart-spec", started, 0)
+        except Exception:
+            pass
+
+
+def _hook() -> int:
     if not SPEC.exists() or not PLAN.exists():
         if first_session():
             print(json.dumps({"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": START}}))

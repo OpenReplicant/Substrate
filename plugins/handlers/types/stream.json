@@ -1,0 +1,23 @@
+{
+  "title": "Stream",
+  "description": "A kind of input something has subscribed to: where its inputs come from, and how an outcome is known.",
+  "type": "object",
+  "properties": {
+    "description": {
+      "type": "string",
+      "description": "what the stream is"
+    },
+    "source": {
+      "type": "object",
+      "description": "where inputs come from: {kind: decisions|jsonl, ...}"
+    },
+    "answers": {
+      "type": "string",
+      "description": "final: the first answer ends the climb; advisory: answers are recommendations and the input still goes to the top"
+    },
+    "outcome": {
+      "type": "string",
+      "description": "how an input's outcome is known"
+    }
+  }
+}

@@ -16,5 +16,5 @@ exec "$ROOT/bin/in-tools" env PYTHONPATH="$ROOT/workbench" \
   WORKBENCH_JWT_SECRET="$(env_value WORKBENCH_JWT_SECRET)" \
   WORKBENCH_SERVER_PASSWORD="$(env_value WORKBENCH_SERVER_PASSWORD)" \
   WORKBENCH_READER_PASSWORD="$(env_value WORKBENCH_READER_PASSWORD)" \
-  WB_PLUGINS_DIR="$ROOT/plugins" \
+  WB_PLUGINS_DIR="$ROOT/plugins" WB_HANDLERS_ROOT="$ROOT" \
   python3 -m workbench "$@"

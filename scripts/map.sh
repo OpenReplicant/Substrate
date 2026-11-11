@@ -21,6 +21,7 @@ derive() {
   for x in map drift reasoner; do
     "$ROOT/scripts/workbench.sh" extract "substrate:$x" | python3 -c 'import json, sys; d = json.load(sys.stdin); print("  substrate:'"$x"'", "ok" if d.get("ok") else "FAILED: " + str(d.get("error")), *(d.get("log") or []))'
   done
+  "$ROOT/scripts/streams.sh" run    # drift's gaps up their ladder (streams.yaml)
 }
 mapfile() {
   "$ROOT/bin/in-tools" env PYTHONPATH="$ROOT/workbench:$ROOT/plugins/substrate" WB_SUBSTRATE_ROOT="$ROOT" \
@@ -30,6 +31,8 @@ mapfile() {
 
 case "${1:-}" in
   --hook)
+    started=$(date +%s.%N)   # this run, recorded for handlers:run (stream claude-code-tools, scripts/calls.py)
+    trap 'python3 "$ROOT/scripts/calls.py" record claude-code-tools posttooluse-map "$started" $?' EXIT
     python3 -c 'import json, sys; d = json.load(sys.stdin); t = (d.get("tool_input") or {}).get("type"); sys.exit(0 if t == "component" else 1)' || exit 0
     "$ROOT/scripts/tools.sh" status >/dev/null 2>&1 || exit 0
     derive >/dev/null 2>&1 || true

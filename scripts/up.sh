@@ -20,7 +20,9 @@ until "$ROOT/scripts/workbench.sh" migrate >/dev/null 2>&1; do
   sleep 2
 done
 echo "  migrated"
-"$ROOT/scripts/workbench.sh" plugin load "$ROOT/plugins/substrate" | python3 -c 'import json, sys; d = json.load(sys.stdin); print("  plugin", d["plugin"], d["version"], "types:", ", ".join(t["type"] for t in d["types"]))'
+for p in handlers substrate; do   # handlers: streams and ranked handlers (spec section 10); substrate: its own types
+  "$ROOT/scripts/workbench.sh" plugin load "$ROOT/plugins/$p" | python3 -c 'import json, sys; d = json.load(sys.stdin); print("  plugin", d["plugin"], d["version"], "types:", ", ".join(t["type"] for t in d["types"]))'
+done
 "$ROOT/scripts/graph.sh"                                  # the graph views, from the terms the plugin just loaded
 wait_for() {   # what url logs
   i=0
@@ -51,6 +53,9 @@ python3 "$ROOT/scripts/harness.py" status | python3 -c 'import json, sys; d = js
 say "What runs (observe.sh)"
 # last, so the observer reads the agent's MCP and the wiring just written (a first run otherwise misses both)
 "$ROOT/scripts/observe.sh" || echo "  observing stopped (above); the gaps are as they were"   # what runs, the gaps, inferences
+
+say "Streams (streams.yaml)"
+"$ROOT/scripts/streams.sh" || echo "  the streams did not run (above)"   # drift's gaps and the hooks' runs up their ladders
 
 
 say "Up"

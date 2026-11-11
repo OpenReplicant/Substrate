@@ -9,6 +9,8 @@ set -eu
 . "$(dirname "$0")/lib.sh"
 
 if [ "${1:-}" = --hook ]; then
+  started=$(date +%s.%N)   # this run, recorded for handlers:run (stream claude-code-tools, scripts/calls.py)
+  trap 'python3 "$ROOT/scripts/calls.py" record claude-code-tools posttooluse-verdicts "$started" $?' EXIT
   "$ROOT/scripts/tools.sh" status >/dev/null 2>&1 || exit 0
   "$ROOT/scripts/workbench.sh" extract substrate:morphogen >/dev/null 2>&1 || true
   exit 0

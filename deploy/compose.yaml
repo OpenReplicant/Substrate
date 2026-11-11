@@ -65,6 +65,7 @@ services:
       WB_POSTGREST_URL: http://postgrest:3000
       WB_PLUGINS_DIR: /srv/substrate/plugins
       WB_SUBSTRATE_ROOT: /srv/substrate        # what substrate's extractors read: this checkout, read-only
+      WB_HANDLERS_ROOT: /srv/substrate         # where the handlers plugin resolves a stream's relative paths
     volumes:
       - ..:/srv/substrate:ro
     depends_on:

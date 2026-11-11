@@ -47,6 +47,10 @@ printf '%s' "$hs" | python3 -c 'import json, sys; d = json.load(sys.stdin); sys.
 printf '%s' "$hs" | python3 -c 'import json, sys; sys.exit(0 if json.load(sys.stdin)["workbench_current"] else 1)' || note "Workbench's MCP entry in .mcp.json is out of date: python3 scripts/harness.py apply"
 gaps=$("$ROOT/bin/in-tools" true >/dev/null 2>&1 && curl -s "http://127.0.0.1:8080/api/decisions?status=eq.open&select=id" -H "Authorization: Bearer $("$ROOT/scripts/workbench.sh" token claude-code --hours 0.02 2>/dev/null)" | python3 -c 'import json, sys; print(len(json.load(sys.stdin)))' 2>/dev/null || echo "?")
 note "review lane: $gaps open"
+# streams (streams.yaml, spec section 10): each handler by rank, with its calls and how often it answered
+ladder=$(curl -s "http://127.0.0.1:8080/api/handler?select=slug,rank,calls,answers,measured&order=rank" -H "Authorization: Bearer $("$ROOT/scripts/workbench.sh" token claude-code --hours 0.02 2>/dev/null)" \
+  | python3 -c 'import json, sys; print("; ".join("%s %s (%s/%s answered%s)" % (h["rank"], h["slug"], h["answers"], h["calls"], "" if h["measured"] else ", unmeasured") for h in json.load(sys.stdin)) or "none declared")' 2>/dev/null || echo "?")
+note "ladder: $ladder"
 
 if [ -f "$ROOT/docs/build.yaml" ]; then
   note "spec: $(python3 "$ROOT/scripts/spec.py" next --short 2>&1)"

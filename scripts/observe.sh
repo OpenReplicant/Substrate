@@ -20,3 +20,4 @@ echo "  gitleaks: nothing secret in the snapshots"
 for x in observed drift reasoner; do
   "$ROOT/scripts/workbench.sh" extract "substrate:$x" | python3 -c 'import json, sys; d = json.load(sys.stdin); print("  substrate:'"$x"'", "ok" if d.get("ok") else "FAILED: " + str(d.get("error")), *(d.get("log") or [])); sys.exit(0 if d.get("ok") else 1)'
 done
+"$ROOT/scripts/streams.sh" run    # the gaps drift just raised, up their ladder (streams.yaml)

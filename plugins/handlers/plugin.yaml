@@ -1,0 +1,8 @@
+# Streams of inputs, handlers ranked by measured cost, and the record of every call (README.md). Built to leave
+# with Workbench: nothing here names the plugin that uses it.
+id: handlers
+version: 0.1.0
+licence: Apache-2.0
+requires: {workbench: "1"}
+content_types: [types/*.json]
+server: handlers_plugin          # extractors: declare, run

@@ -220,11 +220,12 @@ steps:
   # Steps 17 to 21 (S-74, spec section 10) sit here, before step 10, because the skill takes steps in file
   # order: 17 and 18 give step 12 its streams and events.
   - id: 17
+    status: done
+    done_on: 2026-11-10
     title: Streams, handlers and the record of every call
     spec: "1, 10"
     where: Workbench (stream and input, generic), substrate's plugin at first (handler, route, the call record), a small runner library
     after: [9]
-    status: todo
     check: >-
       stream, input, handler and route are content types with nothing in them that names substrate; every call a
       handler makes is recorded with its answer or escalation (with a reason), its cost and, once known, its
@@ -236,6 +237,14 @@ steps:
     notes: >-
       Added 2026-11-10 (S-74). The input's shape may become OCEL 2.0 events and objects once step 10 picks the
       vocabulary; keep the record's fields mappable to it. Inputs are any stream, not only prompts.
+      Done 2026-11-10 (S-76): Workbench plugin plugins/handlers (types stream, input, handler, route, call; ladder.py's
+      contract and runner; handlers:declare, handlers:run), substrate's streams.yaml (drift-gaps, advisory, with the
+      precedent rule under the review lane; claude-code-tools and claude-code-session, the hooks recording their own
+      runs through scripts/calls.py), scripts/streams.sh from up.sh, observe.sh and map.sh, the part handlers-plugin
+      on the map. On this machine's 14 gaps the precedent rule answered 4 (none scorable: all were withdrawn) and
+      escalated 10; the review lane answered 7 and dropped 7. The rule measured cheaper than the hooks, so the ladder
+      is rule, hooks, review lane; the hooks stay on their kind's prior until they first run. Tests:
+      plugins/handlers/tests (17 and 22 checks), workbench/tests/test_w3.py (as_author).
 
   - id: 18
     title: Model calls through one gateway, counted outside the candidate

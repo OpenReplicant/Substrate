@@ -22,6 +22,7 @@ record a claim for every value, here attributed to the extractor and carrying it
 """
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import importlib
 import json
@@ -92,6 +93,7 @@ class Context:
         self.counts = {"items": 0, "sources": 0, "relations": 0, "decisions": 0, "statements": 0}
         self.stated: list[str] = []
         self.messages: list[str] = []
+        self.subruns: dict[str, str] = {}
         self.conn.execute("set local role wb_server")
         self.run = self.conn.execute(
             "insert into wb.run (extractor, plugin, inputs) values (%s, %s, %s) returning id",
@@ -101,6 +103,25 @@ class Context:
 
     def _set(self, key: str, value: str | None):
         self.conn.execute("select set_config(%s, %s, true)", (key, value or ""))
+
+    @contextlib.contextmanager
+    def as_author(self, name: str):
+        """Values written inside this block are claims attributed to `name` (something acting within the run, such as
+        a handler the run called), under a run of its own (extractor `name`, inputs.within this run), so they are
+        that author's and never taken for statements this extractor stopped making (wb.retract_unstated).
+        Relations and decisions stay the extractor's."""
+        sub = self.subruns.get(name)
+        if sub is None:
+            sub = self.subruns[name] = str(self.conn.execute(
+                "insert into wb.run (extractor, plugin, inputs) values (%s, %s, %s) returning id",
+                (name, self.ex["plugin"], Jsonb({"within": str(self.run)}))).fetchone()[0])
+        self._set("wb.author", name)
+        self._set("wb.run", sub)
+        try:
+            yield
+        finally:
+            self._set("wb.author", self.author)
+            self._set("wb.run", str(self.run))
 
     def log(self, message: str):
         self.messages.append(str(message))
@@ -216,6 +237,8 @@ class Context:
                 (self.author, self.author, list(self.keys))).rowcount
         outcome = {"ok": True, **self.counts, "withdrawn": withdrawn, "log": self.messages}
         self.conn.execute("update wb.run set ended_at = now(), outcome = %s where id = %s", (Jsonb(outcome), self.run))
+        for sub in self.subruns.values():
+            self.conn.execute("update wb.run set ended_at = now(), outcome = %s where id = %s", (Jsonb({"ok": True}), sub))
         return {"run": str(self.run), **outcome}
 
 

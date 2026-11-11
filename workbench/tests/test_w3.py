@@ -165,6 +165,19 @@ try:
         left = conn.execute("""select count(*) from wb.claim c join content.note n on n.id = c.subject_id
                                where n.slug = 'a' and c.author = 'pat' and c.status = 'current'""").fetchone()[0]
     check("a statement taken out of its source is retracted", left == 0, left)
+    # as_author: something acting within a run writes values as itself, under a run of its own
+    def acts(ctx, inputs):
+        if inputs.get("text"):
+            with ctx.as_author("agent:helper"):
+                ctx.upsert("note", "c", {"body": inputs["text"]}, title="c")
+    plugins.extractors["test:acts"] = {"key": "test:acts", "plugin": "fixture", "name": "acts", "fn": acts, "description": "", "inputs": {}}
+    run_extractor(cli.connect, plugins, "test:acts", {"text": "written by the helper"})
+    run_extractor(cli.connect, plugins, "test:acts", {"text": ""})
+    with cli.connect() as conn:
+        acted = conn.execute("""select c.author, c.status, r.extractor, r.inputs ? 'within' from wb.claim c join wb.run r on r.id = c.run_id
+                                join content.note n on n.id = c.subject_id where n.slug = 'c' and c.field = 'body'""").fetchall()
+    check("a value written as another author is that author's claim, under its own run within the extractor's, and stays current",
+          acted == [("agent:helper", "current", "agent:helper", True)], acted)
     with cli.connect() as conn:
         conn.execute("set role wb_editor")
         try:

@@ -1,0 +1,33 @@
+# Substrate's streams, for Workbench's handlers plugin (plugins/handlers/README.md; spec section 10, step 17).
+# Each stream is a kind of input, with the handlers that take it; their ranks come from measured cost, never from
+# here. scripts/streams.sh declares this file and runs the streams (from up.sh, observe.sh and map.sh).
+streams:
+  drift-gaps:
+    title: Drift's gaps
+    description: each difference substrate:drift finds between the map and what is there, raised in the review lane
+    source: {kind: decisions, raised_by: "substrate:drift", decision_kind: gap}
+    # the map is the owner's (spec section 7, S-51): a lower rank recommends, the review lane decides
+    answers: advisory
+    outcome: the decision in the review lane (approved, declined), or withdrawn when the gap went on its own
+    handlers:
+      precedent:
+        kind: rule
+        description: what a person decided before on gaps of the same kind (undeclared:volume:*, say)
+      review-lane:
+        kind: person
+        description: the owner, or an agent the owner delegated to, deciding in Workbench's review lane
+  claude-code-tools:
+    title: Claude Code's tool calls the hooks follow
+    description: a Morphogen tool call, or a Workbench write to the map; each run of the hook that follows it
+    source: {kind: jsonl, path: .state/calls/hooks.jsonl}
+    outcome: none yet; a hook's exit code is its own report
+    handlers:
+      posttooluse-map: {kind: hook, component: posttooluse-map, description: "scripts/map.sh --hook: the map's relations, drift, the reasoner"}
+      posttooluse-verdicts: {kind: hook, component: posttooluse-verdicts, description: "scripts/verdicts.sh --hook: Morphogen's verdicts into Workbench"}
+  claude-code-session:
+    title: Claude Code's session starts
+    description: each session start, and the SessionStart hook that says where the build-out stands
+    source: {kind: jsonl, path: .state/calls/hooks.jsonl}
+    outcome: none yet
+    handlers:
+      sessionstart-spec: {kind: hook, component: sessionstart-spec, description: "scripts/spec.py hook"}

@@ -1,0 +1,55 @@
+{
+  "title": "Call",
+  "description": "One handler's call on one input: what it returned, its cost, and whether it matched the outcome.",
+  "type": "object",
+  "properties": {
+    "stream": {
+      "type": "string",
+      "description": "the stream"
+    },
+    "input": {
+      "type": "string",
+      "description": "the input's slug"
+    },
+    "handler": {
+      "type": "string",
+      "description": "the handler's slug"
+    },
+    "kind": {
+      "type": "string",
+      "description": "answer, escalate, waiting, dropped or refused"
+    },
+    "value": {
+      "type": "string",
+      "description": "the answer, as text (JSON for anything structured)"
+    },
+    "confidence": {
+      "type": "number",
+      "description": "the answer's confidence, 0 to 1"
+    },
+    "reason": {
+      "type": "string",
+      "description": "why it escalated, waited, dropped or was refused"
+    },
+    "cost": {
+      "type": "object",
+      "description": "measured: person, usd, seconds"
+    },
+    "at": {
+      "type": "string",
+      "description": "when it was made (ISO 8601, UTC)"
+    },
+    "parent": {
+      "type": "string",
+      "description": "the call that asked for this one, if nested"
+    },
+    "correct": {
+      "type": "boolean",
+      "description": "whether the answer matched the outcome (empty until known, or when not scorable)"
+    },
+    "escalate_to": {
+      "type": "string",
+      "description": "where it escalated to, if it said"
+    }
+  }
+}

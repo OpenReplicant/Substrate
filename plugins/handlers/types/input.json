@@ -1,0 +1,35 @@
+{
+  "title": "Input",
+  "description": "One event on a stream, and its outcome once known.",
+  "type": "object",
+  "properties": {
+    "stream": {
+      "type": "string",
+      "description": "the stream's slug"
+    },
+    "key": {
+      "type": "string",
+      "description": "the source's own key for it"
+    },
+    "payload": {
+      "type": "object",
+      "description": "what arrived"
+    },
+    "arrived_at": {
+      "type": "string",
+      "description": "when it arrived (ISO 8601, UTC)"
+    },
+    "status": {
+      "type": "string",
+      "description": "open, resolved or dropped"
+    },
+    "outcome": {
+      "type": "object",
+      "description": "what happened: value, by, at"
+    },
+    "resolved_by": {
+      "type": "string",
+      "description": "the handler whose call ended it"
+    }
+  }
+}

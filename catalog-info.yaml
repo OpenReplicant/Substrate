@@ -182,6 +182,35 @@ spec:
 apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
+  name: handlers-plugin
+  description: Workbench plugin for streams of inputs, handlers ranked by measured cost, and the record of every call (answer,
+    escalation, cost, outcome); built to leave with Workbench.
+  annotations:
+    morphogen.dev/change: 'plugins/handlers/**
+
+      streams.yaml
+
+      scripts/streams.sh
+
+      scripts/calls.py'
+    substrate.dev/basis: 'plugins/handlers (README.md, ladder.py, handlers_plugin.py: handlers:declare, handlers:run), streams.yaml,
+      scripts/streams.sh, scripts/calls.py (hooks record their own runs)'
+    substrate.dev/fill: build
+    substrate.dev/intent: Handle each input at the cheapest rank that can, and record every call so what a dearer rank works
+      out can be compiled into a cheaper one (spec section 10, S-74).
+    substrate.dev/observed-as: plugin:handlers
+    substrate.dev/step: '17'
+spec:
+  type: library
+  lifecycle: experimental
+  owner: group:agents
+  system: core
+  consumesApis:
+  - workbench-api
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
   name: interviewer
   description: Asks people what the map cannot see, and records each answer as a claim attributed to them.
   annotations:

@@ -1,0 +1,63 @@
+{
+  "title": "Handler",
+  "description": "Something that takes an input and answers, escalates or waits; ranked by its measured cost per call.",
+  "type": "object",
+  "properties": {
+    "stream": {
+      "type": "string",
+      "description": "the stream it handles"
+    },
+    "kind": {
+      "type": "string",
+      "description": "script, hook, rule, model, session or person"
+    },
+    "entry": {
+      "type": "string",
+      "description": "the registered name of its implementation"
+    },
+    "description": {
+      "type": "string",
+      "description": "what it does"
+    },
+    "component": {
+      "type": "string",
+      "description": "its part on a map, if any"
+    },
+    "cost": {
+      "type": "object",
+      "description": "mean cost per call: person, usd, seconds"
+    },
+    "measured": {
+      "type": "boolean",
+      "description": "whether cost comes from its calls (false: its kind's prior)"
+    },
+    "rank": {
+      "type": "integer",
+      "description": "its place on the ladder, 1 cheapest"
+    },
+    "calls": {
+      "type": "integer",
+      "description": "calls recorded"
+    },
+    "answers": {
+      "type": "integer",
+      "description": "calls that answered"
+    },
+    "escalations": {
+      "type": "integer",
+      "description": "calls that escalated"
+    },
+    "refusals": {
+      "type": "integer",
+      "description": "calls the runner refused"
+    },
+    "scored": {
+      "type": "integer",
+      "description": "answers whose input's outcome is known"
+    },
+    "correct": {
+      "type": "integer",
+      "description": "scored answers that matched the outcome"
+    }
+  }
+}

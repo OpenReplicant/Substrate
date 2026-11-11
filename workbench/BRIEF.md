@@ -94,7 +94,8 @@ A content type's schema changes additively by default; a destructive change is a
 An extractor reads a source and emits any mix of **items, relations, claims and sources**, under one run.
 Plugins provide them: targeted (a catalog file, Claude Code's skills and hooks, a package manifest, Morphogen's
 evidence log) or catch-all (a model reading a document or a transcript, quoting what it took). An interview is
-a source, and each answer is a claim attributed to the person.
+a source, and each answer is a claim attributed to the person. Something acting within a run (a handler the run called, say) writes values as
+itself with `ctx.as_author(name)`: its claims are its own, under a run of its own recorded as within the extractor's.
 
 ## 4. The UI
 

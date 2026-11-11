@@ -1,0 +1,23 @@
+{
+  "title": "Route",
+  "description": "The order a stream's handlers see an input in: by rank, cheapest first.",
+  "type": "object",
+  "properties": {
+    "stream": {
+      "type": "string",
+      "description": "the stream"
+    },
+    "answers": {
+      "type": "string",
+      "description": "final or advisory"
+    },
+    "basis": {
+      "type": "string",
+      "description": "how the order was set"
+    },
+    "ladder": {
+      "type": "array",
+      "description": "handler slugs, cheapest first"
+    }
+  }
+}
