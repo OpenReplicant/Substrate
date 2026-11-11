@@ -372,26 +372,33 @@ steps:
       Split from step 18 on 2026-11-11 (S-77). A change to the judge: upstream, by a pull request the owner reviews.
 
   - id: 24
+    status: done
+    done_on: 2026-11-11
     title: Recall by meaning, and a catalog of models by task
     spec: "4, 5, 10"
     where: Workbench (embeddings beside full-text recall, nothing substrate-specific), substrate (the embedding model behind the gateway, the model catalog)
     after: [18]
-    status: todo
     check: >-
       an embedding model is picked through the research skill from a public leaderboard (MTEB) among models that
       run on this machine (Ollama, behind the gateway, so personal text never leaves it), and fills an
       embedding slot with a contract test; Workbench keeps one vector per item field and claim quote (pgvector),
-      named by the model that made it and re-made when the model changes; recall joins full-text and vectors in
-      one ranking; on held-out queries built from substrate's own history (a gap and the items its decision
-      cited, a question and the item that answered it), the joined ranking beats full-text alone on recall at
-      10, judged with an A/A check; models are catalog entries by task (Hugging Face's task tags), each with the
+      named by the model that made it and re-made when the model changes; recall joins full-text, vectors and
+      graph traversal (items a few relations from the strongest matches, through pgGraph or wb.relation) in one
+      query and one ranking; on held-out queries built from substrate's own history (a gap and the items its
+      decision cited, a question and the item that answered it), each addition (vectors, then the graph) is
+      kept only if it beats the ranking without it on recall at 10, judged with an A/A check; the embedding
+      model runs in an Ollama container on this machine's GPU when it has one free, else its CPU; models are catalog entries by task (Hugging Face's task tags), each with the
       leaderboard scores it was picked on (stated, quoted) and what substrate measured (each model handler's
       scored answers per stream, and its cost per call from the gateway); scripts/check.sh passes
     notes: >-
       Added 2026-11-11 (S-82; owner: "shouldn't we be involving vector-encoding models/search? (and cataloging
       models by task, etc)"). Full-text recall was built in S-57 with vectors waiting for an embedding model;
       pgvector is already in the database image. Buildable now: it needs no judged runs, and steps 19, 21 and 25
-      use it (similar tasks shown to a handler, a person's items, papers matched and deduplicated).
+      use it (similar tasks shown to a handler, a person's items, papers matched and deduplicated). Done
+      2026-11-11 (S-83): Qwen3-Embedding 0.6B in Ollama on the CPU (the GPU waits on Podman reading this machine's
+      CDI spec); on 39 held-out queries recall at 10 went from 0.067 to 0.193 with vectors (p 0.002) and to 0.286
+      with the graph (p 0.008), A/A 0; the trial applies Morphogen's rule itself, since Morphogen cannot run
+      substrate's tests until its phase 7b.
 
   - id: 25
     title: Papers as a stream

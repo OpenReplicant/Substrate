@@ -1,6 +1,6 @@
 {
   "title": "Candidate",
-  "description": "Something that could fill a need, found in a source catalog: its licence, releases and activity as the registry gives them, and its fit and outcome as a choice records them.",
+  "description": "Something that could fill a need, found in a source catalog: its licence, releases and activity as the registry gives them, and its fit and outcome as a choice records them. A model is a candidate too, catalogued by task: the tasks it does, its name at the gateway, the leaderboard scores it was picked on (as the board stated them), and what substrate measured of it.",
   "type": "object",
   "properties": {
     "registry": {
@@ -69,6 +69,29 @@
       "type": "string",
       "description": "why it was picked or rejected",
       "x-term": "sub:reason"
+    },
+    "tasks": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "for a model: what it does, as Hugging Face's task tags name it (text-generation, feature-extraction, ...)",
+      "x-term": "sub:tasks"
+    },
+    "model": {
+      "type": "string",
+      "description": "for a model: its name at the gateway (provider/name)",
+      "x-term": "sub:model"
+    },
+    "scores": {
+      "type": "object",
+      "description": "for a model: leaderboard scores it was picked on, by board, as the board or model card stated them",
+      "x-term": "sub:scores"
+    },
+    "measured": {
+      "type": "object",
+      "description": "for a model: what substrate measured, by stream and handler (calls, answers, scored, correct, mean cost) or by trial",
+      "x-term": "sub:measured"
     }
   },
   "x-term": "sub:Candidate"

@@ -31,11 +31,11 @@ else bad "the graph endpoint does not answer at /sparql (scripts/logs.sh graph; 
 code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "http://127.0.0.1:$(env_value GATEWAY_PORT)/v1/chat/completions" -H 'Content-Type: application/json' -d '{"model":"openrouter/x:free","messages":[{"role":"user","content":"hi"}]}')
 [ "$code" = "401" ] && ok "gateway     http://127.0.0.1:$(env_value GATEWAY_PORT)/ (Bifrost; a call without a key is refused)" || bad "the model gateway returned $code to a call without a key (scripts/logs.sh gateway)"
 running=$(rt_status 2>/dev/null | awk 'NR > 1 {print $1}' | tr '\n' ' ')
-for s in db caddy postgrest workbench graph gateway; do
+for s in db caddy postgrest workbench graph gateway ollama; do
   case "$running" in *"-$s-"*) ;; *) bad "service $s is not running (scripts/logs.sh $s)" ;; esac
 done
-extra=$(printf '%s\n' $running | grep -v -e '-db-' -e '-caddy-' -e '-postgrest-' -e '-workbench-' -e '-graph-' -e '-gateway-' || true)
-[ -z "$extra" ] && ok "only the core runs (db, caddy, postgrest, workbench, graph, gateway)" || note "also running, outside the core: $(echo $extra)"
+extra=$(printf '%s\n' $running | grep -v -e '-db-' -e '-caddy-' -e '-postgrest-' -e '-workbench-' -e '-graph-' -e '-gateway-' -e '-ollama-' || true)
+[ -z "$extra" ] && ok "only the core runs (db, caddy, postgrest, workbench, graph, gateway, ollama)" || note "also running, outside the core: $(echo $extra)"
 
 say "Wiring"
 if st=$(sec_status 2>&1); then ok "secrets ($SECRETS): $st"; else bad "secrets ($SECRETS): $st"; fi
@@ -53,6 +53,9 @@ note "review lane: $gaps open"
 ladder=$(curl -s "http://127.0.0.1:8080/api/handler?select=slug,rank,calls,answers,measured&order=rank" -H "Authorization: Bearer $("$ROOT/scripts/workbench.sh" token claude-code --hours 0.02 2>/dev/null)" \
   | python3 -c 'import json, sys; print("; ".join("%s %s (%s/%s answered%s)" % (h["rank"], h["slug"], h["answers"], h["calls"], "" if h["measured"] else ", unmeasured") for h in json.load(sys.stdin)) or "none declared")' 2>/dev/null || echo "?")
 note "ladder: $ladder"
+vecs=$(curl -s "http://127.0.0.1:8080/api/rpc/recall" -H 'Content-Type: application/json' -H "Authorization: Bearer $("$ROOT/scripts/workbench.sh" token claude-code --hours 0.02 2>/dev/null)" \
+  -d '{"q": "model gateway", "lim": 5, "depth": 2}' | python3 -c 'import json, sys; d = json.load(sys.stdin); print(len(d), "hits for \"model gateway\" by words and the graph")' 2>/dev/null || echo "?")
+note "recall: $vecs (scripts/recall.sh QUERY adds meaning)"
 
 if [ -f "$ROOT/docs/build.yaml" ]; then
   note "spec: $(python3 "$ROOT/scripts/spec.py" next --short 2>&1)"

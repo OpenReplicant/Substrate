@@ -1,0 +1,96 @@
+# A choice made from the catalogs (spec section 5, build step 24): the embedding model for recall.
+question: Which embedding model should give Workbench's recall its meaning?
+asked_by: owner
+asked_on: "2026-11-11"
+quote: "shouldn't we be involving vector-encoding models/search? ... you can run embedding models locally on my CPU or GPU (if it doesn't compete for cycles with another GPU-model)"
+need:
+  - runs on this machine (Ollama, behind the gateway), so a person's text never leaves it (docs/assistant/PRIVACY.md P3)
+  - a public leaderboard score to shortlist on (MTEB), then a better recall than words alone on held-out queries from substrate's own history
+  - fast enough on this machine's CPU (a GTX 1070 when Podman can reach it) to embed the whole map in minutes
+  - a permissive or LGPL licence; a release at least two weeks old, pinned exactly
+searched:
+  - "huggingface: model cards of Qwen3-Embedding 0.6B, 4B and 8B, EmbeddingGemma 300m, nomic-embed-text v1.5 and v2-moe, mxbai-embed-large v1, bge-m3, snowflake-arctic-embed-l v2.0, granite-embedding-english-r2, 2026-11-11 (the MTEB leaderboard page itself returned no table)"
+  - "ollama: https://ollama.com/library tags for qwen3-embedding, embeddinggemma, nomic-embed-text, mxbai-embed-large, bge-m3, snowflake-arctic-embed2, granite-embedding, 2026-11-11"
+trial:
+  script: scripts/trials/recall/run.py (queries from scripts/trials/recall/queries.py)
+  run_on: "2026-11-11"
+  cases: >-
+    79 queries from substrate's own history: the owner's words in a decision row, with the parts the row names, and
+    each commit's subject, with the parts whose files it changed; 39 held out (odd decision numbers, commits whose
+    hash starts with an odd digit), read once per arm; 40 for choosing the graph's depth and weight
+  expected: an addition is kept only if it beats the ranking without it on the held-out queries (sign test, p at most 0.01), with an A/A pair showing zero
+  results: .state/trials/recall/results.json (and results-decisions-only.json, the first run on 24 queries)
+verdict: >-
+  Not a Morphogen verdict: Morphogen cannot run substrate's tests yet (its phase 7b), so the trial applies the same
+  rule itself (paired, per query, a sign test at p 0.01, an A/A pair). Qwen3-Embedding 0.6B: recall at 10 on the
+  held-out queries rose from 0.067 (words) to 0.193 with vectors (10 better, 0 worse, p 0.002) and to 0.286 with the
+  graph to depth 2 as well (8 better, 0 worse, p 0.008); the A/A pair differed by 0. nomic-embed-text v1.5: 0.143
+  with vectors (7 better, 0 worse, p 0.016, short of the bar), and the graph added nothing on top of it.
+pick: qwen3-embedding-0-6b
+reason: >-
+  The best recall on held-out queries, both additions passing, and quick: the whole map (422 items) in about a
+  minute on the CPU, 1024 dimensions. Qwen3-Embedding 4B was no better on the first 24 queries (0.279 with vectors
+  against 0.296) and took 547 s to embed against 33 s. Costs it brings: queries want an instruction before them
+  (WORKBENCH_EMBED_QUERY_PREFIX); vectors are only compared within one model, so a new model means embedding again.
+candidates:
+  - name: qwen3-embedding-0-6b
+    title: Qwen3-Embedding 0.6B (ollama qwen3-embedding:0.6b)
+    registry: huggingface
+    repository: QwenLM/Qwen3-Embedding
+    tasks: [feature-extraction]
+    model: ollama/qwen3-embedding:0.6b
+    scores: {mteb-eng-v2: {mean_task: 70.70, retrieval: 61.83, source: "huggingface.co/Qwen/Qwen3-Embedding-0.6B"}}
+    outcome: picked
+    shortlisted: true
+    fit: "0.6B, up to 1024 dimensions (Matryoshka), 32K context, instruction-aware; Apache-2.0 (model card)"
+    trial: "held out (39): recall at 10 0.193 with vectors, 0.286 with the graph; MRR 0.244 and 0.237; 33 s to embed 198 changed items"
+  - name: qwen3-embedding-4b
+    title: Qwen3-Embedding 4B (ollama qwen3-embedding:4b)
+    registry: huggingface
+    repository: QwenLM/Qwen3-Embedding
+    tasks: [feature-extraction]
+    model: ollama/qwen3-embedding:4b
+    scores: {mteb-eng-v2: {mean_task: 74.60, retrieval: 68.46, source: "huggingface.co/Qwen/Qwen3-Embedding-4B"}}
+    outcome: rejected
+    shortlisted: true
+    fit: "4B, up to 2560 dimensions; Apache-2.0"
+    trial: "first 24 queries (14 held out): recall at 10 0.279 with vectors (0.6B: 0.296); 547 s to embed 422 items on the CPU"
+    reason: "No better than 0.6B on substrate's queries and sixteen times slower to embed on the CPU. The pick to try again on the GPU, or when the queries grow and 0.6B's misses show a pattern."
+  - name: nomic-embed-text-v1-5
+    title: nomic-embed-text v1.5 (ollama nomic-embed-text:v1.5)
+    registry: huggingface
+    repository: nomic-ai/contrastors
+    tasks: [feature-extraction]
+    model: ollama/nomic-embed-text:v1.5
+    scores: {mteb: {mean: 62.28, note: "unversioned MTEB, 768 dimensions; source huggingface.co/nomic-ai/nomic-embed-text-v1.5"}}
+    outcome: rejected
+    shortlisted: true
+    fit: "137M, 768 dimensions (Matryoshka), 8192 context; Apache-2.0"
+    trial: "held out (39): recall at 10 0.143 with vectors (p 0.016), 0.137 with the graph; 25 s to embed 422 items"
+    reason: "Below Qwen3 0.6B on every count, and the graph did not help it. The pick if a much smaller model were needed."
+  - name: embeddinggemma-300m
+    title: EmbeddingGemma 300m
+    registry: huggingface
+    tasks: [feature-extraction]
+    scores: {mteb-eng-v2: {mean_task: 69.67, source: "huggingface.co/google/embeddinggemma-300m (768 dimensions)"}}
+    outcome: rejected
+    shortlisted: false
+    fit: "300M, 768 dimensions (Matryoshka), 2048 context"
+    reason: "Its licence is Google's Gemma terms (the model card's header), not a permissive or LGPL licence."
+  - name: granite-embedding-english-r2
+    title: Granite Embedding English R2
+    registry: huggingface
+    tasks: [feature-extraction]
+    scores: {mteb-v2: {mean_41: 62.8, retrieval_10: 56.4, source: "huggingface.co/ibm-granite/granite-embedding-english-r2"}}
+    outcome: rejected
+    shortlisted: false
+    fit: "149M, 768 dimensions, 8192 context; Apache-2.0"
+    reason: "Below Qwen3 0.6B on its own card's retrieval figures, and Ollama's library carries the earlier granite-embedding (278m, 30m), not R2."
+  - name: bge-m3
+    title: BGE-M3
+    registry: huggingface
+    tasks: [feature-extraction]
+    outcome: rejected
+    shortlisted: false
+    fit: "1024 dimensions, 8192 context, dense, sparse and multi-vector; MIT"
+    reason: "Its card reports multilingual benchmarks (MIRACL, MKQA, MLDR), not MTEB English, so there was no score to shortlist it on beside the others. The pick to try if a person's streams are multilingual."

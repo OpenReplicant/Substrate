@@ -46,13 +46,16 @@ class Tools:
 
     # ---------------------------------------------------------------- the tools
     def search(self, q: str, limit: int = 10):
-        hits = self.rest("POST", "rpc/search", body={"q": q, "lim": limit})
-        best = {}
-        for h in hits:
-            k = (h["type"], h["id"])
-            if k not in best or best[k]["rank"] < h["rank"]:
-                best[k] = h
-        return sorted(best.values(), key=lambda h: -h["rank"])[:limit]
+        """Recall (api.recall): words, meaning (when an embedding model is set) and what those items are related
+        to, in one ranking; read through PostgREST as the agent, like every other tool."""
+        from . import embed
+        cfg = embed.settings()
+        try:
+            qvec = embed.query_vector(cfg, q)
+        except (RuntimeError, OSError):
+            qvec = None                      # the embedding endpoint is down: words and the graph still answer
+        body = {"q": q, "lim": limit, "depth": 2, **({"qvec": qvec, "model": cfg["model"]} if qvec else {})}
+        return self.rest("POST", "rpc/recall", body=body)
 
     def list_types(self):
         return [{"id": t["id"], "label": t["label"], "plugin": t["plugin"],
@@ -125,7 +128,8 @@ class Tools:
 
 S = {"type": "string"}
 TOOLS = [
-    ("search", "Search every content type and every claim's quoted source for words (any word, as a prefix).",
+    ("search", "Recall: items matching the words (any word, as a prefix), items close in meaning when vectors are made, "
+               "and items related to the best of those, in one ranking; `via` says which found each.",
      {"q": S, "limit": {"type": "integer", "default": 10}}, ["q"]),
     ("list_types", "The content types: each a table of items, with its fields.", {}, []),
     ("list_items", "Items of one type, newest change first; optionally only those whose title or slug contains text.",

@@ -22,6 +22,7 @@ derive() {
     "$ROOT/scripts/workbench.sh" extract "substrate:$x" | python3 -c 'import json, sys; d = json.load(sys.stdin); print("  substrate:'"$x"'", "ok" if d.get("ok") else "FAILED: " + str(d.get("error")), *(d.get("log") or []))'
   done
   "$ROOT/scripts/streams.sh" run    # drift's gaps up their ladder (streams.yaml)
+  "$ROOT/scripts/recall.sh" || echo "  recall's vectors were not made (above); words and the graph still answer"
 }
 mapfile() {
   "$ROOT/bin/in-tools" env PYTHONPATH="$ROOT/workbench:$ROOT/plugins/substrate" WB_SUBSTRATE_ROOT="$ROOT" \

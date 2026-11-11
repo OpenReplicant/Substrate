@@ -201,6 +201,13 @@ browser ──▶ Caddy (front door) ──┬─ /            the shell: static
   through PostgREST, with a run of their own), streams events from LISTEN/NOTIFY as Server-Sent Events, and
   offers MCP for agents.
 
+**Recall** is one query over three things, each read as the caller: words (`api.search`, full-text over every
+text field and claim quote), meaning (vectors in `wb.embedding`, one per item per model, made outside Postgres
+by `workbench embed` through any OpenAI-style embeddings endpoint, `WORKBENCH_EMBED_*`, and made again when the
+item's text or the model changes) and the graph (items up to two relations from the ten best matches, scored by
+the matches they hang from). `api.recall` fuses the three ranked lists by reciprocal rank and says which found
+each item (`via`); without an embedding model it is words and the graph. MCP's `search` tool is recall.
+
 Sign-in follows PostgREST's own pattern (its v16.5 docs, `how-tos/sql-user-management.rst`, read from its
 repository): passwords hashed with pgcrypto's `crypt` and `gen_salt('bf')`, and a `login` function that checks
 them and signs a JWT with pgjwt's `sign`. pgjwt is one SQL file that needs only pgcrypto, so Workbench vendors

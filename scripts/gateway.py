@@ -45,10 +45,16 @@ def caller_key(secret: str, caller: str) -> str:
     return "sk-bf-" + hmac.new(secret.encode(), caller.encode(), hashlib.sha256).hexdigest()[:40]
 
 
+# Callers that are not handlers, and the only providers each may use (S-83): Workbench's embeddings stay local.
+FIXED = {"workbench:embed": ("ollama",), "contract:model-api": ("openrouter", "ollama")}
+LOCAL = ("ollama",)
+FIXED_KEYS = {"workbench:embed": "WORKBENCH_EMBED_KEY"}   # read from .env by the gateway, the server and the tools
+
+
 def callers() -> list[str]:
     spec = yaml.safe_load((ROOT / "streams.yaml").read_text()) or {}
     return sorted(f"handler:{h}" for s in (spec.get("streams") or {}).values()
-                  for h, d in (s.get("handlers") or {}).items() if (d or {}).get("kind") == "model")
+                  for h, d in (s.get("handlers") or {}).items() if (d or {}).get("kind") == "model") + sorted(FIXED)
 
 
 def pg(env: dict, db: str = "gateway") -> dict:
@@ -64,7 +70,7 @@ def render(env: dict[str, str]) -> dict:
                                          "ollama_key_config": {"url": env["OLLAMA_URL"]}}],
                                "network_config": {"base_url": env["OLLAMA_URL"], "allow_private_network": True}}
     allowed = {"openrouter": [m.strip() for m in (env.get("GATEWAY_OPENROUTER_MODELS") or "regex:.*:free").split(",") if m.strip()],
-               "ollama": ["*"]}
+               "ollama": ["regex:.*"]}
     secret = env.get("GATEWAY_KEY_SECRET") or ""
     per_hour = int(env.get("GATEWAY_REQUESTS_PER_HOUR") or 120)
     return {
@@ -77,11 +83,17 @@ def render(env: dict[str, str]) -> dict:
         "logs_store": {"enabled": True, "type": "postgres", "config": pg(env)},
         "governance": {
             "auth_config": {"is_enabled": True, "admin_username": "admin", "admin_password": "env.GATEWAY_ADMIN_PASSWORD"},
-            "rate_limits": [{"id": "per-caller", "request_max_limit": per_hour, "request_reset_duration": "1h"}],
+            # one limit per caller: a limit several keys point at is one counter, shared (seen 2026-11-11, S-83)
+            "rate_limits": [{"id": "rl-" + c.replace(":", "-"), "request_max_limit": per_hour, "request_reset_duration": "1h"}
+                            for c in callers() if not set(FIXED.get(c, providers)) <= set(LOCAL)] if secret else [],
             "virtual_keys": [{
-                "id": "vk-" + c.replace(":", "-"), "name": c, "value": caller_key(secret, c), "is_active": True,
-                "description": f"{c}'s calls, counted by the gateway", "rate_limit_id": "per-caller",
-                "provider_configs": [{"provider": p, "allowed_models": allowed[p], "key_ids": ["*"]} for p in providers],
+                "id": "vk-" + c.replace(":", "-"), "name": c, "is_active": True,
+                "value": f"env.{FIXED_KEYS[c]}" if c in FIXED_KEYS else caller_key(secret, c),
+                "description": f"{c}'s calls, counted by the gateway",
+                # the hourly cap guards a provider's quota; a caller held to local models has none to guard
+                **({} if set(FIXED.get(c, providers)) <= set(LOCAL) else {"rate_limit_id": "rl-" + c.replace(":", "-")}),
+                "provider_configs": [{"provider": p, "allowed_models": allowed[p], "key_ids": ["*"]} for p in providers
+                                     if p in FIXED.get(c, providers)],
             } for c in callers()] if secret else [],
         },
     }

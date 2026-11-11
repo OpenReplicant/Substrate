@@ -797,6 +797,28 @@ def register(wb):
         ctx.done("verdict")
         ctx.log(f"{len(records)} records in a sound chain, {len(verdicts)} verdicts")
 
+    def model_measures(ctx) -> int:
+        """What substrate measured of each catalogued model: for every handler that calls it (its model setting),
+        that handler's calls, answers, scored and correct answers and mean cost, by stream; quoted from the
+        handler's own item, which the handlers plugin keeps."""
+        q = ctx.conn.execute
+        try:
+            hs = q("""select slug, stream, config->>'model', calls, answers, escalations, scored, correct, cost
+                        from api.handler where wb.live(id) and config ? 'model'""").fetchall()
+        except Exception:  # noqa: BLE001 - no handlers plugin here: nothing measured yet
+            ctx.conn.rollback()
+            return 0
+        n = 0
+        for (slug, model) in q("select slug, model from api.candidate where wb.live(id) and model is not null").fetchall():
+            mine = {f"{h[1]}/{h[0]}": {"calls": h[3], "answers": h[4], "escalations": h[5], "scored": h[6], "correct": h[7],
+                                       "mean_cost": h[8]} for h in hs if h[2] == model}
+            if mine:
+                src = ctx.source(f"workbench:api/handler?config->>model=eq.{model}", json.dumps(mine, sort_keys=True).encode(), "application/json")
+                ctx.upsert("candidate", slug, {"measured": mine}, source=src,
+                           evidence={"measured": {"quote": json.dumps(mine, sort_keys=True)[:300], "span": {"pointer": "/"}}})
+                n += 1
+        return n
+
     def choices(ctx, inputs):
         folder = root / inputs.get("folder", "docs/choices")
         counts = {"choices": 0, "candidates": 0, "registry": 0, "unreached": 0}
@@ -826,7 +848,8 @@ def register(wb):
                     counts["registry"] += 1
                 if not facts:
                     counts["unreached"] += 1
-                own = {k: c.get(k) for k in ("registry", "repository", "image", "fit", "trial", "shortlisted", "outcome", "reason")}
+                own = {k: c.get(k) for k in ("registry", "repository", "image", "fit", "trial", "shortlisted", "outcome", "reason",
+                                             "tasks", "model", "scores")}
                 cev = {k: e for k in own if (e := evidence(lines, spans, ("candidates", i, k)))}
                 item = ctx.upsert("candidate", name, {k: v for k, v in own.items() if v is not None},
                                   title=c.get("title") or name, source=src, evidence=cev)
@@ -834,9 +857,11 @@ def register(wb):
                 if c.get("outcome") == "picked" or name == doc.get("pick"):
                     ctx.relate("choice", choice, "picks", "candidate", item)
                 counts["candidates"] += 1
+        measured = model_measures(ctx)
         ctx.done("choice")
         ctx.done("candidate")
-        ctx.log(f"{counts['choices']} choices, {counts['candidates']} candidates, {counts['registry']} registry answers"
+        ctx.log(f"{counts['choices']} choices, {counts['candidates']} candidates, {counts['registry']} registry answers, "
+                f"{measured} models with measures"
                 + (f"; {counts['unreached']} candidates' registries did not answer (their earlier claims stand)" if counts["unreached"] else ""))
 
     wb.extractor("choices", choices, "docs/choices/*.yaml: each choice and its candidates, licence and releases quoted from the registry")

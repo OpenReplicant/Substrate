@@ -237,6 +237,30 @@ spec:
 apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
+  name: local-models
+  description: 'Ollama 0.40.12 - models that run on this machine: the embedding model for recall now, a person''s models later;
+    reached only through the gateway.'
+  annotations:
+    substrate.dev/basis: deploy/compose.yaml service ollama (volume substrate_ollama-models); scripts/recall.sh pulls the
+      model
+    substrate.dev/evidence: 'CPU for now: Podman 4.9.3 cannot parse this machine''s CDI spec (cdiVersion 0.7.0, additionalGids),
+      so the GTX 1070 is not passed in (S-83).'
+    substrate.dev/fill: adopt
+    substrate.dev/intent: Run models where the data is, so nothing personal leaves this machine (docs/assistant/PRIVACY.md
+      P3).
+    substrate.dev/observed-as: container:substrate-ollama, volume:substrate*-ollama-models
+    substrate.dev/step: '24'
+spec:
+  type: service
+  lifecycle: experimental
+  owner: group:operator
+  system: core
+  providesApis:
+  - embedding-api
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
   name: model-gateway
   description: Bifrost v2.3.2 - every model call goes through one gateway with its caller's own key, and the gateway, not
     the caller, records it (tokens, cost, latency, caller), without content.
@@ -365,6 +389,38 @@ spec:
   consumesApis:
   - workbench-api
   - workbench-server-api
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: recall
+  description: One query over words (full-text), meaning (vectors) and the graph (relations two steps from the best hits),
+    fused by reciprocal rank, read as the caller.
+  annotations:
+    morphogen.dev/change: 'workbench/workbench/sql/013_recall.sql
+
+      workbench/workbench/embed.py
+
+      scripts/recall.sh
+
+      scripts/trials/recall/**'
+    substrate.dev/basis: workbench/workbench/sql/013_recall.sql (api.recall), workbench/workbench/embed.py (workbench embed|recall),
+      MCP search; scripts/recall.sh
+    substrate.dev/evidence: 'Trial 2026-11-11 (scripts/trials/recall): 39 held-out queries from substrate''s history; recall
+      at 10 from 0.067 (words) to 0.193 (with vectors, 10 wins 0 losses, sign p 0.002) to 0.286 (with the graph, 8 wins 0
+      losses, p 0.008); A/A 0.'
+    substrate.dev/fill: build
+    substrate.dev/intent: Find what a question or an input concerns, by its words, its meaning and what the matches are connected
+      to.
+    substrate.dev/step: '24'
+spec:
+  type: service
+  lifecycle: experimental
+  owner: group:agents
+  system: core
+  consumesApis:
+  - database-api
+  - embedding-api
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Component
@@ -1163,6 +1219,21 @@ spec:
   owner: group:operator
   system: core
   definition: SQL over the workbench database; resource postgres (deploy/postgres) fills it.
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: embedding-api
+  description: 'Embeddings at the gateway under Workbench''s own key, local models only: the same text gives the same vector,
+    of one size, with meaning in it.'
+  annotations:
+    morphogen.dev/tests: scripts/contract.sh embedding-api
+spec:
+  type: contract
+  lifecycle: experimental
+  owner: group:operator
+  system: core
+  definition: 'POST /v1/embeddings at the gateway, x-bf-vk: WORKBENCH_EMBED_KEY; filled by local-models with qwen3-embedding:0.6b.'
 ---
 apiVersion: backstage.io/v1alpha1
 kind: API

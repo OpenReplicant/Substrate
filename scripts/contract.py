@@ -32,7 +32,8 @@ OUT = ROOT / ".state" / "contracts"
 CURRENT = {"runtime-api": "compose", "secrets-api": "env", "workbench-api": "postgrest", "workbench-mcp-api": "workbench-server",
            "workbench-server-api": "workbench-server", "graph-api": "ontop", "judge-api": "morphogen",
            "database-api": "postgres", "tools-api": "substrate-tools", "sandbox-api": "podman", "repository-api": "git",
-           "evidence-api": "morphogen-evidence", "model-api": "bifrost"}
+           "evidence-api": "morphogen-evidence", "model-api": "bifrost",
+           "embedding-api": "qwen3-embedding-0.6b"}
 
 
 class Run:
@@ -313,8 +314,11 @@ def model_api(r: Run):
     port = sh("env_value GATEWAY_PORT")[1].strip() or "8090"
     url = f"http://127.0.0.1:{port}/v1/chat/completions"
     callers = g.callers()
-    r.check("the map's model handlers each have a caller (streams.yaml)", callers, callers)
-    caller = callers[0]
+    r.check("the map's model handlers each have a caller (streams.yaml)", any(c.startswith("handler:") for c in callers), callers)
+    caller = "contract:model-api"         # its own key and budget, so the test never spends a handler's
+    cfg = json.loads((ROOT / ".state/gateway/config.json").read_text()) if (ROOT / ".state/gateway/config.json").is_file() else {}
+    limits = [k.get("rate_limit_id") for k in (cfg.get("governance") or {}).get("virtual_keys", []) if k.get("rate_limit_id")]
+    r.check("each capped caller has a limit of its own (a shared limit is one shared counter)", limits and len(limits) == len(set(limits)), limits)
     key = g.caller_key(env["GATEWAY_KEY_SECRET"], caller)
     marker = "probe-" + secrets.token_hex(6)
 
@@ -357,10 +361,50 @@ def model_api(r: Run):
     r.check("the meter's login can read the record and not change it", not wrote, "gateway_meter may delete from logs")
 
 
+def embedding_api(r: Run):
+    """Recall's embeddings (S-83): an OpenAI-style /v1/embeddings at the gateway, under Workbench's own key, which
+    reaches local models only; the same text gives the same vector, of one fixed size; meaning is in it (a
+    synonym is nearer than an unrelated word); and recall through the API uses it."""
+    env = {k: sh(f"env_value {k}")[1].strip() for k in ("GATEWAY_PORT", "WORKBENCH_EMBED_KEY", "WORKBENCH_EMBED_MODEL")}
+    model, key = env["WORKBENCH_EMBED_MODEL"], env["WORKBENCH_EMBED_KEY"]
+    r.check("an embedding model is set", model, "WORKBENCH_EMBED_MODEL is empty")
+    url = f"http://127.0.0.1:{env['GATEWAY_PORT'] or 8090}"
+
+    def post(path, body, key):
+        req = urllib.request.Request(url + path, json.dumps(body).encode(),
+                                     {"Content-Type": "application/json", **({"x-bf-vk": key} if key else {})})
+        try:
+            with urllib.request.urlopen(req, timeout=120) as resp:
+                return resp.status, json.loads(resp.read())
+        except urllib.error.HTTPError as e:
+            return e.code, js(e.read().decode(errors="replace")) or {}
+
+    code, _ = post("/v1/embeddings", {"model": model, "input": ["x"]}, None)
+    r.check("an embedding without a key is refused", code == 401, code)
+    code, _ = post("/v1/chat/completions", {"model": "openrouter/google/gemma-4-31b-it:free",
+                                             "messages": [{"role": "user", "content": "hi"}]}, key)
+    r.check("Workbench's key cannot reach a model off this machine", code == 403, code)
+    words = ["a car needs new tyres", "the automobile needs new tyres", "send the invoice by Friday", "a car needs new tyres"]
+    code, out = post("/v1/embeddings", {"model": model, "input": words}, key)
+    vs = [d["embedding"] for d in sorted(out.get("data") or [], key=lambda d: d["index"])]
+    r.check("the endpoint embeds through the gateway", code == 200 and len(vs) == 4, (code, str(out)[:160]))
+    if len(vs) == 4:
+        cos = lambda a, b: sum(x * y for x, y in zip(a, b)) / ((sum(x * x for x in a) ** 0.5) * (sum(y * y for y in b) ** 0.5))  # noqa: E731
+        r.check("one size for every vector", len({len(v) for v in vs}) == 1, {len(v) for v in vs})
+        r.check("the same text gives the same vector", cos(vs[0], vs[3]) > 0.999, cos(vs[0], vs[3]))
+        r.check("meaning is in it: a synonym is nearer than an unrelated text", cos(vs[0], vs[1]) > cos(vs[0], vs[2]),
+                (cos(vs[0], vs[1]), cos(vs[0], vs[2])))
+    code, out = got("scripts/workbench.sh recall 'where are model calls counted'", {})
+    hits = js(out) or []
+    r.check("recall uses it: meaning finds items, beside words and the graph",
+            any("vector" in (h.get("via") or "") for h in hits), out[-200:])
+
+
 TESTS = {"runtime-api": runtime, "secrets-api": secrets_api, "workbench-api": workbench_api, "workbench-mcp-api": workbench_mcp,
          "workbench-server-api": workbench_server, "graph-api": graph_api, "judge-api": judge_api,
          "database-api": database_api, "tools-api": tools_api, "sandbox-api": sandbox_api, "repository-api": repository_api,
-         "evidence-api": evidence_api, "model-api": model_api}
+         "evidence-api": evidence_api, "model-api": model_api,
+         "embedding-api": embedding_api}
 
 
 def one(interface: str, filler: str) -> bool:

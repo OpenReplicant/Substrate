@@ -22,7 +22,9 @@ terms:
   parents:
   - wb:Item
   comment: 'Something that could fill a need, found in a source catalog: its licence, releases and activity as the registry
-    gives them, and its fit and outcome as a choice records them.'
+    gives them, and its fit and outcome as a choice records them. A model is a candidate too, catalogued by task: the tasks
+    it does, its name at the gateway, the leaderboard scores it was picked on (as the board stated them), and what substrate
+    measured of it.'
 - iri: sub:Cell
   kind: class
   label: Cell
@@ -440,6 +442,12 @@ terms:
   label: matcher
   domain: sub:Hook
   comment: which tool calls it runs after, when the event has one
+- iri: sub:measured
+  kind: datatype-property
+  label: measured
+  domain: sub:Candidate
+  comment: 'for a model: what substrate measured, by stream and handler (calls, answers, scored, correct, mean cost) or by
+    trial'
 - iri: sub:memoryBytes
   kind: datatype-property
   label: memoryBytes
@@ -455,6 +463,11 @@ terms:
   label: metrics
   domain: sub:Verdict
   comment: 'per metric: gain, 95% interval, sign test p, base and candidate medians'
+- iri: sub:model
+  kind: datatype-property
+  label: model
+  domain: sub:Candidate
+  comment: 'for a model: its name at the gateway (provider/name)'
 - iri: sub:module
   kind: datatype-property
   label: module
@@ -607,6 +620,11 @@ terms:
   label: role
   domain: sub:Cell
   comment: 'its role: container, text, code, ...'
+- iri: sub:scores
+  kind: datatype-property
+  label: scores
+  domain: sub:Candidate
+  comment: 'for a model: leaderboard scores it was picked on, by board, as the board or model card stated them'
 - iri: sub:searched
   kind: datatype-property
   label: searched
@@ -668,6 +686,11 @@ terms:
   label: tags
   domain: sub:Image
   comment: its repository tags
+- iri: sub:tasks
+  kind: datatype-property
+  label: tasks
+  domain: sub:Candidate
+  comment: 'for a model: what it does, as Hugging Face''s task tags name it (text-generation, feature-extraction, ...)'
 - iri: sub:transport
   kind: datatype-property
   label: transport

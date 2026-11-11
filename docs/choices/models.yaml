@@ -36,6 +36,9 @@ probe: >-
 candidates:
   - name: gemma-4-26b-a4b
     title: Gemma 4 26B A4B (google/gemma-4-26b-a4b-it:free)
+    tasks: [text-generation]
+    model: openrouter/google/gemma-4-26b-a4b-it:free
+    scores: {arena-text: {score: "1437±7", rank: 101, as_of: "2026-11-09"}}
     registry: openrouter
     outcome: rejected
     reason: "Picked first by the leaderboards; rate-limited upstream (429, Google AI Studio) on every call made on 2026-11-11. The pick again if its free tier becomes reachable."
@@ -43,6 +46,9 @@ candidates:
     fit: "Arena 1437±7, rank 101; AA index not shown; non-reasoning first token 1.50 s; Apache 2.0 (Arena)"
   - name: inkling-2-small
     title: Inkling 2 Small (thinkingmachines/inkling-2-small:free)
+    tasks: [text-generation]
+    model: openrouter/thinkingmachines/inkling-2-small:free
+    scores: {artificial-analysis: {intelligence_index: 31}, arena-text: {score: "1412±12", rank: 151, as_of: "2026-11-09"}}
     registry: openrouter
     outcome: rejected
     reason: "Picked first (the best AA index); its free tier refuses calls from outside agentic harnesses (403 on all 14 calls on 2026-11-11)."
@@ -50,18 +56,27 @@ candidates:
     fit: "AA Intelligence Index 31; Arena 1412±12 (preliminary), rank 151; first answer token 46.89 s; proprietary"
   - name: gemma-4-31b
     title: Gemma 4 31B (google/gemma-4-31b-it:free)
+    tasks: [text-generation]
+    model: openrouter/google/gemma-4-31b-it:free
+    scores: {artificial-analysis: {intelligence_index: 4}, arena-text: {score: "1452±7", rank: 78, as_of: "2026-11-09"}}
     registry: openrouter
     outcome: picked
     shortlisted: true
     fit: "Arena 1452±7, rank 78, the best Arena score of the free models; AA index 4; answered the probe in 1.8 s"
   - name: nemotron-3-5-super-vl
     title: Nemotron 3.5 Super VL (nvidia/nemotron-3.5-super-vl:free)
+    tasks: [text-generation]
+    model: openrouter/nvidia/nemotron-3.5-super-vl:free
+    scores: {artificial-analysis: {intelligence_index: 14}, arena-text: {score: "1415±10", rank: 143, as_of: "2026-11-09"}}
     registry: openrouter
     outcome: picked
     shortlisted: true
     fit: "AA index 14 (second of the free models); Arena 1415±10 (preliminary); answered the probe in 25.5 s"
   - name: nemotron-3-ultra
     title: Nemotron 3 Ultra 550B A55B (nvidia/nemotron-3-ultra-550b-a55b:free)
+    tasks: [text-generation]
+    model: openrouter/nvidia/nemotron-3-ultra-550b-a55b:free
+    scores: {artificial-analysis: {intelligence_index: 12}, arena-text: {score: "1426±7", rank: 122, as_of: "2026-11-09"}}
     registry: openrouter
     outcome: rejected
     shortlisted: false

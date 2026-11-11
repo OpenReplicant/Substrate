@@ -59,6 +59,7 @@ say "What runs (observe.sh)"
 
 say "Streams (streams.yaml)"
 "$ROOT/scripts/streams.sh" || echo "  the streams did not run (above)"   # drift's gaps and the hooks' runs up their ladders
+"$ROOT/scripts/recall.sh" || echo "  recall's vectors were not made (above); words and the graph still answer"
 
 
 say "Up"

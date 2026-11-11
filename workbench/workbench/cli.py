@@ -213,7 +213,24 @@ def main(argv=None) -> int:
     e.add_argument("--queue", action="store_true", help="put it on the server's queue instead of running it here")
     g = sub.add_parser("graph", help="graph views generated from the terms: an Ontop mapping, pgGraph's projection")
     g.add_argument("action", choices=["mapping", "project"]); g.add_argument("dir", type=Path, nargs="?")
+    m = sub.add_parser("embed", help="make the missing or stale vectors for recall (WORKBENCH_EMBED_*)")
+    m.add_argument("--all", action="store_true", help="make every vector again")
+    r = sub.add_parser("recall", help="one query over full-text, vectors and the graph")
+    r.add_argument("query"); r.add_argument("--limit", type=int, default=10); r.add_argument("--depth", type=int, default=1)
+    r.add_argument("--no-vectors", action="store_true")
     a = ap.parse_args(argv)
+    if a.cmd in ("embed", "recall"):
+        from . import embed
+        with connect() as conn:
+            if a.cmd == "embed":
+                cfg = embed.settings()
+                if not cfg:
+                    ap.error("embed needs WORKBENCH_EMBED_URL and WORKBENCH_EMBED_MODEL")
+                result = embed.embed(conn, cfg, every=a.all)
+            else:
+                result = embed.recall(conn, a.query, a.limit, a.depth, not a.no_vectors)
+        print(json.dumps(result, indent=2))
+        return 0
     if a.cmd == "graph":
         from . import graph
         with connect() as conn:
