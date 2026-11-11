@@ -317,10 +317,11 @@ their own.
 | --- | --- | --- |
 | 17 | Streams, handlers and the record of every call | stream, input, handler and route are content types that any domain can use; every call a handler makes is recorded with its answer or escalation, its cost and, later, its outcome, each a claim; a handler's rank is computed from its measured cost; the hooks and the review lane are on the ladder as its bottom and top; one stream from what already happens (drift's gaps) runs through it |
 | 18 | Model calls through one gateway, counted outside the candidate | a model gateway picked through section 5 fills a slot with a contract test; a small and a large model are handlers behind it, each call's cost the gateway's own record of it, never the handler's report; a model call the gateway did not see, or saw under another caller's key, is refused; which models and the monthly budget are the owner's |
-| 19 | A game stream, and one judged compile-down | a game picked through section 5 is a stream whose outcome is its score; three ranks (a script, a small model with a knowledge file, a large model) play seeds; a compile-down from the escalations is judged by Morphogen on seeds it never saw, by score, cost and escalations per game, with an A/A check; over a handful of cycles held-out score holds or rises while cost and escalations fall, and the evidence log holds at least one refused cheat; a model handler's model and prompt are searched together, the prompt tuned for each model, and the best pair is judged on held-out seeds against the handler as it is |
+| 19 | A first environment, and one judged compile-down | the environment slot (reset and step, as Gymnasium states it) has a contract test; ARC-AGI-1, picked through section 5, is the first environment: one step per task, the predicted grid the action, an exact match the reward, its evaluation tasks held out; three ranks (a script, a small model with a knowledge file, a large model) solve training tasks, every call recorded with its transcript and visible in Workbench's ladder view as it happens; a compile-down from the escalations is judged by Morphogen on evaluation tasks it never saw, by score, cost and escalations per task, with an A/A check; a model handler's model and prompt are searched together, the prompt tuned for each model, and the best pair is judged on held-out tasks against the handler as it is |
 | 20 | The idle tier | under a budget, on Workbench's timers and jobs, the idle tier replays escalations into proposed compile-downs, practises on fresh cases, prunes and re-ranks handlers, and proposes streams to subscribe to (each subscription a map change, to review); its spending is recorded and stays inside the budget; it never touches held-out cases (a red-team test) |
 | 21 | A person at the top of a stream | a stream whose outcomes are a person's: first this repository's review lane (the owner's decisions), then a personal assistant's streams (which ones are the owner's choice), with privacy rules written and checked before any personal stream is read (settings by name, gitleaks, local models for personal data); questions to the person fall and work accepted unedited rises over held-out weeks |
 | 22 | Model calls counted inside Morphogen's judged runs | in a judged run the candidate reaches models only through the gateway the operator names, its calls, tokens and cost per round come from the gateway's record, and a candidate that calls a model around it cannot move a verdict (a red-team test in Morphogen, upstream, first: its PLAN.md phase 7c) |
+| 23 | An interactive environment: ARC-AGI-3 | ARC-AGI-3's games, through its toolkit, fill the environment slot and pass its contract test; an episode's steps go up the ladder one action at a time, each frame and action replayed in the ladder view; held-out games stay unplayed until judged; a compile-down from one game's escalations is judged on games it never saw |
 
 ## 10. Multi-process: inputs handled at the cheapest rank that can
 
@@ -380,6 +381,24 @@ Model calls are counted outside the candidate. Morphogen's `otel` observer alrea
 Every other model is reached through the gateway (step 18), and a handler's cost per call is the gateway's record
 of it, so a model call the gateway did not see is refused. Inside Morphogen's judged runs the same rule is step
 22.
+
+**Environments: streams that act.** Some streams are a loop over time, not one input and one answer: a game,
+a person's calendar, later a body. Each turn, an observation comes in, a decision goes up the ladder, an
+action goes out, and the next observation shows what it did. Robotics and reinforcement learning already
+have one interface for that loop, an environment that is reset and stepped (`reset() -> observation`,
+`step(action) -> observation, reward, terminated, truncated, info`, as Gymnasium (MIT) states it), and
+ARC-AGI-3's toolkit already follows it. An **environment** is a slot with that interface and a contract
+test. An **episode** is an input whose calls are its steps, and its outcome is its reward. Actions pass a
+gate the stream declares: a game's are free; a person's world gets proposals the person accepts, edits or
+ignores, until a compile-down earns more on held-out weeks. Several streams can feed one decision (the
+calendar and the inbox for one reply; the frame and what the last moves did, for one game move). They meet
+in the input a handler is shown, never inside a handler where the ladder cannot see them.
+
+**Watching it work.** Every call can be seen as it happens, in Workbench's ladder view: which rank was asked,
+what it answered, how sure it was, why it escalated, and what it cost. For an episode, each step and the frame
+it acted on are shown in order. A stream may keep each call's transcript (its prompt, the reply and the
+reasoning a model returns) in Workbench; a game's stream does, and a person's does only when its privacy rules
+say so (step 21). The gateway never keeps content.
 
 **What lands on its own.** A compile-down lands on a passing verdict. A new subscription, a new rank and
 anything that reads a person's stream go to the review lane. Privacy rules come before any personal stream is
