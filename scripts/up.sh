@@ -23,6 +23,7 @@ until "$ROOT/scripts/workbench.sh" migrate >/dev/null 2>&1; do
 done
 echo "  migrated"
 "$ROOT/bin/in-tools" python3 "$ROOT/scripts/gateway.py" init   # its database and logins; it retries until they exist
+"$ROOT/bin/in-tools" python3 "$ROOT/scripts/gateway.py" prune  # limits its store kept that config.json dropped (S-87)
 for p in handlers business substrate; do   # handlers: streams and ranked handlers (spec section 10); business: an organisation's parts (step 10); substrate: its own types
   "$ROOT/scripts/workbench.sh" plugin load "$ROOT/plugins/$p" | python3 -c 'import json, sys; d = json.load(sys.stdin); print("  plugin", d["plugin"], d["version"], "types:", ", ".join(t["type"] for t in d["types"]))'
 done

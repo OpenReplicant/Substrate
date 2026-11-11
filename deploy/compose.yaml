@@ -117,6 +117,7 @@ services:
       GATEWAY_DB_PASSWORD: ${GATEWAY_DB_PASSWORD:?set in .env}
       GATEWAY_ADMIN_PASSWORD: ${GATEWAY_ADMIN_PASSWORD:?set in .env}
       WORKBENCH_EMBED_KEY: ${WORKBENCH_EMBED_KEY:?set in .env}
+      MORPHOGEN_JUDGE_KEY: ${MORPHOGEN_JUDGE_KEY:?set in .env}
     volumes:
       - ../.state/gateway/config.json:/app/data/config.json:ro   # over the tmpfs: its stores are in Postgres
     ports:

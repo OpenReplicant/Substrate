@@ -20,7 +20,7 @@ import ladder  # noqa: E402
 import yaml  # noqa: E402
 
 env = gw.settings()
-key = gw.caller_key(env["GATEWAY_KEY_SECRET"], gw.JUDGE)
+key = env["MORPHOGEN_JUDGE_KEY"]
 url = f"http://127.0.0.1:{env.get('GATEWAY_PORT') or 8090}"
 spec = yaml.safe_load((ROOT / "streams.yaml").read_text())["streams"]["drift-gaps"]
 # the withdrawn gaps, fetched by the caller (Workbench's REST, as claude-code) into .state/trials/local-model/gaps.json
