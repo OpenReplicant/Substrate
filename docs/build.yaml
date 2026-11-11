@@ -217,6 +217,95 @@ steps:
       interface is tested from the outside only; nothing here changes the judge.
       Done 2026-11-09 (S-66): contract tests for every core interface and the parts beneath them, named on the map; OpenBao passes the secrets slot's test; runs recorded as contract items.
 
+  # Steps 17 to 21 (S-74, spec section 10) sit here, before step 10, because the skill takes steps in file
+  # order: 17 and 18 give step 12 its streams and events.
+  - id: 17
+    title: Streams, handlers and the record of every call
+    spec: "1, 10"
+    where: Workbench (stream and input, generic), substrate's plugin at first (handler, route, the call record), a small runner library
+    after: [9]
+    status: todo
+    check: >-
+      stream, input, handler and route are content types with nothing in them that names substrate; every call a
+      handler makes is recorded with its answer or escalation (with a reason), its cost and, once known, its
+      outcome, each a claim attributed to the handler; a handler's rank is computed from its measured cost, not
+      declared; the hooks and the review lane are on the ladder as its bottom and top; drift's gaps run through
+      it as a first stream (a rank-0 handler answers what it can, the rest escalate to the review lane, and the
+      owner's decision is the outcome); a test shows a handler that answers without a confidence, or calls another
+      handler unrecorded, is refused by the runner; scripts/check.sh passes
+    notes: >-
+      Added 2026-11-10 (S-74). The input's shape may become OCEL 2.0 events and objects once step 10 picks the
+      vocabulary; keep the record's fields mappable to it. Inputs are any stream, not only prompts.
+
+  - id: 18
+    title: Model calls through one gateway, counted outside the candidate
+    spec: "5, 8, 10"
+    where: substrate (the gateway back as a slot with a contract test; model handlers), Morphogen upstream (counting calls in judged runs)
+    after: [17]
+    status: todo
+    needs_owner: true
+    check: >-
+      a model gateway is picked through the research skill (Bifrost v2.3.2 is the option on the map, restorable
+      from a00fb61; re-check versions and licence) and fills a model-gateway slot whose contract test it passes;
+      a small and a large model are handlers behind it, each with its cost per call measured by the gateway; in a
+      judged run every model call is counted from outside the candidate, and a red-team test in Morphogen shows a
+      handler that calls a model around the gateway fails the run (upstream, red team first); the map's option
+      becomes a component; scripts/check.sh passes
+    notes: >-
+      Added 2026-11-10 (S-74). The owner's: which small and large models (a local one for personal data later),
+      and a monthly ceiling for model calls and the idle tier. The change to how Morphogen counts is the judge's,
+      so it goes upstream by PR the owner reviews.
+
+  - id: 19
+    title: A game stream, and one judged compile-down
+    spec: "2, 5, 10"
+    where: a game picked through docs/choices (its own repo or a plugin), substrate (the stream, the ranks), Morphogen (the verdicts)
+    after: [18]
+    status: todo
+    check: >-
+      docs/choices records the game picked (seeded, scored, permissive licence) and the rejections; the game is a
+      stream whose outcome is its score, with nothing game-specific in steps 17 and 18's pieces; three ranks (a
+      script, a small model with a knowledge file, a large model) play seeds and every call is recorded; a
+      compile-down proposed from the escalations is judged by Morphogen on seeds the change never saw, by score,
+      cost per game and escalations per game, with an A/A check; over a handful of judged cycles held-out score
+      holds or rises while cost and escalations fall, with no regressions, and the evidence log holds at least one
+      refused cheat (never escalating, always escalating, or a call around the gateway)
+    notes: >-
+      Added 2026-11-10 (S-74). Ground truth is the score, never the large model's opinion. Use an existing
+      environment, or an original game; never a recreation of a specific existing game.
+
+  - id: 20
+    title: The idle tier
+    spec: "8, 10"
+    where: substrate's plugin (idle jobs on Workbench's pg_cron and pgmq)
+    after: [19]
+    status: todo
+    check: >-
+      under a budget set in .env, the idle tier runs on Workbench's timers and jobs and replays escalations into
+      proposed compile-downs, practises on fresh cases, prunes and re-ranks handlers, and proposes streams to
+      subscribe to (each subscription a map change, to the review lane); its spending is recorded and stays inside
+      the budget; a red-team test shows it cannot reach held-out seeds or windows; one compile-down it proposed is
+      judged and kept or refused; scripts/check.sh passes
+    notes: Added 2026-11-10 (S-74). Section 8's held ideas (episodes, skill promotion, a dispatcher) land here.
+
+  - id: 21
+    title: A person at the top of a stream
+    spec: "6, 10, 11"
+    where: substrate (observers for a person's streams, privacy rules), Workbench (the review lane as a stream)
+    after: [20]
+    status: todo
+    needs_owner: true
+    check: >-
+      this repository's review lane is a stream whose outcomes are the owner's decisions, and a compile-down from
+      them is judged on held-out weeks; then, privacy rules for personal data written and checked first (settings
+      by name, gitleaks before import, local models for personal data, retention), a personal assistant's first
+      streams are observed, and the outcome of each piece of work is what the person did (accepted, edited, redid,
+      ignored); questions to the person fall and work accepted unedited rises over held-out weeks
+    notes: >-
+      Added 2026-11-10 (S-74). The owner's: which personal streams first (email, calendar, messages, files,
+      notes). Gaps between what the person says they want and what they do go to review, and the person decides
+      which side changes.
+
   - id: 10
     title: A business vocabulary, adopted
     spec: "1, 5, 9"
@@ -253,7 +342,7 @@ steps:
     title: Processes as they run
     spec: "1, 6, 8"
     where: substrate (event importers, a process-mining extractor; library through docs/choices), Workbench (events and objects)
-    after: [10]
+    after: [10, 17]
     status: todo
     check: >-
       events from a CSV export and from OpenTelemetry logs or spans land as OCEL 2.0 events and objects in
@@ -307,7 +396,7 @@ steps:
 
   - id: 16
     title: An engagement, packaged
-    spec: "1, 10"
+    spec: "1, 11"
     where: substrate (instances, roles, onboarding, data handling)
     after: [14, 15]
     status: todo

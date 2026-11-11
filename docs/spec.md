@@ -45,7 +45,8 @@ from as components (an AutoML catalog), tested on video games and on internet re
 distil what the language model does slowly into faster, checkable parts. Rules are the first: an OWL 2 RL
 reasoner applies them over claims (step 7), then rules are learned and judged (section 8, held ideas), then
 learned models. Each is a component like any other: chosen from a catalog, judged by Morphogen against what
-runs now, and kept only on evidence. Nothing in the build plan depends on it yet.
+runs now, and kept only on evidence. Section 10 (multi-process, S-74) is the loop that does the distilling:
+inputs handled at the cheapest rank that can, and what a dearer rank works out compiled into a cheaper one.
 
 ## 2. How it works: science-minded
 
@@ -308,7 +309,81 @@ OpenTelemetry and OCEL 2.0 sit at different layers: OpenTelemetry carries events
 OCEL 2.0 says what an event means for a process (which activity, which objects: this order, this invoice). The
 demo business comes first, with synthetic events, so the steps have data without a client's privacy at stake. External vocabularies became an option.
 
-## 10. Limitations
+Steps 17 to 21 (S-74) build multi-process (section 10). They come before step 10 in the order the build plan
+takes them: 17 and 18 give step 12 its streams and events, and the business steps reuse them instead of growing
+their own.
+
+| # | Step | Done when |
+| --- | --- | --- |
+| 17 | Streams, handlers and the record of every call | stream, input, handler and route are content types that any domain can use; every call a handler makes is recorded with its answer or escalation, its cost and, later, its outcome, each a claim; a handler's rank is computed from its measured cost; the hooks and the review lane are on the ladder as its bottom and top; one stream from what already happens (drift's gaps) runs through it |
+| 18 | Model calls through one gateway, counted outside the candidate | a model gateway (Bifrost, an option, back through section 5) fills a slot with a contract test; a small and a large model are handlers behind it; in a judged run every model call is counted from outside the candidate, and a handler that calls a model around the gateway is caught (a red-team test in Morphogen, upstream, first); which models and the monthly budget are the owner's |
+| 19 | A game stream, and one judged compile-down | a game picked through section 5 is a stream whose outcome is its score; three ranks (a script, a small model with a knowledge file, a large model) play seeds; a compile-down from the escalations is judged by Morphogen on seeds it never saw, by score, cost and escalations per game, with an A/A check; over a handful of cycles held-out score holds or rises while cost and escalations fall, and the evidence log holds at least one refused cheat |
+| 20 | The idle tier | under a budget, on Workbench's timers and jobs, the idle tier replays escalations into proposed compile-downs, practises on fresh cases, prunes and re-ranks handlers, and proposes streams to subscribe to (each subscription a map change, to review); its spending is recorded and stays inside the budget; it never touches held-out cases (a red-team test) |
+| 21 | A person at the top of a stream | a stream whose outcomes are a person's: first this repository's review lane (the owner's decisions), then a personal assistant's streams (which ones are the owner's choice), with privacy rules written and checked before any personal stream is read (settings by name, gitleaks, local models for personal data); questions to the person fall and work accepted unedited rises over held-out weeks |
+
+## 10. Multi-process: inputs handled at the cheapest rank that can
+
+Substrate subscribes to **streams** of inputs: anything it chooses to tune into, not only prompts. A game state,
+a new email, a drift gap, a failing check, a hook firing, a timer. Each input goes to the cheapest **handler**
+that can handle it well. A handler either answers (a value, its confidence, its cost) or escalates (a reason,
+and where to send it, if it knows). The longer write-up is [`multi-process.md`](multi-process.md).
+
+**N ranks, not a fixed ladder.** Handlers are sorted by their measured cost per input (time, money, a person's
+attention), so there are as many ranks as there are handlers. The ladder might run from a hook or a script,
+through a rule over claims (step 7), a small model with a knowledge file, a large model, a Claude Code session
+and several handlers asked at once, to a specialist person and the owner in the review lane at the top.
+Consequences:
+- Adding a rank is adding a handler, and retiring a rank is retiring one.
+- Several handlers can share a rank, each specialised for part of a stream.
+- A handler can escalate past the next rank up, or ask several at once.
+- Ranks move as costs are re-measured.
+- The router, which picks a handler for an input, is a handler too.
+- People are ranks.
+
+All of these are components on the map, changed the way section 7 says.
+
+**Every call is a claim.** The input, the handler, its answer or escalation, its cost, and later the
+**outcome**: the score, the check passing, the person accepting, editing, redoing or ignoring the work.
+Outcomes are the ground truth. Another handler's opinion never is, or the cheap handler would learn the dear
+one's mistakes along with its strengths.
+
+**Compiling down is the learning.** What rank *k* works out becomes a change below *k*:
+- a line in a knowledge file or a recipe
+- a rule the reasoner applies
+- a script or hook, once a recipe is fully predictable
+- a routing rule
+
+Each is a component change, so Morphogen decides it, on inputs it was not tuned on, against what runs now.
+Each kept change cites the escalations it came from, and each rejected one stays a negative result. A handler
+whose outcomes fall gets its inputs routed higher until it is fixed or retired. Each form of compile-down is
+one entry in the catalog of learning methods (section 1, direction). Lineage: Soar's chunking, ACT-R's
+production compilation, Expert Iteration.
+
+**The idle tier** is not a rank. It is how the system spends a budget when no input is waiting. It replays
+escalations into compile-downs, practises on fresh cases, prunes and re-ranks handlers, works the map's thin
+parts, and chooses which streams to attend to. A new subscription is a map change, so it goes to review. Section
+8's held ideas (episodes, skill utility and promotion, a dispatcher of headless sessions) land here.
+
+**Measures and cheats.** For each stream, the measures are inputs by resolving rank, cost per input, outcome,
+and escalations per input. Success is resolution moving down while outcomes hold, on held-out cases: seeds for
+a game, time windows for a person's streams (as step 13 holds out windows for a business). The red team tries
+these first:
+- never escalating
+- always escalating
+- a handler quietly calling a bigger model inside itself
+- confidence that doesn't track outcomes
+- the idle tier practising on held-out cases
+- outcomes taken from a handler's opinion
+
+Model calls are counted outside the candidate. Morphogen's `otel` observer already does that for Claude Code,
+and every other model is reached through the gateway (step 18), so a call the gateway did not see fails the
+run.
+
+**What lands on its own.** A compile-down lands on a passing verdict. A new subscription, a new rank and
+anything that reads a person's stream go to the review lane. Privacy rules come before any personal stream is
+read (step 21).
+
+## 11. Limitations
 
 - **One machine, one owner.** Several owners or sites need federation, which this spec does not cover.
 - **Judges are models.** Verdicts are noisy. A/A checks measure that noise but do not remove it, so small
@@ -329,7 +404,11 @@ demo business comes first, with synthetic events, so the steps have data without
 - **Registries differ.** Some have no search API (PyPI), and some limit unauthenticated requests (GitHub).
   Research falls back to the web, and each claim says where it came from.
 
-## 11. Sources
+- **Cheap ranks are only as good as their outcomes.** A stream with a slow or vague outcome (a person who
+  rarely says whether a draft was right) teaches slowly, and compile-downs on it wait for enough held-out data
+  to judge.
+
+## 12. Sources
 
 - This repository's `DECISIONS.md` (S-41 onwards for this spec) and `catalog-info.yaml`
 - Workbench: `workbench/BRIEF.md`; kernel (https://github.com/OpenReplicant/kernel), its predecessor, retired (S-68)
