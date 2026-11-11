@@ -7,4 +7,4 @@
 morphogen:
   url: https://github.com/OpenReplicant/Morphogen
   branch: main
-  checked: eefd79a31fc239364667cb94425259b31c4c440e   # 2026-11-11 (#76: settings from the base commit)
+  checked: a7ec1ac120482c106ec2ef7ef62e850f62ff7105   # 2026-11-11 (#78: morphogen request, the evidence record's schema)
