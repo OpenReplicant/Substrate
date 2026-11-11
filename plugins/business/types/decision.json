@@ -1,0 +1,35 @@
+{
+  "title": "Decision",
+  "description": "A decision the business makes over and over: its question, the answers it may give, and its logic (DMN 1.5).",
+  "type": "object",
+  "x-term": "dmn:Decision",
+  "properties": {
+    "domain": {
+      "type": "string",
+      "description": "the business this belongs to (its map's domain slug)"
+    },
+    "description": {
+      "type": "string",
+      "description": "what it is, in the business's words"
+    },
+    "question": {
+      "type": "string",
+      "description": "what it decides"
+    },
+    "answers": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "the answers it may give"
+    },
+    "logic": {
+      "type": "string",
+      "description": "how it is decided: a rule in words, a DMN decision table's file, FEEL"
+    },
+    "dmn_id": {
+      "type": "string",
+      "description": "its id in a DMN file, if it has one"
+    }
+  }
+}

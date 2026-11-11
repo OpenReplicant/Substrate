@@ -1,0 +1,76 @@
+# The business plugin's terms (README.md; the choice: docs/choices/business-vocabulary.yaml). Each content type
+# names its class from a published model with x-term; this file adds those classes' labels and the relations
+# between items. Nothing is minted where a picked model has the term; `biz:` holds only what none of them has.
+# The SSSOM mappings to the other models are in mappings.sssom.tsv.
+vocabulary: business
+prefixes:
+  biz: https://workbench.local/business#
+  org: http://www.w3.org/ns/org#
+  foaf: http://xmlns.com/foaf/0.1/
+  vf: https://w3id.org/valueflows/ont/vf#
+  bpmn: http://www.omg.org/spec/BPMN/20100524/MODEL#
+  dmn: https://www.omg.org/spec/DMN/20230324/MODEL/#
+  ocel: https://www.ocel-standard.org/2.0/#
+  schema: https://schema.org/
+  bmm: http://www.semanticweb.org/ontologies/bmm#
+terms:
+# ---- classes, one per content type (types/*.json name them with x-term)
+- {iri: "org:Organization", kind: class, label: Organization, parents: ["wb:Item"],
+   comment: "W3C ORG (Recommendation 2014-01-16): a collection of people organized together into a community or other social, commercial or political structure."}
+- {iri: "org:OrganizationalUnit", kind: class, label: OrganizationalUnit, parents: ["org:Organization"],
+   comment: "W3C ORG: an organization such as a department or support unit which is part of some larger organization."}
+- {iri: "org:Role", kind: class, label: Role, parents: ["wb:Item"],
+   comment: "W3C ORG: a role that a person or other agent can take in an organization."}
+- {iri: "foaf:Person", kind: class, label: Person, parents: ["wb:Item"],
+   comment: "FOAF 0.99: a person. ORG's members are foaf:Agents; a person is the agent here."}
+- {iri: "vf:EconomicResource", kind: class, label: EconomicResource, parents: ["wb:Item"],
+   comment: "Valueflows 1.0.0 (an OWL form of REA, ISO/IEC 15944-4): a resource which is useful to people or the ecosystem: equipment, material, money, information, a system."}
+- {iri: "bpmn:Process", kind: class, label: Process, parents: ["wb:Item"],
+   comment: "BPMN 2.0.2 (OMG formal/13-12-09): a sequence or flow of activities in an organization with the objective of carrying out work."}
+- {iri: "bpmn:Activity", kind: class, label: Activity, parents: ["wb:Item"],
+   comment: "BPMN 2.0.2: work performed within a process. Here every flow node is one (a task, an event in the flow, a gateway), its BPMN kind in `kind`."}
+- {iri: "ocel:Event", kind: class, label: Event, parents: ["wb:Item"],
+   comment: "OCEL 2.0: something that happened at a time, of an event type (an activity), related to objects with qualifiers. OCEL publishes no IRIs; ocel: names the specification's metamodel concepts."}
+- {iri: "dmn:Decision", kind: class, label: Decision, parents: ["wb:Item"],
+   comment: "DMN 1.5 (OMG formal/24-01-01): the act of determining an output value from a number of input values, using decision logic."}
+- {iri: "foaf:Document", kind: class, label: Document, parents: ["wb:Item"],
+   comment: "FOAF 0.99: a document, broadly conceived: a form, an invoice, a record, a file."}
+- {iri: "schema:StatisticalVariable", kind: class, label: StatisticalVariable, parents: ["wb:Item"],
+   comment: "schema.org V30.1: any type of statistical metric that can be measured at a place and time: cycle time, rework, cost per case."}
+- {iri: "bmm:Goal", kind: class, label: Goal, parents: ["wb:Item"],
+   comment: "The Business Motivation Model (OMG BMM 1.3, as the BMMOntology OWL has it): a statement about a state or condition of the enterprise to be brought about or sustained."}
+# ---- relations between items (a property's `predicate` names the relation)
+- {iri: "biz:businessRelation", kind: property, label: businessRelation, parents: ["wb:relatedTo"],
+   comment: "A relation the business map states between its parts."}
+- {iri: "org:unitOf", kind: property, label: unitOf, predicate: unitOf, parents: ["biz:businessRelation"], domain: "org:OrganizationalUnit", range: "org:Organization",
+   comment: "W3C ORG: this unit is part of that organization."}
+- {iri: "org:memberOf", kind: property, label: memberOf, predicate: memberOf, parents: ["biz:businessRelation"], domain: "foaf:Person", range: "org:Organization",
+   comment: "W3C ORG: the person is a member of the organization or unit."}
+- {iri: "biz:holds", kind: property, label: holds, predicate: holds, parents: ["biz:businessRelation"], domain: "foaf:Person", range: "org:Role",
+   comment: "The person takes the role (ORG says it with an org:Membership carrying org:role; here, directly)."}
+- {iri: "biz:roleIn", kind: property, label: roleIn, predicate: roleIn, parents: ["biz:businessRelation"], domain: "org:Role", range: "org:Organization",
+   comment: "The role belongs to that organization or unit."}
+- {iri: "biz:partOf", kind: property, label: partOf, predicate: partOf, parents: ["biz:businessRelation"], characteristics: [transitive],
+   comment: "An activity is part of a process; a process part of a larger one."}
+- {iri: "biz:flowsTo", kind: property, label: flowsTo, predicate: flowsTo, parents: ["biz:businessRelation"], domain: "bpmn:Activity", range: "bpmn:Activity",
+   comment: "BPMN's sequence flow: this activity is followed by that one (the flow's name and condition are on the activity's `outgoing`)."}
+- {iri: "biz:performedBy", kind: property, label: performedBy, predicate: performedBy, parents: ["biz:businessRelation"], domain: "bpmn:Activity", range: "org:Role",
+   comment: "Who does the activity: a BPMN lane or performer."}
+- {iri: "biz:uses", kind: property, label: uses, predicate: uses, parents: ["biz:businessRelation"],
+   comment: "The activity reads or consumes a document or a resource (BPMN's data input association)."}
+- {iri: "biz:produces", kind: property, label: produces, predicate: produces, parents: ["biz:businessRelation"],
+   comment: "The activity writes or makes a document or a resource (BPMN's data output association)."}
+- {iri: "biz:makes", kind: property, label: makes, predicate: makes, parents: ["biz:businessRelation"], domain: "bpmn:Activity", range: "dmn:Decision",
+   comment: "The activity makes the decision (BPMN's business rule task, DMN's decision service)."}
+- {iri: "biz:ownedBy", kind: property, label: ownedBy, predicate: ownedBy, parents: ["biz:businessRelation"],
+   comment: "Who answers for a process, a resource, a measure or a goal."}
+- {iri: "biz:occurrenceOf", kind: property, label: occurrenceOf, predicate: occurrenceOf, parents: ["biz:businessRelation"], domain: "ocel:Event", range: "bpmn:Activity",
+   comment: "OCEL's event type: the event is one occurrence of that activity."}
+- {iri: "biz:concerns", kind: property, label: concerns, predicate: concerns, parents: ["biz:businessRelation"], domain: "ocel:Event",
+   comment: "OCEL's event-to-object relation (its qualifier is in the event's `objects`)."}
+- {iri: "biz:measures", kind: property, label: measures, predicate: measures, parents: ["biz:businessRelation"], domain: "schema:StatisticalVariable",
+   comment: "The measure is taken over that process or activity."}
+- {iri: "biz:serves", kind: property, label: serves, predicate: serves, parents: ["biz:businessRelation"], range: "bmm:Goal",
+   comment: "A process, a measure or a decision serves the goal (BMM: a means channelled toward an end)."}
+- {iri: "biz:goalOf", kind: property, label: goalOf, predicate: goalOf, parents: ["biz:businessRelation"], domain: "bmm:Goal",
+   comment: "Whose goal it is: an organization or a unit."}

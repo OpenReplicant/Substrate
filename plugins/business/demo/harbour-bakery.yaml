@@ -1,0 +1,174 @@
+# A demo business (spec step 10), made up: a small bakery that sells bread to cafés and shops on standing and
+# one-off orders. Its order-to-delivery process is demo/wholesale-order.bpmn; this file is the rest of its map.
+# business:map reads it, and export-map writes it back in this same form.
+domain: harbour-bakery
+items:
+  organisation:
+    harbour-bakery:
+      title: Harbour Bakery
+      description: A bakery of nine people that bakes overnight and delivers to about forty cafés and shops before 7am.
+      legal_name: Harbour Bakery Ltd
+      site: the bakehouse by the harbour, with one van
+    flour-mill:
+      title: Valley Flour Mill
+      description: The bakery's flour supplier, delivering weekly.
+  unit:
+    bakehouse:
+      title: Bakehouse
+      description: The overnight baking crew.
+      unitOf: harbour-bakery
+    front-office:
+      title: Front office
+      description: Orders, invoices and the phone.
+      unitOf: harbour-bakery
+  role:
+    head-baker:
+      title: Head baker
+      responsibilities:
+      - plans the night's bake from the order list
+      - orders flour and ingredients
+      roleIn: bakehouse
+    baker:
+      title: Baker
+      responsibilities:
+      - bakes to the plan
+      roleIn: bakehouse
+    office-manager:
+      title: Office manager
+      responsibilities:
+      - takes orders
+      - sends invoices and chases payment
+      roleIn: front-office
+    driver:
+      title: Driver
+      responsibilities:
+      - loads the van and delivers before 7am
+      roleIn: front-office
+  person:
+    sam:
+      title: Sam
+      description: Owner and head baker.
+      holds: head-baker
+      memberOf: bakehouse
+    ari:
+      title: Ari
+      holds: baker
+      memberOf: bakehouse
+    jo:
+      title: Jo
+      holds:
+      - driver
+      - office-manager
+      memberOf: front-office
+  resource:
+    oven:
+      title: Deck oven
+      kind: equipment
+      ownedBy: head-baker
+    van:
+      title: Delivery van
+      kind: equipment
+      ownedBy: driver
+    flour:
+      title: Flour stock
+      kind: material
+      quantity:
+        value: 600
+        unit: kg
+      ownedBy: head-baker
+    accounts:
+      title: Accounting spreadsheet
+      kind: system
+      ownedBy: office-manager
+  process:
+    invoicing:
+      title: Monthly invoicing
+      description: Each customer's deliveries for the month become one invoice, then payment is chased.
+      trigger: the first working day of the month
+      outcome: every customer invoiced, and paid within 30 days
+      ownedBy: office-manager
+      serves: paid-on-time
+  activity:
+    invoicing-start:
+      title: Month ends
+      kind: startEvent
+      flowsTo: collect-delivery-notes
+      partOf: invoicing
+    collect-delivery-notes:
+      title: Collect the month's delivery notes
+      kind: userTask
+      minutes: 45
+      flowsTo: write-invoices
+      partOf: invoicing
+      performedBy: office-manager
+      uses: delivery-note
+    write-invoices:
+      title: Write the invoices
+      kind: userTask
+      minutes: 120
+      flowsTo: invoicing-end
+      partOf: invoicing
+      performedBy: office-manager
+      produces: invoice
+      uses: accounts
+    invoicing-end:
+      title: Invoices sent
+      kind: endEvent
+      partOf: invoicing
+  event:
+    ev-0001:
+      title: Write the invoices for café Lumen, October
+      activity: Write the invoices
+      time: '2026-11-02T09:40:00+00:00'
+      attributes:
+        lines: 22
+      objects:
+      - type: document
+        slug: invoice
+        qualifier: written
+      concerns: invoice
+      occurrenceOf: write-invoices
+  decision:
+    accept-late-order:
+      title: Accept a late order?
+      question: Can an order that arrives after 4pm still go in tonight's bake?
+      answers:
+      - accept
+      - next day
+      logic: accept if the plan has oven space and the order is under 40 loaves; otherwise the next day
+      serves: on-time-delivery
+  document:
+    nights-order-list:
+      title: Night's order list
+      kind: record
+      format: a spreadsheet tab, printed
+    delivery-note:
+      title: Delivery note
+      kind: record
+      format: paper, signed by the customer
+    invoice:
+      title: Invoice
+      kind: invoice
+      format: PDF from the spreadsheet
+  measure:
+    days-to-paid:
+      title: Days from invoice to payment
+      definition: for each invoice, the days from sending it to the payment arriving
+      unit: days
+      better: lower
+      stat: median
+      measures: invoicing
+      serves: paid-on-time
+  goal:
+    on-time-delivery:
+      title: Every delivery before 7am
+      statement: Every customer has their bread before they open.
+      target: 98% of deliveries before 7am
+      goalOf: harbour-bakery
+    paid-on-time:
+      title: Paid within 30 days
+      statement: Customers pay within the terms.
+      target: median days to payment of 30 or fewer
+      due: '2027-06-30'
+      goalOf: harbour-bakery
+      ownedBy: office-manager

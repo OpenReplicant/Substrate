@@ -68,7 +68,9 @@ candidate resolver plugin.
 **Terms.** Workbench's own vocabulary (`workbench/vocabulary.yaml`: wb:Item, wb:Claim, wb:relatedTo, ...) and each
 plugin's (`vocabulary:` in plugin.yaml) are loaded into `wb.term`. A content type and each field name their term
 with `x-term` (a CURIE or IRI), a field may say which class each of its values names (`x-class-of-value`), and
-whatever names none gets a default under `https://workbench.local/`. A relation's term is the property whose
+whatever names none gets a default under `https://workbench.local/`. A plugin's SSSOM mappings (`mappings:` in plugin.yaml, SSSOM TSV with its YAML header) are loaded into
+`wb.mapping` with it, CURIEs expanded against the file's `curie_map`, replacing what that plugin's files said before
+(migration 014). A relation's term is the property whose
 `predicate` names it, else wb:relatedTo.
 
 **A relation is a claim**, like a value: an extractor's run states its relations (`wb.replace_relations`) and

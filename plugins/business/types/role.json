@@ -1,0 +1,23 @@
+{
+  "title": "Role",
+  "description": "A role a person takes in an organisation, which processes name as who does the work (a BPMN lane).",
+  "type": "object",
+  "x-term": "org:Role",
+  "properties": {
+    "domain": {
+      "type": "string",
+      "description": "the business this belongs to (its map's domain slug)"
+    },
+    "description": {
+      "type": "string",
+      "description": "what it is, in the business's words"
+    },
+    "responsibilities": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "what the role answers for"
+    }
+  }
+}

@@ -850,6 +850,8 @@ def register(wb):
                     counts["unreached"] += 1
                 own = {k: c.get(k) for k in ("registry", "repository", "image", "fit", "trial", "shortlisted", "outcome", "reason",
                                              "tasks", "model", "scores")}
+                if not c.get("repository") and c.get("licence"):
+                    own["licence"] = c["licence"]   # no registry to ask: the file states it, citing where it was read
                 cev = {k: e for k in own if (e := evidence(lines, spans, ("candidates", i, k)))}
                 item = ctx.upsert("candidate", name, {k: v for k, v in own.items() if v is not None},
                                   title=c.get("title") or name, source=src, evidence=cev)

@@ -1,0 +1,50 @@
+{
+  "title": "Activity",
+  "description": "A step in a process: a task, or an event or gateway in its flow (BPMN's flow nodes).",
+  "type": "object",
+  "x-term": "bpmn:Activity",
+  "properties": {
+    "domain": {
+      "type": "string",
+      "description": "the business this belongs to (its map's domain slug)"
+    },
+    "description": {
+      "type": "string",
+      "description": "what it is, in the business's words"
+    },
+    "kind": {
+      "type": "string",
+      "description": "BPMN's element: task, userTask, serviceTask, manualTask, businessRuleTask, sendTask, receiveTask, scriptTask, startEvent, endEvent, intermediateCatchEvent, intermediateThrowEvent, exclusiveGateway, parallelGateway, inclusiveGateway, eventBasedGateway"
+    },
+    "bpmn_id": {
+      "type": "string",
+      "description": "its id in the BPMN file it came from"
+    },
+    "shape": {
+      "type": "object",
+      "description": "where BPMN's diagram draws it: {x, y, width, height} (BPMNDI)"
+    },
+    "outgoing": {
+      "type": "array",
+      "description": "its sequence flows: [{to (an activity slug), id, name, condition, waypoints}]",
+      "items": {
+        "type": "object"
+      }
+    },
+    "data": {
+      "type": "array",
+      "description": "its BPMN data associations: [{id, direction (in or out), document (a slug), waypoints}]",
+      "items": {
+        "type": "object"
+      }
+    },
+    "minutes": {
+      "type": "number",
+      "description": "the time it is said to take, in minutes, if someone said"
+    },
+    "bpmn": {
+      "type": "object",
+      "description": "what else BPMN 2.0 XML says of it: its event definitions, its default flow, the placeholder property its data inputs target"
+    }
+  }
+}

@@ -1,0 +1,54 @@
+# curie_map:
+#   biz: https://workbench.local/business#
+#   org: http://www.w3.org/ns/org#
+#   foaf: http://xmlns.com/foaf/0.1/
+#   vf: https://w3id.org/valueflows/ont/vf#
+#   bpmn: http://www.omg.org/spec/BPMN/20100524/MODEL#
+#   dmn: https://www.omg.org/spec/DMN/20230324/MODEL/#
+#   ocel: https://www.ocel-standard.org/2.0/#
+#   schema: https://schema.org/
+#   bmm: http://www.semanticweb.org/ontologies/bmm#
+#   skos: http://www.w3.org/2004/02/skos/core#
+#   semapv: https://w3id.org/semapv/vocab/
+# mapping_set_id: https://workbench.local/business/mappings/0.1.0
+# mapping_set_version: 0.1.0
+# mapping_set_description: The business plugin's terms (each from a picked model) mapped to the terms of the other models searched (docs/choices/business-vocabulary.yaml)
+# license: https://www.apache.org/licenses/LICENSE-2.0
+# creator_id: [claude-code]
+# mapping_date: 2026-11-11
+subject_id	subject_label	predicate_id	object_id	object_label	mapping_justification	confidence	comment
+org:Organization	Organization	skos:exactMatch	schema:Organization	Organization	semapv:ManualMappingCuration	0.95	both: an organized group with its own identity
+org:Organization	Organization	skos:closeMatch	vf:Organization	Organization	semapv:ManualMappingCuration	0.9	Valueflows' agent that is an organization
+org:Organization	Organization	skos:relatedMatch	bpmn:Participant	Participant	semapv:ManualMappingCuration	0.6	a BPMN pool is often one organization in a collaboration
+org:OrganizationalUnit	OrganizationalUnit	skos:broadMatch	schema:Organization	Organization	semapv:ManualMappingCuration	0.8	schema.org has no unit class; a unit is an Organization with a parentOrganization
+org:Role	Role	skos:relatedMatch	schema:Role	Role	semapv:ManualMappingCuration	0.5	schema:Role qualifies a relation (with dates), not a position in an organization
+org:Role	Role	skos:relatedMatch	bpmn:Lane	Lane	semapv:ManualMappingCuration	0.7	a lane usually stands for the role that does its activities
+org:Role	Role	skos:closeMatch	bpmn:Performer	Performer	semapv:ManualMappingCuration	0.7	BPMN's resource role that performs an activity
+foaf:Person	Person	skos:exactMatch	schema:Person	Person	semapv:ManualMappingCuration	0.95	
+foaf:Person	Person	skos:exactMatch	vf:Person	Person	semapv:ManualMappingCuration	0.9	
+vf:EconomicResource	EconomicResource	skos:closeMatch	bmm:Resource	Resource	semapv:ManualMappingCuration	0.7	BMM's resource is a means the enterprise has
+vf:EconomicResource	EconomicResource	skos:relatedMatch	schema:Product	Product	semapv:ManualMappingCuration	0.5	a product is one kind of resource
+vf:EconomicResource	EconomicResource	skos:narrowMatch	ocel:Object	Object	semapv:ManualMappingCuration	0.6	an OCEL object may be a resource; it may also be a document or a case
+bpmn:Process	Process	skos:closeMatch	vf:ProcessSpecification	ProcessSpecification	semapv:ManualMappingCuration	0.7	Valueflows: the kind of process; vf:Process is one run of it
+bpmn:Process	Process	skos:relatedMatch	vf:Process	Process	semapv:ManualMappingCuration	0.6	
+bpmn:Activity	Activity	skos:closeMatch	ocel:EventType	EventType	semapv:ManualMappingCuration	0.85	OCEL's event type is the activity an event is an occurrence of
+bpmn:Activity	Activity	skos:relatedMatch	schema:Action	Action	semapv:ManualMappingCuration	0.5	schema:Action is one action done, not the step a process names
+ocel:Event	Event	skos:closeMatch	schema:Action	Action	semapv:ManualMappingCuration	0.6	an action performed by an agent, with a start and end time
+ocel:Event	Event	skos:broadMatch	vf:EconomicEvent	EconomicEvent	semapv:ManualMappingCuration	0.7	an economic event is one kind of event: one that moves a resource
+ocel:Event	Event	skos:relatedMatch	bpmn:Event	Event	semapv:ManualMappingCuration	0.5	BPMN's event is a node in a model; OCEL's is something that happened
+dmn:Decision	Decision	skos:relatedMatch	bpmn:BusinessRuleTask	BusinessRuleTask	semapv:ManualMappingCuration	0.7	the task that invokes a decision
+dmn:Decision	Decision	skos:relatedMatch	bmm:BusinessRule	BusinessRule	semapv:ManualMappingCuration	0.6	a business rule may be the logic a decision applies
+foaf:Document	Document	skos:closeMatch	schema:CreativeWork	CreativeWork	semapv:ManualMappingCuration	0.7	
+foaf:Document	Document	skos:narrowMatch	schema:DigitalDocument	DigitalDocument	semapv:ManualMappingCuration	0.8	a digital document is one kind of document
+foaf:Document	Document	skos:relatedMatch	bpmn:DataObject	DataObject	semapv:ManualMappingCuration	0.7	the data a process reads or writes, drawn as a document
+schema:StatisticalVariable	StatisticalVariable	skos:relatedMatch	vf:Measure	Measure	semapv:ManualMappingCuration	0.5	vf:Measure is a quantity with a unit, not a defined metric
+schema:StatisticalVariable	StatisticalVariable	skos:relatedMatch	bmm:Objective	Objective	semapv:ManualMappingCuration	0.5	a BMM objective is a measurable target, which a measure tracks
+bmm:Goal	Goal	skos:relatedMatch	bmm:Objective	Objective	semapv:ManualMappingCuration	0.6	an objective quantifies a goal
+bmm:Goal	Goal	skos:relatedMatch	vf:Intent	Intent	semapv:ManualMappingCuration	0.4	a Valueflows intent is a wanted flow, not a state of the enterprise
+org:memberOf	memberOf	skos:exactMatch	schema:memberOf	memberOf	semapv:ManualMappingCuration	0.9	
+org:unitOf	unitOf	skos:closeMatch	schema:parentOrganization	parentOrganization	semapv:ManualMappingCuration	0.85	
+biz:holds	holds	skos:closeMatch	org:holds	holds	semapv:ManualMappingCuration	0.7	ORG's holds is to a post; a role here is held directly
+biz:performedBy	performedBy	skos:closeMatch	bpmn:performer	performer	semapv:ManualMappingCuration	0.7	
+biz:flowsTo	flowsTo	skos:closeMatch	bpmn:SequenceFlow	SequenceFlow	semapv:ManualMappingCuration	0.8	a sequence flow, as a relation from its source to its target
+biz:occurrenceOf	occurrenceOf	skos:closeMatch	ocel:eventType	eventType	semapv:ManualMappingCuration	0.85	
+biz:concerns	concerns	skos:closeMatch	ocel:E2O	E2O	semapv:ManualMappingCuration	0.85	OCEL's qualified event-to-object relation

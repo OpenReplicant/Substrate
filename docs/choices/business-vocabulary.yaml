@@ -1,0 +1,130 @@
+# A choice made from the catalogs (spec section 5, build step 10): the published models a business's parts take
+# their terms from. substrate:choices reads it into Workbench (a `choice`, a `candidate` per model); the terms are
+# in plugins/business/vocabulary.yaml and the mappings to the models not picked in plugins/business/mappings.sssom.tsv.
+question: Which published models should an organisation's parts (organisation, unit, role, person, resource, process, activity, event, decision, document, measure, goal) take their terms from?
+asked_by: owner
+asked_on: "2026-11-09"
+quote: "business ontologies sound good... i was concerned we were inventing ontologies when we could be adopting"
+need:
+  - each of the twelve parts gets its class from a published model with stable IRIs (or, for a standard that publishes none, its own metamodel's names under its namespace), not one invented here
+  - the model can be used without asking: an open licence for the vocabulary (public domain, CC BY, CC BY-SA, MIT), its text readable without paying
+  - processes interchange with BPMN 2.0 tools (a BPMN 2.0 XML file in and out), and events fit OCEL 2.0 for step 12
+  - every type's term mapped (SSSOM) to the terms of the models not picked, so another tool's terms can be read across
+searched:
+  - "w3c: https://www.w3.org/TR/vocab-org/ (Recommendation 2014-01-16) and https://www.w3.org/ns/org.ttl (owl:versionInfo 0.8, dct:license PDDL 1.0), 2026-11-11"
+  - "schema.org: https://schema.org/docs/releases.html (V30.1), https://schema.org/docs/terms.html (CC BY-SA 3.0), https://schema.org/StatisticalVariable, 2026-11-11"
+  - "iso: ISO/IEC 15944-4:2015 (REA; UML class diagrams, sold by ISO/IEC), via standards.iteh.ai and the JTC 1/SC 32 working drafts, 2026-11-11"
+  - "github: valueflows/valueflows (Valueflows 1.0.0, https://w3id.org/valueflows/ont/vf.TTL, an OWL form of REA), renzoar/BMMOntology (bmm.owl at 7e00ec38), 2026-11-11"
+  - "omg: https://www.omg.org/spec/BPMN/2.0.2/About-BPMN (Semantic.xsd, targetNamespace http://www.omg.org/spec/BPMN/20100524/MODEL), https://www.omg.org/spec/DMN/1.5/About-DMN (DMN15.xsd, targetNamespace https://www.omg.org/spec/DMN/20230324/MODEL/), https://www.omg.org/spec/BMM/, 2026-11-11"
+  - "web search: BPMN 2.0 OWL ontologies (BBO, Annane et al., ECKM 2019; Natschläger's BPMN 2.0 ontology), an OCEL 2.0 RDF or OWL form (none found), 2026-11-11"
+  - "ocel-standard.org: https://www.ocel-standard.org/specification/overview/ and arXiv:2403.01975 (the specification, CC BY 4.0), 2026-11-11"
+  - "foaf: http://xmlns.com/foaf/spec/ (FOAF 0.99, CC BY 1.0), the agent and document classes ORG builds on, 2026-11-11"
+trial:
+  script: plugins/business/tests/test_business.py (and scripts/trials/bpmn-opens/run.py)
+  run_on: "2026-11-11"
+  expected: >-
+    every type names a loaded term from a picked model and none is minted; every SSSOM row is loaded, each type's
+    term mapped; the demo business's map (plugins/business/demo/harbour-bakery.yaml) imports, exports to the same
+    map, re-imports changing nothing, and makes the same entities in an empty Workbench; the demo BPMN process
+    imports and exports with the same nodes, flows, lanes, data, defaults, event definitions and diagram; a BPMN
+    tool's parser (bpmn-moddle 10.3.1, the one bpmn.io's modeler uses) opens the file, its export and a mapped
+    process's export with no warnings and every element drawn
+  results: "29/29 checks; bpmn-opens: 24/24, 24/24 and 7/7 elements drawn, no warnings (.state/trials/bpmn-opens/results.json)"
+verdict: >-
+  No Morphogen verdict: the picks were decided by needs each model met or failed (an IRI for the part, an open
+  licence, interchange), not by a measured "better". Whether the terms help anything (an interview mapped faster,
+  a process discovered from events matching its description) is for steps 11 to 13 to measure.
+pick: w3c-org
+reason: >-
+  No one model covers the twelve parts, so each part takes its class from the model that defines it best, and the
+  rest are mapped. W3C ORG for organisation, unit and role (a W3C Recommendation, public domain), with FOAF's
+  Person and Document, which ORG itself builds on; BPMN 2.0.2's metamodel for process and activity, because BPMN
+  2.0 XML is how processes move between tools; OCEL 2.0 for event, the format step 12 lands events in; DMN 1.5 for
+  decision; Valueflows (REA in OWL) for resource; schema.org's StatisticalVariable for measure; and the BMM
+  ontology's Goal for goal. The pick names W3C ORG as the core: the structure the rest hang from. Costs: BPMN,
+  DMN and OCEL publish XML or JSON schemas rather than RDF, so their terms are their metamodels' names under
+  their namespaces (dmn: and ocel: are written that way here; ocel: is not a namespace OCEL publishes); the BMM
+  ontology is one person's OWL of OMG's BMM 1.3 under a placeholder namespace (semanticweb.org/ontologies), last
+  changed in 2017.
+candidates:
+  - name: w3c-org
+    title: W3C Organization Ontology (ORG)
+    registry: w3c
+    licence: PDDL-1.0
+    outcome: picked
+    shortlisted: true
+    fit: "Organization, OrganizationalUnit, Role, Post, Membership, Site, ChangeEvent (org.ttl); dct:license http://www.opendatacommons.org/licenses/pddl/1.0/ in org.ttl; a W3C Recommendation, 2014-01-16"
+    trial: "organisation (org:Organization), unit (org:OrganizationalUnit), role (org:Role); relations unitOf and memberOf"
+  - name: foaf
+    title: FOAF (Friend of a Friend) 0.99
+    registry: web
+    licence: CC-BY-1.0
+    outcome: picked
+    shortlisted: true
+    fit: "Person, Agent, Document; ORG's members are foaf:Agents; the specification is 'licensed under a Creative Commons Attribution License' (xmlns.com/foaf/spec)"
+    trial: "person (foaf:Person), document (foaf:Document)"
+  - name: bpmn-2-0-2
+    title: BPMN 2.0.2 (OMG formal/13-12-09)
+    registry: omg
+    licence: OMG specification licence (royalty-free to implement)
+    outcome: picked
+    shortlisted: true
+    fit: "Process, Activity and its tasks, events, gateways, sequence flows, lanes, data objects; BPMN 2.0 XML (Semantic.xsd, BPMNDI) is what BPMN tools read and write; no RDF published, so its metamodel's names under http://www.omg.org/spec/BPMN/20100524/MODEL#"
+    trial: "process (bpmn:Process), activity (bpmn:Activity); the demo process in and out, opened by bpmn-moddle 10.3.1"
+  - name: ocel-2-0
+    title: OCEL 2.0 (Object-Centric Event Log)
+    registry: web
+    licence: CC-BY-4.0
+    outcome: picked
+    shortlisted: true
+    fit: "events with an event type (the activity), a time, attributes and qualified event-to-object and object-to-object relations; SQLite, XML and JSON formats; the specification is CC BY 4.0 (arXiv:2403.01975); no RDF or OWL form found, so ocel: names the metamodel's concepts"
+    trial: "event (ocel:Event): activity, time, attributes, objects with qualifiers; relations occurrenceOf and concerns"
+  - name: dmn-1-5
+    title: DMN 1.5 (OMG formal/24-01-01)
+    registry: omg
+    licence: OMG specification licence (royalty-free to implement)
+    outcome: picked
+    shortlisted: true
+    fit: "Decision, decision tables, FEEL; DMN15.xsd (targetNamespace https://www.omg.org/spec/DMN/20230324/MODEL/); no RDF published; OMG's RDF files describe the specification document, not its concepts"
+    trial: "decision (dmn:Decision): question, answers, logic, dmn_id"
+  - name: valueflows
+    title: Valueflows 1.0.0 (REA in OWL)
+    registry: github
+    repository: valueflows/valueflows
+    outcome: picked
+    shortlisted: true
+    fit: "EconomicResource, EconomicEvent, Agent, Process, ProcessSpecification, Measure, Intent (vf.TTL, owl:versionInfo 1.0.0); 'implements an ontology called REA'; namespace https://w3id.org/valueflows/ont/vf#"
+    trial: "resource (vf:EconomicResource); vf:EconomicEvent, vf:Process and vf:Measure mapped"
+  - name: rea-iso-15944-4
+    title: REA, as ISO/IEC 15944-4:2015 (Open-edi business transaction ontology)
+    registry: iso
+    licence: proprietary (ISO/IEC copyright; sold per copy)
+    outcome: rejected
+    shortlisted: true
+    fit: "Resource-Event-Agent: economic resources, events and agents, the accounting ontology behind ebXML and UN/CEFACT"
+    reason: "Published as UML class diagrams in a standard sold by ISO, with no machine-readable terms or IRIs. Its concepts are taken through Valueflows, which implements REA as an open OWL vocabulary."
+  - name: schema-org
+    title: schema.org V30.1
+    registry: web
+    licence: CC-BY-SA-3.0
+    outcome: picked
+    shortlisted: true
+    fit: "Organization, Person, Role, Event, Action, CreativeWork, DigitalDocument, Product, StatisticalVariable; the schema is CC BY-SA 3.0 (schema.org/docs/terms.html)"
+    trial: "measure (schema:StatisticalVariable: a statistical metric measured at a place and time); Organization, Person, CreativeWork and the rest mapped"
+    reason: "Picked for measure only: for the rest it is broader than the specialised models (no unit, no process, a Role that qualifies a relation rather than a position), so it is mapped, which is what makes a schema.org page's data readable here."
+  - name: bmm-ontology
+    title: Business Motivation Model ontology (bmm.owl, of OMG BMM 1.3)
+    registry: github
+    repository: renzoar/BMMOntology
+    outcome: picked
+    shortlisted: true
+    fit: "Goal, Objective, Vision, Mission, Strategy, Tactic, BusinessRule, Resource (bmm.owl at 7e00ec38); none of the six named candidates has a goal"
+    trial: "goal (bmm:Goal); bmm:Objective, bmm:BusinessRule and bmm:Resource mapped"
+    reason: "Searched because no named candidate defines a goal. One author's OWL, unchanged since 2017, under a placeholder namespace: the term to replace if OMG publishes BMM as RDF."
+  - name: bbo-bpmn-ontology
+    title: BBO, BPMN 2.0 Based Ontology (Annane, Aussenac-Gilles and Kamel, ECKM 2019)
+    registry: web
+    outcome: rejected
+    shortlisted: false
+    fit: "an OWL ontology of a fragment of BPMN 2.0's metamodel, for business process representation"
+    reason: "No published OWL file, namespace or licence was found (the paper's HAL record only), so it cannot be loaded or cited. BPMN's own metamodel names are used instead, which is what BPMN 2.0 XML carries."

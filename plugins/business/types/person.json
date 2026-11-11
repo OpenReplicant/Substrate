@@ -1,0 +1,16 @@
+{
+  "title": "Person",
+  "description": "A person in the business: someone who holds roles. Contact details stay out unless the person's own consent says otherwise.",
+  "type": "object",
+  "x-term": "foaf:Person",
+  "properties": {
+    "domain": {
+      "type": "string",
+      "description": "the business this belongs to (its map's domain slug)"
+    },
+    "description": {
+      "type": "string",
+      "description": "what it is, in the business's words"
+    }
+  }
+}

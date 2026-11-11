@@ -1,0 +1,36 @@
+{
+  "title": "Event",
+  "description": "Something that happened, as an OCEL 2.0 event: an occurrence of an activity at a time, with the objects it concerned.",
+  "type": "object",
+  "x-term": "ocel:Event",
+  "properties": {
+    "domain": {
+      "type": "string",
+      "description": "the business this belongs to (its map's domain slug)"
+    },
+    "description": {
+      "type": "string",
+      "description": "what it is, in the business's words"
+    },
+    "activity": {
+      "type": "string",
+      "description": "its event type: the activity's name"
+    },
+    "time": {
+      "type": "string",
+      "description": "when it happened",
+      "format": "date-time"
+    },
+    "attributes": {
+      "type": "object",
+      "description": "its OCEL attributes: {name: value}"
+    },
+    "objects": {
+      "type": "array",
+      "description": "OCEL's event-to-object relations: [{type, slug, qualifier}]",
+      "items": {
+        "type": "object"
+      }
+    }
+  }
+}

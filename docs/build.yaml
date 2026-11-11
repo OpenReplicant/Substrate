@@ -421,11 +421,12 @@ steps:
       Diamond) are this stream done manually.
 
   - id: 10
+    status: done
+    done_on: 2026-11-11
     title: A business vocabulary, adopted
     spec: "1, 5, 9"
     where: substrate (a business plugin beside plugins/substrate, docs/choices), Workbench (terms, SSSOM mappings)
     after: [7]
-    status: todo
     check: >-
       docs/choices/business-vocabulary.yaml records the candidates searched (at least W3C ORG, schema.org, REA
       (ISO/IEC 15944-4), a BPMN 2.0 ontology, DMN and OCEL 2.0), each with cited claims and its licence, and the

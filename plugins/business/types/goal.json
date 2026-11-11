@@ -1,0 +1,29 @@
+{
+  "title": "Goal",
+  "description": "What the business wants to bring about or keep: a goal, and its target if it has one.",
+  "type": "object",
+  "x-term": "bmm:Goal",
+  "properties": {
+    "domain": {
+      "type": "string",
+      "description": "the business this belongs to (its map's domain slug)"
+    },
+    "description": {
+      "type": "string",
+      "description": "what it is, in the business's words"
+    },
+    "statement": {
+      "type": "string",
+      "description": "the goal in the business's words"
+    },
+    "target": {
+      "type": "string",
+      "description": "a measurable target, if there is one"
+    },
+    "due": {
+      "type": "string",
+      "description": "by when",
+      "format": "date"
+    }
+  }
+}

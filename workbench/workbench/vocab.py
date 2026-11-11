@@ -103,5 +103,53 @@ def for_types(cur, plugin: str | None, vocabulary_terms: list[str]) -> list[str]
     return sorted(named)
 
 
+def read_sssom(text: str) -> tuple[dict, list[dict]]:
+    """An SSSOM TSV file: its metadata (the YAML block of lines starting with '#') and its rows, as dicts."""
+    meta_lines, rows = [], []
+    lines = text.splitlines()
+    while lines and lines[0].startswith("#"):
+        meta_lines.append(lines.pop(0)[1:])
+    meta = yaml.safe_load("\n".join(meta_lines)) or {}
+    lines = [ln for ln in lines if ln.strip()]
+    if not lines:
+        return meta, []
+    head = lines[0].split("\t")
+    for ln in lines[1:]:
+        cells = ln.split("\t")
+        rows.append({k: (cells[i] if i < len(cells) and cells[i] != "" else None) for i, k in enumerate(head)})
+    return meta, rows
+
+
+MAPPING_SLOTS = ("subject_id", "predicate_id", "object_id", "mapping_justification")
+
+
+def load_mappings(cur, text: str, plugin: str | None) -> int:
+    """A plugin's SSSOM TSV into wb.mapping: what the file says now replaces what the plugin's file said before."""
+    meta, rows = read_sssom(text)
+    pre = {**prefixes(cur), **(meta.get("curie_map") or {})}
+    set_id = meta.get("mapping_set_id")
+    creator = meta.get("creator_id")
+    creator = " | ".join(map(str, creator)) if isinstance(creator, list) else creator
+    if not set_id:
+        raise ValueError("an SSSOM file needs a mapping_set_id in its metadata")
+    cur.execute("delete from wb.mapping where plugin is not distinct from %s", (plugin,))
+    for n, r in enumerate(rows, 1):
+        missing = [k for k in MAPPING_SLOTS if not r.get(k)]
+        if missing:
+            raise ValueError(f"SSSOM row {n}: missing {', '.join(missing)}")
+        conf = float(r["confidence"]) if r.get("confidence") else None
+        cur.execute("""insert into wb.mapping (subject_id, predicate_id, object_id, mapping_justification, confidence, author_id,
+                                               mapping_set_id, plugin, subject_label, object_label, comment)
+                       values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                       on conflict (subject_id, predicate_id, object_id, mapping_set_id) do update set
+                         mapping_justification = excluded.mapping_justification, confidence = excluded.confidence,
+                         author_id = excluded.author_id, plugin = excluded.plugin, subject_label = excluded.subject_label,
+                         object_label = excluded.object_label, comment = excluded.comment""",
+                    (expand(r["subject_id"], pre), expand(r["predicate_id"], pre), expand(r["object_id"], pre),
+                     expand(r["mapping_justification"], pre), conf, r.get("author_id") or creator,
+                     set_id, plugin, r.get("subject_label"), r.get("object_label"), r.get("comment")))
+    return len(rows)
+
+
 def load_core(cur) -> list[str]:
     return load(cur, CORE, None)

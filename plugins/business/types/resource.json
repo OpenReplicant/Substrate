@@ -1,0 +1,24 @@
+{
+  "title": "Resource",
+  "description": "Something the business uses or makes: equipment, material, money, information, a system.",
+  "type": "object",
+  "x-term": "vf:EconomicResource",
+  "properties": {
+    "domain": {
+      "type": "string",
+      "description": "the business this belongs to (its map's domain slug)"
+    },
+    "description": {
+      "type": "string",
+      "description": "what it is, in the business's words"
+    },
+    "kind": {
+      "type": "string",
+      "description": "equipment, material, money, information, system, ..."
+    },
+    "quantity": {
+      "type": "object",
+      "description": "how much there is, if counted: {value, unit}"
+    }
+  }
+}

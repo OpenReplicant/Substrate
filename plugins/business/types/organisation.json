@@ -1,0 +1,28 @@
+{
+  "title": "Organisation",
+  "description": "An organisation: a company, a charity, a partner or supplier with its own structure.",
+  "type": "object",
+  "x-term": "org:Organization",
+  "properties": {
+    "domain": {
+      "type": "string",
+      "description": "the business this belongs to (its map's domain slug)"
+    },
+    "description": {
+      "type": "string",
+      "description": "what it is, in the business's words"
+    },
+    "legal_name": {
+      "type": "string",
+      "description": "its registered name, if it has one"
+    },
+    "identifier": {
+      "type": "string",
+      "description": "a registration or tax number, if given"
+    },
+    "site": {
+      "type": "string",
+      "description": "where it works: an address or a place"
+    }
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "title": "Document",
+  "description": "A document the business uses or makes: a form, an order, an invoice, a record.",
+  "type": "object",
+  "x-term": "foaf:Document",
+  "properties": {
+    "domain": {
+      "type": "string",
+      "description": "the business this belongs to (its map's domain slug)"
+    },
+    "description": {
+      "type": "string",
+      "description": "what it is, in the business's words"
+    },
+    "kind": {
+      "type": "string",
+      "description": "form, order, invoice, record, report, ..."
+    },
+    "format": {
+      "type": "string",
+      "description": "paper, a spreadsheet, a PDF, a system's screen, ..."
+    }
+  }
+}

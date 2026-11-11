@@ -73,6 +73,34 @@ spec:
 apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
+  name: business-plugin
+  description: Workbench plugin for an organisation's parts (organisation, unit, role, person, resource, process, activity,
+    event, decision, document, measure, goal) with terms from published models and SSSOM mappings, a business's map as a domain
+    of items, and BPMN 2.0 processes in and out; built to leave with Workbench.
+  annotations:
+    morphogen.dev/change: 'plugins/business/**
+
+      scripts/business.sh
+
+      scripts/trials/bpmn-opens/**'
+    substrate.dev/basis: 'plugins/business (README.md, vocabulary.yaml, mappings.sssom.tsv, business_plugin.py: business:map,
+      business:bpmn, export-map, export-bpmn; demo/), scripts/business.sh, docs/choices/business-vocabulary.yaml'
+    substrate.dev/fill: build
+    substrate.dev/intent: Adopt business terms rather than invent them (S-73), so a business's map, interviews and events
+      (steps 11 to 13) share one vocabulary other tools can read.
+    substrate.dev/observed-as: plugin:business
+    substrate.dev/step: '10'
+spec:
+  type: library
+  lifecycle: experimental
+  owner: group:operator
+  system: core
+  consumesApis:
+  - workbench-api
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
   name: claude-code
   description: The actor - explores, interviews, researches, builds and maps; one session is one turn of the loop.
   annotations:

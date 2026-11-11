@@ -1,0 +1,28 @@
+{
+  "title": "Process",
+  "description": "A process: work that runs from a trigger to an outcome through activities.",
+  "type": "object",
+  "x-term": "bpmn:Process",
+  "properties": {
+    "domain": {
+      "type": "string",
+      "description": "the business this belongs to (its map's domain slug)"
+    },
+    "description": {
+      "type": "string",
+      "description": "what it is, in the business's words"
+    },
+    "trigger": {
+      "type": "string",
+      "description": "what starts it"
+    },
+    "outcome": {
+      "type": "string",
+      "description": "what it delivers when it ends"
+    },
+    "bpmn": {
+      "type": "object",
+      "description": "what BPMN 2.0 XML needs to write the process again: definitions and process ids, lanes and their shapes, the diagram's ids"
+    }
+  }
+}

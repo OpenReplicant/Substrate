@@ -130,6 +130,10 @@ def add_type(path: Path, plugin: str | None) -> dict:
     return result
 
 
+def _listed(v) -> list[str]:
+    return [] if not v else [v] if isinstance(v, str) else list(v)
+
+
 def load_plugin(folder: Path) -> dict:
     manifest = yaml.safe_load((folder / "plugin.yaml").read_text())
     pid, version = manifest["id"], str(manifest.get("version", "0"))
@@ -148,12 +152,14 @@ def load_plugin(folder: Path) -> dict:
         vocab.load_core(cur)
         listed = vocab.load(cur, yaml.safe_load((folder / manifest["vocabulary"]).read_text()), pid) if manifest.get("vocabulary") else []
         terms = vocab.for_types(cur, pid, listed)
+        mapped = sum(vocab.load_mappings(cur, f.read_text(), pid)
+                     for pattern in _listed(manifest.get("mappings")) for f in sorted(folder.glob(pattern)))
         reload(conn)
     if (folder / "plugin.yaml").is_file():          # new types are new node tables: project the graph again
         from . import graph
         with connect() as conn:
             graph.project(conn)
-    return {"plugin": pid, "version": version, "types": registered, "terms": len(terms)}
+    return {"plugin": pid, "version": version, "types": registered, "terms": len(terms), "mappings": mapped}
 
 
 def new_password() -> str:

@@ -1,0 +1,32 @@
+{
+  "title": "Measure",
+  "description": "A measure over a process: cycle time, rework, cost per case, defined over its events.",
+  "type": "object",
+  "x-term": "schema:StatisticalVariable",
+  "properties": {
+    "domain": {
+      "type": "string",
+      "description": "the business this belongs to (its map's domain slug)"
+    },
+    "description": {
+      "type": "string",
+      "description": "what it is, in the business's words"
+    },
+    "definition": {
+      "type": "string",
+      "description": "how it is computed, in words"
+    },
+    "unit": {
+      "type": "string",
+      "description": "its unit: minutes, a share, a currency"
+    },
+    "better": {
+      "type": "string",
+      "description": "which way is better: lower or higher"
+    },
+    "stat": {
+      "type": "string",
+      "description": "the statistic: median, mean, share, count"
+    }
+  }
+}
