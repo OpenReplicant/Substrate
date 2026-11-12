@@ -157,6 +157,34 @@ Substrate is pluggable in two different senses, and the difference is the design
   not a slot substrate may fill: the loop cannot choose, swap, weaken or tune its own judge (section 7, "who
   decides a change"). Everything else can be replaced by evidence; the judge is replaced only by the owner.
 
+### The map is an actor network
+
+Substrate does not need an actor framework of its own, because its map already is one (S-92). Each component is
+an actor in the sense that matters: it has an address, it receives work, it can be stopped and restarted, and
+something supervises it. What does that is a **control plane**: compose today, and Nomad, Kubernetes or a BEAM
+node (Erlang, Elixir, Gleam) as options. Several can run at once, each over the components the map says it
+manages.
+
+- **The map says who runs what.** Each component names its control plane, and each control plane fills
+  `runtime-api` for the components it manages. Choosing a control plane for a part is an ordinary choice
+  (section 5), made per part. Containers suit Nomad and Kubernetes; the BEAM suits many small processes that are
+  cheap to kill, supervised in trees, and hot-loaded while running, which fits a system that changes its own
+  parts.
+- **Routing is names, not a protocol.** Components find each other through DNS and discovery, by the names the
+  map gives them. Substrate does not dictate how two components talk: HTTP, a queue, Erlang distribution and SQL
+  are all fine, and the map records which one each connection uses.
+- **The record holds without a protocol.** What substrate must see is every change and every decision, not every
+  message. Changes and decisions are claims. Model calls are metered at the gateway. Connections are observed at
+  the edges (routes, sockets, discovery records, traces where a control plane offers them), and a connection
+  the map does not declare, or one it declares that nothing uses, is a gap like any other.
+- **Workbench's plugins become workers.** Inside the compose control plane, each plugin's extractors run in a
+  worker of their own, with a queue of their own as the mailbox (pgmq), a database role of their own so they can
+  only write claims under their own name, and a wake-up on NOTIFY. A worker is a slot with a contract test, so
+  any language that speaks SQL can fill it. A remote or untrusted worker reaches its queue through an API, never
+  a database role (step 31).
+- **Fast paths stay in memory.** A stream at frame rate (step 30) does not round-trip the store per message. Its
+  environment holds its state and writes claims once per turn.
+
 ## 5. Catalogs: choosing, not guessing
 
 Most of what substrate decides is a choice between things that already exist: a library, a service, a model, a
@@ -273,6 +301,8 @@ through section 5, as a choice with evidence, when a step needs it.
 | Metrics (Prometheus v3.15.0) | observed half: rates, cost, errors | an observer probe reads PromQL over HTTP (observe.yaml) | a gap needs numbers over time |
 | Traces (OpenTelemetry collector 0.163.2) | observed half: who calls whom | `service.name` = the catalog name | a gap needs observed calls, not just code |
 | Catalog browser (Backstage, create-app 0.9.3) | a view over the catalog | the catalog stays in Backstage's entity model | people want to browse, or a Backstage plugin is needed |
+| Kubernetes | a control plane for containers across many nodes | `runtime-api` for the components the map says it manages (section 4) | many nodes, or a host that already runs it |
+| A BEAM node (Erlang, Elixir, Gleam) | a control plane for many small supervised processes | `runtime-api`; its processes are components on the map | many cheap, killable actors, or parts changed while running (hot code loading) |
 | Scheduler (Nomad 2.0.7) | runs the services | scripts call only `rt_up`, `rt_down`, `rt_status`, `rt_logs` | many nodes, batch jobs, or an API an actuator drives |
 | Secrets store (OpenBao 2.7.1) | holds credentials | scripts read secrets only through `env_value` and `sec_*` | more than one person or machine, or audit needed |
 | Bus (pgmq 1.13.1) | work and notices between parts | Workbench already uses pgmq for its jobs (`wb_jobs`) | triggers should start sessions without a person |
@@ -353,6 +383,8 @@ their own.
 | 29 | The session rank as a slot; air-gapped as a setting | the top rank (a session with tools) has a contract test and a local agent harness is compared with Claude Code on a role; air-gapped is the flow policy with every label local-only, and the stack comes up from an offline mirror with no call leaving the machine |
 | 30 | A realtime assistant with ears, eyes and a face, from a phone | a mobile page over HTTPS on a private network streams audio and frames to an environment here; turns climb the ladder under a time limit, reflexes cheapest; the avatar is drawn on the phone; models run as the flow policy allows; one latency compile-down is judged on held-out conversations (needs the owner) |
 | 31 | Compute is a slot; volunteered compute | a volunteer runner fills the runner slot with pinned, sandboxed, deterministic jobs on public work only; results are volunteers' claims, never verdicts; redundancy, canaries and learned reliability; a negative is final only on a quorum or a trusted re-run; planted saboteurs caught |
+| 32 | Workbench's plugins as workers | each plugin's extractors run in a worker container of their own, with their own pgmq queue, their own database role (claims only under their own name) and a wake-up on NOTIFY; the server only dispatches; a slow worker no longer holds up another; the worker interface has a contract test |
+| 33 | Control planes, plural: the map as an actor network | each component on the map names its control plane; a second control plane runs beside compose and manages at least one component, filling `runtime-api` for it and passing the contract test; components reach each other by names from the map through DNS; observed connections are compared with declared ones, and an undeclared or unused connection is a gap |
 
 ## 10. Multi-process: inputs handled at the cheapest rank that can
 

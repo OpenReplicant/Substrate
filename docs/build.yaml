@@ -559,6 +559,46 @@ steps:
       trusted re-run before anything lands, a faked loss quietly kills a good idea, so negatives carry the stricter
       rule. Prior art: BOINC's redundant computing and quorums.
 
+  - id: 32
+    title: Workbench's plugins as workers
+    spec: "4"
+    where: Workbench (the worker entrypoint, per-plugin queues and roles, dispatch), deploy/compose.yaml (a service per worker), substrate's map (each worker a component)
+    after: [9]
+    status: todo
+    check: >-
+      the server dispatches an extractor run to its plugin's own pgmq queue and runs none itself; each plugin's
+      extractors run in a worker of their own (the same image, a service each in compose), which wakes on NOTIFY
+      rather than polling and sets its own concurrency; each worker connects as a database role of its own that can
+      write claims only under that plugin's authors, and a test shows a write under another author is refused; a
+      worker that crashes is restarted by its control plane and its job retried by pgmq's read count; a slow
+      extractor in one worker does not delay another's queue (a test); the worker interface (read the mailbox,
+      write claims as yourself, report health) has a contract test and is on the map; scripts/check.sh passes
+    notes: >-
+      Added 2026-11-12 (S-92). Today one server process loads every plugin and works one queue, one job at a time,
+      as one database role. Rules and scripts on the ladder stay in-process; the slow ranks (model, session,
+      person) can be asked through a queue with a call id.
+
+  - id: 33
+    title: Control planes, plural, with the map as an actor network
+    spec: "4, 5, 8"
+    where: substrate's map (a control plane per component), scripts/runtime (one file per control plane), the observer (a probe per control plane, connections at the edges)
+    after: [32]
+    status: todo
+    check: >-
+      every component on the map names the control plane that runs it, and drift reports a component running
+      under a control plane the map does not name; a second control plane, picked through section 5 (Nomad,
+      Kubernetes or a BEAM node), runs beside compose and manages at least one component, filling runtime-api for
+      it and passing runtime-api's contract test; components reach each other by the names the map gives them,
+      through DNS or the control plane's discovery, with no protocol required between them; the observer reads
+      each control plane's own view (what runs, what restarted, what is reachable) and the connections at the
+      edges, and a connection the map does not declare, or a declared one nothing uses, reaches the review lane
+      as a gap; scripts/check.sh passes
+    notes: >-
+      Added 2026-11-12 (S-92; owner: substrate "describes a map of components it can control or access -
+      essentially an 'actor network' as defined by a map, which multiple control planes can orchestrate with
+      comms routing at least at the DNS & discovery levels, not enforcing a protocol"). Nomad is BUSL-1.1 (S-18);
+      a BEAM node is the choice where many cheap, killable, supervised processes or hot code loading matter.
+
   - id: 10
     status: done
     done_on: 2026-11-11
