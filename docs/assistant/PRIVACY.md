@@ -17,4 +17,7 @@ reads nothing.
 | P9 | **The owner can stop and forget.** Turning a stream off stops reading it; forgetting it deletes its items, calls and claims. | a test that forgetting a stream leaves none of its data |
 | P10 | **Judging holds out whole weeks.** A compile-down is judged on weeks it was never built from (as step 13 holds out windows). | the idle tier's red-team test (step 20) covers personal streams too |
 
-The owner decides what each stream may do. These rules set what no stream may do, whatever is decided.
+The owner decides what each stream may do. These rules are the **default flow policy for the `private` label**
+(spec section 7, S-89): privacy is adjustable, because some of it cannot be kept on every machine or stream. The
+owner may loosen a rule for a named stream or label; each loosening is a decision in the review lane, saying who,
+when and why, and the rule's check then tests the policy as set rather than the default.

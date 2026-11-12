@@ -240,6 +240,25 @@ The owner sees Workbench: the review lane (gaps, proposals, verdicts, each with 
 everything. Only decisions that are the owner's reach them: organization (section 3), changes to the judge, licences,
 money. When the lane gets noisy, fix the noise where it starts (an encoder, a query).
 
+### Labels: where content may go
+
+Privacy is a setting, not a fixed list, because what can be kept local differs by stream and by machine (S-89).
+An item or a claim can carry a **label** (to start: public, private, secret). A label is a claim like any other:
+who applied it, when and why. The owner's **flow policy** says, for each label, where its content may go: local
+models, each cloud provider, Claude Code, the map's export and commits, logs, transcripts, volunteered compute.
+Changing it is a decision in the review lane. A stream's default label is part of the policy; a person's streams
+default to private, and `docs/assistant/PRIVACY.md` is the default policy for private.
+
+- **Labels travel.** The reasoner records each conclusion's premises and every handler call its inputs, so
+  whatever is derived (a conclusion, an answer, a summary, a compile-down, a knowledge-file line) takes the
+  strictest label among them. Lowering a label is a decision in the review lane, never a side effect.
+- **Enforced where content leaves.** The gateway gives a handler a key cleared only for the providers its
+  input's labels allow; Workbench's read roles give Claude Code nothing above its clearance; the export and
+  commits carry no labelled item; volunteered compute gets public work only. Each has a contract test (step 28).
+- **Air-gapped is a setting.** Every label local-only. The obstacle is the actor: the top rank is a Claude Code
+  session, which calls Anthropic's API. So that rank is a slot (step 29), and whether a local agent harness can
+  fill it is a judged comparison, re-run as local models are released.
+
 ## 8. Options: what substrate stays compatible with
 
 These are good production choices that substrate does not run now. Each is a component on the map,
@@ -265,6 +284,10 @@ through section 5, as a choice with evidence, when a step needs it.
 | Remote judge | Morphogen on another machine | `judge-api` (its CLI and MCP tools); the evidence log shipped or served instead of read from this repository's git directory | the changer should not even reach the judge's machine; several substrates share one judge |
 | TOSCA, other RDF tools | other tools reading or writing the model | Workbench's SSSOM mappings table; an export is a plugin (Morph-KGC reads the same R2RML) | a tool needs the model in its own terms |
 | A forge (Forgejo, Gitea, GitLab) | where pull requests are reviewed | git remotes only (S-25) | a repository lives there |
+| A private network (WireGuard or similar) | reaching the front door from a phone or another machine | Caddy stays the one address; HTTPS on it | step 30, or a second machine |
+| A voice-agent framework (Pipecat, LiveKit Agents) and local speech models | realtime audio and video in, speech out | an environment in the slot (reset, step); models behind the gateway | step 30 |
+| Volunteered compute (BOINC-style) | jobs run on other people's machines | the runner slot; results are claims, verdicts stay trusted | step 31, when comparisons outgrow this machine |
+| A local agent harness | the top rank without a cloud model | the session rank's contract test | step 29, an air-gapped setting |
 
 **Held ideas.** These come from the previous spec. Each can return as a step when a level needs it: working
 memory, episodes from sessions, recall reranked by activation, skill utility and promotion, triage at an
@@ -323,7 +346,13 @@ their own.
 | 22 | Model calls counted inside Morphogen's judged runs | in a judged run the candidate reaches models only through the gateway the operator names, its calls, tokens and cost per round come from the gateway's record, and a candidate that calls a model around it cannot move a verdict (a red-team test in Morphogen, upstream, first: its PLAN.md phase 7c) |
 | 23 | An interactive environment: ARC-AGI-3 | ARC-AGI-3's games, through its toolkit, fill the environment slot and pass its contract test; an episode's steps go up the ladder one action at a time, each frame and action replayed in the ladder view; held-out games stay unplayed until judged; a compile-down from one game's escalations is judged on games it never saw |
 | 24 | Recall by meaning, and a catalog of models by task | an embedding model picked from a leaderboard runs here (Ollama, GPU or CPU) behind the gateway; recall is one query over full-text, vectors and graph traversal, each part kept only if it beats the ranking without it on held-out queries from substrate's own history; models are catalogued by task with the scores they were picked on and what substrate measured |
-| 25 | Papers as a stream | a query over a paper registry is a stream, as papers are published and in bulk; claims and evidence become stated claims quoting the paper, code becomes catalog candidates, and paper mining is a generator of proposals ranked by what lands |
+| 25 | Papers as a stream | a query over a paper registry is a stream, as papers are published and in bulk; claims and evidence become stated claims quoting the paper, code becomes catalog candidates, and paper mining is a generator of proposals ranked by what lands; a paper about an agent's architecture becomes an architecture's map for step 26 |
+| 26 | Architectures as intended maps, compared on a role | an architecture is a system's intended map with a role claim; first two-way, as Morphogen judges now: the running ladder on ARC-AGI-1 against a Soar-shaped variant (typed escalations, compile-downs from the call trace) at equal metered budgets, each screened by its slots' contracts and a development set first; then the Common Model of Cognition design as a third, under a held-out budget rule (needs the owner); one component of the winner tried in substrate's own core as an ordinary judged change. Needs only the first half of step 19 and step 22 |
+| 27 | A paper's method replicated as an architecture | a paper from step 25 is componentized onto an architecture's map (its unfitted parts are gaps naming missing slots), run on the role it claims at the baseline's budget, and recorded as replicated or not beside the authors' claim |
+| 28 | Labels, and where labelled content may go | items and claims carry labels (public, private, secret), each a claim; an owner's flow policy says where each label's content may go; labels travel to what is derived from them; the gateway, Workbench's read roles and the export enforce it, each with a contract test; `PRIVACY.md` is the default policy for private |
+| 29 | The session rank as a slot; air-gapped as a setting | the top rank (a session with tools) has a contract test and a local agent harness is compared with Claude Code on a role; air-gapped is the flow policy with every label local-only, and the stack comes up from an offline mirror with no call leaving the machine |
+| 30 | A realtime assistant with ears, eyes and a face, from a phone | a mobile page over HTTPS on a private network streams audio and frames to an environment here; turns climb the ladder under a time limit, reflexes cheapest; the avatar is drawn on the phone; models run as the flow policy allows; one latency compile-down is judged on held-out conversations (needs the owner) |
+| 31 | Compute is a slot; volunteered compute | a volunteer runner fills the runner slot with pinned, sandboxed, deterministic jobs on public work only; results are volunteers' claims, never verdicts; redundancy, canaries and learned reliability; a negative is final only on a quorum or a trusted re-run; planted saboteurs caught |
 
 ## 10. Multi-process: inputs handled at the cheapest rank that can
 
@@ -427,6 +456,53 @@ say so (step 21). The gateway never keeps content.
 anything that reads a person's stream go to the review lane. Privacy rules come before any personal stream is
 read (step 21).
 
+**Architectures are intended maps.** An agent architecture (the ladder that runs now, the Common Model of
+Cognition design at `a00fb61`, a Soar- or ACT-R-shaped variant, the method a paper describes) is written as
+the intended half of a system with no observed half yet: its parts, the slots they fill, and how they connect.
+Every part is a gap until something builds it, the same way a system the owner wants starts (section 3). An
+architecture's map carries one claim that matters: on this **role** (a stream and its outcome measure), this
+arrangement does better than the baseline at equal cost. That claim is a hypothesis like any other.
+- **A role** is a stream with its outcome and its held-out cases: ARC-AGI first (step 19), then whatever the
+  owner names. The best architecture for a role is a rank, measured, never declared, and it moves when a model,
+  a paper or the baseline changes.
+- **Most of an architecture is shared.** Variants differ from the baseline in a few components (how recall
+  ranks, how an escalation is typed, how a handler is ranked, what a compile-down is built from), so a
+  comparison is mostly component against component, in slots that already have contract tests.
+- **A paper's method is componentized onto a map** (steps 25 and 27). Its parts that fit a slot become candidates;
+  parts that fit none are gaps on its map, and those gaps name the slots substrate lacks. The paper's reported
+  numbers are the authors' claims. Substrate's own run on the role's held-out cases is the evidence, so the
+  store keeps a record of which published claims replicated here and which did not.
+- **Runs are separate systems.** Each architecture is built and run as its own system beside substrate, never
+  inside it. A component crosses into substrate's own core only as an ordinary change, judged against what runs
+  now (section 7), so nothing an architecture learns can reach the judge.
+- **Equal budgets.** Every architecture in a comparison gets the same model budget, enforced by the gateway's
+  meter (step 22), so "better" cannot mean "spent more".
+- **Cheap screens first.** A candidate must pass its slots' contract tests, then a small development set, before
+  it costs a judged run. Screens and runs are paid from the idle tier's budget (step 20), and the generators
+  that propose architectures are ranked by cost per architecture that wins.
+- **Two first, then many.** Morphogen judges one candidate against one base, so the first comparison is the
+  running ladder against one variant (step 26). A third architecture waits for the held-out budget rule below.
+- **Held-out cases wear out.** Many comparisons against the same held-out cases fit to them slowly even when no
+  single run cheats. Each role keeps a held-out budget: fresh cases where a stream can make them (game seeds,
+  new weeks), and a reusable-holdout rule where it cannot. How the judge holds out cases is the owner's call
+  (section 7).
+
+**Compute is a slot; volunteers are sources.** What runs a job (a screen, a replication, a variant's run) is a
+slot with a contract test, and volunteered compute is one filler for it (step 31). A volunteer's result is a
+claim attributed to them, never a verdict, and each volunteer has a reliability learned from results later
+confirmed or contradicted. Only public work goes out (labels, section 7). Final verdicts stay on trusted compute,
+and whoever proposed a candidate never runs it. Jobs are deterministic (a pinned image, a fixed seed, local
+weights checked by hash) so results compare exactly, each goes to several volunteers who do not know of each
+other, and canary jobs with known answers are mixed in. Sabotage is lopsided: a faked win is caught by the
+trusted re-run before anything lands, but a faked loss quietly kills a good idea. So a negative is never final
+from one run, and a refuted candidate keeps the sources of its negatives, to reopen if one proves unreliable.
+
+**A realtime assistant.** A conversation is an environment whose turns climb the ladder under a time limit
+(step 30). Reflexes (speech starting and stopping, barge-in, a backchannel) are the cheapest rank, a small local
+model answers fast, and a larger one is asked when it must be. A phone reaches it through a page served over
+HTTPS on a private network, since a browser allows its microphone and camera only on a secure page; the avatar
+is drawn on the phone from the speech it says. Which models may hear and see is the flow policy's (section 7).
+
 ## 11. Limitations
 
 - **One machine, one owner.** Several owners or sites need federation, which this spec does not cover.
@@ -451,6 +527,14 @@ read (step 21).
 - **Cheap ranks are only as good as their outcomes.** A stream with a slow or vague outcome (a person who
   rarely says whether a draft was right) teaches slowly, and compile-downs on it wait for enough held-out data
   to judge.
+- **Comparing architectures costs compute.** A full judged run of one architecture on one role is many model
+  calls, and a fair comparison needs several runs of each. Without outside funding, roles stay few, screens stay
+  strict, and local models carry most runs.
+- **Labels are a policy, not a guarantee.** They stop substrate's own flows. A cloud model shown public data
+  may still infer private facts, what a person pastes into a session is outside them, and unlabelled data is
+  only as safe as its stream's default.
+- **Volunteers can be wrong on purpose.** Redundancy, canaries and learned reliability bound sabotage; they do
+  not remove it, which is why verdicts stay on trusted compute.
 
 ## 12. Sources
 
