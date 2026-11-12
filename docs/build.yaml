@@ -340,7 +340,7 @@ steps:
     title: A person at the top of a stream
     spec: "6, 10, 11"
     where: substrate (observers for a person's streams, privacy rules), Workbench (the review lane as a stream)
-    after: [20]
+    after: [20, 28]
     status: todo
     needs_owner: true
     check: >-
@@ -413,12 +413,151 @@ steps:
       what) become stated claims quoting the paper, its code becomes a candidate in the catalogs with its licence
       read from the registry, and near-duplicate papers and claims are matched by meaning (step 24); paper mining
       is a generator on the "what to change next" stream (step 20), so whether papers turn into changes that land
-      shows in its rank; a paper's own numbers never decide anything, only substrate's held-out verdicts do
+      shows in its rank; a paper's own numbers never decide anything, only substrate's held-out verdicts do; a
+      paper about an agent's architecture becomes an architecture's map (step 27), its parts as candidates in
+      slots and the parts that fit none as gaps
     notes: >-
       Added 2026-11-11 (S-82; owner: "an agent/skill for ingesting papers (matching a query/filter) as they're
       published (and in bulk) to mine their claims, evidence, and components ... (especially where AI &
       LLM-harness papers are concerned)"). The lookups made by hand on 2026-11-11 (LLMSelector, routers, Not
       Diamond) are this stream done manually.
+
+  - id: 26
+    title: Architectures as intended maps, compared on a role
+    spec: "3, 7, 10"
+    where: substrate's plugin (an architecture as a domain's map, a role type, the comparison runner), the handlers plugin (typed escalations, compile-downs from the call trace), Morphogen (a held-out budget per role, upstream first), the gateway's meter
+    after: [19, 22]
+    status: todo
+    check: >-
+      an architecture is a domain whose map is intended only (parts, the slots they fill, how they connect) with
+      one role claim: on this stream and outcome it beats the baseline at equal cost; a role is a content type
+      naming its stream, outcome and held-out budget; first two-way, which Morphogen judges as it is: the running
+      ladder on ARC-AGI-1 as the baseline, against a Soar-shaped variant (escalations typed as low confidence,
+      tie, no candidate or refused; compile-downs built from the recorded call trace of nested asks), differing
+      only in named components; each passes its slots' contract tests and a development screen before a judged
+      run at the same metered model budget (step 22); then a third, the Common Model of Cognition design at
+      a00fb61 (working memory, episodes, activation-ranked recall), once the owner has picked the held-out budget
+      rule and a red-team test shows the budget is spent per comparison; the role ranks them on held-out tasks;
+      one component of the winner is tried in substrate's own core as an ordinary judged change and kept or
+      refused; scripts/check.sh passes
+    notes: >-
+      Added 2026-11-12 (S-88; owner: "use the system mapping function to draw up hypothetical blueprints of various
+      cognitive architectures we could implement using substrate (either as self with its core or as a separate
+      system it manages)"). The owner's "blueprint" is an intended map. The shortest path: the first half of step
+      19 (the environment slot, ARC-AGI-1, the ladder running on it) is all this step needs before its two-way
+      comparison; the idle tier (20) and papers (25, 27) make it continual, not possible. The held-out budget rule
+      (fresh cases, or a reusable holdout such as Thresholdout) changes how the judge holds out cases, so it is
+      the owner's and goes to Morphogen upstream first. Compute is the limit (spec section 11).
+
+  - id: 27
+    title: A paper's method replicated as an architecture
+    spec: "5, 6, 10"
+    where: substrate (paper mining from step 25 onto an architecture's map), the comparison runner (step 26)
+    after: [25, 26]
+    status: todo
+    check: >-
+      a paper about an agent's architecture, from the paper stream, is componentized onto an architecture's
+      intended map: its parts that fit a slot become candidates, its parts that fit none become gaps naming the
+      slot substrate lacks; its reported result is the authors' claim, quoting the paper; it runs on the role it
+      claims to improve, at the baseline's metered budget, and substrate's result is recorded beside the authors'
+      as replicated or not; a negative is not final until it is repeated (step 31's rule, on trusted compute
+      until then); scripts/check.sh passes
+    notes: >-
+      Added 2026-11-12 (S-88; owner: an auto-research agent that "watches streams for new papers claiming
+      improvements in agent architecture ... builds a blueprint and componentizes the paper to test against a
+      baseline & competing approaches ... then can integrate where proven advantages are called for"). Over time
+      the store holds which published claims replicated here at equal budgets.
+
+  - id: 28
+    title: Labels, and where labelled content may go
+    spec: "6, 7, 11"
+    where: Workbench (a label on items and claims, read roles by clearance), substrate (the flow policy, the export check), the gateway (keys by label), the handlers plugin (labels carried to derived claims)
+    after: [18]
+    status: todo
+    check: >-
+      an item or claim can carry a label (to start: public, private, secret), itself a claim saying who labelled
+      it and why; a flow policy, set by the owner and changed only as a decision in the review lane, says for each
+      label where its content may go (local models, each cloud provider, Claude Code's Workbench role, the map's
+      export and commits, logs, transcripts, volunteered compute); a stream's default label is the policy's too
+      (a person's streams default to private); a label travels: the reasoner's conclusions, a handler's answers,
+      a compile-down and a knowledge-file line take the strictest label among the premises and inputs they
+      record, and lowering one is a decision in the review lane, never a side effect; contract tests: a handler
+      shown a secret item is given a gateway key cleared only for the providers secret allows, and a call outside
+      them is refused; Claude Code's token gets nothing above its clearance; the export and every committed file
+      carry no labelled item; a derived claim carries its source's label; PRIVACY.md's rules are the default
+      policy for private, and loosening one is recorded with who and why; scripts/check.sh passes
+    notes: >-
+      Added 2026-11-12 (S-89; owner: "privacy needs to be adjustable, it simply isn't possible in some aspects, but
+      what might be interesting is if we can label certain data/claims as 'private' or 'secret' to block them from
+      exfiltration under certain privacy settings"). An enforced and audited policy, not a guarantee: a cloud
+      model shown public data may still infer private facts, and what a person pastes into a session is outside
+      it (spec section 11).
+
+  - id: 29
+    title: The session rank as a slot; air-gapped as a setting
+    spec: "4, 8, 10"
+    where: substrate (the session rank's contract test, a local agent harness as a candidate filler), the gateway, the flow policy (step 28)
+    after: [19, 28]
+    status: todo
+    check: >-
+      the top model rank, a session with tools (Claude Code today), is a slot with a contract test; a local agent
+      harness on a local model, picked through section 5, is a candidate filler and is compared with Claude Code
+      on a role at the same task set, its result recorded whatever it is; air-gapped is one setting of the flow
+      policy, every label allowed only local places, under which a red-team test shows no call leaves the machine
+      and the stack still comes up from an offline mirror of its images and catalogs; scripts/check.sh passes
+    notes: >-
+      Added 2026-11-12 (S-89; owner: "i would love a fully-airgapped cognitive robot that can extend its own
+      capabilities but we may be at least a year out from that being practical even on an expensive home system").
+      The obstacle is the actor, not the stack: the step turns "is a local model good enough yet" into a judged
+      comparison re-run as local models are released.
+
+  - id: 30
+    title: A realtime assistant with ears, eyes and a face, from a phone
+    spec: "8, 10"
+    where: substrate (a realtime environment: audio and camera in, speech out), the front door (HTTPS over a private network), a voice-agent framework, local speech and vision models, the handlers plugin
+    after: [19, 21, 28]
+    status: todo
+    needs_owner: true
+    check: >-
+      a mobile web page, reached over HTTPS through a private network (a phone's browser allows the microphone
+      and camera only on a secure page), streams audio and, when a turn needs it, camera frames to an environment
+      on this machine; a turn climbs the ladder under a time limit: reflexes (speech start and end, barge-in, a
+      backchannel) at the cheapest rank, a small local model for fast replies, escalation to a larger one; the
+      avatar is drawn on the phone from the speech it says; speech-to-text, text-to-speech, the models and vision
+      are picked through section 5 and run as the flow policy allows (local only for private); latency per turn
+      and its rank are recorded; an episode is a conversation and its outcomes are the person's interruptions,
+      corrections and repeats; one compile-down that lowers latency with outcomes holding is judged on held-out
+      conversations; scripts/check.sh passes
+    notes: >-
+      Added 2026-11-12 (S-90; owner: "a realtime interactive avatar assistant with eyes/ears from a mobile
+      page/app"). Candidates to search: Pipecat and LiveKit Agents as frameworks, Whisper-family speech-to-text,
+      Piper or Kokoro text-to-speech. The GTX 1070's 8 GB is tight for speech, a small model and speech synthesis
+      together, and vision on top: expect lag or a second GPU. Later, a role for step 26.
+
+  - id: 31
+    title: Compute is a slot; volunteered compute
+    spec: "4, 7, 10"
+    where: substrate (the runner slot and its contract test, a volunteer runner, volunteers as sources with a reliability), Morphogen (verdicts stay on trusted compute)
+    after: [26, 28]
+    status: todo
+    check: >-
+      what runs a job (a screen, a replication, a variant's run) is a slot with a contract test; a volunteer
+      runner fills it with sandboxed containers by pinned digest, no network but the job's own gateway, a fixed
+      seed, temperature 0 and local weights checked by hash, so results compare exactly; only public work goes out
+      (step 28); each result is a claim attributed to its volunteer, never a verdict; final verdicts stay on
+      trusted compute, and whoever proposed a candidate never runs it; each job goes to several volunteers picked
+      at random who do not know of each other, canary jobs with known answers are mixed in, and each volunteer's
+      reliability is learned from results later confirmed or contradicted; a negative is never final from one
+      run: a candidate is dropped only on a quorum of independent negatives or a trusted re-run, near-misses and
+      results that contradict a claim are re-run more, and a refuted candidate keeps the sources of its negatives
+      so it reopens if one of them proves unreliable; a reported cost is a claim, checked by trusted spot re-runs;
+      red-team tests: a planted saboteur faking losses and one faking wins are both caught; scripts/check.sh passes
+    notes: >-
+      Added 2026-11-12 (S-91; owner: "involve 'untrusted compute' or 'citizen scientists' where we can employ
+      volunteered compute to explore novel permutations and reproduce results, which may also require reproducing
+      failed results to minimize false-negatives/sabotage"). Sabotage is lopsided: a faked win is caught by the
+      trusted re-run before anything lands, a faked loss quietly kills a good idea, so negatives carry the stricter
+      rule. Prior art: BOINC's redundant computing and quorums.
 
   - id: 10
     status: done
