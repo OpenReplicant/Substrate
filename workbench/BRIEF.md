@@ -203,6 +203,27 @@ browser ──▶ Caddy (front door) ──┬─ /            the shell: static
   through PostgREST, with a run of their own), streams events from LISTEN/NOTIFY as Server-Sent Events, and
   offers MCP for agents.
 
+**Workers: an actor framework of its own kind.** Plugins run as workers, and Workbench is designed around them
+the way an actor framework is designed around actors (owner, 2026-11-12):
+
+- **A worker is one plugin's process.** Its address is its queue's name. The server dispatches work and runs
+  none itself.
+- **A mailbox per worker**: a pgmq queue of its own, read with a visibility timeout, so a message is delivered
+  at least once, retried a counted number of times and then archived. A worker wakes on NOTIFY and sets its own
+  concurrency.
+- **Identity and permissions per worker**: a Postgres role of its own. Row-level security decides what it reads,
+  and it can write claims only under its own plugin's authors, so attribution is enforced, not a convention.
+- **Supervision is the control plane's**: compose or a scheduler restarts a crashed worker, and the queue retries
+  the job it dropped.
+- **Messages are recorded.** Workers never call each other directly. One asks another through the other's
+  mailbox with a call id, so every ask is on the record with its answer.
+- **A worker is a contract, not a language.** Read the mailbox, write claims as yourself, report health: any
+  language that speaks SQL can pass the contract test. A remote or untrusted worker reaches its mailbox through
+  the API, never a database role.
+
+It is not a distributed actor runtime: messages are not location-transparent, and anything at frame rate keeps
+its state in memory and writes once per turn.
+
 **Recall** is one query over three things, each read as the caller: words (`api.search`, full-text over every
 text field and claim quote), meaning (vectors in `wb.embedding`, one per item per model, made outside Postgres
 by `workbench embed` through any OpenAI-style embeddings endpoint, `WORKBENCH_EMBED_*`, and made again when the
