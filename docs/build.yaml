@@ -514,7 +514,7 @@ steps:
   - id: 30
     title: A realtime assistant with ears, eyes and a face, from a phone
     spec: "8, 10"
-    where: substrate (a realtime environment: audio and camera in, speech out), the front door (HTTPS over a private network), a voice-agent framework, local speech and vision models, the handlers plugin
+    where: substrate (a realtime environment, audio and camera in and speech out), the front door (HTTPS over a private network), a voice-agent framework, local speech and vision models, the handlers plugin
     after: [19, 21, 28]
     status: todo
     needs_owner: true
