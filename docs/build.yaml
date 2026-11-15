@@ -9,6 +9,7 @@
 # needs_owner: the step contains a decision that is the owner's (kernel changes, licences, money). The skill
 #   prepares the case (a brief, a draft PR, the evidence) and asks; it does not decide.
 # check: what proves the step done; run it, and only then set status to done (with `done_on` and the commit).
+paused: "S-94 (2026-11-14): the plan is being re-cut around docs/direction.md, experiment first."
 steps:
   - id: 1
     status: done

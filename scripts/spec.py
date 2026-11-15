@@ -6,6 +6,9 @@
     python3 scripts/spec.py set ID STATUS [--waiting-on TEXT]   # todo, doing, done, blocked, dropped
     python3 scripts/spec.py hook              # SessionStart hook output (.claude/settings.json)
 
+A top-level `paused: "why"` line in docs/build.yaml pauses the build-out (S-94): the hook then names no step and
+points at the reason, and `next` says so. Remove the line to resume.
+
 Standard library only (it runs on the host, where only python3 is promised, S-19). docs/build.yaml is read with
 a small parser for its own simple layout; `set` edits one line, so comments and order stay as they are.
 """
@@ -45,6 +48,17 @@ def steps() -> list[dict]:
         elif key and line.startswith("      "):   # a folded value's continuation
             cur[key] = (cur.get(key, "") + " " + line.strip()).strip()
     return out
+
+
+def paused() -> str | None:
+    """The reason the build-out is paused (a top-level `paused:` line in docs/build.yaml), or None."""
+    for ln in PLAN.read_text().splitlines():
+        if ln.startswith("steps:"):
+            break
+        m = re.match(r"^paused:\s*(.+)$", ln)
+        if m:
+            return m.group(1).strip().strip('"') or "no reason given"
+    return None
 
 
 def nxt(plan: list[dict]) -> dict | None:
@@ -132,6 +146,10 @@ def _hook() -> int:
         text = ("Substrate's spec is in place (docs/spec.md) and this machine is not set up yet. Unless the owner "
                 "asks for something else, start with the setup skill (step 0 of docs/build.yaml), then continue "
                 "with the build-out skill.")
+    elif paused():
+        text = (f"Substrate's build-out is paused ({done} of {len(plan)} steps of docs/build.yaml done): {paused()} "
+                "Do not continue the build plan or use the build-out skill; work from docs/direction.md, or on "
+                "what the owner asks.")
     elif s is None:
         text = (f"Substrate's spec (docs/spec.md): {done} of {len(plan)} steps done; nothing is ready to work on "
                 "(the rest are blocked, dropped or wait on earlier steps). Say so if the owner asks.")
@@ -157,13 +175,17 @@ def main(argv: list[str]) -> int:
         for s in plan:
             print(line(s) + (f"  waiting on: {s['waiting_on']}" if s.get("waiting_on") else ""))
         n = nxt(plan)
-        print("next: " + (line(n) if n else "none ready"))
+        print(f"paused: {paused()}" if paused() else "next: " + (line(n) if n else "none ready"))
         return 0
     if cmd == "next":
         n = nxt(plan)
         if "--short" in argv:
             done = sum(1 for x in plan if x.get("status") == "done")
-            print(f"{done}/{len(plan)} done; next " + (line(n) if n else "none ready"))
+            print(f"{done}/{len(plan)} done; " + ("paused (docs/direction.md)" if paused()
+                                                   else "next " + (line(n) if n else "none ready")))
+            return 0
+        if paused():
+            print(f"paused: {paused()}")
             return 0
         if not n:
             print("none ready")

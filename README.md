@@ -41,15 +41,16 @@ On the machine it was built on, it has:
 - **Chosen parts from catalogs, not memory.** It picked its SPARQL endpoint by searching registries, testing a
   shortlist and recording why the others lost (`docs/choices/`).
 
+- **Refused a change that looked like a win.** Its first judged change sent a model handler's input as compact
+  JSON. Tokens fell 5.9% on 7 of 7 paired runs, and accuracy fell with them, so Morphogen refused it (S-87).
+  One run on seven held-out cases is a start, not a result: `docs/direction.md` is the plan for the next ones.
+
 Built, and not yet run for real:
 
 - **Interviews.** Most of what a system is *for* lives in people's heads. The `interview` skill asks from the
   gaps and thin parts of the map and keeps a word-for-word transcript. Each statement that quotes the person
   exactly becomes their own claim, beside the map's value rather than over it, and a disagreement goes to
   review. No one has sat for one yet.
-- **A judged change.** Morphogen is wired in, but no change here has been judged by it yet. A gate for
-  ordinary changes (the tests of every interface the changed files' parts touch) is in review upstream
-  (Morphogen #74). The first judged change will be one that closes a gap in a second system.
 
 ## Three ways to start
 
@@ -121,6 +122,9 @@ Claude Code. Everything else runs in containers. Tested on Linux with rootless P
 Workbench's shell is then at http://127.0.0.1:8080/.
 
 ## Where it is going
+
+[`docs/direction.md`](docs/direction.md) is the current direction (S-94): run one real experiment before any
+more restructuring, on work businesses already pay AI to do. It pauses the build plan below.
 
 [`docs/spec.md`](docs/spec.md) is what substrate is meant to become, and [`docs/build.yaml`](docs/build.yaml)
 its build plan. While they are in place, Claude Code sessions here work through the plan a step at a time (the

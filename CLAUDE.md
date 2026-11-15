@@ -5,7 +5,8 @@ component is anything that can be modified (a service, a skill, a hook, a parame
 catalog's entity model. It models each system as cited claims, acts on that model, and changes something only on
 evidence it cannot fake. Self is not a special case: substrate is modelled in Workbench like any other system,
 so nothing you build here may work only on itself. Read `README.md` for the picture,
-`docs/spec.md` for where it is going, and `DECISIONS.md` for every default and why (S-41 sets the current scope).
+`docs/direction.md` for where it is going now (S-94: experiment first; it wins over `docs/spec.md` where they
+disagree), and `DECISIONS.md` for every default and why.
 
 | Part | Where | Role |
 | --- | --- | --- |
@@ -50,6 +51,10 @@ are in place, the SessionStart hook (`.claude/settings.json`, `scripts/spec.py h
 sessions work through the plan with the `build-out` skill (`.claude/skills/build-out/SKILL.md`) unless the owner
 asks for something else, one step per session, each ending with its check passing. The owner stops it by
 deleting `docs/spec.md` or marking steps `dropped`.
+
+**The build-out is paused (S-94).** `docs/build.yaml` carries a top-level `paused:` line, so the hook names no
+step: do not continue the build plan. Work through the steps in `docs/direction.md` instead, or on what the
+owner asks. Removing the line resumes the plan.
 
 ## Where work goes
 
