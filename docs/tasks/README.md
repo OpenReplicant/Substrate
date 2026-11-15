@@ -32,26 +32,35 @@ The owner's use of the largest model is limited, so it is kept for work where a 
 6. **Environment and baseline** (Opus), against the environment contract.
 7. **Review and merge** (largest model, then the owner).
 
-## Now (S-97, 2026-11-15)
+## Now (S-97 to S-101, 2026-11-15): start here
 
-The owner, after items 1 to 3: testing stays small for now; the framework is first made fit for someone else
-to pick up and for a first client system (mapping, then optimizations). What is tested is the agent around a
-model, never the model: each environment holds one cheap, minimum-viable model fixed and looks for a baseline
-and a difference. So the order from here is:
+The owner's direction, in order of when it was said: testing stays small, with one cheap local model held
+fixed (S-97); the first thing to have is a useful starter agent whose components optimize themselves on the
+tasks it is given (S-98), research first (S-99; Granite 4.0 Micro picked, S-100); and (S-101) an
+**environment** is the unit that is configured, started and shared, there is **one way to start** (no script
+per mode), the first environment is **papers** (read, then reproduce: the early goal with provable outcomes),
+and the agent **works on its own code** with other projects' tools interfaced. The order:
 
-1. [`client-readiness.md`](client-readiness.md): three walks (a newcomer, a second system, an optimization on
-   paper) and the list of what stops them.
-2. [`04-rename-pass.md`](04-rename-pass.md), then [`spec-rewrite.md`](spec-rewrite.md) and the `README.md`,
-   so what a newcomer reads matches what is there.
-3. The briefs cut from the readiness findings (walk 1 is done, `docs/readiness.md`: 19 findings, 5 that stop
-   someone, and 6 real limits on judging another system): [`fresh-clone.md`](fresh-clone.md) (Opus),
-   [`first-read-docs.md`](first-read-docs.md) (Sonnet, with the rename), [`second-checkout.md`](second-checkout.md)
-   (Opus), and [`judging-another-system.md`](judging-another-system.md) (largest, then Opus; after walk 2).
-   From walk 2: [`observed-ontology.md`](observed-ontology.md) (what is observed is never dropped: it
-   becomes a nested component or interface; ontologies are optional lenses).
-   [`self-approval.md`](self-approval.md) once the owner says yes.
-4. The environment work (05, `meter-factors.md`, `verdict-fields.md`, 06), kept small: one environment, one
-   local model, the two judge checks, one comparison.
+1. [`environment-package.md`](environment-package.md) (largest for the contract, then Opus).
+2. [`papers-environment.md`](papers-environment.md) stage A, reading (Opus).
+3. [`codebase-environment.md`](codebase-environment.md) (Sonnet for the tool search, Opus to build); can run
+   beside 2.
+4. [`meter-factors.md`](meter-factors.md) and [`verdict-fields.md`](verdict-fields.md), then
+   [`papers-environment.md`](papers-environment.md) stage B, reproducing (largest for the design and the two
+   judge checks).
+5. What a newcomer hits (`docs/readiness.md`): [`fresh-clone.md`](fresh-clone.md), then
+   [`first-read-docs.md`](first-read-docs.md) with [`04-rename-pass.md`](04-rename-pass.md), then
+   [`spec-rewrite.md`](spec-rewrite.md). [`observed-ontology.md`](observed-ontology.md) when a map needs it.
+6. Waiting: [`self-approval.md`](self-approval.md) (the owner's yes, and before stage B's gate is used);
+   [`judging-another-system.md`](judging-another-system.md), [`second-checkout.md`](second-checkout.md)
+   (until someone has a system they want better); [`05-pick-and-judge-design.md`](05-pick-and-judge-design.md),
+   [`06-environment-and-baseline.md`](06-environment-and-baseline.md) (a benchmark is one more environment,
+   if a public comparison is wanted). [`starter-agent.md`](starter-agent.md) stage 1 is done; its last
+   section says what carries the rest. [`client-readiness.md`](client-readiness.md) is done as far as useful.
+
+State at the end of the 2026-11-15 session: `scripts/check.sh` passed; everything after commit `8b97a25`
+(S-99 to S-101, the starter-agent trial and choice file, these briefs) was written but **not committed**:
+ask the owner, then commit. No git identity is configured; earlier commits used `Claude <noreply@anthropic.com>`.
 
 ## Briefs
 
