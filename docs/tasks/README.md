@@ -32,19 +32,39 @@ The owner's use of the largest model is limited, so it is kept for work where a 
 6. **Environment and baseline** (Opus), against the environment contract.
 7. **Review and merge** (largest model, then the owner).
 
+## Now (S-97, 2026-11-15)
+
+The owner, after items 1 to 3: testing stays small for now; the framework is first made fit for someone else
+to pick up and for a first client system (mapping, then optimizations). What is tested is the agent around a
+model, never the model: each environment holds one cheap, minimum-viable model fixed and looks for a baseline
+and a difference. So the order from here is:
+
+1. [`client-readiness.md`](client-readiness.md): three walks (a newcomer, a second system, an optimization on
+   paper) and the list of what stops them.
+2. [`04-rename-pass.md`](04-rename-pass.md), then [`spec-rewrite.md`](spec-rewrite.md) and the `README.md`,
+   so what a newcomer reads matches what is there.
+3. The briefs cut from the readiness findings (walk 1 is done, `docs/readiness.md`: 19 findings, 5 that stop
+   someone, and 6 real limits on judging another system): [`fresh-clone.md`](fresh-clone.md) (Opus),
+   [`first-read-docs.md`](first-read-docs.md) (Sonnet, with the rename), [`second-checkout.md`](second-checkout.md)
+   (Opus), and [`judging-another-system.md`](judging-another-system.md) (largest, then Opus; after walk 2).
+   [`self-approval.md`](self-approval.md) once the owner says yes.
+4. The environment work (05, `meter-factors.md`, `verdict-fields.md`, 06), kept small: one environment, one
+   local model, the two judge checks, one comparison.
+
 ## Briefs
 
-Items 1 (`docs/contracts/`, S-95) and 2 (these files) are done. Each brief has its scope, the files to touch,
+Items 1 (`docs/contracts/`, S-95), 2 (these files) and 3 (`docs/choices/first-environment.yaml`) are done. Each brief has its scope, the files to touch,
 what to leave alone and the check that proves it done. A session takes one brief.
 
 | Brief | Model | Needs | Can start |
 | --- | --- | --- | --- |
-| [`03-benchmark-checks.md`](03-benchmark-checks.md) | Sonnet | nothing | now |
+| [`client-readiness.md`](client-readiness.md) | Opus, then largest | the owner, for one walk | now: first |
+| [`03-benchmark-checks.md`](03-benchmark-checks.md) | Sonnet | nothing | done |
 | [`04-rename-pass.md`](04-rename-pass.md) | Sonnet | nothing | now |
 | [`meter-factors.md`](meter-factors.md) | Opus | nothing | now; before task 6's first judged run |
 | [`verdict-fields.md`](verdict-fields.md) | Sonnet | nothing | now; before direction step 3 |
 | [`self-approval.md`](self-approval.md) | Opus | the owner's yes | before any agent login decides |
-| [`05-pick-and-judge-design.md`](05-pick-and-judge-design.md) | largest | 03 | after 03 |
+| [`05-pick-and-judge-design.md`](05-pick-and-judge-design.md) | largest | 03, the owner's go-ahead to run a benchmark | budget arithmetic done; the trial waits |
 | [`06-environment-and-baseline.md`](06-environment-and-baseline.md) | Opus | 05, meter-factors | after 05 |
 | [`07-review-and-merge.md`](07-review-and-merge.md) | largest, then the owner | the milestone's tasks | at each milestone |
 | [`spec-rewrite.md`](spec-rewrite.md) | Opus | 04, 06 | after 06 |

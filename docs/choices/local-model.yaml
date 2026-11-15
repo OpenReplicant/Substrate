@@ -6,7 +6,7 @@ quote: "Hugging Face quantized models for Ollama should be selected based on sco
 need:
   - runs in Ollama on this machine (a GTX 1070, 8 GB, beside the 1.2 GB embedding model), reached only through the gateway, so a person's text never leaves it (docs/assistant/PRIVACY.md P3) and a judged run spends no provider's quota
   - follows a JSON-only instruction (one object with an answer, a confidence and a reason) in a second or two
-  - a public score to shortlist on (instruction following: IFEval; structured output: BFCL), then readable answers on substrate's own inputs
+  - "a public score to shortlist on (instruction following: IFEval; structured output: BFCL), then readable answers on substrate's own inputs"
   - a permissive or LGPL licence; a release at least two weeks old, its Ollama tag pinned exactly
 searched:
   - "ollama: https://ollama.com/search?o=newest and the tags pages of qwen3, qwen3.5, granite4, ministral-3, phi4-mini, lfm3, d3, 2026-11-11"

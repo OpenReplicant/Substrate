@@ -1,6 +1,7 @@
 # Task 5: the first environment's pick, and the design of the two judge checks
 
-**Model:** the largest available. **Needs:** task 3 (`docs/choices/first-environment.yaml` with candidates).
+**Model:** the largest available. **Needs:** task 3 (done: `docs/choices/first-environment.yaml` has the candidates and the budget arithmetic), and
+the owner's go-ahead to fetch and run a benchmark. **After:** `client-readiness.md` (S-97).
 **Feeds:** task 6. This is direction step 1 and the design half of step 3.
 
 ## Scope
@@ -12,15 +13,19 @@
    held-out cases each model tier can carry in one judged run, and how many cases the sign test needs to see
    an effect of the size hoped for (at 7 paired rounds the smallest possible p is 1/128, so every round must
    agree: say what case count makes a round's score stable enough for that).
-2. **A trial** (the `research` skill's step 4) of the shortlist: the world started in Podman, one `dev` case
+2. **The minimum-viable model** (S-97; `docs/contracts/environment.md`, "The model is held fixed"): for each
+   shortlisted candidate, the cheapest model with a published score clearly off the floor, and whether it runs
+   here (the local GPU has 8 GB). A candidate with no such model is rejected for now, with that as the reason.
+   Keep the testing small: enough to set a baseline and see a difference, not to raise a score.
+3. **A trial** (the `research` skill's step 4) of the shortlist, with that model: the world started in Podman, one `dev` case
    reset and stepped by a scripted agent with no model, the scorer run on the result. Record what ran and what
    did not.
-3. **The pick**, with each rejection's reason and what would reverse it. If the need alone decides, say so.
-4. **The design of the two checks** (`docs/contracts/verdict.md`, "The two checks"), specific to the pick:
+4. **The pick**, with each rejection's reason and what would reverse it. If the need alone decides, say so.
+5. **The design of the two checks** (`docs/contracts/verdict.md`, "The two checks"), specific to the pick:
    how the same-against-same candidate is made, how many times it is judged, what the worse candidate is and
    why its damage is known in advance, the labels each verdict carries, and what result sends the work back to
    the environment instead of on to step 4.
-5. **The cells:** which component of the baseline is governed first, its `change`, and its `better` (the two
+6. **The cells:** which component of the baseline is governed first, its `change`, and its `better` (the two
    metrics of `docs/contracts/cell.md` rule 3).
 
 ## Files to touch

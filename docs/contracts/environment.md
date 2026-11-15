@@ -57,6 +57,19 @@ a different component on the same route. An escalation that leaves the top of th
 a failure). Several streams meet in the observation, never inside a handler. Every model call goes through the
 gateway with the run's key; a call the meter did not see is refused (S-77, S-87).
 
+## The model is held fixed
+
+What is tested is the agent around the model (its route, prompts, knowledge, recall, tools), never the model.
+A comparison names one model for the agent and one for the world, and both sides of every round use them. The
+model's name is outside the candidate's `change`; swapping it is a different experiment with its own series.
+
+Each environment declares its **minimum-viable model**: the cheapest model that scores clearly above the
+environment's floor and below its ceiling on `dev` cases, taken from a published score where one exists and
+confirmed here. Cheapest first, because the aim is a baseline and a difference, not a high score: a local
+model that gets a third of the cases right shows a harness change as well as a large one does, at no cost. A
+model at the floor is not viable (nothing can be made worse, so the judge cannot be checked), and neither is
+one at the ceiling.
+
 ## The run and the scorer
 
 The cell's `run` is the environment's **driver**: for each case in `MORPHOGEN_INPUTS/cases.jsonl` it resets the
@@ -102,6 +115,7 @@ licence: <the benchmark's, and where it was read>
 world: {entry: world.py, max_steps: 30, seconds: 300}
 observation: {fields: {message: text, record: json}, private: [outcome]}
 actions: {reply: free, update_record: free, refund: propose, hand_off: free}
+model: {agent: ollama/<name>, world: ollama/<name>}     # held fixed; the minimum-viable model
 outcome: {metric: scored.resolved, floor: {nothing: 0.0, constant: 0.0}, scorer: score.py}
 cost: [metered.calls, metered.tokens]
 budget: {calls_per_episode: 12, cases_held_out: 60}     # the arithmetic of direction step 1

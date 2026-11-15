@@ -1,0 +1,228 @@
+# A choice made from the catalogs (spec section 5, direction step 1): the first environment, a benchmark for support or back-office work.
+# Task 3 records the need and the candidates only. No trial, verdict or pick yet: task 5 makes them.
+# Every fact below was read on 2026-11-15 at the URL beside it. "not found" means the page did not say.
+question: Which benchmark should be substrate's first environment for support or back-office work?
+asked_by: owner
+asked_on: "2026-11-15"
+quote: "what people/businesses are paying for AI to do now is where we should focus"
+need:
+  - "support or back-office work with an outcome a script can check (a final database state or a checker, not a model's opinion)"
+  - "a permissive licence for the code and, separately, for the data (docs/direction.md; house rule 6)"
+  - "a judged run (7 to 10 paired rounds of base and candidate over the held-out cases) fits in 1,000 free calls a day, or runs on the local model (Granite 4.0 Micro, about one second a call)"
+  - "held-out cases the models have not seen, or a way to make them (a public test set counts as dev, docs/contracts/environment.md)"
+  - "the world runs in Podman on this machine with no paid service"
+searched:
+  - "web search, 2026-11-15: 'OmegaUse OfficeVal benchmark' (found arXiv 2607.27155, the project site and the repository)"
+  - "web search, 2026-11-15: 'tau-bench benchmark tool-agent-user interaction airline retail paper arXiv average steps' (found arXiv 2406.12045; no average step count in any result)"
+  - "web search, 2026-11-15: 'CRMArena-Pro benchmark LLM agents CRM customer service sales tasks github'"
+  - "web search, 2026-11-15: 'WorkArena ServiceNow benchmark github license enterprise knowledge work agents' (secondary sites disagreed on the licence; the LICENSE file was read directly)"
+  - "web search, 2026-11-15: 'benchmark customer service agent policy compliance tool use simulated customer open source 2026 github' (leads: EnterpriseOps-Gym, JourneyBench arXiv 2601.00596, DRIP-R; JourneyBench and DRIP-R were not followed up, no repository was looked for)"
+  - "github: api.github.com/repos/<owner>/<name> and each repository's page, README, LICENSE and docs, 2026-11-15, for sierra-research/tau2-bench, sierra-research/tau-bench, TheAgentCompany/TheAgentCompany, baidu-frontier-research/OmegaUse-OfficeVal, ServiceNow/EnterpriseOps-Gym, stonybrooknlp/appworld, ServiceNow/WorkArena, SalesforceAIResearch/CRMArena, asappresearch/abcd"
+  - "arxiv abstract and HTML pages, 2026-11-15: 2406.12045, 2412.14161, 2607.27155, 2603.13594, 2407.18901 (the PDFs of 2607.27155 and 2505.18878 would not decode, so CRMArena-Pro's paper was not read)"
+  - "huggingface dataset pages, 2026-11-15: baidu-frontier-research/OmegaUse-OfficeVal, ServiceNow-AI/EnterpriseOps-Gym"
+  - "not reached: a leaderboard page for any candidate (taubench.com, Artificial Analysis) was not read; leaderboard facts come from READMEs only"
+candidates:
+  - name: tau2-bench
+    title: "τ²-bench, the current tau-bench family repository (airline, retail, telecom, banking_knowledge, intake)"
+    registry: github
+    repository: sierra-research/tau2-bench
+    tasks: [customer-support, policy-bound-tool-use]
+    outcome: open
+    shortlisted: true
+    fit: >-
+      Support work with a policy document, a database behind tools, and a simulated customer. Not a full pass on the
+      need: its reward can include a model judge, its user simulator is a model, and its tasks are a public frozen set.
+    notes:
+      licence_code: "MIT. LICENSE file begins 'MIT License ... Copyright (c) 2025 Sierra Research' (raw.githubusercontent.com/sierra-research/tau2-bench/main/LICENSE, 2026-11-15); GitHub API spdx_id MIT (api.github.com/repos/sierra-research/tau2-bench, 2026-11-15)"
+      licence_data: "not found: the README, CHANGELOG and docs read give no separate data licence; tasks live in the same repository (github.com/sierra-research/tau2-bench, 2026-11-15)"
+      upkeep: "pushed_at 2026-11-10; CHANGELOG: 2.0.0 on 2026-10-19 (a scoring change, not comparable with 1.x), 1.0.1 on 2026-07-15 (fixed banking_knowledge grading and one gold refund); 342 open issues by the API count (includes pull requests); README says 1.x submissions are still accepted at taubench.com; releases page empty (github.com/sierra-research/tau2-bench, raw CHANGELOG.md, 2026-11-15). Whether any open issue says it is broken: not read."
+      scored: "reward is the product of the components in evaluation_criteria.reward_basis. DB: hash of the final database against a target hash made by replaying the reference actions on a fresh environment, deterministic. ACTION: deterministic match of tool calls. COMMUNICATE: a semantic LLM judge by default, a substring scorer with --communicate-scorer substring. NL_ASSERTION: an LLM judge, marked experimental. So a database-and-action-only reward needs no model, and the docs do not say the score can be re-run outside the agent's process; that DB and ACTION need no model on a stored simulation is the reader's inference, not documented (raw.githubusercontent.com/sierra-research/tau2-bench/main/docs/evaluation.md, 2026-11-15)"
+      agent_calls_per_task: "not found as a median or maximum. The README gives 900 calls for text-v1 at one trial and a 12-call smoke test for 'retail --num-tasks 2' (github.com/sierra-research/tau2-bench, 2026-11-15), which does not say whether a call is one request or one task. No step cap is stated; the limit is simulated seconds (--max-steps-seconds 1200 for custom runs, 2400 for released voice benchmarks) (docs/running-the-benchmark.md, 2026-11-15). The original tau-bench paper caps an episode at 30 agent actions, counting tool calls and user replies (arxiv.org/html/2406.12045, section 5)."
+      world_calls_per_task: "a model plays the customer in every task. Custom runs: gpt-4.1-2025-04-14 at temperature 0 for agent and user by default; released benchmarks: user gpt-5.5 low effort. Communication judge gpt-5.5 low effort; NL-assertion judge gpt-5.4-mini-2026-03-17. Calls per task: not found (docs/running-the-benchmark.md, 2026-11-15). Ollama is not mentioned there; the README says it uses LiteLLM so any supported provider works."
+      cases: "text-v1 and voice-v2: the same 50 frozen tasks per domain (airline, retail, telecom); voice-v1 English: 50 airline, 114 retail, 114 telecom; banking_knowledge: 97 tasks and 698 documents (CHANGELOG 1.0.0); intake: 200 tasks, voice by default (CHANGELOG 2.0.0). The Gym doc is listed as covering train/test splits, but its sizes were not read. The task files are public, so they count as dev. No fresh-case generator found. (README, CHANGELOG, docs/task-subsets.md, 2026-11-15)"
+      needs_to_run: "Python >=3.12 <3.14, uv, API keys in .env through LiteLLM. Docker and Podman are not mentioned for the text domains. Network: the model provider. Voice needs portaudio and ffmpeg and realtime providers (OpenAI, Gemini, xAI). Disk, RAM, GPU: not found. (github.com/sierra-research/tau2-bench README, 2026-11-15)"
+      contract_fit: "the README lists a Gymnasium-compatible environment (uv sync --extra gym) with a play mode, which is the contract's reset/step shape. Seed defaults to 300 and the custom-run user simulator is at temperature 0; the docs make no determinism claim. Replay without a model: the DB reward is a hash of a replayed state, which suggests it; not stated as a guarantee. Gym doc itself was not read."
+  - name: tau-bench
+    title: "τ-bench, the original (retail, airline); its README says its tasks are no longer updated"
+    registry: github
+    repository: sierra-research/tau-bench
+    tasks: [customer-support, policy-bound-tool-use]
+    outcome: open
+    shortlisted: false
+    fit: >-
+      The version the paper describes: 115 retail and 50 airline tasks, a reward with no model in it, a model playing the
+      customer. Superseded by tau2-bench by its own README, so a fallback or a reference only.
+    notes:
+      licence_code: "MIT, shown on the repository page with a LICENSE file; API spdx_id MIT (github.com/sierra-research/tau-bench, api.github.com/repos/sierra-research/tau-bench, 2026-11-15). LICENSE text itself not read."
+      licence_data: "not found: no separate data licence on the page read"
+      upkeep: "pushed_at 2026-03-18; 57 open issues by the API count (includes pull requests); no releases or tags listed; README says 'The tasks in this repo are not updated' and points to tau2-bench for the latest fixed tasks (github.com/sierra-research/tau-bench, 2026-11-15)"
+      scored: "rule-based, no model in the reward: r = r_action x r_output; r_action is the final database matching the one ground-truth database, r_output is required information appearing as substrings in the agent's messages. The paper says r = 1 is necessary, not sufficient, for success (arxiv.org/html/2406.12045, 2026-11-15, first 100,000 characters). Whether it can run outside the agent's process: not found."
+      agent_calls_per_task: "median: not found; the paper reports no average steps. Maximum: 30 agent actions per task, counting tool calls and user responses (arxiv.org/html/2406.12045 section 5). Cost, gpt-4o agent on retail: about $0.38 per task."
+      world_calls_per_task: "user simulator gpt-4-0613 at temperature 1.0 (agent at 0.0); about $0.23 per task on retail; one trial per task costs roughly $200 with gpt-4o as the agent (arxiv.org/html/2406.12045 sections 3, 5, 5.1). The reward itself makes no model call. Calls per task: not found."
+      cases: "115 retail and 50 airline tasks (paper table 1). Main results use at least 3 trials per task. No held-out split mentioned in the part read; the tasks are public, so they count as dev. (arxiv.org/html/2406.12045, 2026-11-15)"
+      needs_to_run: "pip install -e . and API keys for OpenAI, Anthropic, Google, Mistral or AnyScale; no Python version given; no container mentioned (github.com/sierra-research/tau-bench, 2026-11-15)"
+      contract_fit: "no Gymnasium interface found on its page (the later repo adds one). The database is JSON and tools are Python, so reset by reloading is plausible from the paper's description; determinism for a seed: not found."
+  - name: omegause-officeval
+    title: "OmegaUse-OfficeVal (Baidu Frontier Research): 100 long office-suite tasks with economic annotations"
+    registry: github
+    repository: baidu-frontier-research/OmegaUse-OfficeVal
+    tasks: [back-office, document-work]
+    outcome: open
+    shortlisted: false
+    fit: >-
+      Exists under that name (arXiv 2607.27155, submitted 2026-07-29, v2 2026-08-18). Scored by code only, but the work is
+      producing DOCX, PPTX, XLSX and PDF files over about two hours of human labour per task, not support exchanges;
+      the task domains were not listed in the text read; no step or turn figure; some verifiers need Microsoft Office.
+    notes:
+      licence_code: "Apache-2.0 (README: 'Licensed under the Apache License 2.0'; NOTICE and THIRD_PARTY_LICENSES.md also present; API spdx_id Apache-2.0) (github.com/baidu-frontier-research/OmegaUse-OfficeVal, api.github.com/repos/baidu-frontier-research/OmegaUse-OfficeVal, 2026-11-15)"
+      licence_data: "Hugging Face dataset metadata field says apache-2.0; the card has no separate licence statement; the repository page says it does not state a data licence and points to the dataset. The paper itself is CC BY 4.0 (huggingface.co/datasets/baidu-frontier-research/OmegaUse-OfficeVal, github.com/baidu-frontier-research/OmegaUse-OfficeVal, arxiv.org/abs/2607.27155, 2026-11-15). The card says inputs were reconstructed and de-identified."
+      upkeep: "repository created 2026-07-25, pushed_at 2026-10-05, 19 commits, 2 open issues by the API count; no releases or tags listed; leaderboard: a ranked table was on the project site but did not render, so whether it takes entries is not found (omegause-officeval.github.io, 2026-11-15)"
+      scored: "deterministic code-based verifiers, 2,009 task-completion rubric items plus 219 usability checks (2.19 and 20.09 per task); an artefact failing any usability check scores zero; a weighted rubric score otherwise, negatives for damage, clipped at zero. The paper says it avoids human and LLM-as-judge scoring. 'Trajectory-agnostic': it scores the submitted deliverables, so it runs after and outside the agent, with no model call. Nine of the 100 verifiers need Microsoft Office COM on Windows and are skipped on Linux in auto mode (arxiv.org/html/2607.27155v2 first 100,000 characters; github.com/baidu-frontier-research/OmegaUse-OfficeVal; omegause-officeval.github.io, 2026-11-15)"
+      agent_calls_per_task: "not found: no median or maximum steps or turns, no tokens per task in the part read; only money. Cost per task in the paper's table: Qwen3.7-Plus $0.2152, Kimi K2.6 $0.7719, GLM-5.2 $1.4823, human $6.856 task-price proxy. Appendix E.1 (the scaffold) was not read."
+      world_calls_per_task: "none: there is no simulated user and no model grader."
+      cases: "100 tasks, 220 input files, 115 golden artefacts; one split ('train', 100 rows, 514 MB). No private split described, the full set is released, so it counts as dev; no fresh-case generator found (huggingface.co/datasets/baidu-frontier-research/OmegaUse-OfficeVal, 2026-11-15)"
+      needs_to_run: "to score: Python 3.10 or newer, pip install -e '.[test]'; Linux tested on Ubuntu; 9 verifiers need Windows with Office. To run an agent: the agent must produce a ZIP of task directories officeval_001 to officeval_100; the agent environment (apps, GUI) is the agent's own, Appendix E.2 not read."
+      contract_fit: "poor on the face of it: no world to reset and step, only a deliverable per task. A scorer outside the agent exists. Reset/step, determinism and replay: not applicable as published."
+  - name: theagentcompany
+    title: "TheAgentCompany: a simulated software company (GitLab, Plane, ownCloud, RocketChat) with 175 tasks"
+    registry: github
+    repository: TheAgentCompany/TheAgentCompany
+    tasks: [back-office, project-management, hr, finance, admin, software]
+    outcome: open
+    shortlisted: false
+    fit: >-
+      Exists under that name (arXiv 2412.14161). Back-office categories (administrative 15, HR 29, finance 12,
+      project management 28) beside 69 software tasks and 14 data science. Heavy to run, public tasks.
+    notes:
+      licence_code: "MIT: 'Copyright (c) 2024 TheAgentCompany' (raw.githubusercontent.com/TheAgentCompany/TheAgentCompany/main/LICENSE; API spdx_id MIT, 2026-11-15)"
+      licence_data: "not found: the README says 'Distributed under the MIT License'; the paper is CC BY 4.0 (arxiv.org/abs/2412.14161). No separate licence for the task images or the service data was read."
+      upkeep: "pushed_at 2025-11-17 (a year before 2026-11-15); 28 open issues by the API count (includes pull requests); no releases or tags listed (api.github.com/repos/TheAgentCompany/TheAgentCompany, github.com/TheAgentCompany/TheAgentCompany, 2026-11-15). Leaderboard: not found."
+      scored: "weighted checkpoints per task; full score 1 only if all pass, partial = 0.5 x result/total + 0.5 x full. Mostly deterministic Python evaluators; 51 of 175 tasks (29%) involve LLM evaluation, keyword matching first and the LLM as fallback (arxiv.org/html/2412.14161 section 4.1 and appendix E, 2026-11-15). Evaluators ship encrypted (evaluator.py.enc) and the run instructions publish the key, so the evaluator is not hidden from an agent that looks. Running it with no model call: not possible for those 51 tasks; outside the agent's process: not found."
+      agent_calls_per_task: "average steps per task by model, from paper table 1: GPT-4o 14.6, Claude-3.7-Sonnet 27.8, Gemini-2.5-Pro 27.2, Claude-3.5-Sonnet 29.2, Gemini-2.0-Flash 39.9; cost $0.6 to $6.3. Median and maximum: not found. The paper states no numeric step limit; the README gives no call budget."
+      world_calls_per_task: "simulated colleagues are a model: by default all are Claude-3-5-Sonnet-20241022, and the same model backs the LLM evaluators (paper). Calls per task: not found. The README needs a grader LLM configured (LITELLM variables)."
+      cases: "175 tasks; no held-out split mentioned in the paper or README; public, so dev."
+      needs_to_run: "Docker and Docker Compose, 30+ GB free disk, services GitLab, Plane, ownCloud and RocketChat all running, host networking, the Docker environment reaching GitHub at launch, LLM access for agent, environment and grader. RAM: not found (the paper's baselines used EC2 t3.2xlarge). (github.com/TheAgentCompany/TheAgentCompany, 2026-11-15)"
+      contract_fit: "no Gymnasium interface found. State lives in four live services, so reset means restoring all four; the contract's open question about worlds served outside the run applies. Determinism and model-free replay: not found, and the LLM evaluators and colleagues rule model-free replay out for part of the tasks."
+  - name: enterpriseops-gym
+    title: "EnterpriseOps-Gym (ServiceNow): stateful enterprise tasks on containerized MCP servers with SQL verifiers"
+    registry: github
+    repository: ServiceNow/EnterpriseOps-Gym
+    tasks: [back-office, customer-service-management, hr, itsm, email, calendar, drive, teams]
+    outcome: open
+    shortlisted: false
+    fit: >-
+      A lead from the search, not on the shortlist. 1,150 tasks over eight domains, a database behind MCP tools, scored by SQL
+      checks on the final state, no simulated user. The one reader of it here that a model-free scorer fits well.
+    notes:
+      licence_code: "Apache-2.0 (API spdx_id and repository page; LICENSE file text not read) (api.github.com/repos/ServiceNow/EnterpriseOps-Gym, github.com/ServiceNow/EnterpriseOps-Gym, 2026-11-15)"
+      licence_data: "Apache-2.0 in the Hugging Face metadata field, not gated, no licence statement in the card. The paper is CC BY-NC-SA 4.0 (arxiv.org/abs/2603.13594). A licence discrepancy between paper and data to be settled before use. (huggingface.co/datasets/ServiceNow-AI/EnterpriseOps-Gym, 2026-11-15)"
+      upkeep: "repository created 2026-03-03, pushed_at 2026-10-26, 11 open issues by the API count; no releases listed; the project site says latest results are now kept by Artificial Analysis (leaderboard page not read) (enterpriseops-gym.github.io, 2026-11-15)"
+      scored: "hand-written SQL verifiers over the final database state (goal completion, integrity constraints, policy compliance, side effects); a task passes only if all pass. An LLM was used only to categorise verifiers afterwards. The repository page does not say outright whether scoring uses a model; the paper's description says it does not. Whether it can run outside the agent's process: not found. (arxiv.org/html/2603.13594 first 100,000 characters; github.com/ServiceNow/EnterpriseOps-Gym, 2026-11-15)"
+      agent_calls_per_task: "expert trajectories average 9.15 steps (6.2 Email to 12.1 CSM), maximum 34 (HR); model trajectories 'may take considerably more'; average tool calls per task not reported; no runtime step cap documented. Model calls per task: not found. (arxiv.org/html/2603.13594; github README, 2026-11-15)"
+      world_calls_per_task: "none described: tasks are single instructions under system policies, no simulated user, no model grader."
+      cases: "paper: 1,150 tasks including 30 infeasible, 8 domains. The repository says 60% of the samples are released in the public split and does not describe the other 40%. The dataset viewer shows 649 rows in the 'oracle' subset (calendar 61, csm 103, drive 64, email 67, hr 102, hybrid 88, itsm 103, teams 61) and 2,560 rows across four tool-set variants; the card's table says 1,115 tasks. The counts disagree and the card does not explain it. The public part counts as dev; whether the other 40% could serve as held-out: not found."
+      needs_to_run: "Python 3.11+, uv, one Docker container per domain pulled from Docker Hub (shivakrishnareddyma225/enterpriseops-gym-mcp-<domain>:latest), the seed databases from gym_dbs.zip, local ports 8001 to 8009, network to the model provider, Docker Hub and Hugging Face. Podman: not tested or mentioned. Disk, RAM, GPU: not found. A third-party image from a personal Docker Hub namespace is a supply-chain question for the house rule on pinned images."
+      contract_fit: "MCP tool servers over a database snapshot: reset by reloading the seed SQL is plausible, with the scorer reading the database. Gymnasium interface, determinism and model-free replay: not found."
+  - name: appworld
+    title: "AppWorld: 9 apps, 457 APIs, about 100 simulated people, 750 tasks"
+    registry: github
+    repository: stonybrooknlp/appworld
+    tasks: [personal-assistant, multi-app-tool-use]
+    outcome: open
+    shortlisted: false
+    fit: >-
+      A lead from memory, read here. Not support or back-office work: day-to-day apps (the paper's wording) for one
+      person. It has the cleanest scorer and held-back test answers of those read, so it is recorded as a reference for
+      the contract, not as a fit for the need.
+    notes:
+      licence_code: "Apache-2.0; the protected parts (app implementations, API docs, task data, solutions, tests) sit in encrypted .bundle files under Apache-2.0 with a requirement that redistribution be encrypted (github.com/stonybrooknlp/appworld, api.github.com/repos/stonybrooknlp/appworld, 2026-11-15)"
+      licence_data: "same Apache-2.0 with the encrypted-redistribution condition; the paper is CC BY 4.0 (arxiv.org/abs/2407.18901)"
+      upkeep: "pushed_at 2026-09-04; 16 open issues by the API count; no releases or tags listed; 234 commits (api.github.com/repos/stonybrooknlp/appworld, 2026-11-15)"
+      scored: "database-state unit tests, not process-based; no LLM judge mentioned; answer tasks compared in the tests; results as TGC and SGC. Run outside the agent's process: by default code runs in the same process as the caller, with a containerized server mode optional (github.com/stonybrooknlp/appworld, 2026-11-15)"
+      agent_calls_per_task: "not found as median or maximum; the example config sets max_interactions 1000 and max_api_calls_per_interaction 5000, and a run over 2000 requests is treated as a likely loop"
+      world_calls_per_task: "none: the simulated people are data, not a model. Calls per task: not applicable."
+      cases: "paper: 750 tasks. Splits: train, dev, test_normal, test_challenge. Train and dev are fully released. For the test splits only the evaluation programs and difficulty indicators are released; setup and solutions are withheld; a fully hidden test set is planned (github README, arxiv.org/abs/2407.18901, 2026-11-15). Per-split counts: not found."
+      needs_to_run: "Python 3.11+, pip install appworld, appworld install, appworld download data (Git LFS for a source install); internet for install and data; Docker optional with Podman named as an alternative; disk: not found. Ollama: not mentioned; vLLM and an OpenAI-style base_url are."
+      contract_fit: "in-process world with reset by task id; a replay of recorded API calls against a fresh world is the natural shape; determinism and a Gymnasium wrapper: not found."
+  - name: workarena
+    title: "WorkArena and WorkArena++ (ServiceNow knowledge-work tasks in a browser)"
+    registry: github
+    repository: ServiceNow/WorkArena
+    tasks: [back-office, it-service-management, browser]
+    outcome: rejected
+    shortlisted: false
+    fit: "Needs a hosted ServiceNow instance reached through a gated Hugging Face form, so a world cannot run in Podman on this machine (need e)."
+    reason: >-
+      Fails need (e) on what the README says: 'you will need to gain access to ServiceNow instances' through a gated
+      Hugging Face dataset, 'accept the terms ... and wait for approval'. Would become a candidate if the instances could
+      be run locally; no such option was found. Also needs a browser (Playwright) and has no Docker option.
+    notes:
+      licence_code: "LICENSE file begins 'Copyright 2024 ServiceNow / Licensed under the Apache License, Version 2.0' (raw.githubusercontent.com/ServiceNow/WorkArena/main/LICENSE, 2026-11-15). The API reports NOASSERTION (api.github.com/repos/ServiceNow/WorkArena); the README read has no licence statement."
+      licence_data: "not found: the instances dataset is gated behind terms on Hugging Face; the terms were not read"
+      upkeep: "pushed_at 2026-09-28; 27 open issues by the API count; no releases or tags; 230 commits (api.github.com/repos/ServiceNow/WorkArena, github.com/ServiceNow/WorkArena, 2026-11-15)"
+      scored: "env.task.validate(...) returns a reward, 1 is success; how it decides (instance state or otherwise) and whether it needs a model: not found"
+      agent_calls_per_task: "not found"
+      world_calls_per_task: "not found; no simulated user mentioned"
+      cases: "WorkArena-L1: 19,912 unique instances from 33 tasks; WorkArena++: 682 tasks, each sampling among thousands of configurations, which is a source of fresh cases (github.com/ServiceNow/WorkArena, 2026-11-15)"
+      needs_to_run: "a ServiceNow instance through gated access, a Hugging Face account and token, pip install browsergym-workarena, Playwright; Docker not mentioned"
+      contract_fit: "not assessed beyond the above; it is a browser-driven world."
+  - name: crmarena-pro
+    title: "CRMArena and CRMArena-Pro (Salesforce AI Research): CRM sales, service and CPQ tasks"
+    registry: github
+    repository: SalesforceAIResearch/CRMArena
+    tasks: [customer-service, sales, back-office]
+    outcome: rejected
+    shortlisted: false
+    fit: "Customer-service and CRM work, but non-commercial licence and a hosted Salesforce org."
+    reason: >-
+      Fails need (b) and (e) on what was read: the repository's licence is CC BY-NC 4.0 and the README says 'for
+      research purposes only and not for commerical'; it needs credentials for a Salesforce org reached by API. Would
+      become a candidate under a permissive licence and a locally hosted world.
+    notes:
+      licence_code: "CC BY-NC 4.0 per the badge and LICENSE.txt; README: 'This repository is for research purposes only and not for commerical.' API spdx_id NOASSERTION (github.com/SalesforceAIResearch/CRMArena, api.github.com/repos/SalesforceAIResearch/CRMArena, 2026-11-15)"
+      licence_data: "not found separately; data is on Hugging Face as Salesforce/CRMArena and Salesforce/CRMArenaPro, card not read"
+      upkeep: "pushed_at 2026-11-03; 15 open issues by the API count; no releases (api.github.com/repos/SalesforceAIResearch/CRMArena, 2026-11-15). Paper accepted to TMLR 2026 per a search result, not a primary page."
+      scored: "not found: the README names a test_functions/ directory without describing scoring; the paper's PDF would not decode"
+      agent_calls_per_task: "not found"
+      world_calls_per_task: "not found; the paper's multi-turn setting (by a search summary: about 58% single-turn and about 35% multi-turn success) implies a simulated user, not confirmed from a primary page"
+      cases: "per a search summary: 19 tasks across sales, service and CPQ; instance count and any held-out split: not found"
+      needs_to_run: "pip install -e ., a .env with Salesforce credentials and OpenAI, AWS Bedrock or TogetherAI keys; the README says GUI access to the orgs is no longer publicly available"
+      contract_fit: "not assessed; the world is a remote Salesforce org."
+  - name: abcd
+    title: "ABCD, the Action-Based Conversations Dataset (ASAPP)"
+    registry: github
+    repository: asappresearch/abcd
+    tasks: [customer-support]
+    outcome: rejected
+    shortlisted: false
+    fit: "A dialogue corpus with agent actions for customer service, from a 2021 paper, not an interactive world."
+    reason: >-
+      Only the API record was read: MIT licence, last push 2022-01-26, 2 open issues (api.github.com/repos/asappresearch/abcd,
+      2026-11-15). Rejected without reading its README or paper: it is a corpus for dialogue systems, and nothing was
+      found that makes it a world with a reset and a step. Would become a candidate if a simulator over it were found.
+# Task 5, part 1 (2026-11-15): the budget arithmetic, before any trial. Calls per episode are assumptions until a
+# trial measures them: no candidate's page gave a median (see each candidate's agent_calls_per_task).
+budget:
+  formula: "calls per judged run = held-out cases x calls per episode (agent + world) x 2 sides x rounds"
+  rounds: "7 to 10 (morphogen.yaml's rounds; at 7 paired rounds the smallest sign-test p is 1/128 = 0.0078, so a pass at 0.01 needs every round to agree)"
+  limits:
+    free_tier: "1,000 calls a day and 20 a minute for the account (OpenRouter free, S-87)"
+    local_model: "no cap; Granite 4.0 Micro measured at 0.98 s and 335 tokens a call on one-shot prompts (docs/choices/local-model.yaml). A support episode's prompt carries a policy and the conversation so far, several thousand tokens, so seconds per call there are not known: the trial measures them"
+  scenarios:
+    - shape: "one call a case (classify, extract, route): what the drift-gaps bench does now"
+      per_judged_run: "60 cases x 1 x 2 x 7 = 840 calls"
+      free_tier: "one judged run a day"
+      local_model: "about a quarter of an hour at 1 s a call"
+    - shape: "a tool-using episode with no simulated user (EnterpriseOps-Gym: expert trajectories average 9.15 steps, maximum 34)"
+      per_judged_run: "30 cases x 12 x 2 x 7 = 5,040 calls (12 calls an episode is an assumption)"
+      free_tier: "five days for one verdict"
+      local_model: "7 hours at 5 s a call, 14 at 10 s"
+    - shape: "a support conversation with a model as the customer (tau2-bench: 50 public tasks a domain; tau-bench caps an episode at 30 agent actions)"
+      per_judged_run: "50 cases x 20 x 2 x 7 = 14,000 calls (20 calls an episode, agent and customer together, is an assumption); 20 cases gives 5,600"
+      free_tier: "14 days for one verdict at 50 cases; 6 at 20"
+      local_model: "39 hours at 10 s a call for 50 cases; 16 for 20"
+  reading:
+    - "The free tier cannot carry a judged run of any multi-step candidate: one verdict would take most of a week or more. It can carry a one-call-a-case environment, one verdict a day."
+    - "The local model can carry a multi-step run only if episodes are short, calls are a few seconds, and the case count is 20 to 30. Whether 20 to 30 cases make a round's score stable enough for seven rounds to agree is what direction step 3's same-against-same check is for."
+    - "Unknown, and it decides more than the call count: whether a 3B local model scores above the floor at all on a tool-using support task. The published results read were for far larger models. A baseline at the floor cannot be made worse, so the worse-candidate check of step 3 would have nothing to refuse."
+    - "So the trial must measure, on dev tasks with the local model: calls per episode (agent and customer apart), seconds and tokens per call, and the share of episodes with reward above zero."
