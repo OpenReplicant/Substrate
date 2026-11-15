@@ -47,6 +47,8 @@ and a difference. So the order from here is:
    someone, and 6 real limits on judging another system): [`fresh-clone.md`](fresh-clone.md) (Opus),
    [`first-read-docs.md`](first-read-docs.md) (Sonnet, with the rename), [`second-checkout.md`](second-checkout.md)
    (Opus), and [`judging-another-system.md`](judging-another-system.md) (largest, then Opus; after walk 2).
+   From walk 2: [`observed-ontology.md`](observed-ontology.md) (what is observed is never dropped: it
+   becomes a nested component or interface; ontologies are optional lenses).
    [`self-approval.md`](self-approval.md) once the owner says yes.
 4. The environment work (05, `meter-factors.md`, `verdict-fields.md`, 06), kept small: one environment, one
    local model, the two judge checks, one comparison.

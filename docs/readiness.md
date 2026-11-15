@@ -49,13 +49,23 @@ but not yet judged.
 
 ## Walk 2: a second system
 
-Still to do, with the owner.
+Done as far as it was useful (2026-11-15): this machine, as the domain `rig`, observed within the scope the owner
+allowed and three questions asked. The owner stopped it at the third (below, 2.5); no map entries were made for
+`rig`, and its transcript and `observe.local.yaml` stay out of git. Findings:
+
+| # | Finding | Where | Blocks | Severity | Suggested fix |
+| --- | --- | --- | --- | --- | --- |
+| 2.1 | What the owner allows to be read is collected and then dropped. Commands in `observe.local.yaml` are snapshotted, but the extractor turns only `kind: morphogen` commands into items. Services, timers, listening ports, disks, mounts and the GPU have no content type, so none reaches the map, no gap is raised about them, and nothing says they were ignored. The owner, on hearing it: "we ran into the gap of needing ontologies to represent findings and make sure they get used". | `plugins/substrate/substrate_plugin.py:634`, `plugins/substrate/observe.py:325-331`, `plugins/substrate/OBSERVE.md` ("What is observed") | client | stops | `observed-ontology.md`: nothing observed is dropped; what has no type becomes a nested component or interface with a free-text kind (the owner: "we don't need much ontology for that"); ontologies are optional lenses added when a domain needs one. |
+| 2.2 | The collector reads one container engine. This machine runs Podman and Docker; a Docker container that publishes a port to every interface and uses the GPU is invisible to the map. | `plugins/substrate/observe.py` (`engine`, one of podman or docker), `scripts/observe.sh:12` | client | slows | `engine` as a list; one snapshot per engine. |
+| 2.3 | Observed items carry no system. `rig`'s snapshot folder is the same one Substrate's own containers are read from (`.state/observed/rig`), so the two domains cannot be told apart in what is observed (confirms 3.7). | `plugins/substrate/observe.py` (`out = root / ".state" / "observed" / host`) | client | slows | `judging-another-system.md`, item 5. |
+| 2.4 | Commands must print JSON; `ss` and `nvidia-smi` needed a wrapper written by hand in the YAML. | `plugins/substrate/observe.py:327-330` | client | cosmetic | Keep text output as lines when it is not JSON. |
+| 2.5 | Mapping a system its owner does not want improved produces a map and no work. Asked what should get better, the owner said: "there in lies the waste of time in mapping my machine for optimization - there isn't anything i want optimized currently. i do however want a useful starter agent with a stack of components ready to optimize itself for the tasks its given and experiences." The interview skill asks what a system is for before it asks whether anything should change. | `.claude/skills/interview/SKILL.md` (sections 1 and 3) | client | slows | Ask first what the person wants to be better, and map only what that touches. S-98: the starter agent comes before client mapping. |
 
 ## Walk 3: an optimization
 
-The paper walk on a part of the second system is still to do. Below is what the tooling assumes, from the code
-alone. "Real limit" means it cannot work for another system without a change; "naming" means only the words or
-defaults assume Substrate.
+Not done on `rig`: its owner wants nothing there optimized (2.5). The first thing to optimize is the starter
+agent (S-98). Below is what the tooling assumes, from the code alone. "Real limit" means it cannot work for
+another system without a change; "naming" means only the words or defaults assume Substrate.
 
 | # | Finding | Where | Kind | Suggested fix |
 | --- | --- | --- | --- | --- |
