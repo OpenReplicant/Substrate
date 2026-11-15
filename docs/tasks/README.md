@@ -32,6 +32,27 @@ The owner's use of the largest model is limited, so it is kept for work where a 
 6. **Environment and baseline** (Opus), against the environment contract.
 7. **Review and merge** (largest model, then the owner).
 
+## Briefs
+
+Items 1 (`docs/contracts/`, S-95) and 2 (these files) are done. Each brief has its scope, the files to touch,
+what to leave alone and the check that proves it done. A session takes one brief.
+
+| Brief | Model | Needs | Can start |
+| --- | --- | --- | --- |
+| [`03-benchmark-checks.md`](03-benchmark-checks.md) | Sonnet | nothing | now |
+| [`04-rename-pass.md`](04-rename-pass.md) | Sonnet | nothing | now |
+| [`meter-factors.md`](meter-factors.md) | Opus | nothing | now; before task 6's first judged run |
+| [`verdict-fields.md`](verdict-fields.md) | Sonnet | nothing | now; before direction step 3 |
+| [`self-approval.md`](self-approval.md) | Opus | the owner's yes | before any agent login decides |
+| [`05-pick-and-judge-design.md`](05-pick-and-judge-design.md) | largest | 03 | after 03 |
+| [`06-environment-and-baseline.md`](06-environment-and-baseline.md) | Opus | 05, meter-factors | after 05 |
+| [`07-review-and-merge.md`](07-review-and-merge.md) | largest, then the owner | the milestone's tasks | at each milestone |
+| [`spec-rewrite.md`](spec-rewrite.md) | Opus | 04, 06 | after 06 |
+
+Tasks 04, `verdict-fields.md` and `self-approval.md` touch different files and can run side by side; 04 and
+`spec-rewrite.md` cannot. Not briefed, because the backlog rule says not yet: optimizers out of Morphogen into
+plugins, and Workbench out to the kernel repository.
+
 ## Glossary for the rename
 
 | Today | Becomes |
