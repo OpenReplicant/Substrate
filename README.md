@@ -92,7 +92,7 @@ Each of these is small and uses only what is already here:
 
 | Part | Project | Does |
 | --- | --- | --- |
-| Store | Workbench, in `workbench/` (built to leave as its own project) | typed items with claims beside every value, vocabularies, a desktop-like shell, an API, extractors, live updates, MCP for agents |
+| Store | Workbench, in `workbench/` (Substrate's store and GUI) | typed items with claims beside every value, vocabularies, a desktop-like shell, an API, extractors, live updates, MCP for agents |
 | Actor | Claude Code | explores, interviews, builds, maps |
 | Judge | [Morphogen](https://github.com/OpenReplicant/Morphogen), cloned to `repos/morphogen` | a change lands only with a verdict the changer cannot reach |
 

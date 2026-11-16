@@ -4,7 +4,7 @@
 value can say where it came from, vocabularies and SSSOM mappings as tables, and plugins that add content types,
 extractors and UI panels. [`BRIEF.md`](BRIEF.md) is the design and its build order.
 
-It lives inside Substrate for now and imports nothing from it; it is meant to leave as its own project.
+It is Substrate's store and GUI, part of that project (S-120, 2026-11-16: no longer meant to leave as a project of its own). It still imports nothing from the plugins.
 
 ## What runs
 

@@ -33,4 +33,6 @@ for cid, value in gold.items():
             right[value] += 1
 n = len(gold) or 1
 print(json.dumps({"balanced": sum(right[v] / by_value[v] for v in by_value) / (len(by_value) or 1),
-                  "answered": answered / n, "accuracy": sum(right.values()) / n}))
+                  "answered": answered / n, "accuracy": sum(right.values()) / n,
+                  # Morphogen's check (S-119): it refuses a run in which these two differ
+                  "cases_seen": sum(1 for cid in gold if cid in got), "cases_expected": len(gold)}))

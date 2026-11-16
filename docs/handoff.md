@@ -16,11 +16,13 @@ to implement and manage their systems. The owner needs income and public notice 
 
 ## One job per repository
 
+Two projects, not three (S-120): Morphogen, and Substrate with Workbench as its store and GUI.
+
 | Repository | Job | State |
 | --- | --- | --- |
 | Morphogen (`repos/morphogen`, its own repo) | The judge. The product that is led with | Works; six faults to fix first (below) |
 | Substrate (this repo) | The harness, its slots, and packages | Frozen except for what the plan below needs |
-| Workbench (`workbench/`) | The catalog's home: claims are evidence, ontologies name slot types, embeddings are lookup, cron and messages run the harvest and queue | Frozen: use it as it is, add no features |
+| Workbench (`workbench/`, part of Substrate) | Substrate's store and GUI, and the catalog's home: claims are evidence, ontologies name slot types, embeddings are lookup, cron and messages run the harvest and queue | Frozen: use it as it is, add no features |
 
 ## What exists and works
 
@@ -30,7 +32,8 @@ to implement and manage their systems. The owner needs income and public notice 
   `testable` (code with a usable licence). Lookup by need works: `scripts/workbench.sh run
   packages/papers/lookup.py "NEED" [--testable --limit N]`. The per-paper records (kind, slot, claimed result)
   are NOT reliable: a 3B model read them at the floor (S-115, S-116).
-- Morphogen pull request 81 is open and waits for the owner.
+- Morphogen pull requests 81, 82 (item 1.3, S-119) and 83 (the intake for item 1.1b, S-121, S-122) are merged. The
+  judge user `morphogen-judge` exists; `scripts/judge-user.sh` sets up its side and is the owner's to run.
 
 ## What is stopped
 
@@ -101,5 +104,5 @@ Stop rule: if three reproductions give nothing the judge can separate from noise
 
 Which Morphogen fixes to make and in what order; whether the catalog and this repository go public, and the
 licence; the name the work is published under; the task for the first reproduction; who the first audit is
-for and the price; merging pull request 81; rotating the Postgres password (part of it was printed in a
+for and the price; rotating the Postgres password (part of it was printed in a
 session); whether to put the Gemma model at the gateway.

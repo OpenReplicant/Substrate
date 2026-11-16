@@ -12,7 +12,7 @@ disagree), and `DECISIONS.md` for every default and why.
 | --- | --- | --- |
 | Morphogen | `repos/morphogen` (its own git repo) | the judge: a change lands only with a verdict the changer cannot reach |
 | Claude Code | you | the actor: explorer, interviewer, builder, mapper |
-| Workbench | `workbench/` (built to leave), containers `db`, `postgrest`, `workbench`, `caddy` | the store and the model: typed tables, claims beside every value, vocabularies and SSSOM mappings; its shell at `/`, PostgREST at `/api`, its server at `/wb/api` (extractors, live events, MCP for you); `workbench/BRIEF.md` |
+| Workbench | `workbench/` (Substrate's store and GUI, S-120), containers `db`, `postgrest`, `workbench`, `caddy` | the store and the model: typed tables, claims beside every value, vocabularies and SSSOM mappings; its shell at `/`, PostgREST at `/api`, its server at `/wb/api` (extractors, live events, MCP for you); `workbench/BRIEF.md` |
 | Substrate's plugin | `plugins/substrate/` | the content types (component, skill, hook, verdict, what is observed running), extractors (map, claude-code, observed, drift, reasoner, contracts, morphogen) and the Map view; `MAP.md` says how the map is held |
 | Tools | `bin/`, container `substrate-tools` | Workbench's command, Morphogen, gitleaks, run in a container as you |
 | The model gateway | container `gateway` (Bifrost), `scripts/gateway.py` | every model call goes through it with its caller's key and is recorded there, not by the caller (S-77) |
@@ -61,8 +61,8 @@ owner asks. Removing the line resumes the plan.
 
 - **Glue** (this repository): `scripts/`, `deploy/`, `plugins/substrate/` (substrate's Workbench plugin),
   `catalog-info.yaml` (the map's committed export), `docs/` (the spec).
-- **Workbench** (`workbench/`): a general-purpose CMS that substrate is one plugin on. Nothing in it may know about
-  substrate; it is built to leave as its own project.
+- **Workbench** (`workbench/`): Substrate's store and GUI, part of this project and not a product of its own
+  (S-120). Code in it still imports nothing from the plugins: that layering is kept because it costs nothing.
 - **Fixes and improvements to Morphogen** go upstream, in their own repositories, by pull request:
   the `upstream` skill (`.claude/skills/upstream/SKILL.md`). Never patch a clone and leave it: a change in
   `repos/` that is not on a branch with a PR is lost work. Each clone has its own `CLAUDE.md`; read it before

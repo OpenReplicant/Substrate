@@ -4,8 +4,9 @@
 
 A small content system on Postgres with a desktop-like UI, extended by plugins. Content types are real tables;
 every value can say where it came from, through a claims table beside them; vocabularies and their mappings are
-content too. Extractors mine sources into any of these, not only claims. It is built inside Substrate first and
-written so it can leave as its own project: Substrate becomes one plugin among others.
+content too. Extractors mine sources into any of these, not only claims. It is Substrate's store and GUI
+(S-120, 2026-11-16): one project with Substrate, not a product of its own. Where the rest of this brief speaks of a
+general-purpose CMS that leaves, read that as history; the layering (nothing here imports a plugin) stays.
 
 ## 0. What it is for
 

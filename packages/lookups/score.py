@@ -71,7 +71,9 @@ def score(lines, gold: dict[str, str], cases: dict[str, dict], record) -> dict:
             answered += 1
             right += same(final["answer"], answer)
     total = len(gold) or 1
-    return {"correct": right / total, "answered": answered / total, "steps": steps / total}
+    # the two counts are Morphogen's check (S-119): it refuses a run in which they differ
+    return {"correct": right / total, "answered": answered / total, "steps": steps / total,
+            "cases_seen": sum(1 for cid in gold if cid in got), "cases_expected": len(gold)}
 
 
 def main(argv=None):
