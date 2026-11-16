@@ -783,11 +783,20 @@ def register(wb):
             fields = {"claim": rec.get("claim"), "verdict": rec.get("verdict"), "gate": (rec.get("gate") or {}).get("decision"),
                       "cell": part, "base": (rec.get("refs") or {}).get("base"), "candidate": (rec.get("refs") or {}).get("candidate"),
                       "trust": rec.get("trust"), "metrics": outcome.get("metrics") or {},
-                      "reasons": {k: outcome.get(k) for k in ("forbidden", "denied", "check", "interfaces", "wrong", "failed") if k in outcome},
+                      "reasons": {k: outcome.get(k) for k in ("forbidden", "denied", "check", "interfaces", "wrong", "failed",
+                                                             "parameter_violations", "system") if k in outcome},
                       "seq": rec["seq"], "hash": rec["hash"]}
+            gate = rec.get("gate") or {}
+            extra = {"labels": (rec.get("labels"), "/labels"), "scope": (rec.get("scope"), "/scope"),
+                     "inputs": (rec.get("inputs"), "/inputs"),
+                     "meter": (((rec.get("served") or {}).get("gateway") or {}).get("meter"), "/served/gateway/meter"),
+                     "owner": (gate.get("owner"), "/gate/owner"), "lifecycle": (gate.get("lifecycle"), "/gate/lifecycle")}
+            fields.update({f: v for f, (v, _) in extra.items() if v is not None})     # absent in older records: left empty
             ev = {f: {"quote": f"{rec['claim']}" if f == "claim" else json.dumps(rec.get(k), sort_keys=True)[:300],
                       "span": {"record": rec["seq"], "pointer": "/" + k}}
                   for f, k in (("claim", "claim"), ("verdict", "verdict"), ("gate", "gate"), ("trust", "trust"))}
+            ev.update({f: {"quote": json.dumps(v, sort_keys=True)[:300], "span": {"record": rec["seq"], "pointer": ptr}}
+                       for f, (v, ptr) in extra.items() if v is not None})
             item = ctx.upsert("verdict", f"{re.sub(r'[^a-z0-9]+', '-', part.lower()).strip('-') or 'system'}-{rec['seq']}",
                               {k: v for k, v in fields.items() if v is not None},
                               title=rec.get("claim") or f"verdict {rec['seq']}", source=src, evidence=ev)

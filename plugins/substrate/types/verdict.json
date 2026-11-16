@@ -48,6 +48,35 @@
       "description": "what the judge checked: forbidden files, tests, interfaces, equivalence",
       "x-term": "sub:reasons"
     },
+    "labels": {
+      "type": "object",
+      "description": "what the run was labelled with, name to value (the experiment a verdict belongs to)",
+      "x-term": "sub:labels"
+    },
+    "scope": {
+      "description": "the cells the judgement covered, as the record states them",
+      "x-term": "sub:scope"
+    },
+    "inputs": {
+      "type": "string",
+      "description": "the digest of the measured inputs, for comparing verdicts",
+      "x-term": "sub:inputs"
+    },
+    "meter": {
+      "type": "string",
+      "description": "the digest naming the gateway meter the run used",
+      "x-term": "sub:meter"
+    },
+    "owner": {
+      "type": "string",
+      "description": "who owns the cell, from the gate",
+      "x-term": "sub:owner"
+    },
+    "lifecycle": {
+      "type": "string",
+      "description": "the cell's lifecycle, from the gate",
+      "x-term": "sub:lifecycle"
+    },
     "seq": {
       "type": "integer",
       "description": "its place in the evidence log",

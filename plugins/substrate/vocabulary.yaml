@@ -386,6 +386,11 @@ terms:
 - iri: sub:image
   kind: datatype-property
   label: image
+- iri: sub:inputs
+  kind: datatype-property
+  label: inputs
+  domain: sub:Verdict
+  comment: the digest of the measured inputs, for comparing verdicts
 - iri: sub:interface
   kind: datatype-property
   label: interface
@@ -420,8 +425,6 @@ terms:
 - iri: sub:lifecycle
   kind: datatype-property
   label: lifecycle
-  domain: sub:Entity
-  comment: 'spec.lifecycle: production, experimental, option, listed, deprecated'
 - iri: sub:line
   kind: datatype-property
   label: line
@@ -458,6 +461,11 @@ terms:
   label: menus
   domain: sub:UI
   comment: menu entries
+- iri: sub:meter
+  kind: datatype-property
+  label: meter
+  domain: sub:Verdict
+  comment: the digest naming the gateway meter the run used
 - iri: sub:metrics
   kind: datatype-property
   label: metrics
@@ -620,6 +628,11 @@ terms:
   label: role
   domain: sub:Cell
   comment: 'its role: container, text, code, ...'
+- iri: sub:scope
+  kind: datatype-property
+  label: scope
+  domain: sub:Verdict
+  comment: the cells the judgement covered, as the record states them
 - iri: sub:scores
   kind: datatype-property
   label: scores

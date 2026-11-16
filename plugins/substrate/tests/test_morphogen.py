@@ -43,12 +43,23 @@ def verdict(cell, base, cand, passed):
             "refs": {"base": base, "candidate": cand}, "gate": {"decision": "review"}, "trust": "measured", "by": "judge"}
 
 
+def full_verdict(cell, base, cand):
+    """A record carrying every field the item keeps beyond the first set."""
+    v = verdict(cell, base, cand, False)
+    v["outcome"].update({"parameter_violations": ["changes the judge-owned parameter x.y (1 -> 2)"], "system": {"ran": True}})
+    v.update({"labels": {"experiment": "same-candidate", "run": "1"}, "scope": [cell, "other"], "inputs": "sha256:" + "9" * 16,
+              "served": {"gateway": {"meter": "m" * 64}}, "gate": {"decision": "none", "owner": "group:default/agents",
+                                                                 "lifecycle": "experimental"}})
+    return v
+
+
 with tempfile.TemporaryDirectory() as d:
     log = Path(d) / "evidence.db"
     ev = Evidence(log)
     ev.append(verdict("setup", "a" * 40, "b" * 40, True))
     ev.append({"claim": "probe", "kind": "probe", "subject": {"system": "setup"}, "trust": "measured", "by": "judge"})
     ev.append(verdict("map", "c" * 40, "d" * 40, False))
+    ev.append(full_verdict("full", "1" * 40, "2" * 40))               # seq 4
     try:
         cli.migrate()
         cli.load_plugin(ROOT / "plugins/substrate")
@@ -61,7 +72,27 @@ with tempfile.TemporaryDirectory() as d:
             n = conn.execute("select count(*) from wb.claim").fetchone()[0]
         check("each verdict the judge wrote becomes an item; a probe does not",
               r["ok"] and [(s, v, g, c, t, q_) for s, v, g, c, t, q_, _ in rows] ==
-              [("setup-1", "pass", "review", "setup", "measured", 1), ("map-3", "fail", "review", "map", "measured", 3)], (r, rows))
+              [("setup-1", "pass", "review", "setup", "measured", 1), ("map-3", "fail", "review", "map", "measured", 3),
+               ("full-4", "fail", "none", "full", "measured", 4)], (r, rows))
+        with cli.connect() as conn:
+            new = ("labels", "scope", "inputs", "meter", "owner", "lifecycle")
+            cols = ", ".join(new)
+            bare = conn.execute(f"select {cols}, reasons from content.verdict where seq = 1").fetchone()
+            full = conn.execute(f"select {cols}, reasons from content.verdict where seq = 4").fetchone()
+            cl = {f: conn.execute("select c.quote, c.span from wb.claim c join content.verdict v on v.id = c.subject_id"
+                                  " where v.seq = 4 and c.field = %s", (f,)).fetchone() for f in new}
+        check("a record without the new fields leaves them empty, and reasons gain nothing",
+              all(x is None for x in bare[:6]) and "parameter_violations" not in bare[6] and "system" not in bare[6], bare)
+        check("a record with every new field keeps each, and reasons gain parameter_violations and system",
+              full[0] == {"experiment": "same-candidate", "run": "1"} and full[1] == ["full", "other"]
+              and full[2] == "sha256:" + "9" * 16 and full[3] == "m" * 64 and full[4] == "group:default/agents"
+              and full[5] == "experimental" and full[6]["parameter_violations"] == ["changes the judge-owned parameter x.y (1 -> 2)"]
+              and full[6]["system"] == {"ran": True}, full)
+        check("each new value cites its place in the record",
+              [(f, cl[f] and cl[f][1]) for f in new] == [
+                  ("labels", {"record": 4, "pointer": "/labels"}), ("scope", {"record": 4, "pointer": "/scope"}),
+                  ("inputs", {"record": 4, "pointer": "/inputs"}), ("meter", {"record": 4, "pointer": "/served/gateway/meter"}),
+                  ("owner", {"record": 4, "pointer": "/gate/owner"}), ("lifecycle", {"record": 4, "pointer": "/gate/lifecycle"})], cl)
         check("metrics are kept as the judge measured them", rows[0][6]["wall_seconds"]["gain"] == 0.12, rows[0][6])
         check("a verdict's claim cites its record in the log", q and q[0].startswith("setup:") and q[1] == {"record": 1, "pointer": "/claim"}
               and q[2] == "morphogen:evidence.db#1", q)
