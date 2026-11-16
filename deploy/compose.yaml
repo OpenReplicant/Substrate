@@ -155,6 +155,7 @@ services:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - ../workbench/web:/srv/wb:ro              # the shell
       - ../plugins:/srv/plugins:ro               # installed plugins; only each one's web/ is served
+      - ../packages:/srv/packages:ro             # where a package's plugin is linked from (up.sh: plugins/NAME -> ../packages/NAME/plugin)
     environment:
       WB_FRAME_SRC: ${WB_FRAME_SRC:-}            # origins apps may be framed from, beyond this one
       PUBLIC_HOST: ${PUBLIC_HOST:-:80}           # a public host name for HTTPS (then also publish ports 80 and 443)

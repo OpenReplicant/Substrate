@@ -1,0 +1,17 @@
+{
+  "title": "Listing",
+  "description": "A source that names papers: a GitHub paper list, or a saved arXiv search. A paper is listed in it, under a heading.",
+  "type": "object",
+  "properties": {
+    "kind": {"type": "string", "description": "list (a GitHub paper list) or query (a saved arXiv search)"},
+    "url": {"type": "string", "description": "where it is: the repository's page, or the arXiv API query"},
+    "repository": {"type": "string", "description": "a list's GitHub repository, owner/name"},
+    "topic": {"type": "string", "description": "what it is about, in the words of the survey that chose it"},
+    "licence": {"type": "string", "description": "the repository's licence as GitHub's API reports it, or none reported"},
+    "last_changed": {"type": "string", "description": "the last push to the repository, or the newest paper a query found (YYYY-MM-DD)"},
+    "stars": {"type": "integer", "description": "the repository's stars"},
+    "entries": {"type": "integer", "description": "papers resolved: distinct arXiv identifiers in its links"},
+    "unresolved": {"type": "integer", "description": "links that named a paper without an arXiv identifier (a count only)"},
+    "machine_built": {"type": "boolean", "description": "the survey found signs that scripts or a model build part of the list"}
+  }
+}

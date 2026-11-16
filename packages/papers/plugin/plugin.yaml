@@ -1,0 +1,9 @@
+# The papers package's plugin (docs/tasks/paper-catalog.md): the paper and the listing that names it, the extractors that
+# fill them from GitHub paper lists, saved arXiv searches and GitHub's API (no model), and a view of the papers.
+id: papers
+version: 0.1.0
+licence: Apache-2.0
+requires: {workbench: "1"}
+content_types: [types/*.json]
+server: papers_plugin          # extractors: listings, metadata, testable, harvest
+client: web/index.js

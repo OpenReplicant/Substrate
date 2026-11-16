@@ -29,6 +29,7 @@ for p in handlers business substrate; do   # handlers: streams and ranked handle
 done
 for p in $(packages); do   # the packages PACKAGES names (.env): each one's content types, if it carries a plugin
   [ -f "$ROOT/$p/plugin/plugin.yaml" ] || continue
+  ln -sfn "../$p/plugin" "$ROOT/plugins/${p#packages/}"   # where the server and the shell look for plugins (its extractors and view)
   "$ROOT/scripts/workbench.sh" plugin load "$ROOT/$p/plugin" | python3 -c 'import json, sys; d = json.load(sys.stdin); print("  package plugin", d["plugin"], d["version"], "types:", ", ".join(t["type"] for t in d["types"]))'
 done
 "$ROOT/scripts/graph.sh"                                  # the graph views, from the terms the plugin just loaded

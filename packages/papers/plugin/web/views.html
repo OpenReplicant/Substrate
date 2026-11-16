@@ -1,0 +1,65 @@
+<!-- The papers package's view (web/index.js registers it). -->
+<template id="papers-tpl-list">
+  <div class="wb-page wb-page-fill" x-data="papersList">
+    <header class="wb-page-head">
+      <h1>Papers</h1>
+      <span class="wb-faint" x-text="summary"></span>
+    </header>
+    <p class="wb-lede">The papers that lists and saved arXiv searches name, with arXiv's metadata. A heading is the list keeper's own word for what kind of paper it is. Testable is by rule: a repository named in the abstract or comment, a permissive or LGPL licence as GitHub reports it, not archived.</p>
+    <div class="wb-page-head">
+      <input class="wb-input wb-narrow" placeholder="Title, id or heading" x-model="f.text" aria-label="Search">
+      <input class="wb-input wb-narrow" placeholder="Heading contains" x-model="f.heading" aria-label="Heading">
+      <select class="wb-input wb-narrow" x-model="f.listing" aria-label="Listing">
+        <option value="">Any listing</option>
+        <template x-for="l in listingList" :key="l.slug"><option :value="l.slug" x-text="l.title"></option></template>
+      </select>
+      <select class="wb-input wb-narrow" x-model="f.min" aria-label="Listed in at least">
+        <option value="1">Listed in 1 or more</option><option value="2">2 or more</option><option value="3">3 or more</option><option value="5">5 or more</option>
+      </select>
+      <input class="wb-input wb-narrow" type="number" min="0" placeholder="Cited at least (OpenAlex)" x-model="f.cites" aria-label="Minimum citations">
+      <select class="wb-input wb-narrow" x-model="sort" aria-label="Sort by">
+        <option value="listings">Sort: most listed</option><option value="citations">Sort: most cited</option><option value="published">Sort: newest</option>
+      </select>
+      <input class="wb-input wb-narrow" placeholder="Published from (2025-01)" x-model="f.from" aria-label="Published from">
+      <select class="wb-input wb-narrow" x-model="f.repo" aria-label="Repository">
+        <option value="any">Repository: any</option><option value="yes">Has a repository</option><option value="no">No repository</option>
+      </select>
+      <select class="wb-input wb-narrow" x-model="f.testable" aria-label="Testable">
+        <option value="any">Testable: any</option><option value="yes">Testable</option><option value="no">Not testable</option><option value="unchecked">Not checked yet</option>
+      </select>
+      <button class="wb-btn" @click="reset()">Clear</button>
+    </div>
+    <div class="wb-table-wrap">
+      <table class="wb-table">
+        <thead><tr><th>Paper</th><th>arXiv</th><th>Published</th><th>Listings</th><th>Cited</th><th>Headings</th><th>Repository</th><th>Testable</th><th></th></tr></thead>
+        <template x-for="p in visible" :key="p.id">
+          <tbody>
+            <tr>
+              <td><button class="wb-link" @click="toggle(p)" x-text="p.title"></button></td>
+              <td class="wb-mono"><a :href="arxivUrl(p)" target="_blank" rel="noopener" x-text="p.arxiv_id"></a></td>
+              <td x-text="day(p)"></td>
+              <td x-text="p.listing_count"></td>
+              <td :title="p.venue" x-text="cites(p)"></td>
+              <td class="wb-faint" x-text="p.headings.slice(0, 2).join(' · ')"></td>
+              <td><template x-for="r in (p.repositories || [])" :key="r"><a class="wb-mono" :href="repoUrl(r)" target="_blank" rel="noopener" x-text="r"></a></template></td>
+              <td><span :class="flagClass(p)" :title="p.testable_why" x-text="flag(p)"></span></td>
+              <td><button class="wb-btn" @click="open(p)" title="Every value with its claims and sources">Open</button></td>
+            </tr>
+            <tr x-show="isOpen(p)">
+              <td colspan="9">
+                <ul>
+                  <template x-for="e in (p.listed_in || [])" :key="e.listing + e.line + e.heading">
+                    <li><span x-text="listingTitle(e.listing)"></span>, under <em x-text="e.heading"></em>: <a :href="e.url" target="_blank" rel="noopener">line <span x-text="e.line"></span></a></li>
+                  </template>
+                </ul>
+                <p class="wb-faint" x-text="p.testable_why"></p>
+              </td>
+            </tr>
+          </tbody>
+        </template>
+      </table>
+      <p class="wb-empty" x-show="!loading && !rows.length">Nothing yet. Run scripts/workbench.sh extract papers:harvest.</p>
+      <p><button class="wb-btn" x-show="shown.length > visible.length" @click="more()">Show more</button></p>
+    </div>
+  </div>
+</template>

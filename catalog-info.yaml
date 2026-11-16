@@ -1078,6 +1078,25 @@ spec:
 apiVersion: backstage.io/v1alpha1
 kind: Resource
 metadata:
+  name: arxiv
+  description: arXiv - e-prints; descriptive metadata under CC0 (https://info.arxiv.org/help/api/tou.html).
+  annotations:
+    substrate.dev/checked: 2026-11-16 (API answered without a key; terms of use page read)
+    substrate.dev/gives: title, authors, abstract, categories, dates, DOI and journal reference when given, comment; no citation
+      counts, no code links (a repository URL is sometimes in the abstract or comment)
+    substrate.dev/limits: one request every three seconds, one connection at a time, across all machines under one's control;
+      full text is not covered by the metadata licence
+    substrate.dev/search: GET https://export.arxiv.org/api/query?search_query=QUERY&start=N&max_results=N or ?id_list=ID,ID
+      (Atom XML); OAI-PMH at https://oaipmh.arxiv.org/oai for incremental harvest by set and date
+spec:
+  type: registry
+  lifecycle: listed
+  owner: group:operator
+  system: sources
+---
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
   name: container-images
   description: OCI registries - Docker Hub, Quay, GHCR.
   annotations:
@@ -1183,6 +1202,43 @@ metadata:
     substrate.dev/gives: versions with publish times, licence, repository, maintainers, search scores (quality, popularity,
       maintenance)
     substrate.dev/search: 'GET https://registry.npmjs.org/-/v1/search?text=QUERY&size=N; a package: GET https://registry.npmjs.org/NAME'
+spec:
+  type: registry
+  lifecycle: listed
+  owner: group:operator
+  system: sources
+---
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: openalex
+  description: OpenAlex - works, authors, venues and citations across publishers; CC0 (api.openalex.org).
+  annotations:
+    substrate.dev/checked: 2026-11-16 (authentication page read; a keyless call answered with the shared-budget notice)
+    substrate.dev/gives: abstract (inverted index), citation count, references, venue, open-access links
+    substrate.dev/limits: without a key all requests from one address share 0.10 USD a day; a free key (the operator's own
+      email, confirmed by link) gives 1 USD a day; single-record lookups are free
+    substrate.dev/search: GET https://api.openalex.org/works?filter=...&search=QUERY (JSON); a work by DOI or arXiv id; a
+      free snapshot on S3
+spec:
+  type: registry
+  lifecycle: listed
+  owner: group:operator
+  system: sources
+---
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: papers-with-code-archive
+  description: The Papers with Code dumps, kept as Hugging Face datasets pwc-archive/* after the site closed; CC-BY-SA 4.0
+    (dataset cards).
+  annotations:
+    substrate.dev/checked: 2026-11-16 (paperswithcode.com redirects to huggingface.co/papers/trending; dataset cards read)
+    substrate.dev/gives: paper to code repository links, methods, datasets, evaluation tables
+    substrate.dev/limits: 'frozen: links, methods and datasets last modified 2025-09-10; nothing newer. Attribution and share-alike
+      apply to what is republished'
+    substrate.dev/search: No search; download the parquet files of https://huggingface.co/datasets/pwc-archive/links-between-paper-and-code
+      (also papers-with-abstracts, methods, datasets, evaluation-tables)
 spec:
   type: registry
   lifecycle: listed

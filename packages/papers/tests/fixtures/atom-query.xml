@@ -1,0 +1,27 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns="http://www.w3.org/2005/Atom">
+  <opensearch:totalResults>2</opensearch:totalResults>
+  <entry>
+    <id>http://arxiv.org/abs/2402.00002v1</id>
+    <title>Other paper</title>
+    <updated>2024-05-05T00:00:00Z</updated>
+    <summary>A method. Code at https://github.com/o/archived.</summary>
+    <published>2024-01-02T00:00:00Z</published>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <author>
+      <name>A. Author</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2403.00003v1</id>
+    <title>Third paper</title>
+    <updated>2024-06-06T00:00:00Z</updated>
+    <summary>Another. See github.com/o/gone.</summary>
+    <published>2024-01-02T00:00:00Z</published>
+    <arxiv:comment>code: github.com/o/gone</arxiv:comment>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <author>
+      <name>A. Author</name>
+    </author>
+  </entry>
+</feed>

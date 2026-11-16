@@ -1,5 +1,9 @@
 # Task: the first judged comparison: one model against the same model with routines below it
 
+**Parked by S-111 (2026-11-16):** papers first. Steps 1 and 2 are done (S-109, S-110); the routine handler and
+learner sit uncommitted in the worktree `.claude/worktrees/agent-a0f4cd1e115a58fdd`. Resume, change or drop
+after the catalog's first reading, which is on this question.
+
 **Model:** the largest for the design and the two judge checks, Opus to build. **Needs:** `first-package.md`,
 `meter-factors.md`, `verdict-fields.md`. S-102 and S-103: this is the dual-process idea as an experiment.
 

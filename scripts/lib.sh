@@ -24,10 +24,12 @@ env_value() {
   env_file_value "$1"
 }
 
-# the packages this machine starts (PACKAGES in .env: slugs, comma- or space-separated), one directory a line
+# the packages this machine starts (PACKAGES in .env: slugs, comma- or space-separated), one directory a line: one with an
+# environment (environment.yaml) or one that only carries a plugin (plugin/plugin.yaml: content types, extractors, a view)
 packages() {
   for p in $(env_value PACKAGES | tr ',' ' '); do
-    [ -f "$ROOT/packages/$p/environment.yaml" ] && echo "packages/$p" || echo "  no package $p (packages/$p/environment.yaml)" >&2
+    if [ -f "$ROOT/packages/$p/environment.yaml" ] || [ -f "$ROOT/packages/$p/plugin/plugin.yaml" ]; then echo "packages/$p"
+    else echo "  no package $p (packages/$p/environment.yaml or packages/$p/plugin/plugin.yaml)" >&2; fi
   done
 }
 

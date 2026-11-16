@@ -47,6 +47,12 @@ started and shared; where a brief below says "environment" for the directory, re
 Order changed by S-103: one package end to end before anything general, and the first judged comparison on
 work that repeats.
 
+Order changed again by S-111 (2026-11-16): papers first. [`paper-catalog.md`](paper-catalog.md) (largest for
+the design, Sonnet to build) is the task to take now: a catalog of published work on agent harnesses and
+cognitive designs, amassed with no model and presented, with a queue of what is cheap to test. Item 2 below
+then reads from that queue and item 4's stage B reproduces. Item 1b is **parked**, with its routine handler
+in a worktree (S-109). Item 1 is done.
+
 1. [`first-package.md`](first-package.md) (Opus): `packages/lookups`, one model handler, tools as actions, the
    step loop in its smallest form, one start.
 1b. [`routines.md`](routines.md) (largest for the design and the judge checks, then Opus): the model alone
@@ -69,9 +75,8 @@ work that repeats.
    if a public comparison is wanted). [`starter-agent.md`](starter-agent.md) stage 1 is done; its last
    section says what carries the rest. [`client-readiness.md`](client-readiness.md) is done as far as useful.
 
-State on 2026-11-15: S-99 to S-101 are committed (`cbbbc0f`). S-102 and S-103 (the contract rewrite,
-`first-package.md`, `routines.md`, `later-packaging.md`) is written and **not committed**: ask the owner, then commit. No
-git identity is configured; commits use `Claude <noreply@anthropic.com>`.
+State on 2026-11-16: committed through `96c0a2e` (S-108 to S-110). No git identity is configured; commits
+use `Claude <noreply@anthropic.com>`.
 
 ## Briefs
 

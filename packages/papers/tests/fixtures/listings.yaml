@@ -1,0 +1,14 @@
+lists:
+  - repository: a/one
+    files: [README.md]
+    topic: agents
+    machine_built: false
+  - repository: b/two
+    files: [README.md]
+    topic: surveys
+    machine_built: true
+queries:
+  - name: dual
+    topic: dual-process agents
+    search_query: 'abs:"dual process" AND abs:LLM'
+    max_results: 300

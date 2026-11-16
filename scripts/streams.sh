@@ -8,7 +8,7 @@ set -eu
 
 show() { python3 -c 'import json, sys; d = json.load(sys.stdin); print("  handlers:'"$1"'", "ok" if d.get("ok") else "FAILED: " + str(d.get("error")), *(d.get("log") or []))'; }
 case "${1:-}" in
-  "") pk=$(packages | paste -sd, -)   # one declare for both: a stream it no longer declares is retracted
+  "") pk=$(for d in $(packages); do [ -f "$ROOT/$d/environment.yaml" ] && echo "$d"; done | paste -sd, -)   # one declare for both: a stream it no longer declares is retracted
       "$ROOT/scripts/workbench.sh" extract handlers:declare --input "file=$ROOT/streams.yaml" --input uri=streams.yaml --input "packages=$pk" | show declare
       "$ROOT/scripts/workbench.sh" extract handlers:run | show run ;;
   run) "$ROOT/scripts/workbench.sh" extract handlers:run | show run ;;

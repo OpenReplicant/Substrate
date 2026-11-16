@@ -1,0 +1,29 @@
+{
+  "title": "Paper",
+  "description": "A paper, by its arXiv identifier. Metadata is arXiv's (CC0); where it is listed is the lists' (identifier, heading and line only).",
+  "type": "object",
+  "properties": {
+    "arxiv_id": {"type": "string", "description": "the identifier without a version (2309.02427, or cs/0112017)"},
+    "authors": {"type": "array", "items": {"type": "string"}},
+    "published": {"type": "string", "description": "first version (YYYY-MM-DD)"},
+    "updated": {"type": "string", "description": "latest version (YYYY-MM-DD)"},
+    "abstract": {"type": "string"},
+    "categories": {"type": "array", "items": {"type": "string"}},
+    "doi": {"type": "string"},
+    "journal_ref": {"type": "string"},
+    "comment": {"type": "string", "description": "the author's comment as arXiv has it"},
+    "metadata_status": {"type": "string", "description": "found, or not found (arXiv returned no entry for the identifier)"},
+    "repositories": {"type": "array", "items": {"type": "string"}, "description": "GitHub repositories (owner/name) named in the abstract or comment"},
+    "listed_in": {"type": "array", "items": {"type": "object"},
+                  "description": "each place a list names it: {listing, heading (the path of headings it sat under), line, url (the line, anchored), link (the arXiv link found there)}"},
+    "listing_count": {"type": "integer", "description": "how many listings name it"},
+    "repo_checks": {"type": "array", "items": {"type": "object"},
+                    "description": "what GitHub's API said of each repository: {repo, found, licence, archived, stars}"},
+    "openalex_id": {"type": "string", "description": "the paper's OpenAlex work id (W...), found by the DOI 10.48550/arXiv.ID"},
+    "citations": {"type": "integer", "description": "OpenAlex's cited_by_count when it was checked"},
+    "venue": {"type": "string", "description": "the source name of OpenAlex's primary location, if any"},
+    "citations_checked": {"type": "string", "description": "the day OpenAlex was asked (YYYY-MM-DD); a paper checked in the last 30 days is not asked again"},
+    "testable": {"type": "boolean", "description": "by rule: a repository exists, its licence is permissive or LGPL, and it is not archived; unset until checked"},
+    "testable_why": {"type": "string", "description": "which part passed or failed, quoting the API's values"}
+  }
+}

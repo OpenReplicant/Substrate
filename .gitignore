@@ -10,3 +10,6 @@ __pycache__/
 # this machine's Claude Code wiring (scripts/harness.py)
 .mcp.json
 .claude/settings.local.json
+# the links scripts/up.sh makes from plugins/ to a package's plugin (packages/NAME/plugin)
+/plugins/lookups
+/plugins/papers
