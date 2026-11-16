@@ -159,6 +159,10 @@ environment, steps until the episode ends, and prints one JSON line:
 {"id": "...", "end": "terminated|truncated|escalated", "steps": 7, "final": {...}, "actions": [...]}
 ```
 
+After the last case it prints one closing line, `{"episodes": N}`. Morphogen takes a run's last JSON line as
+what the run reports about itself (`reported.*`, never deciding) and does not pass it to the scorer, so a driver
+that ends on a case loses that case in every judged run (S-110).
+
 `final` is the environment's state that the outcome is read from (the ticket's fields, the rows changed, the
 claims recorded), not the agent's account of it. The cell's `score` reads those lines on stdin and the
 answers in `MORPHOGEN_PRIVATE`, and prints one JSON object of metrics. Each environment names:

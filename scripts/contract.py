@@ -461,6 +461,14 @@ def environment_api(r: Run):
 
     floor = spec["outcome"]["floor"]
     got = {name: lines(agent) for name, agent in (("oracle", oracle), ("nothing", nothing), ("constant", constant), ("reader", reader))}
+    # the judge keeps a run's last JSON line from the scorer (what the run reports about itself): the driver must
+    # end on a closing line, or the last case is lost in every judged run (S-110)
+    out = subprocess.run([sys.executable, str(pkg / "driver.py"), "--cases", str(pkg / "cases/dev.jsonl")], capture_output=True,
+                         text=True, timeout=300, env={k: v for k, v in os.environ.items() if not k.startswith(("MORPHOGEN_", "WB_GATEWAY"))})
+    printed = [json.loads(l) for l in out.stdout.splitlines() if l.strip().startswith("{")]
+    r.check("the driver ends on a closing line, after a line for every case",
+            bool(printed) and printed[-1] == {"episodes": len(cases)} and sum("id" in x for x in printed[:-1]) == len(cases),
+            (out.stderr or out.stdout)[-300:])
     r.check("the package runs with its agent cut to one script handler, a line a case",
             all(len(v) == len(cases) and all(json.loads(x)["end"] for x in v) for v in got.values()), {k: len(v) for k, v in got.items()})
 

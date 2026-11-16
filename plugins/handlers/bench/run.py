@@ -22,6 +22,7 @@ inputs = Path(os.environ["MORPHOGEN_INPUTS"])
 spec = json.loads((inputs / "handler.json").read_text())
 gateway = hp.Gateway(os.environ.get("MORPHOGEN_GATEWAY"), None, None, key=os.environ.get("WB_GATEWAY_KEY"))
 ask = hp.model_handler(spec["slug"], spec["config"], spec["about"], gateway)
+done = 0
 for line in (inputs / "cases.jsonl").read_text().splitlines():
     if not line.strip():
         continue
@@ -32,3 +33,7 @@ for line in (inputs / "cases.jsonl").read_text().splitlines():
     if isinstance(got, ladder.Answer):
         out.update(answer=got.value, confidence=got.confidence)
     print(json.dumps(out))
+    done += 1
+# Morphogen takes a run's last JSON line as what the run reports about itself and keeps it from the scorer: without
+# this closing line the last case would be the one it takes, and would score as missing
+print(json.dumps({"cases": done}))

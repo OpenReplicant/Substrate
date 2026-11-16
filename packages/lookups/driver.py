@@ -64,8 +64,13 @@ def main(argv=None):
     gateway = hp.Gateway(os.environ.get("MORPHOGEN_GATEWAY"), None, None, key=os.environ.get("WB_GATEWAY_KEY"))
     agent = yaml.safe_load(o.agent.read_text())
     try:
+        n = 0
         for line in run(cases(o.cases), record, agent, gateway):
             print(json.dumps(line), flush=True)
+            n += 1
+        # Morphogen takes a run's last JSON line as what the run reports about itself and keeps it from the scorer
+        # (S-110): without this closing line the last case would be the one it takes, and would score as missing
+        print(json.dumps({"episodes": n}), flush=True)
     finally:
         if o.network and record.new:
             record.save(record_path)
