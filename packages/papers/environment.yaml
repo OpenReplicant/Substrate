@@ -1,0 +1,38 @@
+# The papers environment (docs/contracts/environment.md; docs/tasks/rd-pipeline.md, step 3): one paper's abstract, read
+# into a fixed record. People's custody: outside every cell's change. The gate is in code (environment.py): a field
+# stays empty unless it cites sentences the abstract has (the abstract is shown numbered, a field cites one to three).
+environment: papers
+work: research
+licence: >-
+  arXiv metadata (title, abstract) is CC0, read 2026-11-16 from arXiv's terms of use for its API; the abstracts in
+  cases/ are kept for that reason
+sensors:
+  # a paper saved (the catalog's `paper` item); the reading is the case: arXiv id, title, abstract
+  paper: {source: {kind: items, type: paper}, starts: true, encoder: paper_claims}
+actions: {record: free, hand_off: free}     # ask and propose_handler are always there
+episode: {max_steps: 2}
+# what the first observation is made of (the contract test reads it): one claim about the paper, and nothing of the answer
+case: {subject: paper, property: paper}
+# never in an observation: the reference record
+private: [outcome, answer]
+# the fields `record` takes. Each is a value and the sentence numbers it rests on ({field}_sentences, one to three; the
+# environment takes the quote from them, and ignores any quote a model sends). component_kind and slot take only the
+# values listed; `other` and `none` claim nothing, so they need no sentences. does, result and needs are free text and
+# need them. A field whose value is empty is left empty.
+fields:
+  component_kind: [memory, planning, tool-use, reflection, skill-library, routing, multi-agent, self-improvement,
+                   evaluation, world-model, prompt-optimization, benchmark, survey, other]
+  slot: [handler, route, notes, sensor, learner, outcome, none]
+  free: [does, result, needs]
+  abstain: {component_kind: other, slot: none}
+# the model is named in agent.yaml (the reading pass swaps it); this environment holds none fixed
+model: {agent: null, environment: null}
+outcome:
+  metric: scored.correct   # the mean over cases of four agreements: component_kind and slot equal; result and needs, the cited sentence sets share a sentence (both empty counts as agreeing)
+  # nothing: an agent that hands every paper off; constant: one that always records other / none and nothing else.
+  # constant on dev: 39 of the 160 case-fields (40 papers, four fields): other is right for 7 papers, none for 18, and a field it
+  # leaves empty is right where the reference leaves it empty (result 3 papers, needs 11)
+  floor: {nothing: 0.0, constant: 0.2438}
+  constant: {component_kind: other, slot: none}
+  scorer: score.py
+budget: {calls_per_episode: 1, cases_held_out: 60}

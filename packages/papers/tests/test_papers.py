@@ -160,8 +160,8 @@ try:
     with tempfile.TemporaryDirectory() as d:
         os.symlink(ROOT / "packages/papers/plugin", Path(d) / "papers")
         plugins = Plugins().load(Path(d))
-        check("the plugin loads with its five extractors", sorted(k for k in plugins.extractors if k.startswith("papers:")) ==
-              ["papers:citations", "papers:harvest", "papers:listings", "papers:metadata", "papers:testable"], plugins.loaded)
+        check("the plugin loads with its six extractors", sorted(k for k in plugins.extractors if k.startswith("papers:")) ==
+              ["papers:citations", "papers:harvest", "papers:listings", "papers:metadata", "papers:records", "papers:testable"], plugins.loaded)
         os.environ.pop("WB_PAPERS_OPENALEX_KEY", None)
         r0 = run_extractor(cli.connect, plugins, "papers:citations", {"listings": str(FIX / "listings.yaml")})
         check("without an OpenAlex key the citation pass is skipped and says so", r0.get("ok") and any("skipped, no OpenAlex key" in m for m in r0["log"]), r0)
@@ -230,6 +230,47 @@ try:
         third = run_extractor(cli.connect, plugins, "papers:harvest", {**INPUT, "listings": str(FIX / "listings.yaml")})
         with cli.connect() as conn:
             check("a third run too", snapshot(conn) == before)
+
+        # ---- the record pass, with a fake gateway (no model, no network)
+        import papers_plugin
+
+        class Gate:
+            def __init__(self, quote):
+                self.calls, self.quote = [], quote
+
+            def ready(self):
+                return True
+
+            def chat(self, caller, model, messages, max_tokens, call_id, tools=None):
+                self.calls.append(messages[1]["content"])
+                return 200, {"usage": {"prompt_tokens": 10, "completion_tokens": 5}, "choices": [{"message": {"tool_calls": [{"function": {
+                    "name": "record", "arguments": json.dumps({"component_kind": "memory", "component_kind_sentences": [1],
+                                                                "result": "r", "result_sentences": [99]})}}]}}]}
+        gate = Gate("We propose CoALA.")
+        papers_plugin.GATEWAY = gate
+        r1 = run_extractor(cli.connect, plugins, "papers:records", {"limit": 2})
+        print("   ", *r1.get("log", []), sep="\n    ")
+        with cli.connect() as conn:
+            rows = {r[0]: r[1:] for r in conn.execute("select slug, component_kind, result, record_by, record_hash, testable from api.paper where record_hash is not null")}
+            check("two papers read, the testable and most-listed first", len(rows) == 2 and "2309.02427" in rows and len(gate.calls) == 2, rows)
+            check("a quoted field is written; the one whose cites a sentence the abstract lacks stays empty",
+                  rows["2309.02427"][0] == "memory" and all(v[1] is None for v in rows.values()), rows)
+            cl = conn.execute("""select c.quote, c.author, s.uri from wb.claim c join wb.source s on s.id = c.source_id
+                                 where c.subject_id = (select id from content.paper where slug = '2309.02427') and c.field = 'component_kind' and c.status = 'current'""").fetchall()
+            check("the claim's quote is the abstract span, its author names the model, its source is the abstract",
+                  cl and cl[0][0] == "We propose CoALA." and cl[0][1].startswith("model:") and cl[0][2] == "arxiv:2309.02427#abstract", cl)
+            check("record_by says which model and when", all(v[2].startswith("ollama/granite4:3b at 20") for v in rows.values()), rows)
+        n = len(gate.calls)
+        r2 = run_extractor(cli.connect, plugins, "papers:records", {"limit": 50})
+        with cli.connect() as conn:
+            total = conn.execute("select count(*) from api.paper where record_hash is not null and abstract is not null").fetchone()[0]
+        check("a second run resumes: the two already read are not read again, the rest are", len(gate.calls) - n == total - 2 and total >= 3, (len(gate.calls) - n, total))
+        n = len(gate.calls)
+        run_extractor(cli.connect, plugins, "papers:records", {"limit": 50})
+        check("a third run with the same model and instructions reads nothing", len(gate.calls) == n)
+        run_extractor(cli.connect, plugins, "papers:records", {"limit": 1, "model": "other/model"})
+        check("another model reads a paper again", len(gate.calls) == n + 1)
+        papers_plugin.GATEWAY = None
 finally:
     with psycopg.connect(cli.url("postgres"), autocommit=True) as conn:
         conn.execute(sql.SQL("drop database if exists {} with (force)").format(sql.Identifier(DB)))

@@ -1,0 +1,13 @@
+# The papers reading agent (docs/contracts/environment.md, "The agent"): one model handler, the baseline. Candidates
+# change this file, handlers/ and notes/; the environment, driver and scorer are outside every change. The model is
+# named here, as for the record pass (plugin/papers_plugin.py, papers:records), which reads with the same file; it is the
+# one `lookups` uses (S-100), and a different one is a different series.
+handlers:
+  main: {kind: model, entry: handlers/model.py, instructions: handlers/instructions.md, notes: notes/notes.md, model: ollama/granite4:3b, max_tokens: 700}
+select: cost-order                  # the slot's default: the route by rank, cheapest first
+context: append-only                # one step, so nothing to append to
+parameters:
+  max_steps: {value: 2, range: [1, 3]}
+  # abstracts shown in one call, each under its arXiv id, the answer one record per id (reading.py); the gate is applied to each
+  # paper in its own abstract. 1 is the step loop; above 1 the driver and the record pass batch it themselves
+  per_call: {value: 1, range: [1, 10]}

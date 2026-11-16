@@ -108,6 +108,23 @@ try:
         qv = embed.query_vector(cfg, "payment")
         rows = as_user(conn, "wb_viewer", "vi", "select title, via from api.recall('payment', %s::vector, 'fake-1', 5, 0)", (qv,))
         check("a viewer recalls through the API as themselves", rows and rows[0][0] == "Invoice 12", rows)
+        # a second content type, to limit recall to one
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            (Path(d) / "memo.json").write_text(json.dumps({"title": "Memo", "type": "object", "properties": {"body": {"type": "string"}}}))
+            cli.add_type(Path(d) / "memo.json", None)
+        memo = as_user(conn, "wb_editor", "ed", "insert into api.memo (title, body) values ('Car memo', 'the car is in the garage') returning id")[0][0]
+        embed.embed(conn, cfg)
+        both_types = {t for t in (h["type"] for h in embed.recall(conn, "vehicle", depth=0))}
+        check("without a type limit, recall ranks every type", both_types == {"note", "memo"}, both_types)
+        only = embed.recall(conn, "vehicle", depth=0, types=["memo"])
+        check("limited to a type, it returns that type's items only", only and {h["type"] for h in only} == {"memo"}, only)
+        check("by words as well as meaning", {h["type"] for h in embed.recall(conn, "garage", depth=0, use_vectors=False, types=["memo"])} == {"memo"})
+        check("and a type with no match returns nothing, not other types", embed.recall(conn, "vehicle", depth=1, types=["nothing-here"]) == [])
+        two = {h["type"] for h in embed.recall(conn, "vehicle", depth=0, types=["note", "memo"])}
+        check("several types may be given", two == {"note", "memo"}, two)
+        rows = as_user(conn, "wb_viewer", "vi", "select type from api.recall('car', null, null, 10, 0, 1.0, 60, array['note'])")
+        check("through the API, as a viewer, with the limit", rows and {r[0] for r in rows} == {"note"}, rows)
         conn.execute("select set_config('request.jwt.claims', %s, false)", (json.dumps({"role": "wb_owner", "name": "ed"}),))
         conn.execute("select api.retire('note', %s, 'done')", (ids["Garden"],))
         gone = titles("plants", depth=0)

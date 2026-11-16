@@ -6,10 +6,13 @@
 #   scripts/workbench.sh user add NAME [--role owner|editor|viewer]   # prints the password once: run it yourself
 #   scripts/workbench.sh user reset NAME | user list
 #   scripts/workbench.sh extract substrate:catalog          # run an extractor now (it reads this checkout)
+#   scripts/workbench.sh run FILE.py [ARGS...]              # a script of this checkout with the same settings (it may import workbench)
 set -eu
 . "$(dirname "$0")/lib.sh"
 
 secrets_export
+runner="-m workbench"
+if [ "${1:-}" = run ]; then shift; runner=""; fi
 exec "$ROOT/bin/in-tools" env PYTHONPATH="$ROOT/workbench" \
   WORKBENCH_ADMIN_URL="postgresql://postgres:$(env_value POSTGRES_PASSWORD)@127.0.0.1:$(env_value DB_PORT)/postgres" \
   WORKBENCH_AUTHENTICATOR_PASSWORD="$(env_value WORKBENCH_AUTHENTICATOR_PASSWORD)" \
@@ -23,4 +26,4 @@ exec "$ROOT/bin/in-tools" env PYTHONPATH="$ROOT/workbench" \
   WORKBENCH_EMBED_URL="http://127.0.0.1:$(env_value GATEWAY_PORT)" WORKBENCH_EMBED_KEY="$(env_value WORKBENCH_EMBED_KEY)" \
   WORKBENCH_EMBED_MODEL="$(env_value WORKBENCH_EMBED_MODEL)" WORKBENCH_EMBED_QUERY_PREFIX="$(env_value WORKBENCH_EMBED_QUERY_PREFIX)" \
   WORKBENCH_EMBED_DOC_PREFIX="$(env_value WORKBENCH_EMBED_DOC_PREFIX)" \
-  python3 -m workbench "$@"
+  python3 $runner "$@"

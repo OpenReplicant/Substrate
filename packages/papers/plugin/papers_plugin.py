@@ -11,8 +11,12 @@
                     first, up to `calls` list calls a run, default 200; a paper checked in the last 30 days is not asked
                     again); skipped, saying so, when no OpenAlex key is set (WB_PAPERS_OPENALEX_KEY, from OPENALEX_API)
   papers:harvest    listings, metadata, citations, testable in order
+  papers:records    each paper's abstract read by a model into the fixed record (component_kind, slot, does, result, needs):
+                    testable first, most-listed first, `limit` papers a run (default 20), a paper already read with the same
+                    model and instructions skipped; a field is written only if it cites sentence numbers the abstract has,
+                    as a claim whose quote is those sentences and whose author is the model (inputs: limit, model, pace)
 
-Inputs for all: listings (a file, default packages/papers/listings.yaml), replay (a directory of recorded fetches: no
+Inputs for all but records: listings (a file, default packages/papers/listings.yaml), replay (a directory of recorded fetches: no
 network), state (where fetches are recorded, default .state/papers), max_age_hours (default 1).
 
 A value's claim quotes the Atom element, the JSON key or the link it was read from, and its source is that URL. From a
@@ -24,6 +28,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from datetime import date, timedelta
 from pathlib import Path
 from urllib.parse import quote
@@ -34,6 +39,7 @@ from papers_lib import (ARXIV_API, Fetcher, default_token, find_repositories, pa
                         slug_for)
 
 PACKAGE = Path(__file__).resolve().parent.parent
+GATEWAY = None          # a gateway object for the tests to put in place of the real one (the record pass)
 
 
 def norm(v):
@@ -404,6 +410,87 @@ class Harvest:
         return {**s, "requests": self.fetcher.requests, "recorded": self.fetcher.recorded, "total": total}
 
 
+class Records:
+    """papers:records. One model call a paper through the gateway as `handler:papers-main` (agent.yaml's model, or the
+    `model` input), the reply through the reading environment's gate, the accepted fields written as claims of the model
+    that read it, each quoting its span of the abstract."""
+
+    def __init__(self, ctx, inputs, root, gateway=None):
+        self.ctx, self.inputs, self.root, self.gateway = ctx, inputs, root, gateway or GATEWAY
+
+    def run(self):
+        import papers_records as pr
+        import reading
+        ctx, inputs = self.ctx, self.inputs
+        agent = (yaml.safe_load((PACKAGE / "agent.yaml").read_text()).get("handlers") or {}).get("main") or {}
+        model = inputs.get("model") or agent.get("model")
+        fixed = reading.instructions(PACKAGE, agent)
+        params = yaml.safe_load((PACKAGE / "agent.yaml").read_text()).get("parameters") or {}
+        per_call = max(1, int(inputs.get("per_call") or (params.get("per_call") or {}).get("value") or 1))
+        digest = reading.digest(reading.batch_fixed(fixed) if per_call > 1 else fixed, model)
+        gateway = self.gateway
+        if gateway is None:
+            from handlers_plugin import Gateway
+            gateway = Gateway(os.environ.get("WB_HANDLERS_GATEWAY_URL"), os.environ.get("WB_HANDLERS_GATEWAY_SECRET"), None)
+        if not model or not gateway.ready():
+            ctx.log("records: no model or no gateway (agent.yaml's model; WB_HANDLERS_GATEWAY_URL and _SECRET); nothing read")
+            return
+        rows = [r[0] for r in ctx.conn.execute(
+            "select to_jsonb(x) from (select slug, title, arxiv_id, abstract, testable, listing_count, record_hash from api.paper) x")]
+        queue = pr.order(rows)
+        todo = [p for p in queue if p.get("record_hash") != digest]
+        limit, pace = int(inputs.get("limit", 20)), float(inputs.get("pace", 0))
+        stats = {"read": 0, "fields": 0, "refused": 0, "handed_off": 0, "errors": 0, "tokens": 0, "calls": 0}
+        stopped = None
+        max_tokens = int(agent.get("max_tokens", 700))
+
+        def write(p, final):
+            fields, quotes = pr.fields_of(final)
+            now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+            by = f"{model} at {now}" + (f" (handed off: {final['handed_off']})" if final.get("handed_off") else "")
+            with ctx.as_author("model:" + model):
+                src = ctx.source(f"arxiv:{p['arxiv_id']}#abstract", p["abstract"].encode(), "text/plain")
+                ctx.upsert("paper", p["slug"], {**fields, "record_by": by, "record_hash": digest}, title=p["title"], source=src,
+                           evidence=pr.spans(p["abstract"], quotes))
+            stats["read"] += 1
+            stats["fields"] += sum(v is not None for v in fields.values())
+            stats["refused"] += len(final.get("fields_refused") or {})
+            stats["handed_off"] += bool(final.get("handed_off"))
+
+        pending, rounds = todo[:limit], 0
+        while pending and not stopped and rounds < 3:       # a paper the answer skipped is asked again, in a later call
+            later = []
+            for k in range(0, len(pending), per_call):
+                chunk = pending[k:k + per_call]
+                key = lambda p: p.get("arxiv_id") or p["slug"]  # noqa: E731
+                r = (pr.read(chunk[0], fixed, model, gateway, "handler:papers-main", max_tokens) if per_call == 1 else
+                     pr.read_batch(chunk, fixed, model, gateway, "handler:papers-main", max_tokens))
+                stats["calls"] += 1
+                stats["tokens"] += sum((r.get("usage") or {}).get(x) or 0 for x in ("prompt_tokens", "completion_tokens"))
+                if "error" in r:
+                    stats["errors"] += len(chunk)
+                    ctx.log(f"{', '.join(key(p) for p in chunk)}: not read ({r['error']})")
+                    if r["retry"]:
+                        stopped = "the gateway or the model kept refusing; the next run resumes here"
+                        break
+                    continue
+                finals = {key(chunk[0]): r["final"]} if per_call == 1 else r["finals"]
+                for p in chunk:
+                    if key(p) in finals:
+                        write(p, finals[key(p)])
+                    else:
+                        later.append(p)
+                if pace:
+                    time.sleep(pace)
+            pending, rounds = later, rounds + 1
+        stats["skipped"] = len(pending)
+        done = [p for p in queue if p.get("record_hash") == digest]
+        ctx.log(f"records: {stats['read']} papers read with {model}; {stats['fields']} fields written, {stats['refused']} refused "
+                f"(a quote not in the abstract, or a value outside the list), {stats['handed_off']} handed off, {stats['errors']} not read; "
+                f"{stats['calls']} calls (per_call {per_call}), {stats['tokens']} tokens; {len(todo) - stats['read']} still to read of {len(queue)} with an abstract"
+                + (f"; stopped: {stopped}" if stopped else "") + f" (read before this run: {len(done)})")
+
+
 def one_ok(repo, c):
     from papers_lib import one_repo
     return one_repo(repo, c)[0]
@@ -424,4 +511,6 @@ def register(wb):
     wb.extractor("metadata", run("metadata_pass"), "each paper's metadata from arXiv's API, 100 at a time, one request every 3 seconds, most-listed first (batches=N)")
     wb.extractor("citations", run("citations_pass"), "each paper's OpenAlex id, citation count and venue by its arXiv DOI, 100 to a list call, most-listed first (calls=N, default 200); needs an OpenAlex key")
     wb.extractor("testable", run("testable_pass"), "each paper with a repository, testable by rule from GitHub's licence and archived values; most-listed first, resumes (checks=N)")
+    wb.extractor("records", lambda ctx, inputs: Records(ctx, inputs, root).run(),
+                 "each paper's abstract read by a model into component_kind, slot, does, result and needs, a field kept only if its quote is in the abstract; testable first, most-listed first, resumes (limit=N papers a run, default 20; model=; pace=seconds between calls)")
     wb.extractor("harvest", run("listings_pass", "metadata_pass", "citations_pass", "testable_pass"), "listings, metadata, citations, then testable")

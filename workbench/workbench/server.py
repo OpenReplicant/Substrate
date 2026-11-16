@@ -111,6 +111,27 @@ async def extract(request: Request):
     return JSONResponse({"queued": msg, **job}, status_code=202)
 
 
+async def recall(request: Request):
+    """Recall for a page: the same ranking as the MCP `search` tool (words, meaning, the graph), as the caller, optionally
+    limited to some content types. POST {"q", "limit", "types"}; the rows come back as api.recall gives them."""
+    who = caller(request)
+    if not who:
+        return refused(401, "sign in first")
+    try:
+        body = await request.json()
+        q, limit = str(body["q"]), min(int(body.get("limit") or 20), 500)
+        types = [str(t) for t in body.get("types") or []]
+    except (KeyError, ValueError, TypeError):
+        return refused(400, 'send {"q": text, "limit": number, "types": [type ids]}')
+    token = request.headers["authorization"].removeprefix("Bearer ").strip()
+    tools = mcp.Tools(token, who, os.environ.get("WB_POSTGREST_URL", "http://postgrest:3000"), None, None)
+    try:
+        rows = await asyncio.to_thread(tools.search, q, limit, types)
+    except mcp.ToolError as e:
+        return refused(502, str(e))
+    return JSONResponse(rows)
+
+
 async def mcp_endpoint(request: Request):
     who = caller(request)
     if not who:          # 401 lets a client re-run its headers helper for a fresh token, then retry
@@ -219,7 +240,7 @@ async def lifespan(app):
 
 SUMMARIES = {"/wb/api/health": "whether the server listens, works the queue, and which plugins it loaded",
              "/wb/api/events": "live changes as Server-Sent Events", "/wb/api/extractors": "the extractors plugins added",
-             "/wb/api/extract": "queue an extractor run", "/wb/api/mcp": "MCP over HTTP for agents (JSON-RPC)",
+             "/wb/api/extract": "queue an extractor run", "/wb/api/recall": "recall (words, meaning, the graph), optionally limited to content types", "/wb/api/mcp": "MCP over HTTP for agents (JSON-RPC)",
              "/wb/api/openapi.json": "this document"}
 
 
@@ -239,5 +260,6 @@ app = Starlette(routes=[
     Route("/wb/api/events", events),
     Route("/wb/api/extractors", extractors),
     Route("/wb/api/extract", extract, methods=["POST"]),
+    Route("/wb/api/recall", recall, methods=["POST"]),
     Route("/wb/api/mcp", mcp_endpoint, methods=["GET", "POST"]),
 ], lifespan=lifespan)

@@ -45,7 +45,7 @@ class Tools:
             raise ToolError(f"{e.code}: {detail}") from None
 
     # ---------------------------------------------------------------- the tools
-    def search(self, q: str, limit: int = 10):
+    def search(self, q: str, limit: int = 10, types: list | None = None):
         """Recall (api.recall): words, meaning (when an embedding model is set) and what those items are related
         to, in one ranking; read through PostgREST as the agent, like every other tool."""
         from . import embed
@@ -54,7 +54,8 @@ class Tools:
             qvec = embed.query_vector(cfg, q)
         except (RuntimeError, OSError):
             qvec = None                      # the embedding endpoint is down: words and the graph still answer
-        body = {"q": q, "lim": limit, "depth": 2, **({"qvec": qvec, "model": cfg["model"]} if qvec else {})}
+        body = {"q": q, "lim": limit, "depth": 2, **({"qvec": qvec, "model": cfg["model"]} if qvec else {}),
+                **({"types": list(types)} if types else {})}
         return self.rest("POST", "rpc/recall", body=body)
 
     def list_types(self):
@@ -130,7 +131,8 @@ S = {"type": "string"}
 TOOLS = [
     ("search", "Recall: items matching the words (any word, as a prefix), items close in meaning when vectors are made, "
                "and items related to the best of those, in one ranking; `via` says which found each.",
-     {"q": S, "limit": {"type": "integer", "default": 10}}, ["q"]),
+     {"q": S, "limit": {"type": "integer", "default": 10},
+      "types": {"type": "array", "items": S, "description": "only these content types (list_types names them)"}}, ["q"]),
     ("list_types", "The content types: each a table of items, with its fields.", {}, []),
     ("list_items", "Items of one type, newest change first; optionally only those whose title or slug contains text.",
      {"type": S, "contains": S, "limit": {"type": "integer", "default": 25}}, ["type"]),

@@ -4,7 +4,7 @@ A self-modifying agent platform: an agent in charge of a system of components, i
 component is anything that can be modified (a service, a skill, a hook, a parameter, a prompt), named in the
 catalog's entity model. It models each system as cited claims, acts on that model, and changes something only on
 evidence it cannot fake. Self is not a special case: substrate is modelled in Workbench like any other system,
-so nothing you build here may work only on itself. Read `README.md` for the picture,
+so nothing you build here may work only on itself. Read `docs/handoff.md` first (S-118: what the project is now, what is stopped, the plan in order), `README.md` for the picture,
 `docs/direction.md` for where it is going now (S-94: experiment first; it wins over `docs/spec.md` where they
 disagree), and `DECISIONS.md` for every default and why.
 

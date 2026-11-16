@@ -103,9 +103,11 @@ def query_vector(cfg: dict | None, q: str) -> str | None:
     return literal(vectors(cfg, [cfg["query_prefix"] + q])[0])
 
 
-def recall(conn, q: str, lim: int = 20, depth: int = 1, use_vectors: bool = True, w_graph: float = 1.0) -> list[dict]:
+def recall(conn, q: str, lim: int = 20, depth: int = 1, use_vectors: bool = True, w_graph: float = 1.0,
+           types: list[str] | None = None) -> list[dict]:
+    """`types`, when given, limits the ranking to those content types (each list is limited before it is cut)."""
     cfg = settings() if use_vectors else None
     qv = query_vector(cfg, q)
-    rows = conn.execute("select type, id, title, snippet, score, via from api.recall(%s::text, %s::vector, %s::text, %s::integer, %s::integer, %s::real)",
-                        (q, qv, cfg["model"] if cfg else None, lim, depth, w_graph)).fetchall()
+    rows = conn.execute("select type, id, title, snippet, score, via from api.recall(%s::text, %s::vector, %s::text, %s::integer, %s::integer, %s::real, 60, %s::text[])",
+                        (q, qv, cfg["model"] if cfg else None, lim, depth, w_graph, types or None)).fetchall()
     return [{"type": r[0], "id": str(r[1]), "title": r[2], "snippet": r[3], "score": round(r[4], 5), "via": r[5]} for r in rows]

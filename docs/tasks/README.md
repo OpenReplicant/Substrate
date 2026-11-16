@@ -5,6 +5,9 @@ Work happens on the branch `direction/experiment-first` and merges to `main` at 
 `scripts/check.sh` passes on the owner's machine. Changes to Morphogen and to the kernel repository go to those
 repositories by branch and pull request (the `upstream` skill).
 
+**Read [`../handoff.md`](../handoff.md) first (S-118, 2026-11-16).** It says what the project is, what is
+stopped, and the plan in order; it wins over this file where they disagree.
+
 ## Which model does what
 
 The owner's use of the largest model is limited, so it is kept for work where a wrong call is expensive.
@@ -52,6 +55,10 @@ the design, Sonnet to build) is the task to take now: a catalog of published wor
 cognitive designs, amassed with no model and presented, with a queue of what is cheap to test. Item 2 below
 then reads from that queue and item 4's stage B reproduces. Item 1b is **parked**, with its routine handler
 in a worktree (S-109). Item 1 is done.
+
+Then (S-114, 2026-11-16): the catalog is built (S-112) and the task now is [`rd-pipeline.md`](rd-pipeline.md):
+a fixed record per paper read from its abstract, lookup by meaning, a queue, then reproduce and judge. It
+replaces stage A of item 2; stage B stands as its last step. Which model an experiment uses is open (S-113).
 
 1. [`first-package.md`](first-package.md) (Opus): `packages/lookups`, one model handler, tools as actions, the
    step loop in its smallest form, one start.

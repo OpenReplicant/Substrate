@@ -224,6 +224,7 @@ def main(argv=None) -> int:
     r = sub.add_parser("recall", help="one query over full-text, vectors and the graph")
     r.add_argument("query"); r.add_argument("--limit", type=int, default=10); r.add_argument("--depth", type=int, default=1)
     r.add_argument("--no-vectors", action="store_true")
+    r.add_argument("--type", action="append", default=[], help="only this content type (repeat for several)")
     a = ap.parse_args(argv)
     if a.cmd in ("embed", "recall"):
         from . import embed
@@ -234,7 +235,7 @@ def main(argv=None) -> int:
                     ap.error("embed needs WORKBENCH_EMBED_URL and WORKBENCH_EMBED_MODEL")
                 result = embed.embed(conn, cfg, every=a.all)
             else:
-                result = embed.recall(conn, a.query, a.limit, a.depth, not a.no_vectors)
+                result = embed.recall(conn, a.query, a.limit, a.depth, not a.no_vectors, types=a.type or None)
         print(json.dumps(result, indent=2))
         return 0
     if a.cmd == "graph":

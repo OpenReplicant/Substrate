@@ -420,15 +420,20 @@ def environment_api(r: Run):
     cases = driver.cases(pkg / "cases/dev.jsonl")
     gold = {d["id"]: d["answer"] for d in map(json.loads, filter(str.strip, (pkg / "cases/dev.outcomes.jsonl").read_text().splitlines()))}
     by_id = {c["id"]: c for c in cases}
-    record = env_mod.Record(pkg / "cases/dev.fetched.jsonl.gz")
+    record = env_mod.Record(pkg / "cases/dev.fetched.jsonl.gz") if hasattr(env_mod, "Record") else None   # a package may read no outside pages
+    # what an environment says of itself, defaults are lookups': the claim that starts a case, the action that closes it
+    # with an answer, and what the oracle and constant agents say (a value, or the action's fields)
+    start = spec.get("case") or {"subject": "question", "property": "question"}
+    closing = "answer" if "answer" in spec["actions"] else next(k for k, g in spec["actions"].items() if g == "free" and k != "hand_off")
+    answer_of = lambda v: {"kind": closing, **v} if isinstance(v, dict) else {"kind": closing, "value": v}  # noqa: E731
     r.check(f"{len(cases)} dev cases, each with an outcome", cases and set(by_id) == set(gold), f"{len(cases)} cases, {len(gold)} outcomes")
 
     env = env_mod.make(record)
     a, b = env.reset(cases[0], 0), env.reset(cases[0], 0)
     r.check("reset twice with one case and seed gives equal observations", a == b, (a, b))
-    env.step({"kind": "answer", "value": "x"})
+    env.step({"kind": closing, "value": "x"})
     try:
-        env.step({"kind": "answer", "value": "x"})
+        env.step({"kind": closing, "value": "x"})
         r.check("step after the end raises", False, "it did not")
     except RuntimeError:
         r.check("step after the end raises", True)
@@ -446,12 +451,14 @@ def environment_api(r: Run):
             return ladder.Answer(fn(item), 1.0)
         return {"handlers": {name: {"kind": "script", "entry": f"contract-{name}"}}}
 
-    oracle = script("oracle", lambda item: {"kind": "answer", "value": gold[case_of(item)]})
+    oracle = script("oracle", lambda item: answer_of(gold[case_of(item)]))
     nothing = script("nothing", lambda item: {"kind": "hand_off", "reason": "does nothing"})
-    constant = script("constant", lambda item: {"kind": "answer", "value": spec["outcome"]["constant"]})
-    reader = script("reader", lambda item: {"kind": "answer", "value": "?"} if item["step"] > 1 else
+    constant = script("constant", lambda item: answer_of(spec["outcome"]["constant"]))
+    # an environment that reads pages has a reader that fetches the page each dev answer was read from; one that does not has none
+    reader = script("reader", (lambda item: {"kind": "answer", "value": "?"} if item["step"] > 1 else
                     {"kind": "fetch", "url": json.loads(next(l for l in (pkg / "cases/dev.outcomes.jsonl").read_text().splitlines()
                                                              if json.loads(l)["id"] == case_of(item)))["url"].split(" ; ")[0]})
+                    if "fetch" in spec["actions"] else (lambda item: {"kind": "hand_off", "reason": "reads nothing"}))
 
     def lines(agent):
         return [json.dumps(x) for x in driver.run(cases, record, agent, None)]
@@ -476,17 +483,18 @@ def environment_api(r: Run):
     observations = [c for item in seen for c in item["observation"] + [x for s in item["episode"] for x in s["observation"]]]
     # a private claim is one about the case itself (its shape, registry, name, outcome): any claim on the case
     # but the question, or an outcome anywhere
-    leaked = [c for c in observations if (str(c["subject"]).startswith("question:") and c["property"] != "question")
+    leaked = [c for c in observations if (str(c["subject"]).startswith(start["subject"] + ":") and c["property"] != start["property"])
               or c["property"] in {"outcome", "answer"} & (private | {"outcome"})]
     firsts = [item["observation"] for item in seen if item["step"] == 1]
     r.check("no observation carries a private claim or an outcome's field", not leaked, leaked[:3])
-    r.check("the first observation is the question alone",
-            all(len(o) == 1 and o[0]["property"] == "question" for o in firsts), [o for o in firsts if len(o) != 1][:1])
+    r.check("the first observation is the case alone",
+            all(len(o) == 1 and o[0]["property"] == start["property"] for o in firsts), [o for o in firsts if len(o) != 1][:1])
     r.check("a handler is given the observation, the episode, the step and the actions, nothing else",
             all(set(i) <= {"observation", "episode", "step", "actions"} for i in seen), {k for i in seen for k in i})
     fetched = [json.loads(x) for x in got["reader"]]
     misses = [x["id"] for x in fetched if "not recorded" in json.dumps(x)]
-    r.check("every page a dev outcome was read from is in the record", not misses, misses)
+    if "fetch" in spec["actions"]:
+        r.check("every page a dev outcome was read from is in the record", not misses, misses)
 
     s_nothing, s_constant, s_oracle = scored(got["nothing"]), scored(got["constant"]), scored(got["oracle"])
     r.check(f"a do-nothing agent scores the declared floor ({floor['nothing']})", abs(s_nothing - floor["nothing"]) < 0.001, s_nothing)
@@ -500,20 +508,21 @@ def environment_api(r: Run):
     r.check("an action of an undeclared kind is refused and recorded, and the episode goes on",
             info.get("refused") and env.final()["refused"] == 1 and not term and not trunc, (obs, info))
     denied = copy.deepcopy(spec)
-    denied["actions"]["fetch"] = "deny"
+    held = "fetch" if "fetch" in spec["actions"] else closing        # the kind to deny: one that would have an effect
+    denied["actions"][held] = "deny"
     env = env_mod.make(record, denied)
     env.reset(cases[0], 0)
-    obs, _, term, _, info = env.step({"kind": "fetch", "url": "https://pypi.org/pypi/six/json"})
+    obs, _, term, _, info = env.step({"kind": held, "url": "https://pypi.org/pypi/six/json"})
     r.check("an action of a deny kind is refused and recorded", info.get("refused") and env.final()["refused"] == 1
-            and not env.final()["read"] and not term, (obs, info))
+            and not env.final().get("read") and not env.final().get("record") and not term, (obs, info))
 
     forged = []
     for x in got["nothing"]:
         d = json.loads(x)
-        forged.append(json.dumps({**d, "reward": 1, "score": 1, "final": {"answer": gold[d["id"]], "handed_off": None}}))
+        forged.append(json.dumps({**d, "reward": 1, "score": 1, "final": {"answer": gold[d["id"]], "record": gold[d["id"]], "handed_off": None}}))
     r.check("a line with a made-up reward or score, or a final its actions could not produce, does not raise the score",
             scored(forged) == s_nothing, scored(forged))
-    many = [json.dumps({**json.loads(x), "actions": [{"kind": "fetch", "url": "https://pypi.org/pypi/six/json"}] * 40}) for x in got["oracle"]]
+    many = [json.dumps({**json.loads(x), "actions": [{"kind": "fetch" if "fetch" in spec["actions"] else closing, "url": "https://pypi.org/pypi/six/json"}] * 40}) for x in got["oracle"]]
     r.check("actions the environment would not take score as the floor", scored(many) == 0.0, scored(many))
     dup = got["oracle"] + got["oracle"][:5]
     r.check("a duplicate id scores as the floor for that case", abs(scored(dup) - (len(cases) - 5) / len(cases)) < 0.001, scored(dup))

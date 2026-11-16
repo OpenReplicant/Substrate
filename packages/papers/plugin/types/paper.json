@@ -24,6 +24,15 @@
     "venue": {"type": "string", "description": "the source name of OpenAlex's primary location, if any"},
     "citations_checked": {"type": "string", "description": "the day OpenAlex was asked (YYYY-MM-DD); a paper checked in the last 30 days is not asked again"},
     "testable": {"type": "boolean", "description": "by rule: a repository exists, its licence is permissive or LGPL, and it is not archived; unset until checked"},
-    "testable_why": {"type": "string", "description": "which part passed or failed, quoting the API's values"}
+    "testable_why": {"type": "string", "description": "which part passed or failed, quoting the API's values"},
+    "component_kind": {"type": "string", "description": "what kind of component the paper presents, read from the abstract by a model: memory, planning, tool-use, reflection, skill-library, routing, multi-agent, self-improvement, evaluation, world-model, prompt-optimization, benchmark, survey or other; every value but other has the abstract span it was read from as its claim's quote"},
+    "slot": {"type": "string", "description": "where it would plug in here: handler, route, notes, sensor, learner (between episodes), outcome (how a run is scored) or none; quoted as component_kind is, except none"},
+    "does": {"type": "string", "description": "one sentence: what the component does; the abstract span it rests on is the claim's quote"},
+    "result": {"type": "string", "description": "the headline claim: metric, value, benchmark, compared with what; the abstract span is the claim's quote; empty when the abstract states none"},
+    "needs": {"type": "string", "description": "the model or models named, and anything else stated (training, data, hardware); quoted; empty when none"},
+    "record_by": {"type": "string", "description": "the model that read the abstract into these fields, and when: MODEL at YYYY-MM-DDTHH:MM:SSZ"},
+    "record_hash": {"type": "string", "description": "which model and which instructions read it (a hash): a paper read with the same pair is not read again"},
+    "trial": {"type": "string", "description": "the queue of papers to try: queued, running, replicated, not replicated or dropped; who set it is the claim's author"},
+    "trial_why": {"type": "string", "description": "why the paper was queued, dropped, or given its result"}
   }
 }

@@ -7,6 +7,13 @@
     </header>
     <p class="wb-lede">The papers that lists and saved arXiv searches name, with arXiv's metadata. A heading is the list keeper's own word for what kind of paper it is. Testable is by rule: a repository named in the abstract or comment, a permissive or LGPL licence as GitHub reports it, not archived.</p>
     <div class="wb-page-head">
+      <input class="wb-input" style="min-width:24rem" placeholder="Describe what you need: a component that does ..." x-model="need" @keydown.enter="search()" aria-label="Lookup by need">
+      <button class="wb-btn" @click="search()" :disabled="searching" x-text="findLabel"></button>
+      <button class="wb-btn" x-show="ranked" @click="clearSearch()">Clear search</button>
+      <span class="wb-faint" x-show="ranked" x-text="rankedNote"></span>
+      <span class="wb-faint" x-show="searchError" x-text="searchError"></span>
+    </div>
+    <div class="wb-page-head">
       <input class="wb-input wb-narrow" placeholder="Title, id or heading" x-model="f.text" aria-label="Search">
       <input class="wb-input wb-narrow" placeholder="Heading contains" x-model="f.heading" aria-label="Heading">
       <select class="wb-input wb-narrow" x-model="f.listing" aria-label="Listing">
@@ -27,11 +34,23 @@
       <select class="wb-input wb-narrow" x-model="f.testable" aria-label="Testable">
         <option value="any">Testable: any</option><option value="yes">Testable</option><option value="no">Not testable</option><option value="unchecked">Not checked yet</option>
       </select>
+      <select class="wb-input wb-narrow" x-model="f.kind" aria-label="Kind">
+        <option value="">Kind: any</option>
+        <template x-for="k in kinds" :key="k"><option :value="k" x-text="k"></option></template>
+      </select>
+      <select class="wb-input wb-narrow" x-model="f.slot" aria-label="Slot">
+        <option value="">Slot: any</option>
+        <template x-for="s in slots" :key="s"><option :value="s" x-text="s"></option></template>
+      </select>
+      <select class="wb-input wb-narrow" x-model="f.trial" aria-label="Trial">
+        <option value="">Trial: any</option><option value="none">Not queued</option>
+        <template x-for="t in trials" :key="t"><option :value="t" x-text="t"></option></template>
+      </select>
       <button class="wb-btn" @click="reset()">Clear</button>
     </div>
     <div class="wb-table-wrap">
       <table class="wb-table">
-        <thead><tr><th>Paper</th><th>arXiv</th><th>Published</th><th>Listings</th><th>Cited</th><th>Headings</th><th>Repository</th><th>Testable</th><th></th></tr></thead>
+        <thead><tr><th>Paper</th><th>arXiv</th><th>Published</th><th>Listings</th><th>Cited</th><th>Headings</th><th>Kind</th><th>Slot</th><th>Repository</th><th>Testable</th><th>Trial</th><th></th></tr></thead>
         <template x-for="p in visible" :key="p.id">
           <tbody>
             <tr>
@@ -41,18 +60,28 @@
               <td x-text="p.listing_count"></td>
               <td :title="p.venue" x-text="cites(p)"></td>
               <td class="wb-faint" x-text="p.headings.slice(0, 2).join(' · ')"></td>
+              <td :title="p.does" x-text="p.component_kind || '—'"></td>
+              <td x-text="p.slot || '—'"></td>
               <td><template x-for="r in (p.repositories || [])" :key="r"><a class="wb-mono" :href="repoUrl(r)" target="_blank" rel="noopener" x-text="r"></a></template></td>
               <td><span :class="flagClass(p)" :title="p.testable_why" x-text="flag(p)"></span></td>
-              <td><button class="wb-btn" @click="open(p)" title="Every value with its claims and sources">Open</button></td>
+              <td><span class="wb-pill" :title="p.trial_why" x-show="p.trial" x-text="p.trial"></span></td>
+              <td><button class="wb-btn" x-show="!p.trial" :disabled="busy(p)" @click="queue(p)" title="Put it in the queue of papers to try, with a reason">Queue</button>
+                  <button class="wb-btn" x-show="p.trial" @click="drop(p)" title="Take it out of the queue, with a reason">Drop</button>
+                  <button class="wb-btn" @click="open(p)" title="Every value with its claims and sources">Open</button></td>
             </tr>
             <tr x-show="isOpen(p)">
-              <td colspan="9">
+              <td colspan="12">
                 <ul>
                   <template x-for="e in (p.listed_in || [])" :key="e.listing + e.line + e.heading">
                     <li><span x-text="listingTitle(e.listing)"></span>, under <em x-text="e.heading"></em>: <a :href="e.url" target="_blank" rel="noopener">line <span x-text="e.line"></span></a></li>
                   </template>
                 </ul>
                 <p class="wb-faint" x-text="p.testable_why"></p>
+                <p x-show="p.does"><strong>Does:</strong> <span x-text="p.does"></span></p>
+                <p x-show="p.result"><strong>Result:</strong> <span x-text="p.result"></span></p>
+                <p x-show="p.needs"><strong>Needs:</strong> <span x-text="p.needs"></span></p>
+                <p class="wb-faint" x-show="p.record_by">Read by <span x-text="p.record_by"></span>; Open shows each value's quote in the abstract.</p>
+                <p class="wb-faint" x-show="p.trial_why">Trial: <span x-text="p.trial"></span>, because <span x-text="p.trial_why"></span></p>
               </td>
             </tr>
           </tbody>
