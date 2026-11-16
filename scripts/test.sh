@@ -2,12 +2,12 @@
 # Every test suite, in the tools container, each in a throwaway database it drops after (the stack must be up).
 #
 #   scripts/test.sh                 # all of them
-#   scripts/test.sh FILE...         # some: workbench/tests/test_w1.py, plugins/substrate/tests/test_map.py, ...
+#   scripts/test.sh FILE...         # some: workbench/tests/test_w1.py, plugins/substrate/tests/test_map.py, packages/lookups/tests/test_lookups.py, ...
 set -eu
 . "$(dirname "$0")/lib.sh"
 
 url="postgresql://postgres:$(env_value POSTGRES_PASSWORD)@127.0.0.1:$(env_value DB_PORT)/postgres"
-[ $# -gt 0 ] || set -- "$ROOT"/workbench/tests/test_*.py "$ROOT"/plugins/*/tests/test_*.py
+[ $# -gt 0 ] || set -- "$ROOT"/workbench/tests/test_*.py "$ROOT"/plugins/*/tests/test_*.py "$ROOT"/packages/*/tests/test_*.py
 failed=0
 for f in "$@"; do
   rel=${f#"$ROOT"/}

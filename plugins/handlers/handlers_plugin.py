@@ -1,7 +1,8 @@
 """Workbench's handlers plugin (README.md): streams, handlers ranked by measured cost, and the record of every call.
 
-handlers:declare  a YAML file of streams and their handlers, written as items
-handlers:run      every stream's inputs up its route; each call recorded, scored against outcomes; handlers re-ranked
+handlers:declare  a YAML file of streams and their handlers, and package directories (an environment and its agent), written as items
+handlers:run      every stream's inputs up its route (an episode stream's: the step loop, episode.py); each call recorded,
+                  scored against outcomes; handlers re-ranked
 """
 from __future__ import annotations
 
@@ -83,8 +84,10 @@ class Gateway:
     def ready(self) -> bool:
         return bool(self.url and (self.key or self.secret))
 
-    def chat(self, caller: str, model: str, messages: list, max_tokens: int, call_id: str) -> tuple[int, dict]:
-        body = json.dumps({"model": model, "messages": messages, "max_tokens": max_tokens, "temperature": 0}).encode()
+    def chat(self, caller: str, model: str, messages: list, max_tokens: int, call_id: str, tools: list | None = None) -> tuple[int, dict]:
+        """One chat call; `tools`, in the OpenAI format, are offered to the model when given."""
+        body = json.dumps({"model": model, "messages": messages, "max_tokens": max_tokens, "temperature": 0,
+                           **({"tools": tools} if tools else {})}).encode()
         req = urllib.request.Request(f"{self.url}/v1/chat/completions", body, {
             "Content-Type": "application/json", "x-bf-vk": self.key or caller_key(self.secret, caller), "x-wb-call": call_id})
         try:
@@ -223,7 +226,17 @@ def from_jsonl(conn, source: dict, root: Path):
                "arrived_at": dt.datetime.fromtimestamp(started, dt.timezone.utc), "outcome": None, "calls": [call]}
 
 
-SOURCES = {"decisions": from_decisions, "jsonl": from_jsonl}
+def from_items(conn, source: dict, root: Path):
+    """Each live item of a type someone saved (a question, a chore), oldest first: its fields are the payload."""
+    from psycopg import sql
+    rows = conn.execute(sql.SQL("select slug, to_jsonb(x), created_at from {} x where wb.live(id) order by created_at, slug").format(
+        sql.Identifier("api", source["type"]))).fetchall()
+    for islug, d, created in rows:
+        payload = {k: v for k, v in d.items() if k not in ("id", "slug", "created_at", "updated_at", "created_by", "updated_by")}
+        yield {"id": islug, "key": islug, "payload": payload, "arrived_at": created, "outcome": None, "by": d.get("created_by")}
+
+
+SOURCES = {"decisions": from_decisions, "jsonl": from_jsonl, "items": from_items}
 
 
 def register(wb):
@@ -251,12 +264,44 @@ def register(wb):
                                                     **({"config": config} if config else {})},
                                  title=h.get("title") or hslug, source=src)
                 ctx.relate("handler", hid, "subscribesTo", "stream", sid, source=src)
+        for rel in [p.strip() for p in (inputs.get("packages") or "").split(",") if p.strip()]:
+            declare_package(ctx, rel)
         ctx.done("stream")
         ctx.done("handler")
 
+    def declare_package(ctx, rel: str):
+        """A package directory (docs: environment.yaml and agent.yaml): its environment as a stream whose inputs start
+        episodes, its agent's handlers as the stream's handlers."""
+        d = root / rel
+        env_raw, agent_raw = (d / "environment.yaml").read_bytes(), (d / "agent.yaml").read_bytes()
+        env, agent = yaml.safe_load(env_raw) or {}, yaml.safe_load(agent_raw) or {}
+        src = ctx.source(f"file:{rel}/environment.yaml", env_raw, "application/yaml")
+        asrc = ctx.source(f"file:{rel}/agent.yaml", agent_raw, "application/yaml")
+        sslug = env["environment"]
+        starts = [x for x in (env.get("sensors") or {}).values() if x.get("starts")]
+        if len(starts) != 1 or (starts[0].get("source") or {}).get("kind") not in SOURCES:
+            raise ValueError(f"package {rel}: one sensor must start episodes, from a source kind in {sorted(SOURCES)}")
+        model = (env.get("model") or {}).get("agent")
+        sid = ctx.upsert("stream", sslug, {
+            "description": f"{env.get('work', 'work')}: episodes of the {sslug} environment ({rel})", "source": starts[0]["source"],
+            "answers": "final", "outcome": json.dumps(env.get("outcome")),
+            "episode": {"dir": rel, "max_steps": int((env.get("episode") or {}).get("max_steps", 30)), "model": model,
+                        "private": env.get("private") or []}}, title=sslug, source=src)
+        for name, h in (agent.get("handlers") or {}).items():
+            hslug = f"{sslug}-{name}"
+            if h.get("kind") not in KINDS:
+                raise ValueError(f"handler {hslug}: kind {h.get('kind')!r} is not one of {KINDS}")
+            config = {**{k: v for k, v in h.items() if k not in ("kind", "entry", "description", "component", "title")},
+                      "model": model, "parameters": agent.get("parameters") or {}}
+            hid = ctx.upsert("handler", hslug, {"stream": sslug, "kind": h["kind"], "entry": h.get("entry") or name,
+                                                "description": h.get("description") or f"{name} in {rel}/agent.yaml",
+                                                "component": h.get("component"), "config": config}, title=hslug, source=asrc)
+            ctx.relate("handler", hid, "subscribesTo", "stream", sid, source=asrc)
+
     def run(ctx, inputs):
         q = ctx.conn.execute
-        streams = q("select id, slug, source, answers from api.stream where wb.live(id) order by slug").fetchall()
+        streams = q("select id, slug, source, answers from api.stream where wb.live(id) and episode is null order by slug").fetchall()
+        episodic = q("select id, slug, source, episode from api.stream where wb.live(id) and episode is not null order by slug").fetchall()
         hs = {r[1]: {"id": str(r[0]), "slug": r[1], "stream": r[2], "kind": r[3], "entry": r[4], "cost": r[5], "measured": r[6], "title": r[7],
                      "config": r[8] or {}}
               for r in q("select id, slug, stream, kind, entry, cost, measured, title, config from api.handler where wb.live(id)").fetchall()}
@@ -344,11 +389,90 @@ def register(wb):
                     ctx.relate("call", str(row[0]), "handles", "input", iid)
                     if hname in hs:
                         ctx.relate("call", str(row[0]), "handledBy", "handler", hs[hname]["id"])
+        for sid, sslug, source, ep in episodic:
+            mine = sorted((h for h in hs.values() if h["stream"] == sslug), key=lambda h: rank_key(cost_of(h)))
+            run_episodes(ctx, str(sid), sslug, source, ep, mine, gateway, totals)
         meter(ctx, gateway, totals, grace_minutes=float(wb.setting("meter_grace_minutes") or 15))
         rank(ctx, hs)
-        ctx.log(f"{len(streams)} streams; {totals['new']} new inputs, {totals['late']} late handler calls, {totals['calls']} calls made or recorded; "
+        ctx.log(f"{len(episodic)} episode streams, {totals['episodes']} episodes run ({totals['answered']} answered, "
+                f"{totals['handed']} handed off or cut short); {len(streams)} streams; {totals['new']} new inputs, {totals['late']} late handler calls, {totals['calls']} calls made or recorded; "
                 f"{totals['metered']} model calls metered by the gateway, {totals['unmetered']} not yet, {totals['unseen']} refused unseen; "
                 f"{len(hs)} handlers ranked")
+
+    def run_episodes(ctx, sid, sslug, source, ep, mine, gateway, totals):
+        """Each new input of an episode stream (README.md, "Episodes"): the package's environment reset with it, the
+        step loop until the episode ends, every handler call recorded, what was read kept as sources and in the
+        record, the end on the input. A hand-off waits in the review lane. An episode a gateway refusal ended (a
+        provider's limit, a model that would not load) is run again on the next run."""
+        import base64
+        import gzip
+        import episode
+        q = ctx.conn.execute
+        pkg = root / ep["dir"]
+        done = {r[0]: r[1] or {} for r in q("select slug, episode from api.input where stream = %s and wb.live(id)", (sslug,)).fetchall()}
+        envm = None
+        for item in SOURCES[source["kind"]](ctx.conn, {**source, "stream": sslug}, root):
+            islug = slug(f"{sslug}-{item['id']}")
+            if islug in done and not done[islug].get("retry"):
+                continue
+            if envm is None:
+                envm = episode.load(pkg / "environment.py", f"environment_{sslug.replace('-', '_')}")
+                agent = {"handlers": {h["slug"]: {"kind": h["kind"], "entry": h["entry"], **h["config"]} for h in mine}}
+                _, entries = episode.route(pkg, agent, ep.get("model"), gateway)
+                order = [h["slug"] for h in mine]          # by measured rank, not the priors the driver uses
+            record = envm.Record(None, network=True)
+            env = envm.make(record)
+            case = {"id": islug, **{k: v for k, v in item["payload"].items() if k not in set(ep.get("private") or [])},
+                    "at": utc(item["arrived_at"])}
+            r = episode.run(env, case, order, entries, max_steps=int(ep.get("max_steps") or 30))
+            totals["episodes"] += 1
+            readings = []
+            for url in record.new:
+                e = record.entries[url]
+                body = e["body"].encode()
+                readings.append({"url": url, "read_at": e["read_at"], "sha256": e["sha256"], "status": e["status"],
+                                 "source": ctx.source(url, body, "application/json"),
+                                 "body_gzip_base64": base64.b64encode(gzip.compress(body)).decode()})
+            answered = r["end"] == "terminated" and r["final"].get("answer") is not None
+            totals["answered" if answered else "handed"] += 1
+            retry = r["end"] == "escalated" and any(c.kind == "escalate" and (c.reason or "").startswith("gateway ") for c in r["calls"])
+            last = next((c.handler for c in reversed(r["calls"]) if c.kind == "answer"), None)
+            iid = ctx.upsert("input", islug, {
+                "stream": sslug, "key": item["key"], "payload": item["payload"], "arrived_at": utc(item["arrived_at"]),
+                "status": "resolved" if answered else "open", **({"resolved_by": last} if answered and last else {}),
+                "final": r["final"], "episode": {"end": r["end"], "steps": r["steps"], "actions": r["actions"], "log": r["log"],
+                                                  "last": r["last"], "readings": readings, "retry": retry}},
+                title=f"{sslug}: {item['key']}")
+            ctx.relate("input", iid, "on", "stream", sid)
+            models = {h["slug"] for h in mine if h["kind"] == "model"}
+            ids = {h["slug"]: h["id"] for h in mine}
+            names = []
+            for n, c in enumerate(r["calls"], 1):
+                cslug = slug(f"{islug}--{c.handler}-{n}")
+                names.append(cslug)
+                kind, reason = c.kind, c.reason or c.note
+                if c.handler in models and kind in ("answer", "escalate") and not (c.meta or {}).get("gateway_call") \
+                        and "no gateway configured" not in (c.reason or ""):
+                    kind, reason = "refused", "a model handler's call must go through the gateway (it sent no call id)"
+                fields = {"stream": sslug, "input": islug, "handler": c.handler, "kind": kind,
+                          "value": None if c.value is None else c.value if isinstance(c.value, str) else json.dumps(c.value),
+                          "confidence": c.confidence, "reason": reason, "escalate_to": c.to,
+                          "cost": {"person": 0, "usd": 0, "seconds": round(c.seconds, 4)}, "at": utc(dt.datetime.now(dt.timezone.utc)),
+                          "parent": names[c.parent] if c.parent is not None else None,
+                          **({"meta": c.meta} if c.meta else {}), **({"metered": False} if c.handler in models else {})}
+                with ctx.as_author(f"handler:{c.handler}"):
+                    cid = ctx.upsert("call", cslug, fields, title=f"{c.handler} on {item['key']}, step {n}")
+                ctx.relate("call", cid, "handles", "input", iid)
+                if c.handler in ids:
+                    ctx.relate("call", cid, "handledBy", "handler", ids[c.handler])
+                totals["calls"] += 1
+        # a hand-off waits for a person: raised again each run while the input is open, so it is not withdrawn
+        for islug, payload, e in q("select slug, payload, episode from api.input where stream = %s and status = 'open' and wb.live(id)",
+                                   (sslug,)).fetchall():
+            if (e or {}).get("end") in ("escalated", "truncated") and not (e or {}).get("retry"):
+                why = next((s["action"].get("reason") for s in reversed(e.get("log") or []) if (s.get("action") or {}).get("kind") == "hand_off"), None)
+                ctx.decision("hand-off", f"hand-off:{islug}", {"input": islug, "stream": sslug, "payload": payload,
+                                                              "end": e["end"], "reason": why or f"the episode ended {e['end']}"})
 
     def meter(ctx, gateway, totals, wait: float = 20.0, grace_minutes: float = 15.0):
         """A model call's cost is the gateway's record of it, never the handler's: its money and time, its tokens.
@@ -412,8 +536,9 @@ def register(wb):
                                                        "an unmeasured handler takes its kind's prior"}, title=f"route: {sslug}")
             ctx.relate("route", rid, "orders", "stream", str(sid))
 
-    wb.extractor("declare", declare, "a YAML file of streams and their handlers (--input file=PATH), written as items",
-                 {"file": "the streams file"})
+    wb.extractor("declare", declare, "a YAML file of streams and their handlers (--input file=PATH), and package directories "
+                                     "(--input packages=DIR,DIR), written as items",
+                 {"file": "the streams file", "packages": "package directories, comma-separated (optional)"})
     wb.extractor("run", run, "every stream's inputs up its route: each call recorded as the handler's claim, scored "
                              "against outcomes; handlers re-ranked by measured cost")
 

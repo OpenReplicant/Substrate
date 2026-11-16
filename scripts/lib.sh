@@ -24,6 +24,13 @@ env_value() {
   env_file_value "$1"
 }
 
+# the packages this machine starts (PACKAGES in .env: slugs, comma- or space-separated), one directory a line
+packages() {
+  for p in $(env_value PACKAGES | tr ',' ' '); do
+    [ -f "$ROOT/packages/$p/environment.yaml" ] && echo "packages/$p" || echo "  no package $p (packages/$p/environment.yaml)" >&2
+  done
+}
+
 # put every secret into this process's environment, for compose's ${...} and the tools container. Only needed
 # when secrets are not in .env; values stay in memory.
 secrets_export() {

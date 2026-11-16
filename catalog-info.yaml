@@ -73,6 +73,29 @@ spec:
 apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
+  name: arc-agi-1
+  description: 'ARC-AGI-1 as the first environment: one episode per test input, the example pairs and test input observed,
+    the predicted grid the action, an exact match the reward. Tasks outside the repository at a pinned commit; the evaluation
+    split held out.'
+  annotations:
+    morphogen.dev/change: environments/arc_agi_1.py
+    substrate.dev/basis: environments/arc_agi_1.py; scripts/arc.py fetch (fchollet/ARC-AGI 3990304, Apache-2.0, into ~/.local/share/substrate/arc-agi-1)
+    substrate.dev/fill: adopt
+    substrate.dev/filler: arc-agi-1
+    substrate.dev/intent: Give the cheap ranks tasks they can solve and score them exactly, so what the dear ranks work out
+      can be compiled down and judged on tasks never seen (spec section 10, S-80).
+    substrate.dev/step: '19'
+spec:
+  type: library
+  lifecycle: experimental
+  owner: group:operator
+  system: core
+  providesApis:
+  - environment-api
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
   name: business-plugin
   description: Workbench plugin for an organisation's parts (organisation, unit, role, person, resource, process, activity,
     event, decision, document, measure, goal) with terms from published models and SSSOM mappings, a business's map as a domain
@@ -222,11 +245,11 @@ metadata:
 
       scripts/calls.py'
     substrate.dev/basis: 'plugins/handlers (README.md, ladder.py, handlers_plugin.py: handlers:declare, handlers:run), streams.yaml,
-      scripts/streams.sh, scripts/calls.py (hooks record their own runs)'
+      scripts/streams.sh, scripts/calls.py (hooks record their own runs); web/ (the Ladder view)'
     substrate.dev/fill: build
     substrate.dev/intent: Handle each input at the cheapest rank that can, and record every call so what a dearer rank works
       out can be compiled into a cheaper one (spec section 10, S-74).
-    substrate.dev/observed-as: plugin:handlers
+    substrate.dev/observed-as: plugin:handlers, ui:plugin-handlers
     substrate.dev/step: '17'
 spec:
   type: library
@@ -286,6 +309,30 @@ spec:
   system: core
   providesApis:
   - embedding-api
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: lookups
+  description: 'The first package (S-103, S-104): an environment where a saved question about a software package is answered
+    from what a registry says (search, fetch, answer, hand off), and an agent of one model handler (Granite 4.0 Micro through
+    the gateway, held fixed). Judged on cases whose answer is a registry field at a recorded date, replayed from a record
+    with no network.'
+  annotations:
+    substrate.dev/basis: packages/lookups (environment.yaml, agent.yaml, environment.py, driver.py, score.py, cases/); plugins/handlers/episode.py
+      (the step loop); morphogen.yaml cell component:lookups; docs/tasks/first-package.md
+    substrate.dev/fill: build
+    substrate.dev/intent: Answer more lookups rightly for no more tokens, on held-out cases the agent cannot reach, with every
+      model call counted at the gateway.
+    substrate.dev/started-by: PACKAGES in .env (scripts/up.sh, scripts/streams.sh)
+spec:
+  type: service
+  lifecycle: experimental
+  owner: group:agents
+  system: core
+  dependsOn:
+  - component:handlers-plugin
+  - component:model-gateway
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Component
@@ -494,6 +541,32 @@ spec:
   consumesApis:
   - workbench-mcp-api
   - judge-api
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: runner
+  description: 'The code runner: a service with no network that runs programs models write, each job as an unprivileged user
+    in an empty directory with CPU, memory and process limits.'
+  annotations:
+    morphogen.dev/change: 'deploy/runner/**
+
+      streams/runner.py'
+    substrate.dev/basis: deploy/runner (Containerfile, service.py; python 3.13.17-slim, numpy 2.5.4), deploy/compose.yaml
+      service runner, streams/runner.py (the client)
+    substrate.dev/fill: build
+    substrate.dev/filler: runner
+    substrate.dev/intent: Let an option check a program against what the input affords (an ARC puzzle's examples) without
+      trusting the program (S-88).
+    substrate.dev/observed-as: container:substrate-runner*
+    substrate.dev/step: '19'
+spec:
+  type: service
+  lifecycle: experimental
+  owner: group:operator
+  system: core
+  providesApis:
+  - code-runner-api
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Component
@@ -1258,6 +1331,21 @@ spec:
 apiVersion: backstage.io/v1alpha1
 kind: API
 metadata:
+  name: code-runner-api
+  description: 'Runs a short program a model wrote on given inputs and returns its outputs: no network, no access to the job
+    queue, stopped at its timeout and memory limit, one job unable to touch another.'
+  annotations:
+    substrate.dev/contract: scripts/contract.sh code-runner-api
+spec:
+  type: contract
+  lifecycle: experimental
+  owner: group:operator
+  system: core
+  definition: streams/runner.py run(code, inputs, entry, timeout) through .state/runner; filled by the runner service.
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
   name: database-api
   description: 'Postgres as the stack needs it: version 17, pgvector, pg_cron, pgmq and pgGraph available, Workbench''s roles.'
   annotations:
@@ -1283,6 +1371,23 @@ spec:
   owner: group:operator
   system: core
   definition: 'POST /v1/embeddings at the gateway, x-bf-vk: WORKBENCH_EMBED_KEY; filled by local-models with qwen3-embedding:0.6b.'
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: environment-api
+  description: 'An environment a stream acts on, in Gymnasium''s terms: reset starts an episode, step takes one action and
+    gives a reward; an observation never holds what scores it; a malformed action scores 0 without raising.'
+  annotations:
+    morphogen.dev/tests: python3 environments/tests/test_arc_agi_1.py
+    substrate.dev/contract: scripts/contract.sh environment-api
+spec:
+  type: contract
+  lifecycle: experimental
+  owner: group:operator
+  system: core
+  definition: 'environments/__init__.py: make(name, split=...), reset(seed, options) -> (observation, info), step(action)
+    -> (observation, reward, terminated, truncated, info), episodes(), describe(); filled by arc-agi-1.'
 ---
 apiVersion: backstage.io/v1alpha1
 kind: API

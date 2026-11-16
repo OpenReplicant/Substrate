@@ -30,6 +30,14 @@
     "resolved_by": {
       "type": "string",
       "description": "the handler whose call ended it"
+    },
+    "final": {
+      "type": "object",
+      "description": "an episode's end state, which its outcome is read from (the answer, a hand-off, what was read)"
+    },
+    "episode": {
+      "type": "object",
+      "description": "an episode: how it ended, its steps (each observation as claims, the action, who took it), and what was read (url, date, body hash, body)"
     }
   }
 }

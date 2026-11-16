@@ -1,0 +1,38 @@
+# The lookups environment (docs/contracts/environment.md; docs/tasks/first-package.md): a question about a
+# package, answered from what a registry says, at a recorded date. People's custody: outside every cell's change.
+environment: lookups
+work: research
+licence: >-
+  the registries' own terms, read 2026-11-15: PyPI, npm, crates.io, GitHub and the Hugging Face Hub serve their
+  public JSON APIs to anonymous clients; each fetched body is kept only as the record a judged run replays
+sensors:
+  # a person saves a question (the shell, or MCP save_item); the reading is the case
+  question: {source: {kind: items, type: question}, starts: true, encoder: question_claims}
+  # what search and fetch read, recorded (url, date, body hash, body); a judged run replays the record
+  fetched: {source: {kind: action, of: [search, fetch]}, records: true, encoder: page_claims}
+actions: {search: free, fetch: free, answer: free, hand_off: free}     # ask and propose_handler are always there
+episode: {max_steps: 8}
+# never in an observation: the outcome, and the case's own labels (for people and the scorer: with them a shape
+# is a lookup table, not a question)
+private: [outcome, answer, shape, registry, name]
+model: {agent: ollama/granite4:3b, environment: null}                  # held fixed (S-100)
+outcome:
+  metric: scored.correct            # the share of cases whose answer equals the recorded field, trimmed, case-folded
+  # nothing: an agent that hands every case off; constant: one that always says "yes", the commonest dev answer
+  # (10 of 48)
+  floor: {nothing: 0.0, constant: 0.208}
+  constant: "yes"
+  scorer: score.py
+budget: {calls_per_episode: 8, cases_held_out: 60}
+# The registries, from the map's sources system (catalog-info.yaml, annotation substrate.dev/search): the search
+# and package-page URLs are read from there; `page` is given here where the map names none.
+registries:
+  pypi: {map: pypi}
+  npm: {map: npm}
+  crates: {map: crates-io, page: "https://crates.io/api/v1/crates/NAME"}
+  github: {map: github, page: "https://api.github.com/repos/NAME"}
+  huggingface: {map: huggingface, page: "https://huggingface.co/api/models/NAME"}
+# What a fetch shows (S-104): a body is kept whole in the record, but shown as at most `chars` characters of
+# path = value claims, breadth first, strings cut at `string`, and any object or list longer than `expand` shown
+# as its size and first and last keys. A fetch with a `path` (keys joined by "/") shows what is under it.
+observation: {chars: 2000, string: 100, expand: 40}

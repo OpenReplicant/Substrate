@@ -1,0 +1,6 @@
+# The lookups package's content types: what a person saves to ask (docs/contracts/environment.md, "The package").
+id: lookups
+version: 0.1.0
+licence: Apache-2.0
+requires: {workbench: "1"}
+content_types: [types/*.json]

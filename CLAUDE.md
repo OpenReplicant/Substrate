@@ -16,6 +16,7 @@ disagree), and `DECISIONS.md` for every default and why.
 | Substrate's plugin | `plugins/substrate/` | the content types (component, skill, hook, verdict, what is observed running), extractors (map, claude-code, observed, drift, reasoner, contracts, morphogen) and the Map view; `MAP.md` says how the map is held |
 | Tools | `bin/`, container `substrate-tools` | Workbench's command, Morphogen, gitleaks, run in a container as you |
 | The model gateway | container `gateway` (Bifrost), `scripts/gateway.py` | every model call goes through it with its caller's key and is recorded there, not by the caller (S-77) |
+| Packages | `packages/<slug>/`, started by `PACKAGES` in `.env` | an environment and the agent configured for it, what is started and shared (`packages/README.md`); first `lookups` |
 | Glue | `scripts/`, `deploy/`, `catalog-info.yaml` (the map's export) | brings the parts up and connects them; the map itself (what runs, what could, where to search) lives in Workbench |
 
 Everything else (Prometheus, OpenTelemetry, Backstage, Nomad, OpenBao, a console) is an
@@ -114,7 +115,8 @@ scripts/verdicts.sh             # Morphogen's verdicts into Workbench (also run 
 scripts/map.sh [export|check|import]   # the map's relations, drift, inferences; or the map to and from catalog-info.yaml (MAP.md)
 scripts/observe.sh              # what runs on this machine (observe.yaml, and observe.local.yaml: what its owner allows) into Workbench, gitleaks first, then drift
 scripts/interview.sh            # interview transcripts (.state/interviews) into the person's own claims, gitleaks first (the interview skill)
-scripts/contract.sh INTERFACE [FILLER]|all   # a slot's contract test against a filler (e.g. secrets-api openbao); results into Workbench
+scripts/contract.sh INTERFACE [FILLER]|all   # a slot's contract test against a filler (e.g. secrets-api openbao, environment lookups); results into Workbench
+python3 packages/lookups/driver.py --cases FILE [--record FILE --network]   # a package's judged run, outside Morphogen (packages/README.md)
 python3 scripts/gateway.py render|keys  # the model gateway's config from .env and streams.yaml (up.sh runs it); the callers with keys
 scripts/graph.sh                # the graph views (Ontop mapping, pgGraph projection) regenerated from Workbench's terms
 scripts/trace.sh NAME [DEPTH]   # an item's chain in Workbench: claims, relations followed out, the part that runs as it, each gap and its decision

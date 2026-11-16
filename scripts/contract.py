@@ -5,6 +5,7 @@ the code in the tree, which can run in its sandbox (S-87).
 
     scripts/contract.sh INTERFACE [FILLER]    # e.g. secrets-api openbao; prints each check, exits 0 only on a pass
     scripts/contract.sh all                   # every core interface with its current filler
+    scripts/contract.sh environment lookups   # a package's environment, on its dev cases (no model, no network)
 
 Each run writes .state/contracts/<interface>--<filler>.json (what was checked, pass or fail, when, on which host),
 which substrate:contracts reads into Workbench as claims. Nothing here reads a value it does not need: a secrets
@@ -401,11 +402,129 @@ def embedding_api(r: Run):
             any("vector" in (h.get("via") or "") for h in hits), out[-200:])
 
 
+# ------------------------------------------------------------------ environment: a package's environment, on dev cases
+def environment_api(r: Run):
+    """docs/contracts/environment.md, "Check": on the package's dev cases only, with no model and no network."""
+    import copy
+    import importlib.util
+    pkg = ROOT / "packages" / r.filler
+
+    def load(name):
+        spec = importlib.util.spec_from_file_location(f"{r.filler}_{name}", pkg / f"{name}.py")
+        m = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(m)
+        return m
+    driver, scorer = load("driver"), load("score")
+    env_mod, ladder = driver.environment, driver.episode.ladder
+    spec = env_mod.SPEC
+    cases = driver.cases(pkg / "cases/dev.jsonl")
+    gold = {d["id"]: d["answer"] for d in map(json.loads, filter(str.strip, (pkg / "cases/dev.outcomes.jsonl").read_text().splitlines()))}
+    by_id = {c["id"]: c for c in cases}
+    record = env_mod.Record(pkg / "cases/dev.fetched.jsonl.gz")
+    r.check(f"{len(cases)} dev cases, each with an outcome", cases and set(by_id) == set(gold), f"{len(cases)} cases, {len(gold)} outcomes")
+
+    env = env_mod.make(record)
+    a, b = env.reset(cases[0], 0), env.reset(cases[0], 0)
+    r.check("reset twice with one case and seed gives equal observations", a == b, (a, b))
+    env.step({"kind": "answer", "value": "x"})
+    try:
+        env.step({"kind": "answer", "value": "x"})
+        r.check("step after the end raises", False, "it did not")
+    except RuntimeError:
+        r.check("step after the end raises", True)
+
+    seen = []                                  # every item a handler was given
+
+    def case_of(item):
+        first = (item["episode"][0]["observation"] if item["episode"] else item["observation"])[0]
+        return first["subject"].split(":", 1)[1]
+
+    def script(name, fn):
+        @ladder.handler(f"contract-{name}")
+        def h(item, ask):
+            seen.append(item)
+            return ladder.Answer(fn(item), 1.0)
+        return {"handlers": {name: {"kind": "script", "entry": f"contract-{name}"}}}
+
+    oracle = script("oracle", lambda item: {"kind": "answer", "value": gold[case_of(item)]})
+    nothing = script("nothing", lambda item: {"kind": "hand_off", "reason": "does nothing"})
+    constant = script("constant", lambda item: {"kind": "answer", "value": spec["outcome"]["constant"]})
+    reader = script("reader", lambda item: {"kind": "answer", "value": "?"} if item["step"] > 1 else
+                    {"kind": "fetch", "url": json.loads(next(l for l in (pkg / "cases/dev.outcomes.jsonl").read_text().splitlines()
+                                                             if json.loads(l)["id"] == case_of(item)))["url"].split(" ; ")[0]})
+
+    def lines(agent):
+        return [json.dumps(x) for x in driver.run(cases, record, agent, None)]
+
+    def scored(ls):
+        return scorer.score(ls, gold, by_id, record)["correct"]
+
+    floor = spec["outcome"]["floor"]
+    got = {name: lines(agent) for name, agent in (("oracle", oracle), ("nothing", nothing), ("constant", constant), ("reader", reader))}
+    r.check("the package runs with its agent cut to one script handler, a line a case",
+            all(len(v) == len(cases) and all(json.loads(x)["end"] for x in v) for v in got.values()), {k: len(v) for k, v in got.items()})
+
+    private = set(spec.get("private") or [])
+    observations = [c for item in seen for c in item["observation"] + [x for s in item["episode"] for x in s["observation"]]]
+    # a private claim is one about the case itself (its shape, registry, name, outcome): any claim on the case
+    # but the question, or an outcome anywhere
+    leaked = [c for c in observations if (str(c["subject"]).startswith("question:") and c["property"] != "question")
+              or c["property"] in {"outcome", "answer"} & (private | {"outcome"})]
+    firsts = [item["observation"] for item in seen if item["step"] == 1]
+    r.check("no observation carries a private claim or an outcome's field", not leaked, leaked[:3])
+    r.check("the first observation is the question alone",
+            all(len(o) == 1 and o[0]["property"] == "question" for o in firsts), [o for o in firsts if len(o) != 1][:1])
+    r.check("a handler is given the observation, the episode, the step and the actions, nothing else",
+            all(set(i) <= {"observation", "episode", "step", "actions"} for i in seen), {k for i in seen for k in i})
+    fetched = [json.loads(x) for x in got["reader"]]
+    misses = [x["id"] for x in fetched if "not recorded" in json.dumps(x)]
+    r.check("every page a dev outcome was read from is in the record", not misses, misses)
+
+    s_nothing, s_constant, s_oracle = scored(got["nothing"]), scored(got["constant"]), scored(got["oracle"])
+    r.check(f"a do-nothing agent scores the declared floor ({floor['nothing']})", abs(s_nothing - floor["nothing"]) < 0.001, s_nothing)
+    r.check(f"a constant agent ({spec['outcome']['constant']!r}) scores the declared floor ({floor['constant']})",
+            abs(s_constant - floor["constant"]) < 0.001, s_constant)
+    r.check("replaying the dev answers scores 1", s_oracle == 1.0, s_oracle)
+
+    env = env_mod.make(record)
+    env.reset(cases[0], 0)
+    obs, _, term, trunc, info = env.step({"kind": "delete_everything"})
+    r.check("an action of an undeclared kind is refused and recorded, and the episode goes on",
+            info.get("refused") and env.final()["refused"] == 1 and not term and not trunc, (obs, info))
+    denied = copy.deepcopy(spec)
+    denied["actions"]["fetch"] = "deny"
+    env = env_mod.make(record, denied)
+    env.reset(cases[0], 0)
+    obs, _, term, _, info = env.step({"kind": "fetch", "url": "https://pypi.org/pypi/six/json"})
+    r.check("an action of a deny kind is refused and recorded", info.get("refused") and env.final()["refused"] == 1
+            and not env.final()["read"] and not term, (obs, info))
+
+    forged = []
+    for x in got["nothing"]:
+        d = json.loads(x)
+        forged.append(json.dumps({**d, "reward": 1, "score": 1, "final": {"answer": gold[d["id"]], "handed_off": None}}))
+    r.check("a line with a made-up reward or score, or a final its actions could not produce, does not raise the score",
+            scored(forged) == s_nothing, scored(forged))
+    many = [json.dumps({**json.loads(x), "actions": [{"kind": "fetch", "url": "https://pypi.org/pypi/six/json"}] * 40}) for x in got["oracle"]]
+    r.check("actions the environment would not take score as the floor", scored(many) == 0.0, scored(many))
+    dup = got["oracle"] + got["oracle"][:5]
+    r.check("a duplicate id scores as the floor for that case", abs(scored(dup) - (len(cases) - 5) / len(cases)) < 0.001, scored(dup))
+
+    seen.clear()
+    proposer = script("proposer", lambda item: {"kind": "propose_handler", "code": "def h(o, ask): ..."} if item["step"] == 1 else
+                      {"kind": "hand_off", "reason": "done"})
+    line = json.loads(lines(proposer)[0])
+    second = seen[1] if len(seen) > 1 else {}
+    r.check("a propose_handler action is recorded and changes nothing the next step can see",
+            line["final"]["proposed"] == 1 and [c["property"] for c in second.get("observation", [])] == ["proposed"]
+            and len(seen) == 2 * len(cases) and line["end"] == "escalated", (line["final"], second.get("observation")))
+
+
 TESTS = {"runtime-api": runtime, "secrets-api": secrets_api, "workbench-api": workbench_api, "workbench-mcp-api": workbench_mcp,
          "workbench-server-api": workbench_server, "graph-api": graph_api, "judge-api": judge_api,
          "database-api": database_api, "tools-api": tools_api, "sandbox-api": sandbox_api, "repository-api": repository_api,
          "evidence-api": evidence_api, "model-api": model_api,
-         "embedding-api": embedding_api}
+         "embedding-api": embedding_api, "environment": environment_api}
 
 
 def one(interface: str, filler: str) -> bool:
@@ -432,7 +551,11 @@ def main(argv: list[str]) -> int:
         return 2
     if argv[0] == "all":
         return 0 if all([one(i, f) for i, f in CURRENT.items()]) else 1
-    return 0 if one(argv[0], argv[1] if len(argv) > 1 else CURRENT[argv[0]]) else 1
+    filler = argv[1] if len(argv) > 1 else CURRENT.get(argv[0])
+    if not filler:
+        print(f"{argv[0]} needs a filler: scripts/contract.sh {argv[0]} NAME")
+        return 2
+    return 0 if one(argv[0], filler) else 1
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 #!/bin/sh
 # Bring up the stack (S-57, S-77): Postgres, PostgREST, the Workbench server, the model gateway, Caddy; then Workbench's schema, substrate's
-# plugin and its extractors, the claude-code agent's account, and this project's Claude Code wiring.
+# plugin and its extractors, the claude-code agent's account, this project's Claude Code wiring, and the packages PACKAGES names (S-104).
 #
 #   scripts/up.sh
 set -eu
@@ -26,6 +26,10 @@ echo "  migrated"
 "$ROOT/bin/in-tools" python3 "$ROOT/scripts/gateway.py" prune  # limits its store kept that config.json dropped (S-87)
 for p in handlers business substrate; do   # handlers: streams and ranked handlers (spec section 10); business: an organisation's parts (step 10); substrate: its own types
   "$ROOT/scripts/workbench.sh" plugin load "$ROOT/plugins/$p" | python3 -c 'import json, sys; d = json.load(sys.stdin); print("  plugin", d["plugin"], d["version"], "types:", ", ".join(t["type"] for t in d["types"]))'
+done
+for p in $(packages); do   # the packages PACKAGES names (.env): each one's content types, if it carries a plugin
+  [ -f "$ROOT/$p/plugin/plugin.yaml" ] || continue
+  "$ROOT/scripts/workbench.sh" plugin load "$ROOT/$p/plugin" | python3 -c 'import json, sys; d = json.load(sys.stdin); print("  package plugin", d["plugin"], d["version"], "types:", ", ".join(t["type"] for t in d["types"]))'
 done
 "$ROOT/scripts/graph.sh"                                  # the graph views, from the terms the plugin just loaded
 wait_for() {   # what url logs
@@ -58,7 +62,7 @@ say "What runs (observe.sh)"
 # last, so the observer reads the agent's MCP and the wiring just written (a first run otherwise misses both)
 "$ROOT/scripts/observe.sh" || echo "  observing stopped (above); the gaps are as they were"   # what runs, the gaps, inferences
 
-say "Streams (streams.yaml)"
+say "Streams (streams.yaml) and packages (PACKAGES: $(env_value PACKAGES))"
 "$ROOT/scripts/streams.sh" || echo "  the streams did not run (above)"   # drift's gaps and the hooks' runs up their ladders
 "$ROOT/scripts/recall.sh" || echo "  recall's vectors were not made (above); words and the graph still answer"
 

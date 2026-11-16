@@ -20,3 +20,19 @@ cells:
       scored.balanced: {higher: true, gain: absolute, max_regression: 0}
     rounds: {warmup: 0, repeats: 7, max_repeats: 10}
     timeout: 900
+
+  # The first package (S-103, S-104): the lookups agent, judged on held-out lookups the operator writes and records
+  # outside the repository (MORPHOGEN_INPUTS: cases.jsonl and fetched.jsonl.gz, made with driver.py --network;
+  # MORPHOGEN_PRIVATE: outcomes.jsonl), replayed with no network. Only the agent may change: its file, its handlers
+  # and its notes. The environment, the driver, the scorer and the model's name (environment.yaml) are the base's.
+  # More lookups answered rightly, never fewer; tokens may not grow.
+  component:lookups:
+    dir: packages/lookups
+    change: [packages/lookups/agent.yaml, packages/lookups/handlers/**, packages/lookups/notes/**]
+    run: python3 driver.py
+    score: python3 score.py
+    better:
+      scored.correct: {higher: true, gain: absolute, max_regression: 0}
+      metered.tokens: {lower: true, max_regression: 0}
+    rounds: {warmup: 0, repeats: 5, max_repeats: 8}
+    timeout: 1800

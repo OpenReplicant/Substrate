@@ -9,7 +9,7 @@
     },
     "source": {
       "type": "object",
-      "description": "where inputs come from: {kind: decisions|jsonl, ...}"
+      "description": "where inputs come from: {kind: decisions|jsonl|items, ...}"
     },
     "answers": {
       "type": "string",
@@ -18,6 +18,10 @@
     "outcome": {
       "type": "string",
       "description": "how an input's outcome is known"
+    },
+    "episode": {
+      "type": "object",
+      "description": "for a package's environment: each input starts an episode (dir, max_steps, model, private); empty for a stream whose inputs climb the route once"
     }
   }
 }

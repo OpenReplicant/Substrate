@@ -1,0 +1,15 @@
+# The lookups agent (docs/contracts/environment.md, "The agent"): one model handler, the baseline. Candidates
+# change this file, handlers/ and notes/ (morphogen.yaml); the model's name is the environment's (held fixed).
+handlers:
+  main: {kind: model, entry: handlers/model.py, instructions: handlers/instructions.md, notes: notes/notes.md, max_tokens: 300}
+select: cost-order                  # the slot's default: the route by rank, cheapest first
+# The episode as a log that only grows: the instructions and notes, then the question, then each action and what
+# came back, in order. Bytes already sent are never rewritten. When the log would pass `window` characters, the
+# newest observation is cut to fit (leaving 300 characters free), with a note saying so; when less than 100
+# characters would be left for it, the handler hands the step up (the episode ends as escalated). Nothing already
+# sent is dropped or rewritten.
+context: append-only
+parameters:
+  sure_at: {value: 0.8, range: [0.5, 0.95]}       # an answer below this confidence is handed up instead
+  max_steps: {value: 6, range: [2, 8]}             # at this step the handler must answer or hand off
+  window: {value: 9000, range: [4000, 12000]}      # characters of log; Ollama's default context is 4096 tokens

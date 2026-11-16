@@ -2,10 +2,11 @@
 """The model gateway (spec step 18, S-77): Bifrost's config.json rendered from .env and streams.yaml.
 
     python3 scripts/gateway.py render     # writes .state/gateway/config.json (no secret in it: Bifrost reads env.NAME)
-    python3 scripts/gateway.py keys       # the callers that get a key (each model handler in streams.yaml)
+    python3 scripts/gateway.py keys       # the callers that get a key (each model handler in streams.yaml and packages/*/agent.yaml)
     bin/in-tools python3 scripts/gateway.py init   # its database and logins, in the tools container (up.sh runs it)
     bin/in-tools python3 scripts/gateway.py prune  # drop limits from its store that config.json no longer has (up.sh)
-    bin/in-tools python3 scripts/gateway.py meter CALL_ID...   # what the meter's login sees of these calls (the contract test)
+    bin/in-tools python3 scripts/gateway.py meter CALL_ID...   # what the meter's login sees of these calls (the contract test;
+                                                               # prompt and cached tokens a call, S-104)
     bin/in-tools python3 scripts/gateway.py judge-meter open|close RUN_ID   # Morphogen's meter for judged runs (S-87)
 
 Providers are the ones this machine has: OpenRouter when OPENROUTER_API_KEY is set (free models only, unless
@@ -61,9 +62,15 @@ FIXED_KEYS = {"workbench:embed": "WORKBENCH_EMBED_KEY", "judge:morphogen": "MORP
 
 
 def callers() -> list[str]:
+    """Each model handler in streams.yaml, and in each package's agent.yaml (named <environment>-<handler>, as the
+    handlers plugin declares it), then the fixed callers."""
     spec = yaml.safe_load((ROOT / "streams.yaml").read_text()) or {}
-    return sorted(f"handler:{h}" for s in (spec.get("streams") or {}).values()
-                  for h, d in (s.get("handlers") or {}).items() if (d or {}).get("kind") == "model") + sorted(FIXED)
+    handlers = [h for s in (spec.get("streams") or {}).values() for h, d in (s.get("handlers") or {}).items() if (d or {}).get("kind") == "model"]
+    for agent in sorted(ROOT.glob("packages/*/agent.yaml")):
+        env = yaml.safe_load((agent.parent / "environment.yaml").read_text()) or {}
+        handlers += [f"{env['environment']}-{h}" for h, d in ((yaml.safe_load(agent.read_text()) or {}).get("handlers") or {}).items()
+                     if (d or {}).get("kind") == "model"]
+    return sorted(f"handler:{h}" for h in handlers) + sorted(FIXED)
 
 
 def pg(env: dict, db: str = "gateway") -> dict:
@@ -157,7 +164,8 @@ def meter(env: dict[str, str], ids: list[str]) -> dict:
     url = f"postgresql://gateway_meter:{env['GATEWAY_METER_PASSWORD']}@127.0.0.1:{env.get('DB_PORT') or 5432}/gateway"
     with psycopg.connect(url, connect_timeout=5) as c:
         rows = c.execute("""select metadata::jsonb->>'x-wb-call', virtual_key_name, status, latency,
-                                   concat_ws(' ', input_history, output_message, content_summary, raw_request, raw_response)
+                                   concat_ws(' ', input_history, output_message, content_summary, raw_request, raw_response),
+                                   prompt_tokens, cached_read_tokens, upstream_latency
                               from logs where metadata::jsonb->>'x-wb-call' = any(%s)""", (ids,)).fetchall()
     with psycopg.connect(url, connect_timeout=5) as c:
         try:
@@ -165,7 +173,9 @@ def meter(env: dict[str, str], ids: list[str]) -> dict:
             writable = True
         except psycopg.Error:
             writable = False
-    return {"rows": {r[0]: {"caller": r[1], "status": r[2], "latency": float(r[3]) if r[3] is not None else None, "content": r[4] or ""}
+    # prompt and cached tokens, and the provider's own latency: whether a log that only grows kept its cache (S-104)
+    return {"rows": {r[0]: {"caller": r[1], "status": r[2], "latency": float(r[3]) if r[3] is not None else None, "content": r[4] or "",
+                            "prompt_tokens": r[5], "cached_read_tokens": r[6], "upstream_latency": float(r[7]) if r[7] is not None else None}
                      for r in rows}, "writable": writable}
 
 

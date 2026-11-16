@@ -224,7 +224,8 @@ Held-out cases are never in a package. Substrate's own streams are a package lik
 On `dev` cases only, with no model:
 
 1. `reset` twice with one case and seed gives equal observations; `step` after the end raises.
-2. No observation carries a `private` claim or any key of the dev outcomes.
+2. No observation carries a `private` claim, or any claim about the case itself beyond what starts it (its
+   outcome, its answer). A page the agent reads may contain the answer: that is the work.
 3. A do-nothing agent and a constant agent score the declared floors; replaying the dev answers scores 1.
 4. An action of an undeclared kind, and a `deny` kind, are refused and recorded.
 5. A driver line with a made-up `reward` or `score` key, or a `final` the actions could not have produced,

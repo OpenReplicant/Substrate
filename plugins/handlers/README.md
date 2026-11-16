@@ -14,8 +14,8 @@ input in: by rank, cheapest first.
 
 | Type | Fields (besides title) |
 | --- | --- |
-| `stream` | description, source (where inputs come from), answers (`final`: the first answer ends the climb; `advisory`: answers are recorded and the input still goes to the top), outcome (how one is known) |
-| `input` | stream, key, payload, arrived_at, status (`open`, `resolved`, `dropped`), outcome (value, by, at), resolved_by |
+| `stream` | description, source (where inputs come from), episode (for an environment: its directory, max_steps, model, private fields), answers (`final`: the first answer ends the climb; `advisory`: answers are recorded and the input still goes to the top), outcome (how one is known) |
+| `input` | stream, key, payload, arrived_at, status (`open`, `resolved`, `dropped`), outcome (value, by, at), resolved_by, final and episode (an episode's end state and its record) |
 | `handler` | stream, kind (`script`, `hook`, `rule`, `model`, `session`, `person`), entry (the implementation's registered name), component (its part on a map, if any), measured cost per call, rank, calls, answers, escalations, refusals, scored, correct |
 | `route` | stream, ladder (handler slugs, cheapest first), answers, basis |
 | `call` | stream, input, handler, kind (`answer`, `escalate`, `waiting`, `dropped`, `refused`), value, confidence, reason, escalate_to, cost (seconds, usd, person), at, correct |
@@ -60,6 +60,35 @@ is marked unmeasured.
   `{stream, handler, input, started, seconds, exit, note}`. Exit 0 is an answer with confidence 1. Anything else
   escalates, with the exit code as the reason.
 
+- **`items`** (`type`): each live item of a content type someone saved (a question, a chore), oldest first. Its
+  fields are the payload; it has no outcome of its own.
+
+## Episodes (`episode.py`)
+
+A stream can be an **environment** instead of a climb: each input starts an episode, and the route is asked at
+every step, not once (the environment contract: an environment with Gymnasium's `reset(case, seed)` and
+`step(action) -> (observation, reward, terminated, truncated, info)`, and `final()`, the state its outcome is read
+from). `episode.run(env, case, order, entries)` is the step loop: the observation, the route asked with
+`{"observation", "episode", "step", "actions"}` (the new claims, the steps before, the step's number, the action
+kinds), the first answer's value as the action, `step`, until the episode ends: `terminated`, `truncated` (the
+environment's limit or `max_steps`) or `escalated` (an escalation off the top of the route, or an action the
+environment says hands the work up). The handler contract above does not change. `ask` (an action of every
+environment) hands the step to another handler that exists, recorded as a call the asker made.
+
+A judged run's driver and the `run` extractor call the same loop with the same handlers, so a benchmark and a live
+input look alike to them. `episode.route(dir, agent, model, gateway)` builds the route an agent file describes:
+cheapest first by kind (`select: cost-order`, the one selection built), a handler whose entry is a `.py` file in
+the directory made by that file's `make(slug, cfg, gateway, dir)`.
+
+A **package** directory (`environment.yaml`, `agent.yaml`, `environment.py`) is declared with
+`handlers:declare --input packages=DIR,...`: the environment becomes a stream (its starting sensor's source, and
+`episode`: the directory, `max_steps`, the environment's model, its `private` fields, which no handler is shown),
+each handler in the agent file a handler named `<environment>-<name>`. On `handlers:run`, each new input runs one
+episode: what the environment read is kept as sources and, whole, on the input (`episode.readings`: url, date,
+body hash, body gzip-compressed), with each step's observation (claims), action and handler (`episode.log`), how
+it ended, and `final`. Every call is recorded and metered as above. A hand-off leaves the input open and raises a
+`hand-off` decision in the review lane; an episode a gateway refusal ended is run again on the next run.
+
 ## Built-in handlers
 
 - **`precedent`** (kind rule): for a decision whose key is `a:b:c`, it looks at earlier decisions with the same
@@ -100,7 +129,9 @@ advisory stream, or an input still open).
 
 ## Extractors
 
-- **`handlers:declare`** (`--input file=PATH`): a YAML file of streams and their handlers, written as items.
+- **`handlers:declare`** (`--input file=PATH`, and `--input packages=DIR,...`): a YAML file of streams and their
+  handlers, and package directories, written as items. One run declares both: a stream it no longer declares is
+  retracted.
 - **`handlers:run`**: every stream's inputs, through its route. It records each call as a claim attributed to
   the handler (`handler:<slug>`), scores the calls against outcomes, and re-ranks the handlers. A replay changes
   nothing that hasn't changed.
@@ -111,4 +142,6 @@ advisory stream, or an input still open).
 throwaway database: precedent answers, the review lane's outcomes, ranks from measured cost, claims attributed to
 handlers, a refused handler) and `test_models.py` (model handlers through a fake gateway that keeps its own log:
 cost from the gateway's record, escalations, a call the gateway never saw or saw under another key refused,
-retries, a handler that joins later).
+retries, a handler that joins later), and `test_episodes.py` (the step loop on a toy environment; a toy package
+declared, saved items each running an episode, every step's call metered, a hand-off in the review lane, nothing
+run twice, a refused episode run again).
