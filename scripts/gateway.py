@@ -183,7 +183,18 @@ def judge_meter(env: dict[str, str], op: str, run_id: str) -> dict:
     """Morphogen's meter for a judged run (its PLAN.md 7c; morphogen.local.yaml's gateway.meter):
     `open RUN_ID` gives the run the judge's key, the only one it holds; `close RUN_ID` counts, from the gateway's
     own record, every call made with that key since the run opened (runs are judged one at a time). In the tools
-    container: it needs psycopg."""
+    container: it needs psycopg.
+
+    `close` prints counts over those rows, nulls as zero (docs/contracts/cell.md rule 3, S-96, S-106): `calls`,
+    `answered` (status success), `tokens` (= `tokens_in` + `tokens_out`), `tokens_in` (prompt_tokens), `tokens_out`
+    (completion_tokens), `tokens_cached` (cached_read_tokens: input tokens read from the provider's cache, a part of
+    `tokens_in`), `seconds` (latency) and `seconds_upstream` (upstream_latency: the provider's socket time across
+    every attempt, so `seconds` less it is the gateway's own), `retries` (number_of_retries), `cost` (cost, dollars).
+    Bifrost v2.3.2 records both latencies in milliseconds (framework/logstore/tables.go; core/schemas/bifrost.go's
+    BifrostResponseExtraFields, read 2026-11-15); they are divided by 1000 here. Seconds are summed over calls, so
+    calls made at the same time count each, and a call turned away (an error) counts its time too. Cached tokens are
+    recorded for Ollama (S-105) and almost never for OpenRouter's free models: 1 of 96 answered calls in the record to
+    2026-11-15, none for a 3,049-token prompt sent twice to nemotron-3.5-super-vl:free. Ratios are computed when read."""
     state = ROOT / ".state/gateway/judge"
     if not re.fullmatch(r"[A-Za-z0-9-]{1,64}", run_id):
         raise SystemExit(f"bad run id {run_id!r}")
@@ -211,13 +222,14 @@ def judge_meter(env: dict[str, str], op: str, run_id: str) -> dict:
     q = """with w as (select timestamp as until from logs where metadata::jsonb->>'x-wb-call' = %s)
            select count(*), count(*) filter (where status = 'processing'), coalesce(sum(prompt_tokens), 0),
                   coalesce(sum(completion_tokens), 0), coalesce(sum(cost), 0), count(*) filter (where status = 'success'),
-                  (select count(*) from w)
+                  (select count(*) from w), coalesce(sum(cached_read_tokens), 0), coalesce(sum(latency), 0),
+                  coalesce(sum(upstream_latency), 0), coalesce(sum(number_of_retries), 0)
              from logs where virtual_key_name = %s and timestamp >= to_timestamp(%s)
               and timestamp <= coalesce((select until from w), 'infinity')
               and coalesce(metadata::jsonb->>'x-wb-call', '') <> %s"""
     with psycopg.connect(url, connect_timeout=5) as c:
         for _ in range(120):
-            calls, busy, tin, tout, usd, ok, seen = c.execute(q, (marker, JUDGE, start, marker)).fetchone()
+            calls, busy, tin, tout, usd, ok, seen, cached, ms, ms_up, retries = c.execute(q, (marker, JUDGE, start, marker)).fetchone()
             if seen and not busy:
                 break
             time.sleep(0.5)
@@ -225,7 +237,8 @@ def judge_meter(env: dict[str, str], op: str, run_id: str) -> dict:
             raise SystemExit("the gateway's record did not show the meter's marker call within a minute")
     f.unlink(missing_ok=True)
     return {"calls": calls, "answered": ok, "tokens": int(tin) + int(tout), "tokens_in": int(tin),
-            "tokens_out": int(tout), "cost": float(usd)}
+            "tokens_out": int(tout), "cost": float(usd), "tokens_cached": int(cached),
+            "seconds": float(ms) / 1000, "seconds_upstream": float(ms_up) / 1000, "retries": int(retries)}
 
 
 def main() -> None:
