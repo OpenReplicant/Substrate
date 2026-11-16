@@ -37,9 +37,10 @@ lands only on a verdict and its approval.
 
 Work businesses already pay AI to do, where the outcome can be checked: customer support, back-office and document
 work, coding. Every role is measured as **value per dollar**: real work completed at acceptable quality, against
-what it cost to run. An **environment** bundles what one kind of work needs (its streams, an encoder per
-modality, what a handler is shown, handlers and escalation, the action gate, the outcome measure) behind the
-reset-and-step interface, so a benchmark and a live deployment of the same work look alike.
+what it cost to run. An **environment** is what one kind of work senses and may do (its sensors and their encoders, its actions
+and their gate, the outcome measure) behind the reset-and-step interface, so a benchmark and a live deployment
+of the same work look alike; an **agent** is the handlers that act in it, a model being optional; a
+**package** holds both and is what is started and shared (S-102, `docs/contracts/environment.md`).
 
 ## Plan
 

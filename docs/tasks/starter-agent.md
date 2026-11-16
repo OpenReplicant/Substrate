@@ -110,3 +110,9 @@ differ from the text above:
 
 What stays from above: the parts table, a finding with a quote and URL for every deciding fact, the two
 outcomes, the recording fetch and replay, the route, and "Tools from elsewhere".
+
+## Changed by S-102 and S-103 (2026-11-15)
+
+`environment-package.md` is now `first-package.md`: the research stream above becomes `packages/lookups`, built
+first and whole. The tool loop no longer lives inside one handler: a tool call is an action of the environment.
+Stage 3's compile-down is `routines.md`.

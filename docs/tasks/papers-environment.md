@@ -1,7 +1,8 @@
-# Task: the `papers` environment: read, then reproduce
+# Task: the `papers` package: read, then reproduce
 
 **Model:** Opus to build each stage; the largest for the reproducing stage's design and its judge checks.
-**Needs:** `environment-package.md`; stage 1 of `starter-agent.md` is done (Granite 4.0 Micro, the tool loop,
+**Needs:** `first-package.md` (S-102, S-103: tools are actions, the agent starts as one model handler, the
+directory is `packages/papers/`, and it reuses the step loop built for `lookups`); stage 1 of `starter-agent.md` is done (Granite 4.0 Micro, the tool loop,
 S-100). This is the starter agent's research stream made specific (S-101) and direction step 7 brought forward.
 
 ## Stage A: reading
@@ -13,7 +14,10 @@ S-100). This is the starter agent's research stream made specific (S-101) and di
 - **Objects**: `paper` (title, authors, date, source, licence), and its **stated claims**: what the paper says
   it does and found (method, components, datasets, baselines, reported numbers), each a claim attributed to the
   authors, quoting the paper with its place in the text. Code links become catalog candidates.
-- **Outcome** (a script, no model's opinion): the share of quotes found in the recorded text; plus what the
+- **Outcome** (a script, no model's opinion), two numbers, because the first alone gives full marks to an
+  agent that quotes the title (S-103): **grounded**, the share of quotes found in the recorded text; and
+  **covered**, the share of a paper's main stated claims (a list a person wrote, held with the outcomes, never
+  shown to the agent) that a recorded claim matches. Covered decides; grounded may not fall. Plus what the
   person did with the reading (accepted, edited, redone).
 - **Cases**: `dev` papers in the repository's cases file by id only; held-out papers chosen by the operator.
 - **Governed components**: the reading prompt, the tool descriptions, the notes, the hand-up rule.

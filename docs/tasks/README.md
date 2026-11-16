@@ -32,17 +32,26 @@ The owner's use of the largest model is limited, so it is kept for work where a 
 6. **Environment and baseline** (Opus), against the environment contract.
 7. **Review and merge** (largest model, then the owner).
 
-## Now (S-97 to S-101, 2026-11-15): start here
+## Now (S-97 to S-102, 2026-11-15): start here
 
 The owner's direction, in order of when it was said: testing stays small, with one cheap local model held
 fixed (S-97); the first thing to have is a useful starter agent whose components optimize themselves on the
 tasks it is given (S-98), research first (S-99; Granite 4.0 Micro picked, S-100); and (S-101) an
 **environment** is the unit that is configured, started and shared, there is **one way to start** (no script
 per mode), the first environment is **papers** (read, then reproduce: the early goal with provable outcomes),
-and the agent **works on its own code** with other projects' tools interfaced. The order:
+and the agent **works on its own code** with other projects' tools interfaced. Then (S-102) the words were
+fixed: an **environment** is what is sensed and may be done, an **agent** is a route of handlers that can be
+a single one with or without a model, and a **package** (`packages/<slug>/`) holds both and is what is
+started and shared; where a brief below says "environment" for the directory, read "package". The order:
 
-1. [`environment-package.md`](environment-package.md) (largest for the contract, then Opus).
-2. [`papers-environment.md`](papers-environment.md) stage A, reading (Opus).
+Order changed by S-103: one package end to end before anything general, and the first judged comparison on
+work that repeats.
+
+1. [`first-package.md`](first-package.md) (Opus): `packages/lookups`, one model handler, tools as actions, the
+   step loop in its smallest form, one start.
+1b. [`routines.md`](routines.md) (largest for the design and the judge checks, then Opus): the model alone
+   against the model with routines below it. Needs 1 and item 4's two briefs.
+2. [`papers-environment.md`](papers-environment.md) stage A, reading (Opus); needs 1, can run beside 1b.
 3. [`codebase-environment.md`](codebase-environment.md) (Sonnet for the tool search, Opus to build); can run
    beside 2.
 4. [`meter-factors.md`](meter-factors.md) and [`verdict-fields.md`](verdict-fields.md), then
@@ -54,13 +63,15 @@ and the agent **works on its own code** with other projects' tools interfaced. T
 6. Waiting: [`self-approval.md`](self-approval.md) (the owner's yes, and before stage B's gate is used);
    [`judging-another-system.md`](judging-another-system.md), [`second-checkout.md`](second-checkout.md)
    (until someone has a system they want better); [`05-pick-and-judge-design.md`](05-pick-and-judge-design.md),
+   [`later-packaging.md`](later-packaging.md) (the general loader, Substrate's own streams as a package,
+   `state.yaml`: when a second package exists);
    [`06-environment-and-baseline.md`](06-environment-and-baseline.md) (a benchmark is one more environment,
    if a public comparison is wanted). [`starter-agent.md`](starter-agent.md) stage 1 is done; its last
    section says what carries the rest. [`client-readiness.md`](client-readiness.md) is done as far as useful.
 
-State at the end of the 2026-11-15 session: `scripts/check.sh` passed; everything after commit `8b97a25`
-(S-99 to S-101, the starter-agent trial and choice file, these briefs) was written but **not committed**:
-ask the owner, then commit. No git identity is configured; earlier commits used `Claude <noreply@anthropic.com>`.
+State on 2026-11-15: S-99 to S-101 are committed (`cbbbc0f`). S-102 and S-103 (the contract rewrite,
+`first-package.md`, `routines.md`, `later-packaging.md`) is written and **not committed**: ask the owner, then commit. No
+git identity is configured; commits use `Claude <noreply@anthropic.com>`.
 
 ## Briefs
 

@@ -9,9 +9,9 @@ find, stop and say so instead of bending either.
 Direction step 2: the picked environment wired, and a plain agent that runs it end to end with every model
 call counted at the gateway. Nothing is judged yet beyond one smoke run.
 
-1. **The world**: `environments/<slug>/world.py` wrapping the picked benchmark behind `reset(case, seed)` and
+1. **The world**: `packages/<slug>/environment.py` wrapping the picked benchmark behind `reset(case, seed)` and
    `step(action)`. The benchmark's own code is fetched at a pinned commit by a script, not copied in.
-2. **The declaration**: `environments/<slug>/environment.yaml`, as the contract's example.
+2. **The declaration**: `packages/<slug>/environment.yaml` and `agent.yaml`, as the contract's example.
 3. **The driver and the scorer**: `driver.py` (the cell's `run`: reads `MORPHOGEN_INPUTS/cases.jsonl`, prints
    one line an episode) and `score.py` (the cell's `score`: reads those lines and `MORPHOGEN_PRIVATE`, prints
    the metrics). Model them on `plugins/handlers/bench/run.py` and `score.py`. The scorer replays each
@@ -29,7 +29,7 @@ call counted at the gateway. Nothing is judged yet beyond one smoke run.
 
 ## Files to touch
 
-`environments/<slug>/` (new), `scripts/` (the cases script, the fetch script, `contract.sh`'s new interface),
+`packages/<slug>/` (new; S-102), `scripts/` (the cases script, the fetch script, `contract.sh`'s new interface),
 `morphogen.yaml`, `streams.yaml` only if the environment's streams are declared there instead of in its own
 file, `catalog-info.yaml` by export only, `deploy/tools/Containerfile` if the world needs a package,
 `DECISIONS.md` (one row), `.env.example` if a setting is added.

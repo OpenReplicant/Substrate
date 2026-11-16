@@ -1,6 +1,7 @@
-# Task: the `codebase` environment: the agent works on its own code
+# Task: the `codebase` package: the agent works on its own code
 
-**Model:** Sonnet for the tool search, Opus to build. **Needs:** `environment-package.md`. S-101: the work done
+**Model:** Sonnet for the tool search, Opus to build. **Needs:** `first-package.md` for the stream (S-102: the picked tool is an action kind in
+`packages/codebase/`). S-101: the work done
 in these sessions is the first stream of tasks; other projects' tools are interfaced, not ported (S-99).
 
 ## Scope
