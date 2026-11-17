@@ -56,6 +56,10 @@ for the system's own tables; schema `content` for one table per content type.
 | `wb.embedding` | vectors for items, claims or sources (pgvector), per model |
 | `wb.user` | sign-in: name, password hash (pgcrypto `crypt`, bcrypt), role (`owner`, `editor`, `viewer`, each a Postgres role); `workbench user add|reset` from the command line |
 
+**Superseded by S-135 (being migrated):** claims narrow to interpretations (an LLM, a component, a person);
+a row carries its lineage (`run_id`, `source_id`), every write is one row in a change log, and the per-field
+trigger and "strongest source wins" below go. The text below describes the store as it is until the migration lands.
+
 **Items and claims.** An item's columns are its current values; the claims are why. Every write records a
 claim, whether an extractor made it or a person typed it, so any field can answer "where did this come from?".
 The current value is the newest current claim from the strongest source, unless a person pinned one. A

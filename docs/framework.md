@@ -28,9 +28,19 @@ The test: anything that could be wrong for reasons other than a broken sensor is
 the claim log holds claims; actions cite the claims that justify them (under pass-through the LLM may act straight
 from signals, and records its interpretation as claims). Interpreters are components, so a distilled interpreter
 has a card and its claims carry its name. A person's statement is their claim; the interview transcript is the
-signal. Workbench today attaches a claim to every value, mechanical ones included: under this distinction a value
-a parser wrote points to its signal with no interpreter, and only an interpretation names one (to be checked
-against the schema).
+signal.
+
+**The store (decided, S-135): Wikibase's data model in Postgres, with OpenWiki's pinned evidence.** An
+**entity** (an item, or a property, itself an entity) has **statements**: a property, a typed value, qualifiers,
+a rank (preferred, normal, deprecated) and **references**. A reference says who stated it (a parser's run, an
+interpreter and its version, a person, a rule and its premises) and which **span** of a signal it rests on; a span
+carries its text's hash and a vector. Every edit is a **revision** of its entity. The usable value is Wikidata's:
+preferred if any, else normal. Constraints are statements on properties, checked and reported, never blocking. A
+Markdown page per entity, regenerated from its statements, is what people and agents read. When a span's hash
+changes, what cites it, and what was derived from that, is flagged with no model call. Under this model a claim is
+a statement whose reference is an interpreter: it enters at normal rank and is preferred or deprecated by review.
+What a parser wrote is a statement too, with a parser's reference, and nobody reviews it: if it is wrong, the
+parser is fixed and rerun.
 
 **A claim's fields**, after Graphiti's data model ([graphiti](https://github.com/getzep/graphiti), Apache-2.0;
 its `nodes.py` and `edges.py` read, S-129), with what it lacks added. Graphiti keeps raw input as episodes (our
