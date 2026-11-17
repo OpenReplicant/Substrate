@@ -3,7 +3,6 @@
 
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 case "$ROOT" in */scripts) ROOT=$(dirname "$ROOT") ;; esac   # sourced from scripts/runtime/
-MORPHOGEN="$ROOT/repos/morphogen"
 ENV_FILE="${SUBSTRATE_ENV_FILE:-$ROOT/.env}"   # a contract run points the env backend at a throwaway file
 
 # a value as written in .env (empty if unset)
@@ -22,15 +21,6 @@ env_value() {
   if [ -n "$current" ]; then printf '%s' "$current"; return; fi
   if [ "${SECRETS:-env}" != env ] && is_secret "$1"; then sec_get "$1"; return; fi
   env_file_value "$1"
-}
-
-# the packages this machine starts (PACKAGES in .env: slugs, comma- or space-separated), one directory a line: one with an
-# environment (environment.yaml) or one that only carries a plugin (plugin/plugin.yaml: content types, extractors, a view)
-packages() {
-  for p in $(env_value PACKAGES | tr ',' ' '); do
-    if [ -f "$ROOT/packages/$p/environment.yaml" ] || [ -f "$ROOT/packages/$p/plugin/plugin.yaml" ]; then echo "packages/$p"
-    else echo "  no package $p (packages/$p/environment.yaml or packages/$p/plugin/plugin.yaml)" >&2; fi
-  done
 }
 
 # put every secret into this process's environment, for compose's ${...} and the tools container. Only needed

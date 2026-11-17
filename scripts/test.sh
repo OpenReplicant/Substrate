@@ -2,16 +2,16 @@
 # Every test suite, in the tools container, each in a throwaway database it drops after (the stack must be up).
 #
 #   scripts/test.sh                 # all of them
-#   scripts/test.sh FILE...         # some: workbench/tests/test_w1.py, plugins/substrate/tests/test_map.py, packages/lookups/tests/test_lookups.py, scripts/tests/test_gateway.py, ...
+#   scripts/test.sh FILE...         # some: scripts/tests/test_gateway.py, ...
 set -eu
 . "$(dirname "$0")/lib.sh"
 
 url="postgresql://postgres:$(env_value POSTGRES_PASSWORD)@127.0.0.1:$(env_value DB_PORT)/postgres"
-[ $# -gt 0 ] || set -- "$ROOT"/workbench/tests/test_*.py "$ROOT"/plugins/*/tests/test_*.py "$ROOT"/packages/*/tests/test_*.py "$ROOT"/scripts/tests/test_*.py
+[ $# -gt 0 ] || set -- "$ROOT"/scripts/tests/test_*.py
 failed=0
 for f in "$@"; do
   rel=${f#"$ROOT"/}
-  if out=$(cd "$ROOT" && "$ROOT/bin/in-tools" env WORKBENCH_ADMIN_URL="$url" python3 "$rel" 2>&1); then
+  if out=$(cd "$ROOT" && "$ROOT/bin/in-tools" env ADMIN_URL="$url" python3 "$rel" 2>&1); then
     printf '  ok    %s: %s\n' "$rel" "$(printf '%s\n' "$out" | tail -1)"
   else
     failed=$((failed + 1))

@@ -1,156 +1,42 @@
 # Substrate
 
-An agent (Claude Code) in charge of a system of components, with a map of that system it can check and a judge
-it cannot fool. Its own system is on the map too, so it can change itself the same way it changes anything else.
+An agent framework. You put an environment on a system you need, run it, and watch and change it. With nothing
+else configured, every event in the environment goes to an LLM harness (Claude Code), which acts through gated
+actuators, and everything is recorded. From that record, components are distilled that handle what repeats; each
+carries a card and is judged on cases its author never saw before it joins.
 
-## Why it was built
+The first environment is **the companion**: a persistent assistant that you talk to, that works in the
+background, and that manages its own model and compute budget (later with a voice, an avatar, and mixed reality
+on a Quest 3).
 
-Coding agents are good at making changes and bad at knowing what they are changing. What they know about a
-system lives in the chat and is gone next session. "The tests pass" is a check they can edit. And when they
-change their own setup (a skill, a hook, a prompt), nothing records what changed or whether it helped.
+- `docs/plan.md`: what is built next, step by step
+- `docs/framework.md`: the shape: signals and claims, the store, pass-through, components and cards, the judge,
+  nesting
+- `docs/privacy.md`: the rules for personal streams, with their defaults
+- `DECISIONS.md`: every default and why, append-only
 
-Substrate gives the agent three things it usually lacks:
+## The store
 
-- **A model it can check.** Every fact about a system is a claim: who said it, when, and a quote from the file,
-  the running container or the interview it came from. Facts that stop being true are retracted, not
-  forgotten.
-- **Two halves that disagree out loud.** The map says what the system is meant to be. Observers record what
-  actually runs. Where the two differ is a gap, and gaps go to a review lane where a person or the judge
-  decides which side changes.
-- **A judge outside its reach.** A change that claims to improve something lands only with a verdict from
-  [Morphogen](https://github.com/OpenReplicant/Morphogen), which tests it on cases the agent has never seen
-  and keeps the rules where the agent cannot edit them.
+Wikibase's data model in Postgres, with graph and vector features (S-135). Entities have statements; a
+statement is a property, a typed value, qualifiers, a rank (preferred, normal, deprecated) and references saying
+who stated it and which span of which source it rests on. Spans carry a hash, so when a source changes, what
+cites it is flagged without a model call (after OpenWiki). An interpreter's statement (a model's, a person's)
+is a claim: it enters at normal rank and review prefers or deprecates it. Graph queries, SPARQL and vector search
+are views over the same tables.
 
-## What it can do for you
+## Running it
 
-On the machine it was built on, it has:
-
-- **Read what actually runs.** It records containers, images, volumes, settings (by name only, never their
-  values), HTTP routes, the APIs and UIs served, and Claude Code's skills and hooks. Each fact quotes the
-  snapshot it came from. Snapshots are scanned for secrets before anything reads them.
-- **Found what nobody had declared.** On its first look at itself it found five volumes still holding data from
-  a stack that had been taken down, and an HTTP API that was on no map. The owner decided each one in the
-  review lane, and the record shows who decided, when and why.
-- **Answered questions about the system.** It can trace a chain such as "route `/api/*` → the container behind
-  it → the database volume its data lands on", and answers SPARQL, graph paths and full-text search over
-  the same claims. A rule engine adds what follows from the facts, and withdraws a conclusion when a fact it
-  rests on goes.
-- **Swapped a part on evidence, not trust.** Each slot (the runtime, the secrets store, the store's APIs,
-  the judge's interface) has a contract test. A candidate takes the slot only by passing it: OpenBao passed
-  the secrets contract 9 of 9 before it was allowed in as an option.
-- **Chosen parts from catalogs, not memory.** It picked its SPARQL endpoint by searching registries, testing a
-  shortlist and recording why the others lost (`docs/choices/`).
-
-- **Refused a change that looked like a win.** Its first judged change sent a model handler's input as compact
-  JSON. Tokens fell 5.9% on 7 of 7 paired runs, and accuracy fell with them, so Morphogen refused it (S-87).
-  One run on seven held-out cases is a start, not a result.
-
-Built, and not yet run for real:
-
-- **Interviews.** Most of what a system is *for* lives in people's heads. The `interview` skill asks from the
-  gaps and thin parts of the map and keeps a word-for-word transcript. Each statement that quotes the person
-  exactly becomes their own claim, beside the map's value rather than over it, and a disagreement goes to
-  review. No one has sat for one yet.
-
-## Three ways to start
-
-Once it is up, open Claude Code in this folder. It already knows substrate itself: the map, what runs and the
-gaps are in Workbench. Its first session offers you three ways to point it at a system of yours, all run by the
-`interview` skill and all through the same loop:
-
-| You have | It starts by | The gaps are |
-| --- | --- | --- |
-| **A system that exists** (a machine, a stack, a repository) | observing it, then interviewing you about what it is for | what runs but nobody declared, and what was meant but does not run |
-| **A system you want** | interviewing you, then writing its map before anything exists | every part not running yet: the build list |
-| **A change to substrate itself** | editing its own map | the difference between the new map and what runs, closed by builders and judged |
-
-The last two are the same mechanism. A map written before the system exists is all intent and no
-observation, so every part on it is a gap until something builds it. Substrate changing itself is that
-mechanism applied to its own map. It does not need a copy of itself.
-
-## Ideas to build on
-
-Each of these is small and uses only what is already here:
-
-- **Map something of yours.** Point `observe.yaml` at another stack, run `scripts/observe.sh`, and see what
-  it finds that nobody wrote down.
-- **Teach the observer a new kind of software.** A probe in `observe.yaml` says how to read one (Caddy's
-  admin API is the example). Postgres, nginx, Kubernetes and systemd units are all open.
-- **Fill a slot differently.** Write a filler for the runtime (Docker, Nomad, systemd) or for the secrets
-  store, and run `scripts/contract.sh` against it. If it passes, it fits.
-- **Bring an option back.** Prometheus, OpenTelemetry and Backstage are in the map with
-  where they fit and the commit to restore them from. Each would give the observer more to read.
-- **Add a domain.** Workbench is a general store. A plugin with its own content types and one extractor
-  (`plugins/substrate/` is the example) makes a new kind of thing modellable: a home lab, a research
-  library, a game's rules.
-- **Add rules.** The vocabulary's axioms (`plugins/substrate/vocabulary.axioms.yaml`) decide what the
-  reasoner concludes. A new rule is a small change you can test.
-- **Try to cheat the judge.** Morphogen's red team is meant to catch an agent gaming its verdict. A cheat it
-  misses is the most useful bug you can report.
-
-## Parts
-
-| Part | Project | Does |
-| --- | --- | --- |
-| Store | Workbench, in `workbench/` (Substrate's store and GUI) | typed items with claims beside every value, vocabularies, a desktop-like shell, an API, extractors, live updates, MCP for agents |
-| Actor | Claude Code | explores, interviews, builds, maps |
-| Judge | [Morphogen](https://github.com/OpenReplicant/Morphogen), cloned to `repos/morphogen` | a change lands only with a verdict the changer cannot reach |
-
-This repository is the glue: scripts that bring the parts up and connect them, and a tools container they run
-in. Substrate's map of itself lives in Workbench, where you or the agent edit it, and `catalog-info.yaml` is its
-committed export: the copy the judge reads, and the one a new machine starts from
-([`plugins/substrate/MAP.md`](plugins/substrate/MAP.md)). Production choices it stays compatible with but does not
-run are options on that map (system `options`; [`docs/archive/spec.md`](docs/archive/spec.md) section 8).
-
-**Pluggable by slots, not by trust.** Each part fills a slot named by an interface, and anything that answers
-the interface can take its place once it passes that slot's contract test. The judge is the exception: the
-loop can never choose or tune what judges it ([`docs/archive/spec.md`](docs/archive/spec.md) section 4).
-
-## Start
-
-Clone this repository, open Claude Code in it, and ask it to set up (the `setup` skill). By hand:
+Needs git, python3, Podman with compose, and Claude Code; everything else runs in containers.
 
 ```sh
-git clone https://github.com/OpenReplicant/Substrate substrate && cd substrate
-scripts/bootstrap.sh          # host check, Morphogen cloned into repos/, the images, the tools container
-scripts/up.sh                 # the stack, Workbench, substrate's plugin, its first look at itself
-scripts/check.sh              # is everything up and wired
+scripts/bootstrap.sh   # once: images and the tools container
+scripts/up.sh          # the stack and its databases, then the checks
+scripts/check.sh
 ```
 
-The host needs git, python3 (the scripts use its standard library), Podman (or Docker) with compose, and
-Claude Code. Everything else runs in containers. Tested on Linux with rootless Podman 4.9, on one machine.
-Workbench's shell is then at http://127.0.0.1:8080/.
-
-## Where it is going
-
-[`docs/plan.md`](docs/plan.md) is the one current plan (S-124): Substrate as an agent framework, with
-Workbench as its UI, starting from one real agent for a system the owner picks. The old spec, build plan and
-direction are in `docs/archive/` as history. Every default and the reason for it is in [`DECISIONS.md`](DECISIONS.md).
-
-## Layout
-
-```
-CLAUDE.md            instructions for the agent working here
-DECISIONS.md         every default and why (S-01...), append-only
-catalog-info.yaml    the map's export (edit it in Workbench): what runs, what it can choose, where to search
-morphogen.yaml       the same map as Morphogen cells
-observe.yaml         what the observer reads on this machine, and how to read each kind of software
-repos.yaml           the upstream projects and the commits last checked
-docs/                the plan, contracts, recorded choices; archive/ for the old spec and plans
-deploy/              the stack (compose.yaml), the Postgres image, the Caddyfile, the secrets list, the tools image
-workbench/           Workbench: the store, its shell, server and MCP (its own README, licence and tests)
-plugins/substrate/   substrate's Workbench plugin: content types, extractors, the observer, the reasoner, the Map
-scripts/             bootstrap, up, down, check, test, observe, interview, map, contract, trace, graph, spec, verdicts
-bin/                 morphogen, gitleaks: each runs inside the tools container (in-tools runs anything else there)
-.claude/skills/      setup, research, upstream, interview (build-out: retired with the spec)
-repos/               the Morphogen clone, gitignored, its own git repository
-```
-
-## Working upstream
-
-Fixes and improvements to Morphogen go to its repository by branch and pull request (the
-`upstream` skill), never as patches left in a clone.
+This is the fresh tree (S-137). v1, a store with a claim behind every value, a map of the system, and the
+Morphogen judge in the build, is tagged `v1-final`.
 
 ## Licence
 
-Apache-2.0, as Workbench and Morphogen.
+See `LICENSE`.

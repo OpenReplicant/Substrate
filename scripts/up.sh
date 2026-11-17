@@ -1,6 +1,6 @@
 #!/bin/sh
-# Bring up the stack (S-57, S-77): Postgres, PostgREST, the Workbench server, the model gateway, Caddy; then Workbench's schema, substrate's
-# plugin and its extractors, the claude-code agent's account, this project's Claude Code wiring, and the packages PACKAGES names (S-104).
+# Bring up the stack on the fresh tree (S-137): Postgres, the model gateway, local models, the tools container;
+# then the store's database and the gateway's. The store's schema, its API and UI come in docs/plan.md 3b.
 #
 #   scripts/up.sh
 set -eu
@@ -8,76 +8,17 @@ set -eu
 
 "$ROOT/scripts/settings.sh"
 "$ROOT/scripts/build.sh"
-say "The model gateway's config (scripts/gateway.py: providers from .env, a key per model handler in streams.yaml)"
+say "The model gateway's config (scripts/gateway.py: providers from .env, a key per caller)"
 python3 "$ROOT/scripts/gateway.py" render
 
 say "Services ($RUNTIME)"
 rt_up
 "$ROOT/scripts/tools.sh" start
 
-say "Workbench: its database, the core schema, substrate's plugin (workbench/BRIEF.md)"
-i=0
-until out=$("$ROOT/scripts/workbench.sh" migrate 2>&1); do
-  # A wrong password never comes right by waiting: most often the database volume outlived the .env that made it
-  case "$out" in *"password authentication failed"*)
-    echo "  Postgres refused POSTGRES_PASSWORD from .env: the volume (DB_VOLUME, substrate_db-data) was made with" >&2
-    echo "  another one. Set the old one in .env, or reset it in the container (the setup skill, step 3)." >&2
-    exit 1 ;;
-  esac
-  i=$((i + 1)); [ $i -gt 30 ] && { echo "  Postgres did not take the migration: scripts/logs.sh db" >&2; "$ROOT/scripts/workbench.sh" migrate; exit 1; }
-  sleep 2
-done
-echo "  migrated"
-"$ROOT/bin/in-tools" python3 "$ROOT/scripts/gateway.py" init   # its database and logins; it retries until they exist
+say "Databases"
+"$ROOT/bin/in-tools" python3 "$ROOT/scripts/db.py" init        # waits for Postgres; stops at once on a refused password
+"$ROOT/bin/in-tools" python3 "$ROOT/scripts/gateway.py" init   # its database and logins
 "$ROOT/bin/in-tools" python3 "$ROOT/scripts/gateway.py" prune  # limits its store kept that config.json dropped (S-87)
-for p in handlers business substrate; do   # handlers: streams and ranked handlers (spec section 10); business: an organisation's parts (step 10); substrate: its own types
-  "$ROOT/scripts/workbench.sh" plugin load "$ROOT/plugins/$p" | python3 -c 'import json, sys; d = json.load(sys.stdin); print("  plugin", d["plugin"], d["version"], "types:", ", ".join(t["type"] for t in d["types"]))'
-done
-for p in $(packages); do   # the packages PACKAGES names (.env): each one's content types, if it carries a plugin
-  [ -f "$ROOT/$p/plugin/plugin.yaml" ] || continue
-  ln -sfn "../$p/plugin" "$ROOT/plugins/${p#packages/}"   # where the server and the shell look for plugins (its extractors and view)
-  "$ROOT/scripts/workbench.sh" plugin load "$ROOT/$p/plugin" | python3 -c 'import json, sys; d = json.load(sys.stdin); print("  package plugin", d["plugin"], d["version"], "types:", ", ".join(t["type"] for t in d["types"]))'
-done
-"$ROOT/scripts/graph.sh"                                  # the graph views, from the terms the plugin just loaded
-wait_for() {   # what url logs
-  i=0
-  until curl -fsS -o /dev/null "$2" 2>/dev/null; do
-    i=$((i + 1)); [ $i -gt 60 ] && { echo "  $1 did not answer at $2: scripts/logs.sh $3" >&2; exit 1; }
-    sleep 2
-  done
-  echo "  $1 ok: $2"
-}
-wait_for API "http://127.0.0.1:8080/api/" postgrest
-wait_for server "http://127.0.0.1:8080/wb/api/health" workbench
-wait_for shell "http://127.0.0.1:8080/" caddy
-# the map lives in Workbench (plugins/substrate/MAP.md); an empty one starts from the committed export
-if [ "$("$ROOT/scripts/map.sh" count 2>/dev/null || echo 0)" = 0 ]; then
-  "$ROOT/scripts/map.sh" import | head -1
-fi
-for x in map claude-code morphogen choices; do   # the map's relations, what the repository has, verdicts, choices
-  "$ROOT/scripts/workbench.sh" extract "substrate:$x" | python3 -c 'import json, sys; d = json.load(sys.stdin); print("  substrate:'"$x"'", "ok" if d.get("ok") else "FAILED: " + str(d.get("error")), *(d.get("log") or []))'
-done
-
-say "Agents and this project's Claude Code"
-"$ROOT/scripts/workbench.sh" user list | python3 -c 'import json, sys; sys.exit(0 if any(u["name"] == "claude-code" for u in json.load(sys.stdin)) else 1)' \
-  || "$ROOT/scripts/workbench.sh" user add claude-code --role editor --agent >/dev/null
-echo "  agent claude-code (editor): it signs in by token"
-python3 "$ROOT/scripts/harness.py" status | python3 -c 'import json, sys; d = json.load(sys.stdin); sys.exit(0 if d["workbench_current"] else 1)' \
-  || python3 "$ROOT/scripts/harness.py" apply | python3 -c 'import json, sys; d = json.load(sys.stdin); print("  wired: Workbench MCP in .mcp.json; backup in", d["backup"] or "(none: new file)")'
-
-say "What runs (observe.sh)"
-# last, so the observer reads the agent's MCP and the wiring just written (a first run otherwise misses both)
-"$ROOT/scripts/observe.sh" || echo "  observing stopped (above); the gaps are as they were"   # what runs, the gaps, inferences
-
-say "Streams (streams.yaml) and packages (PACKAGES: $(env_value PACKAGES))"
-"$ROOT/scripts/streams.sh" || echo "  the streams did not run (above)"   # drift's gaps and the hooks' runs up their ladders
-"$ROOT/scripts/recall.sh" || echo "  recall's vectors were not made (above); words and the graph still answer"
-
 
 say "Up"
-"$ROOT/scripts/check.sh" || true
-echo
-echo "  Workbench: http://127.0.0.1:8080/ (a person: scripts/workbench.sh user add NAME, run in your own terminal)"
-if [ -f "$ROOT/docs/spec.md" ]; then
-  echo "  The spec is in place (docs/spec.md): the next Claude Code session here continues its build plan."
-fi
+"$ROOT/scripts/check.sh"
