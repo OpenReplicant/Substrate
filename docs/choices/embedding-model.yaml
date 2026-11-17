@@ -4,7 +4,7 @@ asked_by: owner
 asked_on: "2026-11-11"
 quote: "shouldn't we be involving vector-encoding models/search? ... you can run embedding models locally on my CPU or GPU (if it doesn't compete for cycles with another GPU-model)"
 need:
-  - runs on this machine (Ollama, behind the gateway), so a person's text never leaves it (docs/archive/assistant/PRIVACY.md P3)
+  - runs on this machine (Ollama, behind the gateway), so a person's text never leaves it (docs/privacy.md P3)
   - a public leaderboard score to shortlist on (MTEB), then a better recall than words alone on held-out queries from substrate's own history
   - fast enough on this machine's CPU (a GTX 1070 when Podman can reach it) to embed the whole map in minutes
   - a permissive or LGPL licence; a release at least two weeks old, pinned exactly
