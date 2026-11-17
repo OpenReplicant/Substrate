@@ -159,6 +159,18 @@ skill), writing transcripts as signals and what they mean as claims. Each stage 
 each can be tested, swapped for a cheaper or better one, and judged against the stage it replaces. The
 environment's senses grow to fit its streams and its model: embodiment that adapts.
 
+## Maps, roles and catalogs (decided, S-139)
+
+Any thing, software or not, is taken apart the same way: a whole *has part* parts, each playing a **role** there;
+a role *requires interface* what anything filling it must provide, and a part *provides interface* it. The
+interface is what makes parts interchangeable, so it is named exactly enough to check. A **catalog** is where
+candidates come from; `alternatives` lists what provides everything a role requires. A whole *has goal*
+measurable goals; a trial's results are *measurements*, and whether a candidate is better is a judge's
+*verdict*, a statement whose reference is the judge (Morphogen, when it is back in the build). All of it is
+statements in the store, written by the `map` and `catalog` skills through the store's MCP tools, so a map is
+reviewed, flagged and corrected like anything else. The components below are this applied to an
+environment's own parts.
+
 ## Components and their cards (decided)
 
 A component is a handler that subscribes to a pattern and does something: writes claims, proposes an action,

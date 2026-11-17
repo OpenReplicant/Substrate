@@ -1,65 +1,42 @@
 ---
 name: research
-description: Choose a component, library, service, model or vocabulary from the catalogs instead of from memory - search the registries in catalog-info.yaml's sources system, record candidates with cited claims, test the shortlist against the need, and record the pick and the rejections in docs/choices for Workbench. Use when a step or the owner needs something picked ("which X should we use", "find a library for", "is there something that does"), or before adding any part, package or image.
+description: Choose a component, library, service, model or vocabulary for Substrate itself from the catalogs instead of from memory - name the role on Substrate's map, find candidates with the catalog skill, test the shortlist against the need, and record the pick in the store and DECISIONS.md. Use when a step or the owner needs something picked ("which X should we use", "find a library for", "is there something that does"), or before adding any part, package or image.
 ---
 
-# Research: choose from catalogs, not memory
+# Research: Substrate's own choices, from catalogs, not memory
 
-A choice is curated, researched and tested (spec section 5). What you remember about a tool is a lead, not
-evidence: every fact that decides the choice comes from a registry's answer or a trial you ran.
+The catalog skill applied to Substrate (S-139), with the house rules on top. What you remember about a tool is
+a lead, not evidence: every fact that decides the choice comes from a registry's answer or a trial you ran.
 
-## 1. Write the need first
+## 1. The role and the need, first
 
-Start `docs/choices/<slug>.yaml` with `question`, `asked_by`, `asked_on` (quoted, "YYYY-MM-DD"), the owner's
-words in `quote` if they asked, and `need`: three to five things the pick must do, each one testable. The
-house rules are always part of it: a permissive or LGPL licence in the default stack, a release at least two
-weeks old, pinned exactly, one container under Podman for a service. Write the need before looking at
-candidates, so the candidates are tested against it rather than the need bent to fit a favourite.
+Find the role on Substrate's map in the store (`search` for Substrate, `read` it; the map skill if the part of
+it you need is not mapped yet). Write the need before looking at candidates, so candidates are tested against
+it rather than the need bent to fit a favourite: the interfaces the role requires (`requires-interface`) and, as
+a goal on Substrate (`has-goal`) with a metric and target, whatever is measured. The house rules are always part
+of the need: a permissive or LGPL licence in the default stack, a release at least two weeks old, pinned
+exactly, one container under Podman for a service, nothing installed on the host.
 
-## 2. Search the source catalogs
+## 2. Candidates
 
-The map's system `sources` (in Workbench: MCP `list_items` type `component`, then `get_item`; or the export,
-`catalog-info.yaml`): each registry says how to search it (`substrate.dev/search`), what it
-gives and its limits. Also look in the `options` system: a part already known may fit. Search more than one
-registry, by topic and by need rather than by the name you expect. Record each search in `searched` (registry,
-query, date). Useful starts:
+The catalog skill, steps 2 and 3: at least three, from more than one catalog, each with its catalog id, URL and
+the interfaces its sources say it provides. Licence, versions and dates come from the registry's answer
+(deps.dev, GitHub's API, the LICENSE file when GitHub says NOASSERTION), quoted as evidence, never written from
+memory. Rule out on the house rules early and say which.
 
-- GitHub: `gh api -X GET search/repositories -f q="topic:TOPIC" -f sort=stars` (topics find more than words;
-  `gh search repos` returns little for multi-word queries)
-- deps.dev for a package's versions and licence (Maven, PyPI, npm, Go, Cargo, NuGet)
-- `podman search --list-tags REGISTRY/NAME` for images; name the registry
-- `awesome-*` lists found this way are leads, never evidence
+## 3. Test the shortlist
 
-## 3. Candidates
+A trial script under `scripts/trials/<slug>/` runs every shortlisted candidate on the same cases, against real
+data where there is some, and prints one result line per candidate and case (output in `.state/trials/<slug>/`).
+Pin every image, jar and package in it; fetch with checksums. Test each need, not what is easy to measure. Each
+result goes in as a measurement (the catalog skill, step 4), the output file as its evidence.
 
-At least three, as entries under `candidates`: `name` (the slug), `title`, `registry`, `repository`
-(owner/name on GitHub) and, for packages, `package: {system, name}` for deps.dev; `fit` (what it does against
-the need), `shortlisted`, `outcome` (open, picked or rejected) and `reason`. Do not write licence, versions,
-stars or dates by hand: `substrate:choices` reads them from GitHub and deps.dev and quotes the key each came
-from. Reject on the house rules early (licence, no release in years) and say which rule, quoting the source
-when the registry's answer is not enough (GitHub reports some licences as NOASSERTION; quote the LICENSE file).
+When two or more meet the need and the question is which is better, that is a judge's question (Morphogen,
+when it is back in the build); until then the measurements and your recommendation go to the owner.
 
-## 4. Test the shortlist
+## 4. Record the pick
 
-A trial script under `scripts/trials/<slug>/` that runs every shortlisted candidate on the same cases, against
-real data where there is some, and prints one result line per candidate and case (results in
-`.state/trials/<slug>/`). Pin every image, jar and package in the script; fetch jars with their checksums. Test
-each need, not what is easy to measure. Record per candidate a `trial` line with the numbers, and in `trial`
-at the top the script, cases, date and what was expected.
-
-When two or more candidates meet the need and the question becomes which is better (faster, more accurate,
-better answers), that is Morphogen's question: set up a judged comparison and record its verdict in `verdict`.
-When the need alone decides it, say so in `verdict` and why.
-
-## 5. Record the pick
-
-`pick` and `reason`: why this one, and what it costs. Each rejected candidate keeps its `reason`, including
-what would make it the pick, so a later need starts from evidence. Then:
-
-- `scripts/workbench.sh extract substrate:choices` (also run by `scripts/up.sh`), and check the candidate items
-  carry registry quotes (MCP `get_item` type `candidate`)
-- the pick goes on the map: a `component` item in `options` (fits, interface, when, candidates) until a step
-  needs it running, then into `core`; `scripts/map.sh export`, then `bin/morphogen structure check morphogen.yaml`
-- a `DECISIONS.md` row when the pick becomes a default
-
-Recall answers "why this one?" from the choice item and its candidates (MCP `search`, then `get_item`).
+- In the store: the pick *has part* on Substrate with its role, when a step puts it in; rejected candidates
+  keep their statements, and a `note` on what would make one the pick.
+- In `DECISIONS.md`, a new row when the pick becomes a default: what was pinned, where it was read, the
+  candidates and why the others lost.

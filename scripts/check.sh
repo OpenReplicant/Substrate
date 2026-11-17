@@ -27,6 +27,17 @@ with connect(settings(), DB) as c:
   ok "postgres    127.0.0.1:$(env_value DB_PORT)/substrate (extensions available: $(cat /tmp/substrate-check.$$))"
 else bad "the substrate database does not answer: $(tail -1 /tmp/substrate-check.$$) (scripts/up.sh)"; fi
 rm -f /tmp/substrate-check.$$
+if out=$("$ROOT/bin/in-tools" python3 -c '
+import sys; sys.path[:0] = ["scripts", "."]
+import store; from db import connect, DB; from gateway import settings
+with connect(settings(), DB) as c:
+    done = {r[0] for r in c.execute("select name from public.store_migration")}
+    todo = sorted(f.name for f in store.SQL.glob("*.sql") if f.name not in done)
+    if todo: raise SystemExit("schema not applied: " + ", ".join(todo))
+    e, s, f, v = c.execute("select (select count(*) from store.entity), (select count(*) from store.statement), (select count(distinct statement_id) from store.flag), (select count(*) from store.violation)").fetchone()
+    print(f"{e} entities, {s} statements, {f} flagged, {v} constraint violations")' 2>&1); then
+  ok "store       $out (MCP: bin/in-tools python3 -m store.mcp)"
+else bad "the store: $(printf '%s\n' "$out" | tail -1) (bin/in-tools python3 scripts/db.py init)"; fi
 # Probe with a provider this machine has: Bifrost answers 400 for one it has none of, before it checks the key
 probe=openrouter/x:free; [ -z "$(env_value OPENROUTER_API_KEY)" ] && [ -n "$(env_value OLLAMA_URL)" ] && probe=ollama/x
 code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "http://127.0.0.1:$(env_value GATEWAY_PORT)/v1/chat/completions" -H 'Content-Type: application/json' -d "{\"model\":\"$probe\",\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}]}")

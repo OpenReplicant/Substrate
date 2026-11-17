@@ -1,18 +1,22 @@
 #!/usr/bin/env python3
 """The store's database (S-135): made once beside v1's, which stay in the same volume until imported from.
 
-    bin/in-tools python3 scripts/db.py init    # wait for Postgres, then make the `substrate` database if missing
+    bin/in-tools python3 scripts/db.py init        # wait for Postgres, make the `substrate` database if missing,
+                                                   # and apply the store's schema (store/sql/) not yet applied
+    bin/in-tools python3 scripts/db.py import-v1   # v1's people's statements and open decisions (store/import_v1.py)
 
 It waits up to a minute for Postgres to take connections, and stops at once on a refused password: that never
 comes right by waiting, and most often means the volume outlived the .env that made it (the setup skill says how
-to keep the data). The store's schema arrives in step 3b; until then this only makes the database.
+to keep the data).
 """
 from __future__ import annotations
 
 import sys
 import time
 
-sys.path.insert(0, __import__("os").path.dirname(__file__))
+HERE = __import__("os").path.dirname(__file__)
+sys.path.insert(0, HERE)
+sys.path.insert(0, __import__("os").path.join(HERE, ".."))
 from gateway import settings  # noqa: E402  (the same env_value path, so the secrets slot is honoured)
 
 DB = "substrate"
@@ -41,14 +45,31 @@ def init(env: dict[str, str]) -> None:
     with connect(env) as c:
         if c.execute("select 1 from pg_database where datname = %s", (DB,)).fetchone():
             print(f"  database {DB}: present")
-            return
-        c.execute(f"create database {DB} encoding 'UTF8' template template0")
-    print(f"  database {DB}: made (pg_cron runs in it from Postgres's next start)")
+        else:
+            c.execute(f"create database {DB} encoding 'UTF8' template template0")
+            print(f"  database {DB}: made (pg_cron runs in it from Postgres's next start)")
+    import store
+    with connect(env, DB) as c:
+        applied = store.migrate(c)
+        graph = store.project(c)
+    print(f"  the store's schema: {'applied ' + ', '.join(applied) if applied else 'up to date'}")
+    print(f"  the store's graph: built, {graph['nodes']} nodes and {graph['edges']} edges")
+
+
+def import_v1(env: dict[str, str]) -> None:
+    import store
+    from store import import_v1
+    with connect(env, "workbench") as v1, connect(env, DB) as c:
+        v1.execute("set default_transaction_read_only = on")
+        counts = import_v1.run(v1, store.Store(c, actor="store:import-v1"))
+    print("  imported from v1: " + ", ".join(f"{v} {k}" for k, v in counts.items()))
 
 
 def main() -> None:
     if sys.argv[1:] == ["init"]:
         init(settings())
+    elif sys.argv[1:] == ["import-v1"]:
+        import_v1(settings())
     else:
         print(__doc__)
         sys.exit(2)
