@@ -28,7 +28,7 @@ no more work goes into it for now.
 | # | Step | Done when |
 | --- | --- | --- |
 | 1 | Get the stack up on the machine you work on (`setup` skill) | `scripts/check.sh` passes |
-| 2 | Read the three closest works in full (Global Workspace Agents, CogRec, Graphiti's data model) and the current Claude Code channels docs; amend `docs/framework.md` where they change it | the page cites what was read and what changed |
+| 2 | Read the three closest works in full (Global Workspace Agents, CogRec, Graphiti's data model) and the current Claude Code channels docs; amend `docs/framework.md` where they change it | the page cites what was read and what changed (done 2026-11-17, S-129; checking the claim fields against Workbench's schema waits for step 1) |
 | 3 | The owner picks the first real system: one with a steady stream of similar work and a checkable outcome | the pick is a row in `DECISIONS.md` |
 | 4 | Pass-through on it: its streams into pgmq topics, readings into the claim log, a Claude Code channel subscribed, one actuator gated at `propose` | it does the job end to end on real input; every event, model call and action is in the record; the owner decides proposals in Workbench |
 | 5 | One distilled component with its card, and the judge interface's first filler (a script as the judge user, the held-out slice of the record) | a verdict on the component against pass-through; promoted or refused on it |

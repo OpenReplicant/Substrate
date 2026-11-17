@@ -32,6 +32,17 @@ signal. Workbench today attaches a claim to every value, mechanical ones include
 a parser wrote points to its signal with no interpreter, and only an interpretation names one (to be checked
 against the schema).
 
+**A claim's fields**, after Graphiti's data model ([graphiti](https://github.com/getzep/graphiti), Apache-2.0;
+its `nodes.py` and `edges.py` read, S-129), with what it lacks added. Graphiti keeps raw input as episodes (our
+signals) and facts as edges with an `episodes` list, and is bi-temporal: `valid_at` and `invalid_at` (when the
+fact held), `created_at` and `expired_at` (when the store learned and dropped it). On a contradiction an LLM only
+nominates candidates; code decides by dates. Kept: the four times, and "the model nominates, code decides". Not
+kept: it overwrites an edge's times in place, has delete paths, records no interpreter, no confidence and no
+review status, and links provenance by a list of strings. So a claim here carries `cites` (signals or claims, by
+foreign key), `interpreter` (who, and which version of a component), `confidence`, `status` (proposed,
+accepted, retracted) and `retracted_by`, and a change of belief is a new claim, never an edit. Graphiti has no
+Postgres backend, so it is a model to borrow from, not a part to add.
+
 ## Three parts
 
 | Part | Does | Is not |
@@ -68,12 +79,55 @@ runs on any model the gateway serves and already has tools, MCP, hooks, skills, 
 context management; Substrate does not rebuild any of them.
 
 - **In:** a Claude Code channel (an MCP server that pushes events into a running session) subscribed to the
-  environment's topics. Channels are a research preview (v2.1.80); read the current docs and pin before relying
-  on them (rule 1).
+  environment's topics.
 - **Look around:** Workbench's MCP server, to query objects, claims and history.
 - **Out:** actions written to actuator queues through MCP, under the gates; hooks and permissions enforce them.
 
 Pass-through is useful on its own, and it is the **baseline every other layer is measured against**.
+
+### The channel, as documented (read 2026-11-17, S-129)
+
+From [channels](https://code.claude.com/docs/en/channels) and the
+[channels reference](https://code.claude.com/docs/en/channels-reference). Research preview; the flag syntax and
+protocol "may change", so the version that works is pinned when it is built.
+
+- **Shape:** a local MCP server, spawned by Claude Code over stdio, declaring
+  `capabilities.experimental['claude/channel']`, and sending `notifications/claude/channel` with `content` (the
+  body) and `meta` (attributes; keys letters, digits and underscores only, others silently dropped). Claude sees
+  each event as a `<channel source="..." ...>` tag; events queued during a turn arrive together on the next. Its
+  `instructions` string tells Claude what the attributes mean.
+- **No acknowledgement and no persistence:** a notification is fire-and-forget, and nothing survives a closed
+  session. So the durable side is ours: the channel reads its pgmq queue with a visibility timeout and does not
+  archive a message until Claude calls an `ack(msg_id)` tool (or acts on it); an unacknowledged message
+  reappears and is delivered again.
+- **Two-way:** replies and actions are ordinary MCP tools on the same server (or Workbench's).
+- **Permission relay** (`claude/channel/permission`): Claude Code sends `permission_request` (`request_id`,
+  `tool_name`, `description`, `input_preview`) and accepts `allow` or `deny` back; first answer wins. This can be
+  where a `propose` gate meets the review lane: Workbench shows the request and a person's decision goes back
+  through it. Anyone who can answer the relay can approve tool use, so it is declared only for an authenticated
+  path.
+- **Enabling it:** a server of our own needs `claude --dangerously-load-development-channels server:<name>`
+  (a confirmation dialog; ignored with `-p` and through the Agent SDK), so pass-through runs as an interactive
+  session kept open (tmux or a user service). Team and Enterprise organizations must set `channelsEnabled`.
+- **Untrusted input:** "An ungated channel is a prompt injection vector." Every signal from outside is data,
+  not instructions: the channel's `instructions` say so, senders are gated where a stream has senders, and
+  actions stay behind the gates.
+- **Unknown, to test first:** whether channels work when Claude Code runs on a non-Anthropic model through the
+  gateway (`ANTHROPIC_BASE_URL`); the docs require a claude.ai login or a Console API key and say nothing of
+  other endpoints. If they do not, pass-through on a local model needs another way in (a hook that injects
+  pending events, or polling through a tool). Also unstated: rate limits, maximum payload, reconnects.
+- **Known preview bug:** a server negotiating protocol revision 2026-07-28 does not register on the v2 MCP client
+  runtime; pin the SDK's protocol revision.
+
+## Components can be pipelines: adaptive perception (decided as a shape)
+
+A component need not be a rule. When a stream has no handler, the LLM can build one: probe the signal, decide
+what it is, and install a pipeline that turns it into something it can use. Example: a raw audio stream arrives
+unhandled; the LLM samples it, and either pipes it to its own audio input if the model has one, or installs a
+classifier (speech, music, noise) and, for speech, a speech-to-text model chosen from the catalog (the `research`
+skill), writing transcripts as signals and what they mean as claims. Each stage is a component with a card, so
+each can be tested, swapped for a cheaper or better one, and judged against the stage it replaces. The
+environment's senses grow to fit its streams and its model: embodiment that adapts.
 
 ## Components and their cards (decided)
 
@@ -93,6 +147,16 @@ from the LLM distilling its own repeated decisions (or from a person), and each 
 **Lifecycle:** proposed → judged → active at `propose` → `free` once trusted → demoted when it drifts (overrides
 climb in the review lane). Every version is kept, so a component can be rolled back or compared against the LLM
 it replaced.
+
+**What CogRec shows, and what it lacks** ([arXiv 2512.24113](https://arxiv.org/abs/2512.24113), read in full,
+S-129). A recommender: Soar handles what its rules cover; on an impasse, a summary of working memory goes to an
+LLM (DeepSeek-V3), and the answer is parsed into a condition-action pair that Soar's chunking compiles into a
+rule. It beat the best baseline by 4–9% on three datasets, and its rate of LLM calls fell to a low plateau as
+rules accumulated; without chunking it stayed near the plain LLM. But no seeds, variance or significance tests
+are reported, and learned rules are never tested, scoped or removed: they are "permanently internalized". That
+is the gap the card and the judge fill. Taken from it: the escalation carries a structured summary of the
+state, not the raw context; the answer is parsed into trigger and action before it becomes a component; and
+the **rate of LLM calls per event** is a KPI of the whole environment, the number that should fall as it learns.
 
 **Confidence is measured, not stated.** A component's confidence is the agreement the judge measured on held-out
 cases, within the scope its trigger covers. The LLM gets an event when no trigger fires, when the event falls
@@ -196,13 +260,14 @@ much reaches a person. A layer that does not stays off.
 
 ## Prior art
 
-From one round of searches (2026-11-17), mostly abstracts; the first three are to be read in full before building.
+From one round of searches (2026-11-17), mostly abstracts; CogRec, Graphiti's code and Global Workspace Agents
+were then read in full (S-129).
 
 | Part | Closest work |
 | --- | --- |
-| Shared space, broadcast | [Global Workspace Agents](https://arxiv.org/html/2604.08206) (2026); blackboard systems with LLMs: [LbMAS](https://arxiv.org/html/2507.01701v1), [Google's data-discovery blackboard](https://arxiv.org/abs/2510.01285v2) |
-| Distilling LLM decisions into rules | [CogRec](https://arxiv.org/pdf/2512.24113v1) (Soar chunking of LLM answers); [NL2GenSym](https://arxiv.org/pdf/2510.09355v1); [LATM](https://arxiv.org/abs/2305.17126v2) |
-| Claims with provenance, over time | [Graphiti](https://github.com/getzep/graphiti) (episodes, bi-temporal facts; derived edges are not reviewed claims) |
+| Shared space, broadcast | blackboard systems with LLMs, the ones with results: [LbMAS](https://arxiv.org/html/2507.01701v1), [Google's data-discovery blackboard](https://arxiv.org/abs/2510.01285v2). [Global Workspace Agents](https://arxiv.org/html/2604.08206) (2026), read in full: a design with no evaluation at all, and a serial four-phase loop with fixed roles, not parallel subscribers; ideas only (an explicit "respond or think more" tag from an arbiter; compressing short-term memory into a retrievable long-term store past a threshold) |
+| Distilling LLM decisions into rules | [CogRec](https://arxiv.org/abs/2512.24113) (Soar chunking of LLM answers; results, but rules never tested or removed); [NL2GenSym](https://arxiv.org/pdf/2510.09355v1); [LATM](https://arxiv.org/abs/2305.17126v2) |
+| Claims with provenance, over time | [Graphiti](https://github.com/getzep/graphiti) (episodes, bi-temporal facts; no interpreter, confidence or review; times overwritten in place) |
 | Rules written by an LLM, run without it | [llm-trigger](https://github.com/c4pt0r/llm-trigger); [LLM4CEP](https://pure.uva.nl/ws/files/201121899/24-LLM4CEP.pdf); [reactive synthesis](https://arxiv.org/html/2402.16905v1). All start from a person's request, not from the observed stream |
 | Cheap first, escalate | [FrugalGPT](https://www.emergentmind.com/papers/2305.05176); [routing and cascades review](https://web.stanford.edu/~shuhuiq/blog/review-routing-cascades.html) (no router clearly beat the trivial one on RouterBench) |
 | Event logs, actors | [OpenHands events](https://docs.openhands.dev/sdk/arch/events); [AutoGen Core](https://www.mintlify.com/microsoft/autogen/core/overview); [ambient agents](https://snowplow.io/blog/what-are-ambient-agents) |
@@ -221,4 +286,5 @@ harness rather than a research loop over a bare model API.
   once there are components; everything under pass-through).
 - The judge's runner: a script, or one of Inspect AI, promptfoo, DeepEval.
 - The default view's format, until one has been measured on the first environment's model.
+- Whether channels work with Claude Code on a non-Anthropic model through the gateway; the first thing to test.
 - The first system to put an environment on.
