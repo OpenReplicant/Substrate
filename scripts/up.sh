@@ -17,7 +17,13 @@ rt_up
 
 say "Workbench: its database, the core schema, substrate's plugin (workbench/BRIEF.md)"
 i=0
-until "$ROOT/scripts/workbench.sh" migrate >/dev/null 2>&1; do
+until out=$("$ROOT/scripts/workbench.sh" migrate 2>&1); do
+  # A wrong password never comes right by waiting: most often the database volume outlived the .env that made it
+  case "$out" in *"password authentication failed"*)
+    echo "  Postgres refused POSTGRES_PASSWORD from .env: the volume (DB_VOLUME, substrate_db-data) was made with" >&2
+    echo "  another one. Set the old one in .env, or reset it in the container (the setup skill, step 3)." >&2
+    exit 1 ;;
+  esac
   i=$((i + 1)); [ $i -gt 30 ] && { echo "  Postgres did not take the migration: scripts/logs.sh db" >&2; "$ROOT/scripts/workbench.sh" migrate; exit 1; }
   sleep 2
 done

@@ -53,7 +53,11 @@ the cause, fix it in this repository (or upstream, with the `upstream` skill, wh
 
 - **tools** container: `scripts/tools.sh status`. If a hook fails in Claude Code, run the same command by hand.
 - **db**: the image carries pgvector, pg_cron, pgmq and pgGraph (`deploy/postgres/Dockerfile`). Its volume
-  is `substrate_db-data`.
+  is `substrate_db-data`. If it outlived the `.env` that made it, Postgres refuses the new `POSTGRES_PASSWORD`:
+  keep the data and set the role to `.env`'s value over the container's socket, never printing it
+  (`podman exec -i substrate-db-1 psql -U postgres` with `\set pw '…'` and `alter role postgres password :'pw'`
+  on stdin), then run `scripts/up.sh` again; it resets the other roles itself. With only Ollama configured, set
+  `OLLAMA_URL=http://ollama:11434`, or the gateway knows no provider.
 - **workbench**: `scripts/logs.sh workbench`; `http://127.0.0.1:8080/wb/api/health` says whether it relays events,
   takes jobs, and which plugins loaded (a plugin's error is shown there).
 
