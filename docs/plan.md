@@ -34,7 +34,8 @@ no more work goes into it for now.
 | 5 | **The browser client as an environment, and the voice head.** A two-way media path on Workbench's server; the browser's microphone and speaker as sensor and actuator. The voice head as a pipeline component: voice activity, speech-to-text (Parakeet TDT), a fast local model for turn-taking and short answers, text-to-speech (Kokoro, Rust); versions and placement (GPU or CPU on the 1070) checked with the `research` skill and measured. It answers what it can and hands real work to the Claude Code session, which reports back through it | a spoken conversation with latency the owner accepts; LLM calls per event and cost per hour on its card |
 | 6 | One distilled component with its card, and the judge interface's first filler (a script as the judge user, a held-out slice of the record, whole days held out) | a verdict on the component against pass-through; promoted or refused on it |
 | 7 | Sight: the camera as a sensor, a fast path (motion, presence, landmarks) and a slow path (a vision model on demand) as components | the companion notices and answers about what it sees, with refresh rate and cost per hour on the cards |
-| 8 | The avatar, then the first embodied child environment (VRChat, Virt-A-Mate or a ROS2 simulation, the owner's pick), nested under the chimera by the interface rule | the companion acts there through that environment's actuators, under the same gates and budget |
+| 8 | **The avatar, then mixed reality on the Quest 3.** The talking head first (three.js, `@pixiv/three-vrm`, mouth by expression presets); then the browser environment in an `immersive-ar` WebXR session: planes, meshes, anchors, depth, head and hand pose as sensors; the avatar placed in the room (`move_to`, `place_on`, `look_at`). First test on the device: does `getUserMedia` give the passthrough camera (if not, a native Quest app as another adapter) | the avatar talks, stays where it was put in the room and looks at the owner; recognition components on their cards (where they run, how often, cost) |
+| 9 | The next embodied child: VRChat, Virt-A-Mate or a ROS2 simulation (the owner's pick), by the same adapter pattern | the companion acts there through the same avatar actuators, under the same gates and budget |
 
 Self-levers beyond budget and model choice, and the other layers in `docs/framework.md`, come as these steps
 need them, each tested against pass-through. Workbench is no longer frozen: add what these steps need, and
@@ -50,6 +51,6 @@ publication and reproductions, the hosted mapper and hosted judging, the slot mo
 ## The owner's to decide
 
 - Whether to loosen P3/P4 for the companion's text stream (the default flags and refuses it; S-131), or to run its Claude Code on a local model.
-- Which embodied environment comes first (step 8).
+- Which embodied environment comes after mixed reality (step 9).
 - Rotating the Postgres password; putting the Gemma model at the gateway.
 - The licence and whether the repository goes public.

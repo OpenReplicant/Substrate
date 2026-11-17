@@ -309,6 +309,20 @@ VRM's expression presets (`aa`, `ih`, `ou`, `ee`, `oh`) rather than a jaw bone, 
 and look-at from the same expression manager. Later: visemes from the text-to-speech's phoneme timings, if
 Kokoro's Rust implementation provides them.
 
+**Mixed reality on the Quest 3 is the same environment on the headset (S-133).** An `immersive-ar` WebXR
+session with passthrough gives, as sensors: plane detection with semantic labels, mesh detection, hit testing
+(on Meta's Depth API since Horizon Browser 40.4), persistent anchors, depth sensing (mostly the GPU path), and
+head and hand pose. The headset runs SLAM itself; its poses and anchors are signals, so SLAM is never built.
+Camera pixels are the open question: Meta's Passthrough Camera API is native (Android Camera2, Horizon OS v74+);
+WebXR `camera-access` is reportedly refused for `immersive-ar` (Horizon OS v85); a "headset cameras" website
+permission and `getUserMedia` reportedly work but are not in Meta's developer docs. Tested first on the device;
+if the browser cannot have the camera, a small native Quest app is one more adapter onto the same topics. The
+avatar gains `move_to` (an anchor or point), `place_on` (a plane) and `look_at` (a person or object) for presence
+in the room. Recognition (objects, activity, pose, face, gaze) is perception pipelines: light and fast on the
+headset, rich and slow on the PC's GPU from frames sent at a low rate; their output is claims, and the companion
+reasons over claims, not pixels. Camera frames from inside the owner's home are personal under the privacy
+defaults: local models only, retention bounded.
+
 ### Perception pipelines trade interpretability against refresh rate
 
 Every pipeline sits somewhere between fast and shallow and slow and rich, and can run both at once:
