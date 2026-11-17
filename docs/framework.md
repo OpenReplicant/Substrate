@@ -119,6 +119,26 @@ protocol "may change", so the version that works is pinned when it is built.
 - **Known preview bug:** a server negotiating protocol revision 2026-07-28 does not register on the v2 MCP client
   runtime; pin the SDK's protocol revision.
 
+### The harness profile is a component, sized to the model (S-134)
+
+Claude Code can be cut down so a small model sees only what it needs (read 2026-11-17 in the
+[CLI reference](https://code.claude.com/docs/en/cli-reference.md) and [permissions](https://code.claude.com/docs/en/permissions.md)):
+`--tools ""` (or a short list) removes built-in tools from the model's context; a bare-name deny
+(`--disallowedTools "Edit"`, `permissions.deny`) removes a tool's schema, while a scoped one only blocks calls;
+`--strict-mcp-config --mcp-config FILE` loads exactly the listed MCP servers; `--system-prompt-file` replaces the
+system prompt (whether that drops the built-in tool instructions is undocumented, so it is tested); and
+`CLAUDE_CODE_DISABLE_AUTO_MEMORY`, `CLAUDE_CODE_DISABLE_CLAUDE_MDS`, `CLAUDE_CODE_DISABLE_GIT_INSTRUCTIONS`,
+`CLAUDE_CODE_DISABLE_WEB_FETCH` and `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` drop context. `--bare` and
+`--safe-mode` also skip MCP, which the channel needs, so they are not used. Subagents take their own `tools`
+allowlist and `model` (background subagents keep only MCP tools). The model is set by `ANTHROPIC_MODEL`, and
+Claude Code's background calls by `ANTHROPIC_DEFAULT_HAIKU_MODEL`, both at the gateway. Anthropic states it does
+not support routing Claude Code to non-Claude models through a gateway ([LLM gateway](https://code.claude.com/docs/en/llm-gateway.md)),
+so on a local model the first test is whether channels deliver, tool calls hold, and the replaced prompt works.
+
+A **profile** (tool set, prompt, MCP servers, context switches, model) is a component with a card: the lean one
+for a small local model (only the channel's and Workbench's tools, a short prompt), richer ones for larger models,
+each measured on the same record.
+
 ## Components can be pipelines: adaptive perception (decided as a shape)
 
 A component need not be a rule. When a stream has no handler, the LLM can build one: probe the signal, decide
