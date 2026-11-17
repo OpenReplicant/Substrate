@@ -264,6 +264,50 @@ simulation and later in operation. Each is nested by the interface rule, so the 
 their actuators under the same gates and budget. A personal stream (the owner's voice, messages, files) carries
 the privacy floor from its first signal.
 
+### Privacy: adjustable, with defaults that flag and prevent exfiltration (decided, S-131)
+
+The rules in `docs/privacy.md` are the defaults, and they hold until the owner loosens one for a named stream
+(a review-lane decision: who, when, why). The default is to **flag and prevent**: personal content does not go
+to a hosted model, and an attempt is refused and flagged rather than silently allowed. The gateway is the one
+place that can enforce this, so every model call goes through it, **Claude Code's included**
+(`ANTHROPIC_BASE_URL` at the gateway), and each caller's key names the providers it may reach. Loosening P3 or
+P4 for the companion's text is then one change to one key, visible in the record.
+
+### Placement is a trade-off the system can choose (decided, S-131)
+
+On the owner's machine today (a GTX 1070, 8 GB, weights already partly offloaded to system RAM), each part runs
+on the GPU or the CPU, at a cost in latency: Gemma 4 26B or 12B for the local model, speech parts on the CPU.
+These are parameters on each component's card (placement, model, quantization), measured for latency, quality
+and memory, and choosing among them within the budget is a self-lever; the owner can pin any of them.
+
+### The browser client is an environment (decided as a shape, S-131)
+
+Workbench's browser client is where the owner is, so it is an environment of its own, a child of the companion:
+
+- **Sensors** from browser APIs: microphone, camera, text, and others as needed (screen, location), each off
+  until the owner turns it on, each a personal stream under the privacy floor.
+- **Actuators:** the speaker, the avatar's rendering, the page itself (messages, notifications, the review lane).
+- **Transport:** today the shell gets Server-Sent Events of changed ids (`NOTIFY` on `wb_events`) and sends by
+  HTTP. Media needs a two-way binary path (a WebSocket, or WebRTC if latency demands it) on Workbench's server.
+- **Rate:** raw audio and video do not go through pgmq frame by frame (Postgres's rate ceiling). The browser's
+  media goes straight to its pipeline; what the pipeline makes (an utterance, a transcript, a detection) is the
+  signal published to the topics, and raw media is kept, if at all, as files under the retention rule (P7).
+
+### Perception pipelines trade interpretability against refresh rate
+
+Every pipeline sits somewhere between fast and shallow and slow and rich, and can run both at once:
+
+| | Fast path | Slow path |
+| --- | --- | --- |
+| Hearing | voice activity, wake word, speaker turn | speech-to-text, then what was meant (claims) |
+| Sight | motion, presence, face or hand landmarks, many times a second | a vision model's description or answer, a frame every few seconds or on demand |
+
+The fast path's signals decide when to spend on the slow one (someone spoke; something moved), and the LLM can
+ask for the slow path directly. The rates, models and the switching rule are card parameters, so the balance is
+measured per machine and per task rather than fixed. Speech candidates named by the owner: **Kokoro** (a Rust
+implementation) for text-to-speech and **NVIDIA Parakeet TDT** for speech-to-text; versions, licences and
+CPU latency are checked with the `research` skill before they are pinned (rules 1, 3, 6).
+
 ## Assumptions, as parameters
 
 Each layer is switched on per environment and has to beat pass-through on the same work, on quality, cost or how
