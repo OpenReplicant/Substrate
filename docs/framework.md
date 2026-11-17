@@ -15,6 +15,23 @@ the component join the environment. What a component cannot handle goes back up 
 person. Environments nest: a child is an object in its parent's environment. Workbench is where people watch
 and decide.
 
+## Signals and claims (decided, S-126)
+
+- A **signal** is what a source reports: a reading, an event, a message, a snapshot, a transcript. It is kept
+  whole and is no one's opinion; if it is wrong, the sensor is broken. Parsing a signal into fields leaves it a
+  signal.
+- A **claim** is an interpretation of one or more signals (or other claims) by an **interpreter** that answers
+  for it: the LLM, a distilled component, or a person. It cites what it rests on, and can be wrong even when
+  every signal is right, which is why it is reviewed, judged and retracted.
+
+The test: anything that could be wrong for reasons other than a broken sensor is a claim. Streams carry signals;
+the claim log holds claims; actions cite the claims that justify them (under pass-through the LLM may act straight
+from signals, and records its interpretation as claims). Interpreters are components, so a distilled interpreter
+has a card and its claims carry its name. A person's statement is their claim; the interview transcript is the
+signal. Workbench today attaches a claim to every value, mechanical ones included: under this distinction a value
+a parser wrote points to its signal with no interpreter, and only an interpretation names one (to be checked
+against the schema).
+
 ## Three parts
 
 | Part | Does | Is not |
@@ -29,8 +46,8 @@ Everything is in one Postgres, so the environment, the record and the judge's ca
 
 | Need | Mechanism |
 | --- | --- |
-| The source of truth | the claim log: readings kept whole, and claims (subject, property, value, source, time, confidence) beside every value. Append-only; a claim is retracted, never erased |
-| Streams in | pgmq topics. A reading is published with `pgmq.send_topic` under a routing key `<env>.<stream>.<kind>` (dot-separated, so a child's keys sit under its parent's); logged queues, archived after handling, so a stream can be replayed |
+| The source of truth | signals kept whole (pgmq's archive and the readings they become), and the claim log: claims (subject, property, value, the signals or claims cited, the interpreter, time, confidence). Append-only; a claim is retracted, never erased |
+| Streams in | pgmq topics. A signal is published with `pgmq.send_topic` under a routing key `<env>.<stream>.<kind>` (dot-separated, so a child's keys sit under its parent's); logged queues, archived after handling, so a stream can be replayed |
 | Sensing, in parallel | each subscriber (an encoder, a reactive handler, the LLM's channel) owns a queue bound to the patterns it watches (`pgmq.bind_topic`; `*` one segment, `#` any). Fan-out is pgmq's; no subscriber takes a message from another |
 | Acting, in series | one pgmq queue per actuator, read by the one process that applies it. Who may write to it, and through which gate, is the arbitration |
 | Gates | per action kind: `free` (applied), `propose` (into the review lane for a person), `deny`. Live work starts at `propose` |
@@ -67,7 +84,7 @@ from the LLM distilling its own repeated decisions (or from a person), and each 
 | Field | Says |
 | --- | --- |
 | intent | what it is for, in a sentence the owner can check |
-| trigger | the pattern it fires on: one event or several aligned in time, over claims |
+| trigger | the pattern it fires on: one signal or claim, or several aligned in time |
 | action | what it does, through which actuator |
 | source cases | the recorded events it was made from, each with what the LLM or person did |
 | KPIs | what it must hold to: agreement with what it replaces, cost per event, latency, override rate |
