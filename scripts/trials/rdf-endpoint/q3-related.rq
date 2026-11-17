@@ -1,3 +1,0 @@
-# Subproperty reasoning: dependsOn and partOf are both wb:relatedTo.
-PREFIX wb: <https://workbench.local/ns#>
-SELECT (COUNT(*) AS ?n) WHERE { ?a wb:relatedTo ?b }

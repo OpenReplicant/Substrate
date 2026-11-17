@@ -1,4 +1,0 @@
-# Subclass reasoning: every component, skill and hook is a sub:Part; none is typed so directly.
-PREFIX wb: <https://workbench.local/ns#>
-PREFIX sub: <https://substrate.local/ns#>
-SELECT (COUNT(?x) AS ?n) WHERE { ?x a sub:Part }
