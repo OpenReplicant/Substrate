@@ -1,6 +1,6 @@
 #!/bin/sh
-# Bring up the stack on the fresh tree (S-137): Postgres, the model gateway, local models, the tools container;
-# then the store's database and the gateway's. The store's schema, its API and UI come in docs/plan.md 3b.
+# Bring up the stack on the fresh tree (S-137): Postgres, the model gateway, local models, the UI (S-140), the
+# tools container; then the store's database and the gateway's.
 #
 #   scripts/up.sh
 set -eu

@@ -9,14 +9,14 @@ fails=0
 ok()   { printf '  ok    %s\n' "$*"; }
 bad()  { printf '  FAIL  %s\n' "$*"; fails=$((fails + 1)); }
 note() { printf '  note  %s\n' "$*"; }
-CORE="db gateway ollama"
+CORE="db gateway ollama ui"
 
 say "Services ($RUNTIME on $ENGINE)"
 running=$(rt_status 2>/dev/null | awk 'NR > 1 {print $1}' | tr '\n' ' ')
 for s in $CORE; do
   case "$running" in *"-$s-"*) ;; *) bad "service $s is not running (scripts/logs.sh $s)" ;; esac
 done
-extra=$(printf '%s\n' $running | grep -v -e '-db-' -e '-gateway-' -e '-ollama-' || true)
+extra=$(printf '%s\n' $running | grep -v -e '-db-' -e '-gateway-' -e '-ollama-' -e '-ui-' || true)
 [ -z "$extra" ] && ok "only the core runs ($CORE)" || note "also running, outside the core: $(echo $extra)"
 if "$ROOT/bin/in-tools" python3 -c '
 import sys; sys.path.insert(0, "scripts")
@@ -35,13 +35,22 @@ with connect(settings(), DB) as c:
     todo = sorted(f.name for f in store.SQL.glob("*.sql") if f.name not in done)
     if todo: raise SystemExit("schema not applied: " + ", ".join(todo))
     e, s, f, v = c.execute("select (select count(*) from store.entity), (select count(*) from store.statement), (select count(distinct f.statement_id) from store.flag f join store.statement st on st.id = f.statement_id where st.rank <> $$deprecated$$), (select count(*) from store.violation)").fetchone()
-    print(f"{e} entities, {s} statements, {f} flagged, {v} constraint violations")' 2>&1); then
+    stale = len(store.stale_file_spans(c, store.SQL.parent.parent))
+    print(f"{e} entities, {s} statements, {f} flagged, {v} constraint violations, {stale} cited file lines changed")' 2>&1); then
   ok "store       $out (MCP: bin/in-tools python3 -m store.mcp)"
 else bad "the store: $(printf '%s\n' "$out" | tail -1) (bin/in-tools python3 scripts/db.py init)"; fi
 # Probe with a provider this machine has: Bifrost answers 400 for one it has none of, before it checks the key
 probe=openrouter/x:free; [ -z "$(env_value OPENROUTER_API_KEY)" ] && [ -n "$(env_value OLLAMA_URL)" ] && probe=ollama/x
 code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "http://127.0.0.1:$(env_value GATEWAY_PORT)/v1/chat/completions" -H 'Content-Type: application/json' -d "{\"model\":\"$probe\",\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}]}")
 [ "$code" = "401" ] && ok "gateway     http://127.0.0.1:$(env_value GATEWAY_PORT)/ (Bifrost; a call without a key is refused)" || bad "the model gateway returned $code to a call without a key (scripts/logs.sh gateway)"
+# The UI (S-140): its API answers from the store, under a CSP that allows scripts and styles from itself only
+ui="http://127.0.0.1:$(env_value UI_PORT || true)"; [ "$ui" = "http://127.0.0.1:" ] && ui=http://127.0.0.1:8100
+hdr=$(curl -s -D - -o /dev/null "$ui/api/wholes" 2>/dev/null | tr -d '\r')
+case "$hdr" in
+  *" 200 "*"script-src 'self'; style-src 'self'"*) ok "ui          $ui/ (maps at $ui/#/map/<id>; scripts and styles from itself only)" ;;
+  *" 200 "*) bad "the UI answers without its CSP (ui/server.py)" ;;
+  *) bad "the UI does not answer at $ui/api/wholes (scripts/logs.sh ui)" ;;
+esac
 
 say "Wiring"
 if st=$(sec_status 2>&1); then ok "secrets ($SECRETS): $st"; else bad "secrets ($SECRETS): $st"; fi

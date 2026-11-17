@@ -287,3 +287,31 @@ class Store:
         rows = self.c.execute("select statement_id, subject, property, kind, message from store.violation "
                               "order by subject, property, kind").fetchall()
         return [{"statement": str(s), "subject": su, "property": p, "kind": k, "message": m} for s, su, p, k, m in rows]
+
+
+def stale_file_spans(conn, root: Path) -> list[dict]:
+    """Current spans of file: sources, cited by a statement in use, whose text is no longer at their locator (Lnn or
+    Lnn-mm) in the file under root, or whose file is gone. A wrong locator or a mistyped quote shows up here too."""
+    rows = conn.execute(
+        "select distinct sp.id, s.uri, sp.locator, sp.text from store.span sp join store.source s on s.id = sp.source_id "
+        "join store.reference r on r.span_id = sp.id join store.cites ci on ci.reference_id = r.id "
+        "join store.statement st on st.id = ci.statement_id "
+        "where s.uri like 'file:%%' and sp.superseded_at is null and st.rank <> 'deprecated' order by s.uri, sp.locator").fetchall()
+    out = []
+    for sid, uri, loc, text in rows:
+        m = re.fullmatch(r"L(\d+)(?:-(\d+))?", loc)
+        if not m:
+            continue                                      # a locator that is not a line range is not checked here
+        f = root / uri[len("file:"):]
+        if not f.is_file():
+            out.append({"span": str(sid), "uri": uri, "locator": loc, "why": "file gone"})
+            continue
+        a, b = int(m[1]), int(m[2] or m[1])
+        lines = f.read_text(errors="replace").split("\n")
+        if text in "\n".join(lines[a - 1:b]):
+            continue
+        n = text.count("\n") + 1                     # a window as tall as the quote, wherever it now starts
+        moved = [i + 1 for i in range(len(lines)) if text in "\n".join(lines[i:i + n])]
+        out.append({"span": str(sid), "uri": uri, "locator": loc,
+                    "why": f"moved to L{moved[0]}" if len(moved) == 1 else "not at that locator"})
+    return out

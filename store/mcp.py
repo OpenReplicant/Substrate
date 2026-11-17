@@ -81,6 +81,8 @@ class Server:
 
     @property
     def s(self) -> Store:
+        if self._s is not None and self._s.c.closed:     # Postgres restarted under us: connect again
+            self._s = None
         if self._s is None:
             conn = psycopg.connect(database_url(), autocommit=True)
             self._s = Store(conn, actor=f"{self.client[0]} {self.client[1]} (MCP)")
@@ -173,7 +175,13 @@ class Server:
             if name not in {t["name"] for t in TOOLS}:
                 return {"jsonrpc": "2.0", "id": mid, "error": {"code": -32602, "message": f"unknown tool: {name}"}}
             try:
-                text, err = self.call(name, params.get("arguments") or {}), False
+                try:
+                    text, err = self.call(name, params.get("arguments") or {}), False
+                except psycopg.OperationalError:
+                    # the connection was lost (a restarted Postgres), so whatever this call began was rolled back:
+                    # connect again and run it once more
+                    self._s = None
+                    text, err = self.call(name, params.get("arguments") or {}), False
             except (KeyError, ValueError, PermissionError, psycopg.Error) as e:
                 text, err = f"{type(e).__name__}: {e}", True
             return {"jsonrpc": "2.0", "id": mid, "result": {"content": [{"type": "text", "text": text}], "isError": err}}

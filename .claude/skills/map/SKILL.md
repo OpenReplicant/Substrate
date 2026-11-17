@@ -38,9 +38,11 @@ quoted text. Read the thing itself (code, config, a running process, a manual) r
 memory; what you cannot cite, leave out or ask about. What a person tells you is theirs: quote them with the
 conversation as the source, and say so in `note`.
 
-The quote is the source's text at that locator, not an excerpt: quote the whole line or range (`L13`, `L10-12`),
-and quote it the same way every time you cite it. A different quote at the same locator reads as the source
-having changed: it supersedes the earlier span and flags every statement that cited it.
+The quote is the source's text at that locator: copy it from the file (print the lines, don't retype them), and
+quote one locator the same way every time you cite it. A different quote at the same locator reads as the source
+having changed: it supersedes the earlier span and flags every statement that cited it. Prefer stable places (a
+schema line, a decision row) to long lines that change often. `scripts/check.sh` counts cited file lines that are
+no longer at their locator; `store.stale_file_spans` says which, and where a moved line went.
 
 ## 5. Goals
 
@@ -51,6 +53,7 @@ verdicts come later, from trials and a judge (the catalog skill).
 ## 6. Check
 
 `read` the whole's page; `path` from the whole to an interface; `violations` for the whole and its parts (a role
-named where an interface belongs shows up here). Tell the owner what is mapped, what was left out and why, and
-what you are unsure of. If you got something wrong, `deprecate` your own statement with the reason, and say the
-right one.
+named where an interface belongs shows up here). Tell the owner what is mapped, what was left out and why, what
+you are unsure of, and where to see it: the UI draws the map at `http://127.0.0.1:8100/#/map/<id>`, and shows an
+interface a role requires but its filler lacks as missing. If you got something wrong, `deprecate` your own
+statement with the reason, and say the right one.

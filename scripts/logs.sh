@@ -1,7 +1,7 @@
 #!/bin/sh
 # A service's recent logs, by the runtime in .env.
 #
-#   scripts/logs.sh SERVICE     # db, gateway, ollama
+#   scripts/logs.sh SERVICE     # db, gateway, ollama, ui
 set -eu
 . "$(dirname "$0")/lib.sh"
 

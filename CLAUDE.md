@@ -16,10 +16,10 @@ plans to work from. v1's databases are kept in the same Postgres volume (`workbe
 | Local models | container `ollama` | the store's embeddings; local models later |
 | Tools | `bin/`, container `substrate-tools` | the scripts' Python and gitleaks, run in a container as you (S-19) |
 | The companion | its own container (S-136), plan step 4 | the first environment: Claude Code on Haiku through the gateway |
+| The UI | `ui/` (`ui/server.py`, `ui/static`), compose service `ui` on 127.0.0.1:8100 | the store's pages and maps as diagrams (S-140), read-only; Workbench's successor, its name the owner's to decide |
 | Glue | `scripts/`, `deploy/` | brings the parts up and connects them |
 
-The UI (Workbench's successor; its name is the owner's to decide) comes with the store. `deploy/caddy` and
-`deploy/ontop` are kept for it and are not started yet.
+`deploy/caddy` (in front of the UI) and `deploy/ontop` (SPARQL) are kept and not started yet.
 
 ## Rules
 
@@ -53,11 +53,11 @@ The UI (Workbench's successor; its name is the owner's to decide) comes with the
 
 ```sh
 scripts/bootstrap.sh       # once per machine: host tools, images, the tools container
-scripts/up.sh              # the stack (db, gateway, ollama), the tools container, the databases; then check.sh
+scripts/up.sh              # the stack (db, gateway, ollama, ui), the tools container, the databases; then check.sh
 scripts/check.sh           # is everything up and wired
 scripts/test.sh [FILE...]  # the test suites, in the tools container
 scripts/build.sh [db|tools]
-scripts/logs.sh SERVICE    # db, gateway, ollama
+scripts/logs.sh SERVICE    # db, gateway, ollama, ui
 scripts/tools.sh start|stop|status
 scripts/down.sh [--volumes]   # stop (deleting data asks first)
 python3 scripts/gateway.py render|keys   # the gateway's config from .env and its callers

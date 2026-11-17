@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Substrate</title>
+<link rel="stylesheet" href="/static/ui.css">
+<link id="__________cytoscape_stylesheet" rel="stylesheet" href="/static/cytoscape.css">
+<script src="/static/vendor/cytoscape/cytoscape.min.js" defer></script>
+<script src="/static/vendor/cytoscape-dagre/cytoscape-dagre.min.js" defer></script>
+<script src="/static/app.js" defer></script>
+</head>
+<body>
+<header>
+  <a href="#/" class="home">Substrate</a>
+  <input id="q" type="search" placeholder="Search the store" autocomplete="off" aria-label="Search the store">
+  <span id="crumb"></span>
+</header>
+<main>
+  <nav id="list" aria-label="Results"></nav>
+  <section id="view">
+    <div id="toolbar" hidden>
+      <button id="fit" type="button">Fit</button>
+      <label><input id="all" type="checkbox"> every edge</label>
+      <span id="legend"></span>
+      <span id="stats"></span>
+    </div>
+    <div id="map" hidden></div>
+    <article id="page" hidden></article>
+  </section>
+  <aside id="side" hidden>
+    <button id="close" type="button" aria-label="Close">×</button>
+    <div id="sidebody"></div>
+  </aside>
+</main>
+</body>
+</html>

@@ -7,9 +7,12 @@
 - keep one revision per entity per transaction, naming who edited
 - pin spans: an unchanged re-read changes nothing; a changed or vanished span flags what cites it and what was
   derived from that, and nothing else, with no model call; the old text stays readable; re-citing clears it
-- find, read, expand, locate, path and alternatives, directly and over MCP (stdio), and write over MCP as claims:
+- find, read, expand, locate, path and alternatives, directly and over MCP (stdio), reconnecting after a restart, and
+  write over MCP as claims:
   the client as interpreter, at normal rank, deprecating only its own
-- take a whole apart into parts with roles, and find what else provides every interface a role requires
+- take a whole apart into parts with roles, and find what else provides every interface a role requires; give
+  the map as nodes and edges
+- report cited file lines that are no longer at their locator (moved, changed or gone)
 - import v1's people's statements and decisions as readable pages (when v1's database is in the same Postgres)
 
     scripts/test.sh scripts/tests/test_store.py
@@ -61,7 +64,7 @@ def main():
 
 
 def run(c, url, admin):
-    check("the schema applies", store.migrate(c) == ["001_store.sql", "002_graph.sql", "003_components.sql"])
+    check("the schema applies", store.migrate(c) == ["001_store.sql", "002_graph.sql", "003_components.sql", "004_map.sql"])
     check("the graph builds", store.project(c)["nodes"] > 0)
     check("and applying it again changes nothing", store.migrate(c) == [])
 
@@ -226,8 +229,31 @@ def components(c, s, me):
     check("and which fills it now, in which whole", alt[chain]["fills_now"] and alt[chain]["in_whole"] == bike and not alt[other]["fills_now"], alt)
     check("the whole's page shows the part with its role", "has part" in s.render(bike) and "object has role: drivetrain role" in s.render(bike), s.render(bike))
     check("a path runs from the whole through its part to the interface", [p["entity"] for p in s.path(bike, chain_if)] == [bike, chain, chain_if], s.path(bike, chain_if))
+    edges = {(a, b, k) for a, b, k in c.execute("select source, target, kind from store.map(%s)", (bike,))}
+    kinds = dict(c.execute("select id, kind from store.map_nodes(%s)", (bike,)).fetchall())
+    check("the map: whole, part, role and interface as edges",
+          {(bike, chain, "has-part"), (chain, drive, "plays"), (drive, chain_if, "requires"), (chain, chain_if, "provides")} <= edges, edges)
+    check("and what else could fill a role, not what already does", (other, drive, "could-fill") in edges and not any(k == "could-fill" and a == chain for a, _, k in edges), edges)
+    check("its nodes by kind", kinds == {bike: "whole", chain: "part", drive: "role", chain_if: "interface", other: "candidate"}, kinds)
     s.say(belt, s.id("provides-interface"), drive, by=me)
     check("a role given as an interface is reported", any(v["kind"] == "value-type" and v["subject"] == belt for v in s.violations()))
+
+    # Cited file lines checked against the file: unchanged, moved, changed, gone
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmp:
+        f = Path(tmp) / "parts.txt"
+        f.write_text("alpha\nthe chain fits 1/2 x 3/32\nomega\n")
+        sp = s.read_source("file:parts.txt", [("L2", "the chain fits 1/2 x 3/32"), ("L2-3", "the chain fits 1/2 x 3/32\nomega")], "text/plain")
+        s.say(chain, s.id("described-at-url"), "https://example.org/chain", by=interpreter("reader", "1", span=sp["L2"][0]))
+        s.say(other, s.id("described-at-url"), "https://example.org/other", by=interpreter("reader", "1", span=sp["L2-3"][0]))
+        why = lambda: sorted(x["why"] for x in store.stale_file_spans(c, Path(tmp)))  # noqa: E731
+        check("cited lines still in their file are not reported", why() == [], why())
+        f.write_text("new first line\nalpha\nthe chain fits 1/2 x 3/32\nomega\n")
+        check("cited lines that moved, one or several, are reported with where they went", why() == ["moved to L3", "moved to L3"], why())
+        f.write_text("alpha\nthe chain fits 1/8 inch\nomega\n")
+        check("a cited line that changed is reported", why() == ["not at that locator", "not at that locator"], why())
+        f.unlink()
+        check("a cited file that is gone is reported", why() == ["file gone", "file gone"], why())
 
 
 def mcp(url, hammer, s):
@@ -278,6 +304,19 @@ def mcp(url, hammer, s):
     res = {m["id"]: m for m in map(json.loads, p.stdout.splitlines())}
     check("MCP: a client deprecates its own statement", not res[2]["result"]["isError"] and s.locate(sid)[0]["rank"] == "deprecated", res.get(2))
     check("MCP: but not a person's", res[3]["result"]["isError"] and "person reviews" in res[3]["result"]["content"][0]["text"], res.get(3))
+
+    # A restarted Postgres drops the server's connection: the next call connects again rather than failing
+    from store.mcp import Server
+    os.environ["STORE_URL"] = url
+    try:
+        srv = Server()
+        call = lambda: srv.handle({"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {"name": "search", "arguments": {"query": "hammer"}}})  # noqa: E731
+        call()
+        s.c.execute("select pg_terminate_backend(%s)", (srv.s.c.info.backend_pid,))
+        r = call()
+        check("MCP: after its connection is cut, the next call reconnects", not r["result"]["isError"] and hammer in r["result"]["content"][0]["text"], r)
+    finally:
+        del os.environ["STORE_URL"]
 
 
 def v1(admin, c, s):

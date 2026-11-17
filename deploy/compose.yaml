@@ -1,10 +1,11 @@
-# Substrate's stack on the fresh tree (S-137): Postgres, the model gateway and local models. The store's
-# API, its UI behind Caddy (deploy/caddy) and SPARQL (deploy/ontop) come back with the store (docs/plan.md 3b).
+# Substrate's stack on the fresh tree (S-137): Postgres, the model gateway, local models and the UI (S-140).
+# SPARQL (deploy/ontop) and Caddy in front (deploy/caddy) come later (docs/plan.md 3b).
 # Started by scripts/up.sh:
 #
 #   $CONTAINER_ENGINE compose -f deploy/compose.yaml --env-file .env up -d
 #
-# Everything is published on 127.0.0.1 only: Postgres at :${DB_PORT}, the gateway at :${GATEWAY_PORT}.
+# Everything is published on 127.0.0.1 only: Postgres at :${DB_PORT}, the gateway at :${GATEWAY_PORT}, the UI at
+# :${UI_PORT}.
 
 name: substrate
 
@@ -80,6 +81,33 @@ services:
       test: ["CMD", "ollama", "list"]
       interval: 10s
       retries: 30
+
+  # The UI (S-140; its name is the owner's to decide): the store's pages and maps, read-only, on the standard
+  # library (ui/server.py) in the tools image. It sees only ui/ and reaches Postgres as db.
+  ui:
+    <<: *locked
+    image: localhost/substrate-tools:local
+    command: ["python3", "-m", "ui.server"]
+    working_dir: /app
+    user: "65534:65534"
+    environment:
+      UI_HOST: 0.0.0.0
+      UI_PORT: "8100"
+      PYTHONDONTWRITEBYTECODE: "1"
+      PGHOST: db
+      PGUSER: postgres
+      PGDATABASE: substrate
+      PGPASSWORD: ${POSTGRES_PASSWORD:?set in .env}
+    volumes:
+      - ../ui:/app/ui:ro
+    ports:
+      - "127.0.0.1:${UI_PORT:-8100}:8100"
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8100/api/wholes', timeout=3)"]
+      interval: 10s
+      retries: 10
+    depends_on:
+      db: {condition: service_healthy}
 
 volumes:
   ollama-models:
