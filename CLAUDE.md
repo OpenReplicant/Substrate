@@ -5,7 +5,7 @@ component is anything that can be modified (a service, a skill, a hook, a parame
 catalog's entity model. It models each system as cited claims, acts on that model, and changes something only on
 evidence it cannot fake. Self is not a special case: substrate is modelled in Workbench like any other system,
 so nothing you build here may work only on itself. Substrate is now an agent framework with Workbench as its UI
-(S-124). Read `docs/plan.md` first (the one current plan), `README.md` for the picture, and `DECISIONS.md` for
+(S-124). Read `docs/plan.md` first (the one current plan), `docs/framework.md` for its shape (S-125), `README.md` for the picture, and `DECISIONS.md` for
 every default and why. `docs/archive/` holds the old spec, build plan, direction and handoff: history, not plans
 to work from.
 

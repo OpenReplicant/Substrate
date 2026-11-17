@@ -6,9 +6,11 @@ from. Every default and its reason is still in `DECISIONS.md`.
 
 ## What Substrate is now
 
-An agent framework. You build an agent for a system you need, run it, and watch and change it in Workbench,
-which is Substrate's web UI and store. Morphogen stays a part you can use as it is; no more work goes into it
-for now.
+An agent framework. You put an environment on a system you need, run it, and watch and change it in Workbench,
+which is Substrate's web UI and store. Its shape is `docs/framework.md` (S-125): the environment is data in
+Postgres, pass-through to Claude Code is the default, components distilled from the record carry cards, a judge
+tests them on cases their author never saw, and environments nest. Morphogen stays a part you can use as it is;
+no more work goes into it for now.
 
 ## What already exists
 
@@ -26,12 +28,14 @@ for now.
 | # | Step | Done when |
 | --- | --- | --- |
 | 1 | Get the stack up on the machine you work on (`setup` skill) | `scripts/check.sh` passes |
-| 2 | The owner picks the first real system to build an agent for | the pick is a row in `DECISIONS.md` |
-| 3 | Build that agent as a package, using what exists | it does the job end to end on real input, every model call recorded at the gateway |
-| 4 | Run and watch it from Workbench: its episodes, its calls and cost, its hand-offs in the review lane | the owner can start it and see what it did without a terminal; only the views it needed were added |
-| 5 | Write down the path that worked (new package → run → watch → change) in `packages/README.md`, then build a second agent by following it | the second agent needed no new framework code, or the framework changes it needed are named |
+| 2 | Read the three closest works in full (Global Workspace Agents, CogRec, Graphiti's data model) and the current Claude Code channels docs; amend `docs/framework.md` where they change it | the page cites what was read and what changed |
+| 3 | The owner picks the first real system: one with a steady stream of similar work and a checkable outcome | the pick is a row in `DECISIONS.md` |
+| 4 | Pass-through on it: its streams into pgmq topics, readings into the claim log, a Claude Code channel subscribed, one actuator gated at `propose` | it does the job end to end on real input; every event, model call and action is in the record; the owner decides proposals in Workbench |
+| 5 | One distilled component with its card, and the judge interface's first filler (a script as the judge user, the held-out slice of the record) | a verdict on the component against pass-through; promoted or refused on it |
+| 6 | Write down the path that worked, then put a second environment on another system by following it | the second needed no new framework code, or the changes it needed are named |
 
-Workbench is no longer frozen: add what steps 3 to 5 need, and nothing they don't.
+Nesting, self-levers and the other layers in `docs/framework.md` come after step 6, each tested against
+pass-through. Workbench is no longer frozen: add what these steps need, and nothing they don't.
 
 ## Deferred
 
@@ -42,6 +46,7 @@ publication and reproductions, the hosted mapper and hosted judging, the persona
 
 ## The owner's to decide
 
-- The first system (step 2).
+- The first system (step 3).
+- Morphogen's future: frozen as an option (recommended), slimmed, or folded in.
 - Rotating the Postgres password; putting the Gemma model at the gateway.
 - The licence and whether the repository goes public.
