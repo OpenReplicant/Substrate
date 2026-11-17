@@ -82,7 +82,7 @@ services:
       interval: 10s
       retries: 30
 
-  # The UI (S-140; its name is the owner's to decide): the store's pages and maps, read-only, on the standard
+  # The UI (S-140, S-141: Substrate's UI, no name of its own): the store's pages and maps, read-only, on the standard
   # library (ui/server.py) in the tools image. It sees only ui/ and reaches Postgres as db.
   ui:
     <<: *locked

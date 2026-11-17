@@ -12,7 +12,7 @@ From that record, the LLM **distills components** (reactive handlers for pattern
 aligned ones), each carrying a **card**: its intent, trigger, action, the cases it came from, its KPIs and tests.
 A **judge** outside the author's reach tests the card on recorded cases the author never saw, and only then does
 the component join the environment. What a component cannot handle goes back up to the LLM, and from there to a
-person. Environments nest: a child is an object in its parent's environment. Workbench is where people watch
+person. Environments nest: a child is an object in its parent's environment. The UI is where people watch
 and decide.
 
 ## Signals and claims (decided, S-126)
@@ -58,7 +58,7 @@ Postgres backend, so it is a model to borrow from, not a part to add.
 | Part | Does | Is not |
 | --- | --- | --- |
 | **Substrate** | the environment, pass-through, the record, components and their cards, the hierarchy | a harness: Claude Code is the harness |
-| **Workbench** | the UI and the store: the stream, the review lane, each component's card and verdicts, the map | a separate product (S-120) |
+| **The UI and the store** | Substrate's web UI (`ui/`) and the store: the stream, the review lane, each component's card and verdicts, the map | a separate product (S-120) |
 | **The judge** | an interface: a card and a candidate in, a verdict out, on cases the candidate's author cannot read | a framework; Morphogen is one filler of it, optional |
 
 ## The environment is data (decided)
@@ -90,7 +90,7 @@ context management; Substrate does not rebuild any of them.
 
 - **In:** a Claude Code channel (an MCP server that pushes events into a running session) subscribed to the
   environment's topics.
-- **Look around:** Workbench's MCP server, to query objects, claims and history.
+- **Look around:** the store's MCP server, to query objects, claims and history.
 - **Out:** actions written to actuator queues through MCP, under the gates; hooks and permissions enforce them.
 
 Pass-through is useful on its own, and it is the **baseline every other layer is measured against**.
@@ -110,10 +110,10 @@ protocol "may change", so the version that works is pinned when it is built.
   session. So the durable side is ours: the channel reads its pgmq queue with a visibility timeout and does not
   archive a message until Claude calls an `ack(msg_id)` tool (or acts on it); an unacknowledged message
   reappears and is delivered again.
-- **Two-way:** replies and actions are ordinary MCP tools on the same server (or Workbench's).
+- **Two-way:** replies and actions are ordinary MCP tools on the same server (or the store's).
 - **Permission relay** (`claude/channel/permission`): Claude Code sends `permission_request` (`request_id`,
   `tool_name`, `description`, `input_preview`) and accepts `allow` or `deny` back; first answer wins. This can be
-  where a `propose` gate meets the review lane: Workbench shows the request and a person's decision goes back
+  where a `propose` gate meets the review lane: the UI shows the request and a person's decision goes back
   through it. Anyone who can answer the relay can approve tool use, so it is declared only for an authenticated
   path.
 - **Enabling it:** a server of our own needs `claude --dangerously-load-development-channels server:<name>`
@@ -146,7 +146,7 @@ not support routing Claude Code to non-Claude models through a gateway ([LLM gat
 so on a local model the first test is whether channels deliver, tool calls hold, and the replaced prompt works.
 
 A **profile** (tool set, prompt, MCP servers, context switches, model) is a component with a card: the lean one
-for a small local model (only the channel's and Workbench's tools, a short prompt), richer ones for larger models,
+for a small local model (only the channel's and the store's tools, a short prompt), richer ones for larger models,
 each measured on the same record.
 
 ## Components can be pipelines: adaptive perception (decided as a shape)
@@ -263,7 +263,7 @@ events appended in order. Timestamps, tool sets and instructions that change mid
 no caching). The gateway already meters `tokens_cached` (S-106), so a view's cache rate is a KPI on its card.
 
 **Under pass-through** the view is two things Substrate controls: the format of the events a channel pushes,
-and what Workbench's MCP tools return. Claude Code manages the rest of the context (compaction, its own cache
+and what the store's MCP tools return. Claude Code manages the rest of the context (compaction, its own cache
 layout), and that stays its job. A self-lever lets the LLM ask for a different view (a summary instead of raw
 signals), as a `propose`.
 
@@ -324,19 +324,19 @@ and memory, and choosing among them within the budget is a self-lever; the owner
 
 ### The browser client is an environment (decided as a shape, S-131)
 
-Workbench's browser client is where the owner is, so it is an environment of its own, a child of the companion:
+The UI's browser client is where the owner is, so it is an environment of its own, a child of the companion:
 
 - **Sensors** from browser APIs: microphone, camera, text, and others as needed (screen, location), each off
   until the owner turns it on, each a personal stream under the privacy floor.
 - **Actuators:** the speaker, the avatar's rendering, the page itself (messages, notifications, the review lane).
 - **Transport:** today the shell gets Server-Sent Events of changed ids (`NOTIFY` on `wb_events`) and sends by
-  HTTP. Media needs a two-way binary path (a WebSocket, or WebRTC if latency demands it) on Workbench's server.
+  HTTP. Media needs a two-way binary path (a WebSocket, or WebRTC if latency demands it) on the UI's server.
 - **Rate:** raw audio and video do not go through pgmq frame by frame (Postgres's rate ceiling). The browser's
   media goes straight to its pipeline; what the pipeline makes (an utterance, a transcript, a detection) is the
   signal published to the topics, and raw media is kept, if at all, as files under the retention rule (P7).
 
-**Built as its own package, not inside Workbench (S-132).** Workbench's live events stay as they are. The browser
-environment is a small JavaScript library dropped onto any page (Workbench's shell is the first host) that
+**Built as its own package, not inside the UI (S-132).** The UI's live events stay as they are. The browser
+environment is a small JavaScript library dropped onto any page (the UI's page is the first host) that
 declares what the browser offers, sensors and actuators each with a schema, the way an MCP server declares its
 tools; and a small bridge on the server that takes one WebSocket from it and connects it to pgmq (signals out to
 topics, actuator queues in; raw media to its pipeline). Every embodied child is the same pattern: an adapter from

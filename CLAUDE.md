@@ -16,7 +16,7 @@ plans to work from. v1's databases are kept in the same Postgres volume (`workbe
 | Local models | container `ollama` | the store's embeddings; local models later |
 | Tools | `bin/`, container `substrate-tools` | the scripts' Python and gitleaks, run in a container as you (S-19) |
 | The companion | its own container (S-136), plan step 4 | the first environment: Claude Code on Haiku through the gateway |
-| The UI | `ui/` (`ui/server.py`, `ui/static`), compose service `ui` on 127.0.0.1:8100 | the store's pages and maps as diagrams (S-140), read-only; Workbench's successor, its name the owner's to decide |
+| The UI | `ui/` (`ui/server.py`, `ui/static`), compose service `ui` on 127.0.0.1:8100 | the store's pages and maps as diagrams (S-140), read-only; v1's Workbench rebuilt, with no name of its own (S-141) |
 | Glue | `scripts/`, `deploy/` | brings the parts up and connects them |
 
 `deploy/caddy` (in front of the UI) and `deploy/ontop` (SPARQL) are kept and not started yet.
