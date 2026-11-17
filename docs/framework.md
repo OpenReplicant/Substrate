@@ -293,6 +293,22 @@ Workbench's browser client is where the owner is, so it is an environment of its
   media goes straight to its pipeline; what the pipeline makes (an utterance, a transcript, a detection) is the
   signal published to the topics, and raw media is kept, if at all, as files under the retention rule (P7).
 
+**Built as its own package, not inside Workbench (S-132).** Workbench's live events stay as they are. The browser
+environment is a small JavaScript library dropped onto any page (Workbench's shell is the first host) that
+declares what the browser offers, sensors and actuators each with a schema, the way an MCP server declares its
+tools; and a small bridge on the server that takes one WebSocket from it and connects it to pgmq (signals out to
+topics, actuator queues in; raw media to its pipeline). Every embodied child is the same pattern: an adapter from
+a native API (the browser's, VRChat's OSC, ROS2) to topics and queues. The declarations follow WebMCP's tool
+shape (`document.modelContext`; a draft W3C community report in a Chrome origin trial, not called by mainstream
+agents as of May 2026), so the library can register there later without depending on it now.
+
+**The avatar's actuators are defined once:** `speak` (audio, optional visemes), `express` (name, weight),
+`look_at`, `gesture`; each embodied environment fills them its own way. First filler, in the browser: three.js
+with `@pixiv/three-vrm` (versions pinned when built), idle motion, and the mouth driven by speech volume through
+VRM's expression presets (`aa`, `ih`, `ou`, `ee`, `oh`) rather than a jaw bone, so any VRM model works; blink
+and look-at from the same expression manager. Later: visemes from the text-to-speech's phoneme timings, if
+Kokoro's Rust implementation provides them.
+
 ### Perception pipelines trade interpretability against refresh rate
 
 Every pipeline sits somewhere between fast and shallow and slow and rich, and can run both at once:
