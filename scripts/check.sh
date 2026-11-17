@@ -39,6 +39,15 @@ with connect(settings(), DB) as c:
     print(f"{e} entities, {s} statements, {f} flagged, {v} constraint violations, {stale} cited file lines changed")' 2>&1); then
   ok "store       $out (MCP: bin/in-tools python3 -m store.mcp)"
 else bad "the store: $(printf '%s\n' "$out" | tail -1) (bin/in-tools python3 scripts/db.py init)"; fi
+# The real-time environment (plan step 3c): signals, queues and proposals waiting for a person
+if out=$("$ROOT/bin/in-tools" python3 -c '
+import sys; sys.path[:0] = ["scripts", "."]
+from db import connect, DB; from gateway import settings
+with connect(settings(), DB) as c:
+    s, q, a, w = c.execute("select (select count(*) from env.signal), (select count(*) from pgmq.meta), (select count(*) from env.actuator), (select count(*) from env.action where status = $$proposed$$)").fetchone()
+    print(f"{s} signals, {q} queues, {a} actuators, {w} proposals waiting")' 2>&1); then
+  ok "environment $out (bin/in-tools python3 scripts/env.py waiting)"
+else bad "the environment: $(printf '%s\n' "$out" | tail -1) (bin/in-tools python3 scripts/db.py init)"; fi
 # Probe with a provider this machine has: Bifrost answers 400 for one it has none of, before it checks the key
 probe=openrouter/x:free; [ -z "$(env_value OPENROUTER_API_KEY)" ] && [ -n "$(env_value OLLAMA_URL)" ] && probe=ollama/x
 code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "http://127.0.0.1:$(env_value GATEWAY_PORT)/v1/chat/completions" -H 'Content-Type: application/json' -d "{\"model\":\"$probe\",\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}]}")

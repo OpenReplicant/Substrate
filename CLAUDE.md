@@ -11,7 +11,7 @@ plans to work from. v1's databases are kept in the same Postgres volume (`workbe
 | Part | Where | Role |
 | --- | --- | --- |
 | The store | `store/` (schema in `store/sql/`, agent tools in `store/mcp.py`) on Postgres (`deploy/postgres`: pgvector, pgmq, pg_cron, pgGraph), database `substrate` | Wikibase's data model with OpenWiki's pinned evidence (S-135, S-138): entities, statements with ranks, references, spans, revisions, a page per entity; the agent's tools over MCP, and maps, roles, interfaces and catalogs (S-139; the `map` and `catalog` skills) |
-| The real-time environment | pgmq in the same Postgres | streams as topics, a queue per actuator, gates, the channel into Claude Code. Step 3c |
+| The real-time environment | `environment/` (schema `env` in `store/sql/005_environment.sql`, the channel in `environment/channel.py`) on pgmq in the same Postgres | signals logged whole and fanned out as topics, a queue per actuator behind its gate (`free`, `propose`, `deny`), the channel into Claude Code, archived only on `ack` (S-143) |
 | The model gateway | container `gateway` (Bifrost), `scripts/gateway.py` | every model call goes through it with its caller's key and is recorded there, not by the caller (S-77) |
 | Local models | container `ollama` | the store's embeddings; local models later |
 | Tools | `bin/`, container `substrate-tools` | the scripts' Python and gitleaks, run in a container as you (S-19) |
@@ -62,4 +62,5 @@ scripts/tools.sh start|stop|status
 scripts/down.sh [--volumes]   # stop (deleting data asks first)
 python3 scripts/gateway.py render|keys   # the gateway's config from .env and its callers
 bin/in-tools python3 scripts/db.py init|import-v1   # the store's schema; v1's people's statements and decisions
+bin/in-tools python3 scripts/env.py waiting|decide|publish|actuators|gate|queues   # the environment, as a person
 ```
