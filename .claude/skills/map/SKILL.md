@@ -38,6 +38,10 @@ quoted text. Read the thing itself (code, config, a running process, a manual) r
 memory; what you cannot cite, leave out or ask about. What a person tells you is theirs: quote them with the
 conversation as the source, and say so in `note`.
 
+The quote is the source's text at that locator, not an excerpt: quote the whole line or range (`L13`, `L10-12`),
+and quote it the same way every time you cite it. A different quote at the same locator reads as the source
+having changed: it supersedes the earlier span and flags every statement that cited it.
+
 ## 5. Goals
 
 If the owner says what better means, put it on the whole: *has goal* (`has-goal`) a goal (`instance_of: goal`)

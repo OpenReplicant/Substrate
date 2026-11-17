@@ -34,7 +34,7 @@ with connect(settings(), DB) as c:
     done = {r[0] for r in c.execute("select name from public.store_migration")}
     todo = sorted(f.name for f in store.SQL.glob("*.sql") if f.name not in done)
     if todo: raise SystemExit("schema not applied: " + ", ".join(todo))
-    e, s, f, v = c.execute("select (select count(*) from store.entity), (select count(*) from store.statement), (select count(distinct statement_id) from store.flag), (select count(*) from store.violation)").fetchone()
+    e, s, f, v = c.execute("select (select count(*) from store.entity), (select count(*) from store.statement), (select count(distinct f.statement_id) from store.flag f join store.statement st on st.id = f.statement_id where st.rank <> $$deprecated$$), (select count(*) from store.violation)").fetchone()
     print(f"{e} entities, {s} statements, {f} flagged, {v} constraint violations")' 2>&1); then
   ok "store       $out (MCP: bin/in-tools python3 -m store.mcp)"
 else bad "the store: $(printf '%s\n' "$out" | tail -1) (bin/in-tools python3 scripts/db.py init)"; fi
