@@ -1061,6 +1061,29 @@ spec:
 apiVersion: backstage.io/v1alpha1
 kind: Resource
 metadata:
+  name: agent-memory-atlas
+  description: Agent Memory Atlas - reviews of agent memory systems made by reading their code at a pinned commit; MIT (github.com/neoneye/agent-memory-atlas
+    README).
+  annotations:
+    substrate.dev/checked: 2026-11-16 (home page, methodology/atlas-rubric and the repository README read through a fetch;
+      the benchmarks, patterns and per-system pages were not read)
+    substrate.dev/gives: 'per memory system: a one-line summary, its best idea and main risk, and seven capability marks with
+      the file and symbol behind each (rejected-value tombstone, explicit trust state, bi-temporal validity, scope enforced
+      in retrieval, append-only mutation audit, human review surface, negative retrieval assertion); design patterns'
+    substrate.dev/limits: the home page counts 808 systems reviewed; marks come from code reading by one model reviewer directed
+      by one person, with no second review, and nothing was run, so a mark says a mechanism exists, not that it works better;
+      systems, not papers; no raw JSON or YAML found, the Markdown under content/ is the source
+    substrate.dev/search: No search API; browse https://neoneye.github.io/agent-memory-atlas/ (filters by mark and family)
+      or read content/systems/*.md in https://github.com/neoneye/agent-memory-atlas
+spec:
+  type: registry
+  lifecycle: listed
+  owner: group:operator
+  system: sources
+---
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
   name: apt
   description: Debian and Ubuntu package archives - system packages for images.
   annotations:

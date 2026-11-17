@@ -1,0 +1,16 @@
+# A request the judge user keeps (scripts/judge-user.sh request lookups-rehearsal FILE; Morphogen's intake, S-121):
+# the lookups agent judged on the rehearsal set. NOT held out: these are the open dev cases (S-110), copied to the
+# judge's side to prove the door and, later, its gateway. No real comparison is judged by this request.
+# It names no gateway yet: a candidate that reaches the runs has no model to call (S-122's next step).
+morphogen: request/v1
+kind: judge
+project: /var/lib/morphogen-judge/projects/substrate
+base: direction/experiment-first
+target: cell:component:default/lookups
+labels: {set: rehearsal}
+local:
+  sandbox_image: localhost/substrate-tools:local
+  cells:
+    lookups:
+      inputs: /var/lib/morphogen-judge/private/lookups-rehearsal/inputs
+      private: /var/lib/morphogen-judge/private/lookups-rehearsal/private

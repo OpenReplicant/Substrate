@@ -4,6 +4,95 @@ Written 2026-11-16 by the session that built the paper catalog and reviewed Morp
 another model that did not see that conversation. It wins over `docs/tasks/README.md` and `docs/direction.md`
 where they disagree. Decisions behind it: S-111 to S-118 in `DECISIONS.md`.
 
+## Where it stands (end of 2026-11-16, second session; read this first)
+
+Decisions S-119 to S-123 are in `DECISIONS.md`. Committed through `8c13016`; nothing is pushed. S-123 is the
+positioning: several ways in (mapping, process and automation consulting, new agents, judging changes,
+self-optimization) on one spine, map, cases and scorer, deploy, judge, optimize; self-host first, then a hosted
+mapper for public repositories, hosted judging later.
+
+**Done**
+- Morphogen pull requests 81, 82 and 83 are merged (`b57fbbb`, pinned in `repos.yaml`). 82 is item 1.3 below. 83 is
+  the intake for item 1.1b: `morphogen intake judge NAME` takes a candidate as a git bundle on standard input and
+  judges it by a request the judge's side keeps; `morphogen intake advance NAME` moves the judge's base forward.
+- The judge user `morphogen-judge` exists (home `/var/lib/morphogen-judge`, mode 700, linger on, rootless Podman
+  works). The owner ran `scripts/judge-user.sh install`, `clone`, `door`, `images`, `request` and `give`. Its side
+  has Morphogen, a clone of this repository, the request `lookups-rehearsal`, the rehearsal cases (not held out)
+  and the tools and database images.
+- The door works: `git bundle create - CANDIDATE ^direction/experiment-first | sudo -n -u morphogen-judge
+  /usr/local/bin/morphogen-intake lookups-rehearsal` reaches the judge's own install, request and clone. The sudo
+  rule refused a path, a second argument and another command.
+- Two projects, not three (S-120): Workbench is Substrate's store and GUI.
+- `docs/writeups/what-the-judge-caught.md`: item 2 below, drafted, not published.
+- `docs/slots.md`: the owner's model of the harness (slots, roles, fillers with slots of their own, encoders,
+  processors and decoders inside memory). Thinking, not a build plan.
+
+**Not committed** (the owner has not said to): `docs/slots.md`, this section, the source `agent-memory-atlas` and
+its export in `catalog-info.yaml`, `deploy/judge/requests/lookups-rehearsal.yaml`, and the `request` and `give`
+verbs in `scripts/judge-user.sh`. `scripts/check.sh` passes. Scan with `bin/gitleaks protect --staged --redact`;
+commits are authored `Claude <noreply@anthropic.com>` through `GIT_AUTHOR_*` and `GIT_COMMITTER_*` (no git
+identity is configured).
+
+**Next, in order**
+0. *The case-and-scorer kit* (S-123), first because every way in needs it and most teams have no evals. Two
+   halves: an existing eval into the environment contract (`docs/contracts/environment.md`), with its scorer outside
+   the agent and printing `cases_seen`/`cases_expected`; and a process's history (a CSV of tickets, logs, past
+   decisions) into a case set whose recorded outcomes are the answers, split so a held-out part goes to the judge
+   user (`scripts/judge-user.sh give`). Rehearse it on the lookups cases and on one process-history set; its check
+   is `scripts/contract.sh environment` passing on what it makes. Item 3 below (held-out cases by script) folds
+   into it. Also in it (`docs/slots.md`, "The environment's own slots"):
+   - *A scorer contract:* a scorer is admitted when the do-nothing and constant agents score its stated floors,
+     the dev answers replayed score 1, it agrees with a person's labels on a small calibration set, and the
+     red-team cheats fail against it. A panel of scorers needs its verdict rule (which metric decides, which only
+     bound) fixed before the run. Generated scorers are written on the judge's side and reach the base only by
+     the owner's advance. The kit ships a library of reusable scorers as catalog entries.
+   - *Three wraps of different shapes* to test whether the contract is universal: a coding task with tests (the
+     observed stepping mode: the environment's actions as an MCP server, gated by the agent's hooks), a support
+     task with a simulated customer (a rubric scorer), and a process-history set (a state machine, late outcomes).
+     Where the contract bends, it changes. Put the contract's five rules at the top of
+     `docs/contracts/environment.md` first: people own the environment and scorer, the candidate only the agent;
+     episodes by `reset`/`step` or one call for a black-box agent; actions declared and gated; scored outside the
+     agent on held-out cases with stated floors; what is read from outside is recorded and replayed.
+1. *The judge's own gateway and meter.* The door stops here: the judge answered "the cell measures
+   metered.tokens ... but no gateway is named". Today's gateway runs in the author's Podman and its meter is a
+   script in this repository, so both must exist on the judge's side (its own Bifrost container, its own keys, a
+   meter it holds), named in the request's `local.gateway`. Ollama must be reachable from it.
+2. *A queue as the second carrier* (S-122): a worker run by the judge user as a systemd user service, reading
+   requests from pgmq in Workbench and posting verdicts; it lives here, not in Morphogen. Advancing the base never
+   goes on the queue. A verdict on the queue is a copy; the judge's evidence log is the proof.
+3. *Held-out cases by script* (item 4 below), made under the judge user, with connected questions among them.
+4. *Statistics* (item 1.2 below) before the write-up is published.
+5. Then items 1.4, 1.5 and 1.6 below, and GitHub Actions (1.1a) as the same interface a third time.
+
+**Asked of the owner and not answered**
+- Record pages plus a typed graph over claims as the default memory design, as a hypothesis to be judged
+  (`docs/slots.md`, last part of the encoders section)? Its backing is one vendor's own test.
+- Make the first public demonstration "GEPA's `optimize_anything` on an agent part, then judged on cases it never
+  saw", ahead of item 5 below? Recommended. Morphogen already drives `optimize_anything` (`optimize.py`, `Gepa`).
+- A note in the verdict when a scorer prints no case counts (a small Morphogen pull request)?
+- Score Workbench against the Agent Memory Atlas's seven marks?
+- Still open from before: rotate the Postgres password; put the Gemma model at the gateway.
+- From S-123: the open core's licence (permissive or AGPL-like; it matters once there is a hosted service);
+  consulting or the platform as the main business (it decides the front page); pricing; the first customer.
+- After the kit, in S-123's order: the self-host quickstart (1.6), a hosted mapper for public repositories only, one
+  public write-up and one public audit, hosted judging when someone asks to pay for it.
+
+**Working notes**
+- `sudo` needs the owner's own terminal: the `!` prefix has no terminal for a password. Put sudo steps in
+  `scripts/judge-user.sh` and ask for the output to be pasted.
+- Morphogen's whole suite in Podman takes about 12 minutes: run it in the background.
+- Opinion given to the owner: Morphogen's own optimizers, web UI and Backstage reading are where it is over-built;
+  the judge, requests, the intake and the evidence log are the product.
+
+## Four ideas, two repositories (owner, 2026-11-16)
+
+| Idea | Where | State |
+| --- | --- | --- |
+| Agent environments: sensors, gated actions, episodes, scorers in people's custody | Substrate (`docs/contracts/environment.md`, `packages/`) | one built (lookups); three wraps next |
+| A knowledge store: cited claims, modular encoders, processors and decoders | Substrate (`workbench/`) | built; the modules are the open part |
+| Judged change and optimization: nothing lands without a verdict the changer cannot reach | Morphogen | built; the product; faults 1.2 to 1.6 left |
+| Everything as a component graph (slots, fillers, the map) | Substrate (the map, `docs/slots.md`) | useful and transferable so far, not shown to be better than doing without |
+
 ## The project in one line
 
 **An agent harness where every component can be swapped, and every swap is judged on cases the changer

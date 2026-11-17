@@ -7,6 +7,8 @@
 #   scripts/judge-user.sh clone [BRANCH]      # the judge's clone of this repository at BRANCH (default: the current one)
 #   scripts/judge-user.sh door                # /usr/local/bin/morphogen-intake and the sudoers rule that allows it
 #   scripts/judge-user.sh images IMAGE...     # copy images from this user's store to the judge's (Podman only)
+#   scripts/judge-user.sh request NAME FILE   # give the judge a request to keep under NAME (deploy/judge/requests/)
+#   scripts/judge-user.sh give NAME DIR       # copy DIR (cases, answers) into the judge's private/NAME
 #   scripts/judge-user.sh advance NAME [BRANCH]   # move the judge's base forward to BRANCH: the owner's, by password
 #   scripts/judge-user.sh status              # what is in place (no password needed for what this user may see)
 #
@@ -66,6 +68,18 @@ images)
     podman save "$image" | as_judge "podman load"
   done
   ;;
+request)
+  name=${2:?usage: scripts/judge-user.sh request NAME FILE}; file=${3:?usage: scripts/judge-user.sh request NAME FILE}
+  case "$name" in ""|*[!a-z0-9-]*) echo "NAME: lower-case letters, digits and dashes" >&2; exit 1 ;; esac
+  say "the request $name, kept by the judge"
+  as_judge "mkdir -p requests && cat > requests/$name.yaml && chmod 600 requests/$name.yaml && echo kept" < "$file"
+  ;;
+give)
+  name=${2:?usage: scripts/judge-user.sh give NAME DIR}; dir=${3:?usage: scripts/judge-user.sh give NAME DIR}
+  case "$name" in ""|*[!a-z0-9-]*) echo "NAME: lower-case letters, digits and dashes" >&2; exit 1 ;; esac
+  say "$dir into the judge's private/$name"
+  tar -C "$dir" -cf - . | as_judge "mkdir -p private/$name && chmod 700 private private/$name && tar -C private/$name -xf - && find private/$name -type f | wc -l"
+  ;;
 advance)
   name=${2:?usage: scripts/judge-user.sh advance NAME [BRANCH]}
   branch=${3:-$(git -C "$ROOT" branch --show-current)}
@@ -80,5 +94,5 @@ status)
   else echo "this user may not run the door without a password (yet)"; fi
   ;;
 *)
-  sed -n '2,13p' "$0" >&2; exit 1 ;;
+  sed -n '2,15p' "$0" >&2; exit 1 ;;
 esac
