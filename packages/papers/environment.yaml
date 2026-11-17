@@ -1,4 +1,4 @@
-# The papers environment (docs/contracts/environment.md; docs/tasks/rd-pipeline.md, step 3): one paper's abstract, read
+# The papers environment (docs/contracts/environment.md; docs/archive/tasks/rd-pipeline.md, step 3): one paper's abstract, read
 # into a fixed record. People's custody: outside every cell's change. The gate is in code (environment.py): a field
 # stays empty unless it cites sentences the abstract has (the abstract is shown numbered, a field cites one to three).
 environment: papers

@@ -1,4 +1,4 @@
-# A choice made from the catalogs (docs/tasks/starter-agent.md, stage 1; S-97, S-99): the one local model the starter
+# A choice made from the catalogs (docs/archive/tasks/starter-agent.md, stage 1; S-97, S-99): the one local model the starter
 # agent runs on. The candidates are the local chat models docs/choices/local-model.yaml already searched for and
 # pulled; their licences and public scores are recorded there and not repeated from memory here.
 question: Which local model, held fixed, should drive the starter agent's tool loop on research tasks?

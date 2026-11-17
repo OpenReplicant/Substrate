@@ -1,4 +1,4 @@
-"""Lookup (docs/tasks/rd-pipeline.md, step 4): papers for a described need. Workbench's recall (words, meaning, the graph)
+"""Lookup (docs/archive/tasks/rd-pipeline.md, step 4): papers for a described need. Workbench's recall (words, meaning, the graph)
 limited to the paper type, then the record's fields beside each hit and the filters applied. No model at query time.
 
     scripts/workbench.sh run packages/papers/lookup.py "reuse past successful action sequences" [--kind K] [--slot S]

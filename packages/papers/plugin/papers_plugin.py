@@ -1,4 +1,4 @@
-"""The paper catalog's extractors (docs/tasks/paper-catalog.md, leg one; no model anywhere):
+"""The paper catalog's extractors (docs/archive/tasks/paper-catalog.md, leg one; no model anywhere):
 
   papers:listings   each listing in listings.yaml: a GitHub list's arXiv identifiers, the headings they sat under and
                     their lines, or a saved arXiv search's results; the papers they name, each listed in them

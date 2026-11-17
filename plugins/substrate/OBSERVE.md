@@ -48,6 +48,6 @@ Settings and images are not gaps on their own: they belong to the container that
 
 ## Check
 
-The step 5 check in `docs/build.yaml`. In short: every row of the table above has items from this machine,
+The step 5 check in `docs/archive/build.yaml`. In short: every row of the table above has items from this machine,
 quoting what was read; drift raises at least one real gap of a kind step 2 could not see and it is decided;
 `scripts/trace.sh` follows a route to the container that serves it.

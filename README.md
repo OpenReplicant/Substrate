@@ -43,7 +43,7 @@ On the machine it was built on, it has:
 
 - **Refused a change that looked like a win.** Its first judged change sent a model handler's input as compact
   JSON. Tokens fell 5.9% on 7 of 7 paired runs, and accuracy fell with them, so Morphogen refused it (S-87).
-  One run on seven held-out cases is a start, not a result: `docs/direction.md` is the plan for the next ones.
+  One run on seven held-out cases is a start, not a result.
 
 Built, and not yet run for real:
 
@@ -100,11 +100,11 @@ This repository is the glue: scripts that bring the parts up and connect them, a
 in. Substrate's map of itself lives in Workbench, where you or the agent edit it, and `catalog-info.yaml` is its
 committed export: the copy the judge reads, and the one a new machine starts from
 ([`plugins/substrate/MAP.md`](plugins/substrate/MAP.md)). Production choices it stays compatible with but does not
-run are options on that map (system `options`; [`docs/spec.md`](docs/spec.md) section 8).
+run are options on that map (system `options`; [`docs/archive/spec.md`](docs/archive/spec.md) section 8).
 
 **Pluggable by slots, not by trust.** Each part fills a slot named by an interface, and anything that answers
 the interface can take its place once it passes that slot's contract test. The judge is the exception: the
-loop can never choose or tune what judges it ([`docs/spec.md`](docs/spec.md) section 4).
+loop can never choose or tune what judges it ([`docs/archive/spec.md`](docs/archive/spec.md) section 4).
 
 ## Start
 
@@ -123,13 +123,9 @@ Workbench's shell is then at http://127.0.0.1:8080/.
 
 ## Where it is going
 
-[`docs/direction.md`](docs/direction.md) is the current direction (S-94): run one real experiment before any
-more restructuring, on work businesses already pay AI to do. It pauses the build plan below.
-
-[`docs/spec.md`](docs/spec.md) is what substrate is meant to become, and [`docs/build.yaml`](docs/build.yaml)
-its build plan. While they are in place, Claude Code sessions here work through the plan a step at a time (the
-`build-out` skill). `python3 scripts/spec.py status` shows where it stands; deleting `docs/spec.md` stops it.
-Every default and the reason for it is in [`DECISIONS.md`](DECISIONS.md).
+[`docs/plan.md`](docs/plan.md) is the one current plan (S-124): Substrate as an agent framework, with
+Workbench as its UI, starting from one real agent for a system the owner picks. The old spec, build plan and
+direction are in `docs/archive/` as history. Every default and the reason for it is in [`DECISIONS.md`](DECISIONS.md).
 
 ## Layout
 
@@ -140,13 +136,13 @@ catalog-info.yaml    the map's export (edit it in Workbench): what runs, what it
 morphogen.yaml       the same map as Morphogen cells
 observe.yaml         what the observer reads on this machine, and how to read each kind of software
 repos.yaml           the upstream projects and the commits last checked
-docs/                the spec, its build plan, recorded choices
+docs/                the plan, contracts, recorded choices; archive/ for the old spec and plans
 deploy/              the stack (compose.yaml), the Postgres image, the Caddyfile, the secrets list, the tools image
 workbench/           Workbench: the store, its shell, server and MCP (its own README, licence and tests)
 plugins/substrate/   substrate's Workbench plugin: content types, extractors, the observer, the reasoner, the Map
 scripts/             bootstrap, up, down, check, test, observe, interview, map, contract, trace, graph, spec, verdicts
 bin/                 morphogen, gitleaks: each runs inside the tools container (in-tools runs anything else there)
-.claude/skills/      setup, build-out, research, upstream, interview
+.claude/skills/      setup, research, upstream, interview (build-out: retired with the spec)
 repos/               the Morphogen clone, gitignored, its own git repository
 ```
 

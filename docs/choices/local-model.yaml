@@ -4,7 +4,7 @@ asked_by: owner
 asked_on: "2026-11-11"
 quote: "Hugging Face quantized models for Ollama should be selected based on scoreboards ... you can run embedding models locally on my CPU or GPU"
 need:
-  - runs in Ollama on this machine (a GTX 1070, 8 GB, beside the 1.2 GB embedding model), reached only through the gateway, so a person's text never leaves it (docs/assistant/PRIVACY.md P3) and a judged run spends no provider's quota
+  - runs in Ollama on this machine (a GTX 1070, 8 GB, beside the 1.2 GB embedding model), reached only through the gateway, so a person's text never leaves it (docs/archive/assistant/PRIVACY.md P3) and a judged run spends no provider's quota
   - follows a JSON-only instruction (one object with an answer, a confidence and a reason) in a second or two
   - "a public score to shortlist on (instruction following: IFEval; structured output: BFCL), then readable answers on substrate's own inputs"
   - a permissive or LGPL licence; a release at least two weeks old, its Ollama tag pinned exactly

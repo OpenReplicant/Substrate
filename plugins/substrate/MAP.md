@@ -67,7 +67,7 @@ Three systems in the domain `substrate` (S-47):
 | `substrate.dev/intent` | any part | what the part is for |
 | `substrate.dev/fill` | any part | `existing` (built, in Workbench, Morphogen or Claude Code), `adopt` (open source as is), `build` (to write) |
 | `substrate.dev/basis` | any part | where an existing part lives |
-| `substrate.dev/step` | any part | the build step (`docs/build.yaml`) it belongs to |
+| `substrate.dev/step` | any part | the build step (`docs/archive/build.yaml`) it belongs to |
 | `substrate.dev/filler` | a part filling a slot | which filler it is, as `scripts/contract.sh` names it (`compose`, `env`, `openbao`, ...) |
 | `substrate.dev/observed-as` | any part | how it is recognised running: `<type>:<slug>` items `substrate:observed` reads, comma-separated, a slug may be a glob; drift raises what no part accounts for (`OBSERVE.md`) |
 | `morphogen.dev/change` | any part | the files that are it, one glob per line (Morphogen's `change`): `morphogen change` finds the parts a diff belongs to from these, and refuses a file no part claims. Tests, contract scripts and the rules are claimed by no part on purpose, so a change cannot weaken what judges it (`scripts/map.sh owners` lists them) |

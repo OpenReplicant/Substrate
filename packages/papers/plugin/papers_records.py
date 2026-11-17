@@ -1,4 +1,4 @@
-"""The record pass (docs/tasks/rd-pipeline.md, step 3): each paper's abstract read by a model into the fixed fields of the
+"""The record pass (docs/archive/tasks/rd-pipeline.md, step 3): each paper's abstract read by a model into the fixed fields of the
 reading environment (environment.py), the gate in code deciding what stays.
 
     order(papers)             the papers to read: testable first, most-listed first, then the rest in the same order

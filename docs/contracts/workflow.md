@@ -4,7 +4,7 @@ Between **Substrate** (which holds who may approve what), **Morphogen** (which s
 the **Knowledge Kernel** (which records the approval). "Workflow" is the new word for approval policy; the
 moderation queue is the new word for the review lane.
 
-It is floor: `docs/direction.md` puts "who may approve what" among the things only people change. This page
+It is floor: `docs/archive/direction.md` puts "who may approve what" among the things only people change. This page
 writes down what is already decided (S-25, S-37, S-51, S-74, S-94) and gives it one field. It changes no one's
 authority.
 

@@ -7,7 +7,7 @@ asked_on: "2026-11-15"
 quote: "what people/businesses are paying for AI to do now is where we should focus"
 need:
   - "support or back-office work with an outcome a script can check (a final database state or a checker, not a model's opinion)"
-  - "a permissive licence for the code and, separately, for the data (docs/direction.md; house rule 6)"
+  - "a permissive licence for the code and, separately, for the data (docs/archive/direction.md; house rule 6)"
   - "a judged run (7 to 10 paired rounds of base and candidate over the held-out cases) fits in 1,000 free calls a day, or runs on the local model (Granite 4.0 Micro, about one second a call)"
   - "held-out cases the models have not seen, or a way to make them (a public test set counts as dev, docs/contracts/environment.md)"
   - "the world runs in Podman on this machine with no paid service"

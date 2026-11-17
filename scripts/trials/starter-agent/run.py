@@ -1,4 +1,4 @@
-"""Trial for docs/choices/starter-agent-model.yaml (docs/tasks/starter-agent.md, stage 1): which local model can
+"""Trial for docs/choices/starter-agent-model.yaml (docs/archive/tasks/starter-agent.md, stage 1): which local model can
 drive a tool loop on research questions at all. Each model, through the gateway with the local-only judge key,
 gets five dev questions and two tools that read GitHub's public API. Every tool result is kept on disk and
 replayed, so each model sees the same world and a re-run needs no network. In the tools container:

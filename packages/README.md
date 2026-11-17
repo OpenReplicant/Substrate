@@ -31,8 +31,8 @@ saved item of the type its environment starts from begins an episode. No script 
 
 ## papers
 
-The paper catalog (`docs/tasks/paper-catalog.md`) and the pipeline from a need to a judged result
-(`docs/tasks/rd-pipeline.md`): what has been published about agent harnesses and cognitive designs with language models, as
+The paper catalog (`docs/archive/tasks/paper-catalog.md`) and the pipeline from a need to a judged result
+(`docs/archive/tasks/rd-pipeline.md`): what has been published about agent harnesses and cognitive designs with language models, as
 data. The harvest is plain code with no model; reading each abstract into a fixed record is the package's agent, and the
 lookup over the records is plain code again.
 

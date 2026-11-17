@@ -4,9 +4,10 @@ A self-modifying agent platform: an agent in charge of a system of components, i
 component is anything that can be modified (a service, a skill, a hook, a parameter, a prompt), named in the
 catalog's entity model. It models each system as cited claims, acts on that model, and changes something only on
 evidence it cannot fake. Self is not a special case: substrate is modelled in Workbench like any other system,
-so nothing you build here may work only on itself. Read `docs/handoff.md` first (S-118: what the project is now, what is stopped, the plan in order), `README.md` for the picture,
-`docs/direction.md` for where it is going now (S-94: experiment first; it wins over `docs/spec.md` where they
-disagree), and `DECISIONS.md` for every default and why.
+so nothing you build here may work only on itself. Substrate is now an agent framework with Workbench as its UI
+(S-124). Read `docs/plan.md` first (the one current plan), `README.md` for the picture, and `DECISIONS.md` for
+every default and why. `docs/archive/` holds the old spec, build plan, direction and handoff: history, not plans
+to work from.
 
 | Part | Where | Role |
 | --- | --- | --- |
@@ -45,22 +46,17 @@ owner wants built, or a change to substrate itself. Use the `interview` skill (`
 for any of them; on a first session the SessionStart hook says to offer the three. A system's map is a domain of
 its own in Workbench, and stays there: never export another system's map into this repository.
 
-## Becoming the spec
+## The plan
 
-`docs/spec.md` is what substrate is meant to become, and `docs/build.yaml` its build plan. While they
-are in place, the SessionStart hook (`.claude/settings.json`, `scripts/spec.py hook`) names the next step, and
-sessions work through the plan with the `build-out` skill (`.claude/skills/build-out/SKILL.md`) unless the owner
-asks for something else, one step per session, each ending with its check passing. The owner stops it by
-deleting `docs/spec.md` or marking steps `dropped`.
-
-**The build-out is paused (S-94).** `docs/build.yaml` carries a top-level `paused:` line, so the hook names no
-step: do not continue the build plan. Work through the steps in `docs/direction.md` instead, or on what the
-owner asks. Removing the line resumes the plan.
+`docs/plan.md` is the one plan: work its steps in order, or on what the owner asks. Morphogen R&D is deferred
+(S-124): use the judge as it is and open no new work on it unless the owner asks. The old spec and build plan
+are in `docs/archive/`; the `build-out` skill and the spec hook no longer apply (with `docs/spec.md` gone the
+hook names no step).
 
 ## Where work goes
 
 - **Glue** (this repository): `scripts/`, `deploy/`, `plugins/substrate/` (substrate's Workbench plugin),
-  `catalog-info.yaml` (the map's committed export), `docs/` (the spec).
+  `catalog-info.yaml` (the map's committed export), `docs/` (the plan, contracts, recorded choices).
 - **Workbench** (`workbench/`): Substrate's store and GUI, part of this project and not a product of its own
   (S-120). Code in it still imports nothing from the plugins: that layering is kept because it costs nothing.
 - **Fixes and improvements to Morphogen** go upstream, in their own repositories, by pull request:
@@ -110,7 +106,6 @@ scripts/up.sh                   # the stack, Workbench's schema, substrate's plu
 scripts/check.sh                # is everything up and wired
 scripts/test.sh [FILE...]       # every test suite, each in a throwaway database
 scripts/build.sh [db|workbench|tools]   # images, built in containers
-python3 scripts/spec.py status|next|set ID STATUS   # where the spec's build plan stands
 scripts/verdicts.sh             # Morphogen's verdicts into Workbench (also run by a hook after judged runs)
 scripts/map.sh [export|check|import]   # the map's relations, drift, inferences; or the map to and from catalog-info.yaml (MAP.md)
 scripts/observe.sh              # what runs on this machine (observe.yaml, and observe.local.yaml: what its owner allows) into Workbench, gitleaks first, then drift

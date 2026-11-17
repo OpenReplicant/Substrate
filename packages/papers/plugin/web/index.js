@@ -1,4 +1,4 @@
-// The papers package's plugin, browser side: one view, the papers (docs/tasks/paper-catalog.md). A table with filters
+// The papers package's plugin, browser side: one view, the papers (docs/archive/tasks/paper-catalog.md). A table with filters
 // for the heading a list put the paper under, the listing, how many listings name it, the date, a repository and the
 // testable flag, and for what a model read from the abstract (kind, slot, trial); a need described in words is searched with
 // recall limited to papers (the lookup), the filters applied to what it ranks; a row can be queued for a trial with a reason. A row opens to the listings that name it (each with its heading and a link to the line), and "Open"

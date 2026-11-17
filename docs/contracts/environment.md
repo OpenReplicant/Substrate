@@ -4,7 +4,7 @@ Between an **environment** (what is sensed, what may be done, how the outcome is
 candidate architecture: whatever turns an observation into an action), and **Morphogen** (which runs both and
 decides). A **package** is the directory that holds one environment and an agent configured for it, and is
 what gets started and shared (S-102). It starts from `plugins/handlers/ladder.py` (the handler contract),
-`bench/run.py` and `bench/score.py` (the one judged workload), spec section 10 and `docs/direction.md`.
+`bench/run.py` and `bench/score.py` (the one judged workload), spec section 10 and `docs/archive/direction.md`.
 
 The words, each with one meaning (S-102 ends the overlap):
 
