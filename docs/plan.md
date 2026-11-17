@@ -47,6 +47,6 @@ publication and reproductions, the hosted mapper and hosted judging, the persona
 ## The owner's to decide
 
 - The first system (step 3).
-- Morphogen's future: frozen as an option (recommended), slimmed, or folded in.
+
 - Rotating the Postgres password; putting the Gemma model at the gateway.
 - The licence and whether the repository goes public.

@@ -108,8 +108,58 @@ the record held by another role: Postgres row-level security, or a separate user
 
 - **First filler:** a script run as the judge user, running the card's tests and the held-out slice.
 - **Candidates for the runner** (rule 3, not yet searched): Inspect AI, promptfoo, DeepEval.
-- **Morphogen** stays an option behind the same interface, for noisy comparisons (one LLM configuration
-  against another, statistics over rounds). No new work on it (S-124).
+- **Morphogen** is frozen as an option behind the same interface (S-127). Its later overhaul, when the owner
+  starts it, is toward a standard CI workflow built from components (a runner, held-out cases, a verdict log,
+  statistics as a step) rather than one custom program.
+
+## It is an actor model on Postgres (a description, not a runtime to build)
+
+Each component is an actor: it owns a mailbox (its pgmq queue), handles one message at a time, and sends
+messages (`send_topic`); the parent environment supervises its children, as an Erlang/OTP supervisor does. Two
+differences from a pure actor model: state is shared, not private (the claim log is a blackboard every actor
+reads), and an actor is judged before it runs live. So: actors for messaging, a blackboard for state.
+
+What follows from that:
+
+- **Borrow the semantics, not a runtime:** one mailbox per actor, per-mailbox order, supervision, retries with
+  visibility timeouts. pgmq gives all of it; no actor framework is added.
+- **Side effects must be idempotent:** a retried message re-applies its action. Writes to the database are
+  transactional; anything outside (an email, an API call) needs an idempotency key on the actuator.
+- **Postgres has a rate ceiling:** work-level events (tickets, messages, changes) are fine; high-rate sensor
+  data is sampled or batched before it becomes a signal, or uses an unlogged queue where loss is acceptable.
+- **Nearby tools** for durable steps on Postgres, if a component needs multi-step workflows:
+  [Absurd](https://lucumr.pocoo.org/2025/11/3/absurd-workflows/) (SQL-only, works with pgmq),
+  [DBOS](https://dbos.dev/blog/making-postgres-queues-scale), Hatchet. Chosen by the research skill when needed.
+
+## The view: serializing the environment for the LLM (a component, tested per model)
+
+What the LLM sees is a rendering of the environment, and how it is rendered changes results: one study found
+up to 40% differences between plain text, Markdown, YAML and JSON on the same task, with no format best across
+models ([He et al. 2024](https://arxiv.org/abs/2411.10541), OpenAI models only). It also decides cost, through
+the prompt cache. So the **view is a component with a card**, like any other, and is judged per model and per
+arrangement.
+
+Its parameters:
+
+| Parameter | Choices |
+| --- | --- |
+| format | plain text, Markdown, YAML, JSON, XML tags, tables |
+| content | signals, claims, or both; citations inline or by id |
+| granularity | each signal, a summary per stream, deltas against a snapshot |
+| order | by time, by object, by priority |
+| time | absolute or relative; where timestamps sit |
+| budget | how much fits before older content is summarized |
+
+**Cache layout (default):** stable first, changing last, and nothing already sent rewritten: instructions and
+the environment's schema (streams, objects, actuators), then a snapshot of the objects that matters, then the
+events appended in order. Timestamps, tool sets and instructions that change mid-session break the cached prefix
+([prefix-stability study](https://neurips.cc/virtual/2026/162685) finds a badly arranged loop can cost more than
+no caching). The gateway already meters `tokens_cached` (S-106), so a view's cache rate is a KPI on its card.
+
+**Under pass-through** the view is two things Substrate controls: the format of the events a channel pushes,
+and what Workbench's MCP tools return. Claude Code manages the rest of the context (compaction, its own cache
+layout), and that stays its job. A self-lever lets the LLM ask for a different view (a summary instead of raw
+signals), as a `propose`.
 
 ## Environments nest (decided as a shape; built later)
 
@@ -139,6 +189,7 @@ much reaches a person. A layer that does not stays off.
 | Raw readings into claims | encoding helps more than it loses |
 | Reactive handlers, in parallel | cheap pattern matching takes load off the LLM without missing things |
 | Escalation filtering | the LLM judges better with less in its context, and can query the rest |
+| The view's format and layout | a given rendering suits a given model; differs per model and arrangement |
 | Serial arbitration per actuator | needed once there is more than one actor |
 | Self-levers (subscribe, mute, add or retire a handler, set a threshold) | the LLM tunes its own setup well; structure changes are `propose` |
 | Nesting | splitting off a child lowers cost or escalations without losing quality |
@@ -169,5 +220,5 @@ harness rather than a research loop over a bare model API.
 - What the LLM sees by default: everything, or what components escalate plus queries (recommended: the latter,
   once there are components; everything under pass-through).
 - The judge's runner: a script, or one of Inspect AI, promptfoo, DeepEval.
-- Morphogen's future: frozen as an option (recommended), slimmed, or folded in.
+- The default view's format, until one has been measured on the first environment's model.
 - The first system to put an environment on.
