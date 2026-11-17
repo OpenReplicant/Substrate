@@ -29,23 +29,26 @@ no more work goes into it for now.
 | --- | --- | --- |
 | 1 | Get the stack up on the machine you work on (`setup` skill) | `scripts/check.sh` passes |
 | 2 | Read the three closest works in full (Global Workspace Agents, CogRec, Graphiti's data model) and the current Claude Code channels docs; amend `docs/framework.md` where they change it | the page cites what was read and what changed (done 2026-11-17, S-129; checking the claim fields against Workbench's schema waits for step 1) |
-| 3 | The owner picks the first real system: one with a steady stream of similar work and a checkable outcome | the pick is a row in `DECISIONS.md` |
-| 4 | Pass-through on it: its streams into pgmq topics, readings into the claim log, a Claude Code channel subscribed, one actuator gated at `propose` | it does the job end to end on real input; every event, model call and action is in the record; the owner decides proposals in Workbench |
-| 5 | One distilled component with its card, and the judge interface's first filler (a script as the judge user, the held-out slice of the record) | a verdict on the component against pass-through; promoted or refused on it |
-| 6 | Write down the path that worked, then put a second environment on another system by following it | the second needed no new framework code, or the changes it needed are named |
+| 3 | The owner picks the first system | done (S-130): the companion, a persistent voice and avatar assistant that works in the background and manages its own model and compute budget, the first child of the chimera (the root environment) |
+| 4 | **The companion, text first, pass-through.** Its streams into pgmq topics: the owner's messages, the gateway's meter (spend per caller), a clock. Its actuators: reply, start a background task, propose a budget or model change. A Claude Code session kept open, fed by our channel (a pgmq queue behind `notifications/claude/channel`, archived only on `ack`). The privacy floor (`docs/privacy.md`) applies from the first message. First test inside it: does a channel work with Claude Code on the gateway's local model | the owner talks to it in text and it does background work end to end; every signal, call and action is in the record; budget changes are proposals the owner decides in Workbench |
+| 5 | **The voice head**, as a pipeline component: microphone, voice activity, speech-to-text, a fast local model for turn-taking and short answers, text-to-speech; parts chosen with the `research` skill and run locally. It answers what it can and hands real work to the Claude Code session, which reports back through it | a spoken conversation with latency the owner accepts; LLM calls per event and cost per hour on its card |
+| 6 | One distilled component with its card, and the judge interface's first filler (a script as the judge user, a held-out slice of the record, whole days held out) | a verdict on the component against pass-through; promoted or refused on it |
+| 7 | The avatar, then the first embodied child environment (VRChat, Virt-A-Mate or a ROS2 simulation, the owner's pick), nested under the chimera by the interface rule | the companion acts there through that environment's actuators, under the same gates and budget |
 
-Nesting, self-levers and the other layers in `docs/framework.md` come after step 6, each tested against
-pass-through. Workbench is no longer frozen: add what these steps need, and nothing they don't.
+Self-levers beyond budget and model choice, and the other layers in `docs/framework.md`, come as these steps
+need them, each tested against pass-through. Workbench is no longer frozen: add what these steps need, and
+nothing they don't.
 
 ## Deferred
 
 Morphogen R&D (statistics, the judge's own gateway and meter, the queue, GitHub Actions, the evidence log), the
 case-and-scorer kit and the environment contract's generalisation, held-out cases by script, the paper catalog's
-publication and reproductions, the hosted mapper and hosted judging, the personal assistant, the slot model
+publication and reproductions, the hosted mapper and hosted judging, the slot model
 (`docs/archive/slots.md`).
 
 ## The owner's to decide
 
-- The first system (step 3).
+- Whether the companion's Claude Code may see personal content (privacy rules P3, P4): Claude Code on a local model only, or loosened per stream.
+- Which embodied environment comes first (step 7).
 - Rotating the Postgres password; putting the Gemma model at the gateway.
 - The licence and whether the repository goes public.

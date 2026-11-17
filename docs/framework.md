@@ -243,6 +243,27 @@ parent's side, judged like any rule.
 **The one rule built in from the start:** an environment's interface (streams, objects, actuators, gates) is
 exactly what a parent sees of it as an object, so nesting needs no redesign.
 
+## The chimera: the root and its goals (decided, S-130)
+
+The root environment is the **chimera**: one system that finds components, or makes and changes them, as its
+goals require. Every other environment is a child of it. Its goals, in the order they bind:
+
+1. **Values and constraints** (floor, changed only by the owner): the gates, the privacy rules for personal
+   streams (`docs/privacy.md`), the budgets, and what the judge holds. Nothing optimizes against these.
+2. **The owner's preferences** (from what they say, in interviews and in the review lane, as their own claims).
+3. **Self-optimization** (seed): lower cost and fewer LLM calls per event, fewer escalations to the owner, at
+   equal or better quality, every change judged against what it replaces.
+
+**Budgets** are a floor the owner sets (spend per day, per caller, per model) and signals the chimera reads (the
+gateway's meter). Choosing a model or a compute placement within the budget is a self-lever; raising a budget
+is always the owner's.
+
+**The children, in order:** the companion (a persistent voice and avatar assistant working in the background),
+then embodied environments it acts in: VRChat or Virt-A-Mate for presence as a 'hologram', ROS2 for a robot in
+simulation and later in operation. Each is nested by the interface rule, so the companion acts in them through
+their actuators under the same gates and budget. A personal stream (the owner's voice, messages, files) carries
+the privacy floor from its first signal.
+
 ## Assumptions, as parameters
 
 Each layer is switched on per environment and has to beat pass-through on the same work, on quality, cost or how

@@ -1,6 +1,6 @@
 # Privacy rules for personal streams
 
-Written before any personal stream is read (spec step 21, S-80). Each rule has a check. A personal stream turns
+Written before any personal stream is read (spec step 21, S-80; brought back as the companion's floor, S-130). Each rule has a check. A personal stream turns
 on only when every check passes and the owner has turned that stream on by name. Until then the assistant
 reads nothing.
 
@@ -13,7 +13,7 @@ reads nothing.
 | P5 | **Secrets are never kept.** Everything read passes gitleaks before it is imported; a finding drops the item and says so. | the observer's gitleaks step, tested with a planted key |
 | P6 | **Transcripts are off.** A personal stream keeps a call's answer, confidence, reason and cost, not its prompt or reply, unless the owner turns transcripts on for that stream. The gateway keeps no content at all (S-77). | a test that a personal stream's calls have no transcript by default |
 | P7 | **Retention is bounded.** Raw items are kept for a number of days the owner sets (`ASSISTANT_RETENTION_DAYS`), then dropped; claims keep only what a decision needs, quoting as little as possible. | a timer job and its test: an item past retention is gone, its claims retracted |
-| P8 | **The assistant proposes; it does not act.** No message is sent and no event changed except by the owner's acceptance, until a judged compile-down earns one kind of action (BRIEF.md). | a red-team test: a handler that acts without an accepted proposal is refused |
+| P8 | **The assistant proposes; it does not act.** No message is sent and no event changed except by the owner's acceptance, until a judged compile-down earns one kind of action (`docs/archive/assistant/BRIEF.md`; now a judged component, `docs/framework.md`). | a red-team test: a handler that acts without an accepted proposal is refused |
 | P9 | **The owner can stop and forget.** Turning a stream off stops reading it; forgetting it deletes its items, calls and claims. | a test that forgetting a stream leaves none of its data |
 | P10 | **Judging holds out whole weeks.** A compile-down is judged on weeks it was never built from (as step 13 holds out windows). | the idle tier's red-team test (step 20) covers personal streams too |
 
