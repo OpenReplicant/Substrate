@@ -2,6 +2,7 @@
 It should:
 - name every caller in CALLERS, each with its own key, and no other
 - hold a local-only caller (the store's embeddings) to Ollama even when OpenRouter is configured
+- hold the companion's callers to Anthropic (on the owner's own login: no Anthropic key in the config)
 - refuse calls without a key, keep no message content, and carry no secret (only env.NAME references or derived keys)
 - give no caller a key when GATEWAY_KEY_SECRET is unset
 
@@ -35,7 +36,13 @@ def main():
     check("the store's embeddings reach Ollama only", [p["provider"] for p in embed["provider_configs"]] == ["ollama"],
           embed["provider_configs"])
     check("its key is read from .env", embed["value"] == "env.STORE_EMBED_KEY", embed["value"])
-    check("both providers are configured", sorted(cfg["providers"]) == ["ollama", "openrouter"], sorted(cfg["providers"]))
+    check("the providers are configured", sorted(cfg["providers"]) == ["anthropic", "ollama", "openrouter"], sorted(cfg["providers"]))
+    check("Anthropic has no key of its own (only a caller's Claude login reaches it)", cfg["providers"]["anthropic"] == {"keys": []})
+    for c in ("companion:session", "companion:task"):
+        pc = keys[c]["provider_configs"]
+        check(f"{c} reaches Anthropic only, Haiku by default", [p["provider"] for p in pc] == ["anthropic"]
+              and pc[0]["allowed_models"] == ["regex:claude-haiku.*"], pc)
+        check(f"{c}'s key is read from .env", keys[c]["value"].startswith("env.COMPANION_"), keys[c]["value"])
     client = cfg["client"]
     check("a call needs a key", client["enforce_auth_on_inference"] is True)
     check("no message content is logged", client["disable_content_logging"] is True)

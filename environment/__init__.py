@@ -21,11 +21,11 @@ class Env:
 
     def read(self, queue: str, vt: int = 300, qty: int = 10) -> list[dict]:
         """Messages now visible on a queue, hidden from the next read for vt seconds unless acknowledged."""
-        rows = self.c.execute("select msg_id, read_ct, message from pgmq.read(%s, %s, %s)", (queue, vt, qty)).fetchall()
+        rows = self.c.execute("select msg_id, read_ct, message from env.read(%s, %s, %s)", (queue, vt, qty)).fetchall()
         return [{"msg_id": m, "read_ct": n, **(msg if isinstance(msg, dict) else json.loads(msg))} for m, n, msg in rows]
 
     def ack(self, queue: str, msg_ids: list[int]) -> list[int]:
-        return [r[0] for r in self.c.execute("select pgmq.archive(%s, %s::bigint[])", (queue, msg_ids)).fetchall()]
+        return [r[0] for r in self.c.execute("select env.ack(%s, %s::bigint[])", (queue, msg_ids)).fetchall()]
 
     def actuator(self, name: str, gate: str, by: str, description: str | None = None) -> str:
         return self.c.execute("select env.actuator(%s, %s, %s, %s)", (name, gate, by, description)).fetchone()[0]

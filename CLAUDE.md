@@ -15,7 +15,7 @@ plans to work from. v1's databases are kept in the same Postgres volume (`workbe
 | The model gateway | container `gateway` (Bifrost), `scripts/gateway.py` | every model call goes through it with its caller's key and is recorded there, not by the caller (S-77) |
 | Local models | container `ollama` | the store's embeddings; local models later |
 | Tools | `bin/`, container `substrate-tools` | the scripts' Python and gitleaks, run in a container as you (S-19) |
-| The companion | its own container (S-136), plan step 4 | the first environment: Claude Code on Haiku through the gateway |
+| The companion | `deploy/companion` (compose service `companion`), `environment/companion.py` (service `environment`), the UI's `#/companion` | the first environment: Claude Code on Haiku through the gateway's pass-through route on the owner's login, fed by the channel; it replies, starts background tasks and proposes budget and model changes (S-136, S-144) |
 | The UI | `ui/` (`ui/server.py`, `ui/static`), compose service `ui` on 127.0.0.1:8100 | the store's pages and maps as diagrams (S-140), read-only; v1's Workbench rebuilt, with no name of its own (S-141) |
 | Glue | `scripts/`, `deploy/` | brings the parts up and connects them |
 
@@ -56,11 +56,12 @@ scripts/bootstrap.sh       # once per machine: host tools, images, the tools con
 scripts/up.sh              # the stack (db, gateway, ollama, ui), the tools container, the databases; then check.sh
 scripts/check.sh           # is everything up and wired
 scripts/test.sh [FILE...]  # the test suites, in the tools container
-scripts/build.sh [db|tools]
-scripts/logs.sh SERVICE    # db, gateway, ollama, ui
+scripts/build.sh [db|tools|companion]
+scripts/logs.sh SERVICE    # db, gateway, ollama, ui, environment, companion
 scripts/tools.sh start|stop|status
 scripts/down.sh [--volumes]   # stop (deleting data asks first)
 python3 scripts/gateway.py render|keys   # the gateway's config from .env and its callers
 bin/in-tools python3 scripts/db.py init|import-v1   # the store's schema; v1's people's statements and decisions
 bin/in-tools python3 scripts/env.py waiting|decide|publish|actuators|gate|queues   # the environment, as a person
+scripts/companion.sh login|attach|restart|status   # the companion's session (log in once)
 ```

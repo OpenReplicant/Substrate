@@ -31,7 +31,7 @@ OUT = ROOT / ".state/gateway/config.json"
 
 NAMES = ("POSTGRES_PASSWORD", "DB_PORT", "OPENROUTER_API_KEY", "OLLAMA_URL", "GATEWAY_OPENROUTER_MODELS",
          "GATEWAY_REQUESTS_PER_HOUR", "GATEWAY_DB_PASSWORD", "GATEWAY_METER_PASSWORD", "GATEWAY_KEY_SECRET",
-         "GATEWAY_PORT")
+         "GATEWAY_PORT", "COMPANION_MODELS", "COMPANION_DB_PASSWORD")
 
 
 def settings() -> dict[str, str]:
@@ -47,10 +47,13 @@ def caller_key(secret: str, caller: str) -> str:
 
 
 # Every caller, and the only providers each may use (S-83): the store's embeddings stay local. A caller is added
-# here when a step needs one (the companion's session, S-136, in step 4).
-CALLERS = {"store:embed": ("ollama",)}
+# here when a step needs one. The companion (S-136, plan step 4): its session and its background tasks, each on the
+# owner's own Claude login (subscription mode: the gateway forwards the login's token to Anthropic and keeps the
+# call under the caller's key), held to Anthropic's models in COMPANION_MODELS.
+CALLERS = {"store:embed": ("ollama",), "companion:session": ("anthropic",), "companion:task": ("anthropic",)}
 LOCAL = ("ollama",)
-FIXED_KEYS = {"store:embed": "STORE_EMBED_KEY"}   # keys read from .env by the gateway and the caller
+FIXED_KEYS = {"store:embed": "STORE_EMBED_KEY", "companion:session": "COMPANION_SESSION_KEY",
+              "companion:task": "COMPANION_TASK_KEY"}   # keys read from .env by the gateway and the caller
 
 
 def callers() -> list[str]:
@@ -69,7 +72,10 @@ def render(env: dict[str, str]) -> dict:
         providers["ollama"] = {"keys": [{"name": "ollama", "value": "", "models": ["*"], "weight": 1.0,
                                          "ollama_key_config": {"url": env["OLLAMA_URL"]}}],
                                "network_config": {"base_url": env["OLLAMA_URL"], "allow_private_network": True}}
-    allowed = {"openrouter": [m.strip() for m in (env.get("GATEWAY_OPENROUTER_MODELS") or "regex:.*:free").split(",") if m.strip()],
+    # Anthropic with no key of its own: only calls carrying a Claude login (the companion's) can use it
+    providers["anthropic"] = {"keys": []}
+    allowed = {"anthropic": [m.strip() for m in (env.get("COMPANION_MODELS") or "regex:claude-haiku.*").split(",") if m.strip()],
+               "openrouter": [m.strip() for m in (env.get("GATEWAY_OPENROUTER_MODELS") or "regex:.*:free").split(",") if m.strip()],
                "ollama": ["regex:.*"]}
     secret = env.get("GATEWAY_KEY_SECRET") or ""
     # OpenRouter's free tier limits the account (20 calls a minute, 1000 a day: the owner, 2026-11-11, S-87) and

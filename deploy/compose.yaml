@@ -1,4 +1,5 @@
-# Substrate's stack on the fresh tree (S-137): Postgres, the model gateway, local models and the UI (S-140).
+# Substrate's stack on the fresh tree (S-137): Postgres, the model gateway, local models, the UI (S-140), and the
+# companion (plan step 4): its environment's sensors and appliers, and its Claude Code session.
 # SPARQL (deploy/ontop) and Caddy in front (deploy/caddy) come later (docs/plan.md 3b).
 # Started by scripts/up.sh:
 #
@@ -53,6 +54,8 @@ services:
       GATEWAY_DB_PASSWORD: ${GATEWAY_DB_PASSWORD:?set in .env}
       GATEWAY_ADMIN_PASSWORD: ${GATEWAY_ADMIN_PASSWORD:?set in .env}
       STORE_EMBED_KEY: ${STORE_EMBED_KEY:?set in .env}
+      COMPANION_SESSION_KEY: ${COMPANION_SESSION_KEY:?set in .env}
+      COMPANION_TASK_KEY: ${COMPANION_TASK_KEY:?set in .env}
     volumes:
       - ../.state/gateway/config.json:/app/data/config.json:ro   # over the tmpfs: its stores are in Postgres
     ports:
@@ -98,8 +101,11 @@ services:
       PGUSER: postgres
       PGDATABASE: substrate
       PGPASSWORD: ${POSTGRES_PASSWORD:?set in .env}
+      OWNER_NAME: ${OWNER_NAME:-owner}
     volumes:
       - ../ui:/app/ui:ro
+      - ../environment:/app/environment:ro      # the companion's page: what the owner says is published through it
+      - ../store:/app/store:ro
     ports:
       - "127.0.0.1:${UI_PORT:-8100}:8100"
     healthcheck:
@@ -109,7 +115,56 @@ services:
     depends_on:
       db: {condition: service_healthy}
 
+  # The companion's environment (plan step 4): the clock, the gateway's meter of its calls, and the appliers of
+  # its reply, budget and model actuators (environment/companion.py sense). Outside the companion's container, so
+  # what it counts and what applies an approved proposal are not the model's to change.
+  environment:
+    <<: *locked
+    image: localhost/substrate-tools:local
+    command: ["python3", "-m", "environment.companion", "sense"]
+    working_dir: /app
+    user: "65534:65534"
+    environment:
+      PYTHONDONTWRITEBYTECODE: "1"
+      STORE_URL: postgresql://postgres:${POSTGRES_PASSWORD:?set in .env}@db:5432/substrate
+      PGHOST: db
+      GATEWAY_METER_PASSWORD: ${GATEWAY_METER_PASSWORD:?set in .env}
+      COMPANION_CLOCK_MINUTES: ${COMPANION_CLOCK_MINUTES:-60}
+      COMPANION_DAILY_TOKENS: ${COMPANION_DAILY_TOKENS:-2000000}
+    volumes:
+      - ../environment:/app/environment:ro
+      - ../store:/app/store:ro
+    depends_on:
+      db: {condition: service_healthy}
+
+  # The companion (S-136): Claude Code in tmux, fed by the channel, on the owner's own Claude login made once in it
+  # (scripts/companion.sh login) and kept in its own home volume; models only through the gateway's pass-through
+  # route under its own keys; the database only as the `companion` login. Nothing on the host is changed.
+  companion:
+    image: localhost/substrate-companion:local
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+    tmpfs: [/tmp]
+    environment:
+      ANTHROPIC_BASE_URL: http://gateway:8080/anthropic_passthrough
+      ANTHROPIC_CUSTOM_HEADERS: "x-bf-vk: ${COMPANION_SESSION_KEY:?set in .env}"
+      COMPANION_TASK_KEY: ${COMPANION_TASK_KEY:?set in .env}
+      COMPANION_MODEL: ${COMPANION_MODEL:-claude-haiku-5-5}
+      STORE_URL: postgresql://companion:${COMPANION_DB_PASSWORD:?set in .env}@db:5432/substrate
+    volumes:
+      - companion-home:/home/companion
+      - ../environment:/app/environment:ro
+      - ../store:/app/store:ro
+      - ../deploy/companion:/app/deploy/companion:ro
+    depends_on:
+      db: {condition: service_healthy}
+      gateway: {condition: service_started}
+
 volumes:
+  companion-home:
+    name: ${COMPANION_VOLUME:-substrate_companion-home}   # its Claude login and its session's history
   ollama-models:
     name: ${OLLAMA_VOLUME:-substrate_ollama-models}   # the downloaded models; large, and only re-downloadable
   db-data:

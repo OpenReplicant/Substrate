@@ -12,8 +12,15 @@ In the stack it is the compose service `ui` (deploy/compose.yaml), published on 
   GET /api/map/Q10[?depth=6]    nodes (id, label, description, kind) and edges (source, target, kind, statement,
                                 flagged): store.map_nodes and store.map
 
+  GET  /api/companion            the companion's conversation (the owner's messages, its replies, its tasks and
+                                proposals, in order), the proposals waiting, the latest meter, its budget and model
+  POST /api/companion/say       {"text"}: the owner says something (env.publish companion.owner.message)
+  POST /api/companion/decide    {"action", "approve", "reason"}: the owner decides a proposal (env.decide)
+
 Every response carries the UI's Content-Security-Policy (deploy/caddy/Caddyfile's, without frames): scripts and
-styles only from this origin. The session is read-only; writes go through the agent's tools (store/mcp.py).
+styles only from this origin. Reads are on a read-only session; the store's writes go through the agent's tools
+(store/mcp.py). The two POSTs are the owner's, as OWNER_NAME: they are accepted only as JSON from this origin
+(Origin, and Sec-Fetch-Site when the browser sends it), so another page cannot speak or decide for the owner.
 """
 from __future__ import annotations
 
@@ -48,18 +55,18 @@ def database_url() -> str:
 
 
 class Store:
-    """One read-only connection, used by one request at a time."""
+    """One connection, used by one request at a time: read-only, or (write=True) for the owner's two writes."""
 
-    def __init__(self, url: str):
+    def __init__(self, url: str, write: bool = False):
         self.url, self.lock, self.conn = url, threading.Lock(), None
+        self.options = "-c statement_timeout=10000" + ("" if write else " -c default_transaction_read_only=on")
 
     def query(self, sql: str, args=()) -> list[tuple]:
         with self.lock:
             for attempt in (1, 2):                       # reconnect once if Postgres restarted under us
                 try:
                     if self.conn is None or self.conn.closed:
-                        self.conn = psycopg.connect(self.url, autocommit=True,
-                                                    options="-c default_transaction_read_only=on -c statement_timeout=10000")
+                        self.conn = psycopg.connect(self.url, autocommit=True, options=self.options)
                     return self.conn.execute(sql, args).fetchall()
                 except psycopg.OperationalError:
                     self.conn = None
@@ -96,10 +103,70 @@ def api(store: Store, path: str, q: dict) -> tuple[int, object]:
                      "nodes": [{"id": i, "label": la, "description": d, "kind": k} for i, la, d, k in nodes],
                      "edges": [{"source": s, "target": t, "kind": k, "statement": str(st) if st else None, "flagged": f}
                                for s, t, k, st, f in edges]}
+    if parts == ["companion"]:
+        return 200, companion(store)
     return 404, {"error": "no such route"}
 
 
-def handler(store: Store):
+OWNER = os.environ.get("OWNER_NAME") or "owner"
+
+# The companion's conversation: what the owner said, what it replied, the tasks it started and their results, its
+# proposals and their decisions, each as it is in the record (env.signal, env.action)
+CONVERSATION = """
+select * from (
+  select 'said' as kind, s.at, s.source as who, s.body->>'text' as text, null::bigint as action, null as status, s.id as ref
+    from env.signal s where s.key = 'companion.owner.message'
+  union all
+  select case a.actuator when 'companion.reply' then 'reply' when 'companion.task' then 'task' else 'proposal' end,
+         a.at, a.caller, coalesce(a.input->>'text', a.input->>'prompt', a.input::text), a.id, a.status, a.id
+    from env.action a where a.actuator like 'companion.%%' and not (a.actuator = 'companion.reply' and a.status <> 'applied')
+  union all
+  select 'task_done', s.at, s.source, s.body->>'text', (s.body->>'action')::bigint,
+         case when (s.body->>'ok')::boolean then 'applied' else 'failed' end, s.id
+    from env.signal s where s.key = 'companion.task.done'
+  union all
+  select 'decided', a.decided_at, a.decided_by, a.reason, a.id, a.status, a.id
+    from env.action a where a.actuator like 'companion.%%' and a.decided_at is not null
+) c order by at desc limit %s
+"""
+
+
+def companion(store: Store, limit: int = 200) -> dict:
+    rows = store.query(CONVERSATION, (limit,))
+    convo = [{"kind": k, "at": at.isoformat(), "who": w, "text": t, "action": a, "status": st}
+             for k, at, w, t, a, st, _ in reversed(rows)]
+    waiting = store.query("select id, actuator, input, caller, at from env.action where actuator like 'companion.%%' "
+                          "and status = 'proposed' order by id")
+    meter = store.query("select body, at from env.signal where key = 'companion.meter.spend' order by id desc limit 1")
+    gates = store.query("select name, gate, set_by from env.actuator where name like 'companion.%%' order by name")
+    settings = store.query("select name, value, set_by, at from env.current where env = 'companion'")
+    return {"owner": OWNER, "conversation": convo,
+            "waiting": [{"action": i, "actuator": n, "input": inp, "by": c, "at": at.isoformat()} for i, n, inp, c, at in waiting],
+            "meter": {**meter[0][0], "at": meter[0][1].isoformat()} if meter else None,
+            "gates": {n: {"gate": g, "set_by": b} for n, g, b in gates},
+            "settings": {n: {"value": v, "set_by": b, "at": at.isoformat()} for n, v, b, at in settings}}
+
+
+def post(writer: Store, path: str, body: dict) -> tuple[int, object]:
+    if path == "/api/companion/say":
+        text = body.get("text")
+        if not isinstance(text, str) or not text.strip() or len(text) > 20000:
+            return 400, {"error": "say needs text (at most 20000 characters)"}
+        sid = writer.query("select env.publish('companion.owner.message', %s::jsonb, %s)",
+                           (json.dumps({"text": text.strip()}), OWNER))[0][0]
+        return 200, {"signal": sid}
+    if path == "/api/companion/decide":
+        action, approve, reason = body.get("action"), body.get("approve"), body.get("reason")
+        if not isinstance(action, int) or not isinstance(approve, bool) or not (reason is None or isinstance(reason, str)):
+            return 400, {"error": "decide needs action (a number) and approve (true or false), and may give a reason"}
+        if not writer.query("select 1 from env.action where id = %s and actuator like 'companion.%%'", (action,)):
+            return 404, {"error": f"no companion action {action}"}
+        status = writer.query("select env.decide(%s, %s, %s, %s)", (action, approve, OWNER, reason or None))[0][0]
+        return 200, {"action": action, "status": status}
+    return 404, {"error": "no such route"}
+
+
+def handler(store: Store, writer: Store | None = None):
     class Handler(BaseHTTPRequestHandler):
         server_version = "substrate-ui"
 
@@ -122,7 +189,7 @@ def handler(store: Store):
                     status, obj = api(store, u.path, parse_qs(u.query))
                 except (psycopg.Error, ValueError) as e:
                     status, obj = 500, {"error": type(e).__name__ + ": " + str(e).strip().splitlines()[0]}
-                return self.send(status, json.dumps(obj).encode(), "application/json")
+                return self.send(status, json.dumps(obj, default=str).encode(), "application/json")
             rel = "index.html" if u.path in ("/", "/index.html") else u.path.removeprefix("/static/") if u.path.startswith("/static/") else None
             f = (STATIC / rel).resolve() if rel else None
             if not f or not f.is_file() or STATIC.resolve() not in f.parents:
@@ -134,6 +201,24 @@ def handler(store: Store):
 
         do_HEAD = do_GET
 
+        def do_POST(self):
+            u = urlparse(self.path)
+            host = self.headers.get("Host") or ""
+            origin = self.headers.get("Origin") or ""
+            same = origin in (f"http://{host}", f"https://{host}") and self.headers.get("Sec-Fetch-Site", "same-origin") == "same-origin"
+            if not same or not (self.headers.get("Content-Type") or "").startswith("application/json"):
+                return self.send(403, b'{"error": "only JSON from this page"}', "application/json")
+            try:
+                n = int(self.headers.get("Content-Length") or 0)
+                body = json.loads(self.rfile.read(min(n, 100_000)) or b"{}")
+                status, obj = post(writer or store, u.path, body if isinstance(body, dict) else {})
+            except json.JSONDecodeError:
+                status, obj = 400, {"error": "not JSON"}
+            except (psycopg.Error, ValueError) as e:
+                status, obj = 400 if isinstance(e, psycopg.errors.RaiseException) else 500, \
+                    {"error": str(e).strip().splitlines()[0]}
+            self.send(status, json.dumps(obj, default=str).encode(), "application/json")
+
         def log_message(self, fmt, *args):
             if os.environ.get("UI_LOG"):
                 super().log_message(fmt, *args)
@@ -142,7 +227,7 @@ def handler(store: Store):
 
 
 def serve(host: str, port: int, url: str) -> ThreadingHTTPServer:
-    return ThreadingHTTPServer((host, port), handler(Store(url)))
+    return ThreadingHTTPServer((host, port), handler(Store(url), Store(url, write=True)))
 
 
 def main():

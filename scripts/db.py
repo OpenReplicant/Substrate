@@ -53,7 +53,24 @@ def init(env: dict[str, str]) -> None:
         applied = store.migrate(c)
         graph = store.project(c)
     print(f"  the store's schema: {'applied ' + ', '.join(applied) if applied else 'up to date'}")
+    if env.get("COMPANION_DB_PASSWORD"):
+        companion_login(env)
     print(f"  the store's graph: built, {graph['nodes']} nodes and {graph['edges']} edges")
+
+
+def companion_login(env: dict[str, str]) -> None:
+    """The companion's container's login (store/sql/006_logins.sql): a member of env_agent, so it may publish, act
+    and read the queues it is given, and nothing else; then its actuators and queues (environment.companion)."""
+    from psycopg import sql
+    with connect(env, DB) as c:
+        c.autocommit = True
+        if not c.execute("select 1 from pg_roles where rolname = 'companion'").fetchone():
+            c.execute("create role companion login")
+        c.execute(sql.SQL("alter role companion password {}").format(sql.Literal(env["COMPANION_DB_PASSWORD"])))
+        c.execute("grant env_agent to companion")
+        from environment import Env
+        from environment.companion import setup
+        setup(Env(c))
 
 
 def import_v1(env: dict[str, str]) -> None:

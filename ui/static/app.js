@@ -169,9 +169,91 @@ async function side(id) {
 }
 $("close").onclick = () => { $("side").hidden = true; if (cy) cy.resize(); };
 
+// ---------- the companion (plan step 4): talk to it, see what it did, decide its proposals ----------
+
+let talkTimer = null, lastConvo = "";
+
+async function post(path, body) {
+  const r = await fetch(path, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
+  const out = await r.json();
+  if (!r.ok) throw new Error(out.error || r.statusText);
+  return out;
+}
+
+const when = iso => new Date(iso).toLocaleTimeString([], {hour: "2-digit", minute: "2-digit"});
+const LABEL = {said: "you", reply: "companion", task: "task started", task_done: "task result", proposal: "proposal", decided: "decision"};
+
+function line(c) {
+  const who = c.kind === "said" ? "you" : LABEL[c.kind];
+  let text = c.text || "";
+  if (c.kind === "task" && c.status !== "queued" && c.status !== "applied") text += ` (${c.status})`;
+  if (c.kind === "proposal") text = `${c.text} — ${c.status}`;
+  if (c.kind === "decided") text = `action ${c.action} ${c.status === "refused" ? "refused" : "approved"} by ${c.who}${c.text ? ": " + c.text : ""}`;
+  return el("li", {class: c.kind}, el("span", {class: "who", text: `${who} · ${when(c.at)}`}), el("div", {class: "text", text}));
+}
+
+async function refresh() {
+  let d;
+  try { d = await get("/api/companion"); } catch (err) { $("status").textContent = `Could not load: ${err.message}`; return; }
+  const key = JSON.stringify([d.conversation.length, d.conversation.at(-1), d.waiting.map(w => w.action)]);
+  const m = d.meter, budget = (d.settings.budget || {}).value || {}, model = (d.settings.model || {}).value;
+  const task = d.gates["companion.task"] || {};
+  $("status").textContent = [
+    m ? `today ${m.today_tokens.toLocaleString()} of ${(m.daily_budget_tokens || budget.daily_tokens || 0).toLocaleString()} tokens (as of ${when(m.at)})` : "no meter reading yet",
+    model ? `model ${model.model}` : null,
+    task.gate === "deny" ? "background tasks refused (over budget)" : null,
+  ].filter(Boolean).join(" · ");
+  $("waiting").replaceChildren(...d.waiting.map(w => {
+    const why = w.input.why ? ` — ${w.input.why}` : "";
+    const what = w.actuator === "companion.budget" ? `daily budget ${Number(w.input.daily_tokens).toLocaleString()} tokens`
+      : w.actuator === "companion.model" ? `switch to ${w.input.model}` : JSON.stringify(w.input);
+    const decide = approve => async () => {
+      try { await post("/api/companion/decide", {action: w.action, approve}); refresh(); }
+      catch (err) { $("status").textContent = err.message; }
+    };
+    const yes = el("button", {type: "button", text: "Approve"}), no = el("button", {type: "button", text: "Refuse"});
+    yes.onclick = decide(true); no.onclick = decide(false);
+    return el("div", {class: "proposal"}, el("span", {text: `The companion proposes: ${what}${why}`}), yes, no);
+  }));
+  if (key === lastConvo) return;
+  lastConvo = key;
+  const box = $("convo"), atEnd = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
+  box.replaceChildren(...d.conversation.map(line));
+  if (!d.conversation.length) box.append(el("li", {class: "empty", text: "Nothing said yet."}));
+  if (atEnd) box.scrollTop = box.scrollHeight;
+}
+
+function talk() {
+  current = null;
+  for (const id of ["map", "toolbar", "page", "side"]) $(id).hidden = true;
+  $("talk").hidden = false; $("list").hidden = true;
+  $("crumb").textContent = "Companion";
+  lastConvo = "";
+  refresh().then(() => { $("convo").scrollTop = $("convo").scrollHeight; });
+  clearInterval(talkTimer);
+  talkTimer = setInterval(refresh, 2000);
+  $("text").focus();
+}
+
+$("say").addEventListener("submit", async ev => {
+  ev.preventDefault();
+  const text = $("text").value.trim();
+  if (!text) return;
+  $("text").disabled = true;
+  try { await post("/api/companion/say", {text}); $("text").value = ""; await refresh(); $("convo").scrollTop = $("convo").scrollHeight; }
+  catch (err) { $("status").textContent = err.message; }
+  finally { $("text").disabled = false; $("text").focus(); }
+});
+$("text").addEventListener("keydown", ev => {
+  if (ev.key === "Enter" && !ev.shiftKey) { ev.preventDefault(); $("say").requestSubmit(); }
+});
+
 // ---------- routes ----------
 
 async function route() {
+  if (location.hash === "#/companion") return talk();
+  clearInterval(talkTimer);
+  $("talk").hidden = true; $("list").hidden = false;
   const [, kind, id] = /^#\/(map|e)\/([QP][1-9][0-9]*)$/.exec(location.hash) || [];
   try {
     if (kind === "map") { await map(id); showWholes(id); }

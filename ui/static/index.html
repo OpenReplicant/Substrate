@@ -14,6 +14,7 @@
 <header>
   <a href="#/" class="home">Substrate</a>
   <input id="q" type="search" placeholder="Search the store" autocomplete="off" aria-label="Search the store">
+  <a href="#/companion" class="nav">Companion</a>
   <span id="crumb"></span>
 </header>
 <main>
@@ -27,6 +28,15 @@
     </div>
     <div id="map" hidden></div>
     <article id="page" hidden></article>
+    <div id="talk" hidden>
+      <div id="status"></div>
+      <div id="waiting"></div>
+      <ol id="convo" aria-live="polite"></ol>
+      <form id="say">
+        <textarea id="text" rows="2" placeholder="Say something to the companion (Enter sends, Shift+Enter for a new line)" aria-label="Message"></textarea>
+        <button type="submit">Send</button>
+      </form>
+    </div>
   </section>
   <aside id="side" hidden>
     <button id="close" type="button" aria-label="Close">×</button>

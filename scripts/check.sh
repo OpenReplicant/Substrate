@@ -9,14 +9,14 @@ fails=0
 ok()   { printf '  ok    %s\n' "$*"; }
 bad()  { printf '  FAIL  %s\n' "$*"; fails=$((fails + 1)); }
 note() { printf '  note  %s\n' "$*"; }
-CORE="db gateway ollama ui"
+CORE="db gateway ollama ui environment companion"
 
 say "Services ($RUNTIME on $ENGINE)"
 running=$(rt_status 2>/dev/null | awk 'NR > 1 {print $1}' | tr '\n' ' ')
 for s in $CORE; do
   case "$running" in *"-$s-"*) ;; *) bad "service $s is not running (scripts/logs.sh $s)" ;; esac
 done
-extra=$(printf '%s\n' $running | grep -v -e '-db-' -e '-gateway-' -e '-ollama-' -e '-ui-' || true)
+extra=$(printf '%s\n' $running | grep -v -e '-db-' -e '-gateway-' -e '-ollama-' -e '-ui-' -e '-environment-' -e '-companion-' || true)
 [ -z "$extra" ] && ok "only the core runs ($CORE)" || note "also running, outside the core: $(echo $extra)"
 if "$ROOT/bin/in-tools" python3 -c '
 import sys; sys.path.insert(0, "scripts")
@@ -52,6 +52,14 @@ else bad "the environment: $(printf '%s\n' "$out" | tail -1) (bin/in-tools pytho
 probe=openrouter/x:free; [ -z "$(env_value OPENROUTER_API_KEY)" ] && [ -n "$(env_value OLLAMA_URL)" ] && probe=ollama/x
 code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "http://127.0.0.1:$(env_value GATEWAY_PORT)/v1/chat/completions" -H 'Content-Type: application/json' -d "{\"model\":\"$probe\",\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}]}")
 [ "$code" = "401" ] && ok "gateway     http://127.0.0.1:$(env_value GATEWAY_PORT)/ (Bifrost; a call without a key is refused)" || bad "the model gateway returned $code to a call without a key (scripts/logs.sh gateway)"
+# The companion (plan step 4, S-136): its session in tmux, and whether the owner's Claude login is in its home yet
+if out=$(compose exec -T companion sh -c 'tmux has-session -t companion 2>/dev/null && echo session; test -s "$HOME/.claude/.credentials.json" && echo login; true' 2>/dev/null); then
+  case "$out" in
+    *session*login*) ok "companion   session running, logged in (scripts/companion.sh attach; talk at the UI's #/companion)" ;;
+    *session*) note "companion   session running, not logged in yet: scripts/companion.sh login" ;;
+    *) bad "companion   no session in its container (scripts/logs.sh companion)" ;;
+  esac
+else bad "companion   its container does not answer (scripts/logs.sh companion)"; fi
 # The UI (S-140): its API answers from the store, under a CSP that allows scripts and styles from itself only
 ui="http://127.0.0.1:$(env_value UI_PORT || true)"; [ "$ui" = "http://127.0.0.1:" ] && ui=http://127.0.0.1:8100
 hdr=$(curl -s -D - -o /dev/null "$ui/api/wholes" 2>/dev/null | tr -d '\r')
