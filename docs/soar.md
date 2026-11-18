@@ -1,6 +1,6 @@
-# Soar, with Substrate on its impasses
+# MetaSoar: Soar, with Substrate on its impasses
 
-The spec for Substrate's first target (S-160, 2026-11-18; supersedes S-154's design, which is kept below as
+The spec for Substrate's first target, the repository `OpenReplicant/MetaSoar` (S-160, S-161, 2026-11-18; supersedes S-154's design, which is kept below as
 hypotheses). **The original Soar, unchanged, with one hook: an impasse its own knowledge cannot get out of goes
 to Substrate, which proposes a change, judged by Morphogen and let in by the gate.** Nothing else is ours. What
 Substrate adds over time, and whether it rediscovers anything we would have built in, is the result.
@@ -28,12 +28,16 @@ get better at it over episodes, and does what it learned make the next game fast
 
 ## The only things we add
 
-1. **A game adapter**: an environment's observation onto Soar's input link, Soar's output-link commands onto the
-   environment's actions, its reward onto Soar's reward link (ch. 5). Written once against a standard environment
-   interface (which one, picked with the `research` skill; Gymnasium's observation, action and reward is the lead),
-   not per game. It is the judge's, not the agent's: Substrate may not change it.
-2. **The impasse hook**: Soar reaches impasses constantly as normal problem solving, so the hook fires only on one
-   its own knowledge cannot leave: no progress for N decision cycles, the goal-depth limit reached, or the same
+1. **An environment adapter**: an environment's observation onto Soar's input link, Soar's output-link commands
+   onto the environment's actions, its reward onto Soar's reward link (ch. 5). Written once against a standard
+   environment interface (which one, picked with the `research` skill; Gymnasium's observation, action and reward
+   is the lead, with arbitrary observation and action spaces, text among them), not per environment. This is
+   what "environment" means here: any senses and any actions, with feedback; a game is one kind. It is the
+   judge's, not the agent's: Substrate may not change it.
+2. **The impasse hook**, a watcher outside the agent, on the judge's side with the adapter: it sees the kernel's
+   decisions and impasses through SML, so the agent's own rules (which Substrate changes) cannot suppress it and
+   the agent cannot learn to hide being stuck. Soar reaches impasses constantly as normal problem solving, so the
+   hook fires only on one its own knowledge cannot leave: no progress for N decision cycles, the goal-depth limit reached, or the same
    impasse recurring across episodes. It calls Substrate's `improve` (`docs/seed.md`) with the trace: the impasse,
    the working memory above it, the recent decisions, the episode's reward so far. N and the recurrence count are
    settings, and the hook's only opinions.
@@ -48,6 +52,12 @@ get better at it over episodes, and does what it learned make the next game fast
 | rules | the agent's productions (`agent/**`) | yes: the reference check holds by construction |
 | settings | Soar's own parameters (learning on or off, RL's rates, memory settings), bounded | yes |
 | architecture | the kernel's source | no: this starts the architecture lineage |
+
+Soar is BSD C++ built from source here, so the architecture can change by three routes, and which one Substrate
+takes, and when, is part of the result: **edit the kernel's C++ and rebuild** (a new decision procedure, memory
+or kind of substate); **replace a part behind SML** (a module reimplemented elsewhere, on Postgres for instance,
+with the adapter and the rules still working); or **leave the kernel alone** and work through rules and settings,
+which keeps it Soar.
 
 Fixed, the judge's: the adapter, the games, the measures, the hook's thresholds, the gate policy.
 
@@ -66,14 +76,25 @@ where the base's scope ends (owner: "i think what we'll find is that Soar's scop
 needed for higher-generalization"), and whether Substrate then reaches for the architecture cell is the next
 result.
 
-## Games
+## Environments
 
 To be picked with the `research` skill, symbolic first, since Soar needs symbols on its input link:
-- Soar's own: Eaters and TankSoar (the tutorials' games), water jug and blocks world as puzzles.
+- Soar's own puzzles from its tutorials: water jug, blocks world. Eaters and TankSoar are not packaged with 9.6.5
+  ("we are not packaging eaters or tanksoar this release", the release's notes); an older release or a
+  reimplementation behind the adapter, if wanted.
 - Grid and text games with a standard interface and feedback (leads: BabyAI, MiniHack, Crafter, TextWorld, and the
   games BALROG benchmarks agents on).
 - Later, games seen only as pixels: perception is then something Substrate has to build or choose, which is itself
   a test.
+- **Conversation**, as one environment among the others, not the agent's nature: the observation is what was said
+  and its timing (speaking or silent, for how long), the actions say, wait and stop, the reward from the exchange
+  (answered, talked over, corrected). Soar has no language of its own (its history with language is hand-built
+  rules: NL-Soar's parsing, Rosie's restricted English, both to be read before citing), so whether Substrate
+  reaches for an LLM for language, or grows rules that model language without one, is the finding. Until then the
+  companion (an LLM) stays the owner's way to talk *about* the agent, reading its trace.
+- **A Linux terminal**: the observation is the screen and the command's output, the actions are keystrokes or
+  commands, the reward a task done (a file found, a test passing). Much of it may simply defer to an LLM; whatever
+  repeats (the same commands for the same kind of task) is what rules can learn.
 
 ## Lineages
 
@@ -115,6 +136,13 @@ may draw on when it changes the base; whether Substrate reaches for one unprompt
   rules exist or an in-cycle LLM (above) is let in.
 - **Model calls per decision falling** as chunks replace impasses, when an LLM is in the cycle: the curve S-154
   predicted.
+- **Language without an LLM**: rules (and Soar's memories) that model language well enough to converse, grown
+  from the conversation environment by Substrate's changes alone; the strongest form of the narrow-scope question.
+- **ACT-R's mechanisms** (from memory, to be read before use): activation-based declarative memory (retrieval time
+  and failure from use, decay and noise), utility learning with noise, perceptual and motor modules with human
+  timing. Later, ACT-R as a second base behind the same adapter (a hook on failed retrievals), and as a **model of
+  the person** the agent acts with, fitted to their own record (the voice head's timings and requests): theory of
+  mind, a later use, not the agent's base.
 
 ## Read for it
 
