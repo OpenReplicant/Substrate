@@ -2,7 +2,7 @@
 
 The seed (S-155): the primitives for emergence, scoped as a coding and devops tool. A mapper, a builder and a
 reconciler, kept in files, with Morphogen as the judge outside (S-156); it builds other repositories, Soar with
-an impasse hook first (`docs/soar.md`). Its spec is `docs/seed.md`; what is built next is `docs/plan.md`, the one plan;
+an impasse hook first (MetaSoar's `docs/spec.md`). Its spec is `docs/seed.md`; what is built next is `docs/plan.md`, the one plan;
 every default and its reason is in `DECISIONS.md` (append-only). Read the plan first. `docs/framework.md` and the
 parts table below describe the framework this tree was built for (S-125); those parts move to the Soar
 repository (S-155, plan step D).

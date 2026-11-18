@@ -18,7 +18,7 @@ instance can work with)". Generalising beyond software is a later plan it can wr
 design.
 
 It is not a harness (Claude Code, or any harness, runs it), not a cognitive architecture (it can build one:
-Soar is its first target, `docs/soar.md`), and not a judge (Morphogen is, from its own repository).
+Soar is its first target, MetaSoar's `docs/spec.md`), and not a judge (Morphogen is, from its own repository).
 
 ## Three roles inside, one outside
 
@@ -35,7 +35,7 @@ The judge is never inside the bundle: anything Substrate ships, the builder can 
 
 | Kind | From | Example |
 | --- | --- | --- |
-| **Blueprint** (designed) | specs, designs, decisions | `docs/soar.md` |
+| **Blueprint** (designed) | specs, designs, decisions | MetaSoar's `docs/spec.md` |
 | **Described** (hypothesised) | interviews, docs, what people say | "orders go to finance, then shipping" |
 | **Observed** (measured) | code, logs, traces, trials | what the code does; how long a step takes |
 
@@ -96,7 +96,7 @@ rules do; a change to either is a change like any other, gated by the policy alr
 
 A repository Substrate builds keeps, in itself: its specs (blueprints), its `catalog-info.yaml` (its map), its
 `morphogen.yaml` (cells, what may change, how better is measured), its gate policy. Any Substrate instance can
-pick it up from those alone. The first is the Soar repository (`docs/soar.md`).
+pick it up from those alone. The first is the Soar repository (MetaSoar's `docs/spec.md`).
 
 ## What this tree keeps, and where the rest goes
 
