@@ -1,0 +1,13 @@
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: morphogen
+  namespace: observed
+  description: Morphogen, from OpenReplicant/Morphogen: the judge, outside the seed.
+  annotations:
+    openreplicant.com/evidence-description: "docs/seed.md#L30 sha256:5cd6426ec61b"
+spec:
+  type: service
+  owner: group:owner
+  providesApis:
+    - api:morphogen-verdict

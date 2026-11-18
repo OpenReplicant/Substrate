@@ -1,0 +1,10 @@
+apiVersion: backstage.io/v1alpha1
+kind: Group
+metadata:
+  name: owner
+  namespace: observed
+  description: The owner: decides what is merged, and the gate policy.
+  annotations:
+    openreplicant.com/evidence-description: "docs/seed.md#L115 sha256:51c1a19a7201"
+spec:
+  type: person

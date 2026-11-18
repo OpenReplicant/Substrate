@@ -1,0 +1,13 @@
+apiVersion: openreplicant.com/v1alpha1
+kind: Role
+metadata:
+  name: judging
+  namespace: observed
+  description: What morphogen does in Substrate.
+  annotations:
+    openreplicant.com/evidence-filledBy: "docs/seed.md#L30 sha256:5cd6426ec61b"
+spec:
+  of: system:substrate
+  filledBy: resource:morphogen
+  requiresApis:
+    - api:morphogen-verdict

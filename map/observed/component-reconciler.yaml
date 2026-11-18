@@ -1,0 +1,18 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: reconciler
+  namespace: observed
+  description: The reconcile skill: compares the three maps and writes the gaps that remain.
+  annotations:
+    openreplicant.com/evidence-description: "docs/seed.md#L29 sha256:17ad4305214b"
+spec:
+  type: skill
+  lifecycle: experimental
+  owner: group:owner
+  system: system:substrate
+  providesApis:
+    - api:backstage-descriptor
+  consumesApis:
+    - api:skill-format
+    - api:evidence-annotation

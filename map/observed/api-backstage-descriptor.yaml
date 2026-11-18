@@ -1,0 +1,13 @@
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: backstage-descriptor
+  namespace: observed
+  description: The map format: Backstage descriptor files, one entity per file, with two kinds of our own.
+  annotations:
+    openreplicant.com/evidence-definition: "docs/seed.md#L66 sha256:09f827530d3b"
+spec:
+  type: file-format
+  lifecycle: production
+  owner: group:owner
+  definition: "The map format: Backstage descriptor files, one entity per file, with two kinds of our own."

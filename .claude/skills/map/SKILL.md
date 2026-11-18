@@ -1,59 +1,49 @@
 ---
 name: map
-description: Take a thing apart into its parts, the roles each part plays and the interfaces that make parts interchangeable, and write it into the store with evidence - any thing, software or not (a codebase, this machine, a bicycle, a team, a process). Use when the owner asks what something is made of, how its parts work together, what could be swapped or changed, or before cataloging alternatives for a part (the catalog skill).
+description: Take a thing apart into its parts, the roles each part plays and the interfaces that make parts interchangeable, and write it as Backstage descriptor files with evidence on every claim - any thing (a codebase, a service, a process, a team). Use when the owner asks what something is made of, how its parts fit, what could be swapped or changed, before cataloging alternatives (the catalog skill), and before building toward a spec (the build skill).
 ---
 
-# Map: what a thing is made of, and what makes its parts interchangeable
+# Map: what a thing is made of, as designed, described and observed
 
-A map is statements in the store (S-139), through its MCP tools (`mcp__store__*`): a **whole** *has part* a
-**part**, qualified by *object has role* the **role** the part plays there; a role *requires interface* the
-**interfaces** anything filling it must provide; a part *provides interface* them. Everything you write is your
-claim: it enters at normal rank and cites you, and the owner can prefer or deprecate it.
+A map is files: one entity per file under `map/<namespace>/`, each listed as a target of `catalog-info.yaml`,
+in the format of `docs/seed.md` ("The map format"). Everything you write is your claim, with its evidence.
 
-## 1. Find the whole, and the question
+## 1. The whole, the question, and which map
 
-`search` before `create_item`, always: `create_item` also answers with similar items already there. Ask what the
-map is for (what might change, what should get better) if it is not said: it decides how deep to go. Map to that
-depth and stop; a part nobody would change needs no parts of its own.
+Ask what the map is for (what might change, what should get better) if it is not said: it decides how deep to
+go. Map to that depth and stop. Then pick the namespace by where the claims come from:
+- `blueprint`: a spec, a design, a decision (what should be)
+- `described`: what people say or docs claim (what is believed to be)
+- `observed`: the thing itself: code, config, a running process, a measurement (what is)
 
-## 2. Parts and roles
+Read what exists first (`ls map/*/`): the same name in another namespace is the same thing; reuse it.
 
-For each part: find or make it, then `say` *has part* (`has-part`) on the whole with the qualifier
-*object has role* (`object-has-role`). The role is what the part does there, named so another part could do it
-("drivetrain", "the store's embedding model", "bookkeeping"), an item made with `instance_of: role`. One part can
-play several roles; say each.
+## 2. Parts, roles, interfaces
 
-## 3. Interfaces: what makes parts interchangeable
+- A **whole** is a `System`; a **part** a `Component` (built here) or `Resource` (used, not built), with
+  `spec.system` or `spec.subcomponentOf` for where it sits.
+- A **role** is a `Role` (`openreplicant.com/v1alpha1`): `spec.of` the whole, `spec.filledBy` the part playing
+  it now, `spec.requiresApis` what anything filling it must provide. Name it for what it does, so another part
+  could do it.
+- An **interface** is an `API` whose `spec.definition` says exactly what crosses the boundary: an API and its
+  version, a file format, a protocol, a standard part. A part that has it lists it in `spec.providesApis`. An
+  interface named loosely makes everything look interchangeable.
+- What better means, if the owner says: a `Goal` with `spec.metric` (words a judge could apply) and `spec.target`.
 
-On each role, `say` *requires interface* (`requires-interface`); on each part, *provides interface*
-(`provides-interface`). An interface is what crosses the boundary, named exactly enough to check: an API and its
-version, a protocol, a file format, a socket size, a skill set, a schedule. Make each with `instance_of:
-interface`. Two parts are alternatives when both provide everything the role requires (`alternatives` lists
-them), so an interface named loosely ("an API") makes everything look interchangeable.
+Names follow Backstage's rule: letters and digits, separated by `-`, `_` or `.`, at most 63 characters.
+References are `kind:name` inside the same namespace, `kind:namespace/name` across.
 
-## 4. Evidence
+## 3. Evidence on every claim
 
-Every `say` carries `evidence`: the source (`file:path`, an `https://` URL), where in it (`L10-20`, `p3`) and the
-quoted text. Read the thing itself (code, config, a running process, a manual) rather than describing it from
-memory; what you cannot cite, leave out or ask about. What a person tells you is theirs: quote them with the
-conversation as the source, and say so in `note`.
+Each claim carries an annotation `openreplicant.com/evidence-FIELD` (the field it backs; `-2` for a second
+source): `"PATH#La-b sha256:new"` for lines of a file in this repository, `"URL YYYY-MM-DD"` for a page read
+outside it. Read the source itself, not your memory of it; cite the smallest stable span (a heading, a definition,
+a config line). What a person told you: write it into a file first (a note quoting them, with the date) and cite
+that. What you cannot cite, leave out or ask about. Then `python3 check.py --stamp` fills in the hashes.
 
-The quote is the source's text at that locator: copy it from the file (print the lines, don't retype them), and
-quote one locator the same way every time you cite it. A different quote at the same locator reads as the source
-having changed: it supersedes the earlier span and flags every statement that cited it. Prefer stable places (a
-schema line, a decision row) to long lines that change often. `scripts/check.sh` counts cited file lines that are
-no longer at their locator; `store.stale_file_spans` says which, and where a moved line went.
+## 4. Check
 
-## 5. Goals
-
-If the owner says what better means, put it on the whole: *has goal* (`has-goal`) a goal (`instance_of: goal`)
-with *metric* (how it is measured, in words a judge could apply) and *target* (a quantity). Measurements and
-verdicts come later, from trials and a judge (the catalog skill).
-
-## 6. Check
-
-`read` the whole's page; `path` from the whole to an interface; `violations` for the whole and its parts (a role
-named where an interface belongs shows up here). Tell the owner what is mapped, what was left out and why, what
-you are unsure of, and where to see it: the UI draws the map at `http://127.0.0.1:8100/#/map/<id>`, and shows an
-interface a role requires but its filler lacks as missing. If you got something wrong, `deprecate` your own
-statement with the reason, and say the right one.
+`python3 check.py`: every file listed, every reference resolves, every name and kind is valid, no evidence stale.
+A stale citation means the source changed: re-read it, then fix the claim or re-cite it. Tell the owner what is
+mapped, what was left out and why, what you are unsure of. Morphogen reads the same files (its Backstage loader)
+when it judges.

@@ -1,0 +1,13 @@
+apiVersion: openreplicant.com/v1alpha1
+kind: Role
+metadata:
+  name: building
+  namespace: observed
+  description: What builder does in Substrate.
+  annotations:
+    openreplicant.com/evidence-filledBy: "docs/seed.md#L28 sha256:8d3e8e540ea1"
+spec:
+  of: system:substrate
+  filledBy: component:builder
+  requiresApis:
+    - api:pull-request

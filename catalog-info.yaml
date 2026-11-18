@@ -1,0 +1,35 @@
+# Substrate's map of itself (S-162): the format is docs/seed.md, "The map format"; python3 check.py checks it.
+apiVersion: backstage.io/v1alpha1
+kind: Location
+metadata:
+  name: substrate
+  namespace: observed
+  description: Every entity file of Substrate's map.
+spec:
+  targets:
+    - ./map/blueprint/api-improve-mcp.yaml
+    - ./map/blueprint/component-mcp-server.yaml
+    - ./map/blueprint/role-improving-agents.yaml
+    - ./map/blueprint/system-substrate.yaml
+    - ./map/observed/api-backstage-descriptor.yaml
+    - ./map/observed/api-evidence-annotation.yaml
+    - ./map/observed/api-morphogen-verdict.yaml
+    - ./map/observed/api-pull-request.yaml
+    - ./map/observed/api-skill-format.yaml
+    - ./map/observed/component-builder.yaml
+    - ./map/observed/component-check.yaml
+    - ./map/observed/component-mapper.yaml
+    - ./map/observed/component-reconciler.yaml
+    - ./map/observed/goal-changes-judged.yaml
+    - ./map/observed/group-owner.yaml
+    - ./map/observed/resource-claude-code.yaml
+    - ./map/observed/resource-github.yaml
+    - ./map/observed/resource-morphogen.yaml
+    - ./map/observed/role-building.yaml
+    - ./map/observed/role-evidence-checking.yaml
+    - ./map/observed/role-gating.yaml
+    - ./map/observed/role-harness.yaml
+    - ./map/observed/role-judging.yaml
+    - ./map/observed/role-mapping.yaml
+    - ./map/observed/role-reconciling.yaml
+    - ./map/observed/system-substrate.yaml

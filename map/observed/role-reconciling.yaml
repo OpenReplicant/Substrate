@@ -1,0 +1,13 @@
+apiVersion: openreplicant.com/v1alpha1
+kind: Role
+metadata:
+  name: reconciling
+  namespace: observed
+  description: What reconciler does in Substrate.
+  annotations:
+    openreplicant.com/evidence-filledBy: "docs/seed.md#L29 sha256:17ad4305214b"
+spec:
+  of: system:substrate
+  filledBy: component:reconciler
+  requiresApis:
+    - api:backstage-descriptor

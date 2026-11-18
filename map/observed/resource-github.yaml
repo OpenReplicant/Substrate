@@ -1,0 +1,13 @@
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: github
+  namespace: observed
+  description: GitHub: branches, pull requests and branch protection; the record and the gate.
+  annotations:
+    openreplicant.com/evidence-description: "docs/seed.md#L48 sha256:5940c1f78495"
+spec:
+  type: service
+  owner: group:owner
+  providesApis:
+    - api:pull-request

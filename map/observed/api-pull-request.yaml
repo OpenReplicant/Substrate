@@ -1,0 +1,13 @@
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: pull-request
+  namespace: observed
+  description: A change proposed on a branch as a pull request; main takes it only through the gate.
+  annotations:
+    openreplicant.com/evidence-definition: "docs/seed.md#L110 sha256:24b15f766c2f"
+spec:
+  type: protocol
+  lifecycle: production
+  owner: group:owner
+  definition: "A change proposed on a branch as a pull request; main takes it only through the gate."

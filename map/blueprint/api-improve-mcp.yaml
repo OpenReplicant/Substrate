@@ -1,0 +1,13 @@
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: improve-mcp
+  namespace: blueprint
+  description: The MCP tools improve, status, explain, revert: how any agent asks to be improved.
+  annotations:
+    openreplicant.com/evidence-definition: "docs/seed.md#L98 sha256:69122bdc0b4e"
+spec:
+  type: protocol
+  lifecycle: experimental
+  owner: group:observed/owner
+  definition: "MCP tools: improve (intent, KPIs, target, constraints; returns a ticket), status, explain, revert"

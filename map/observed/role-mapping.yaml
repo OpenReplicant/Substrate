@@ -1,0 +1,14 @@
+apiVersion: openreplicant.com/v1alpha1
+kind: Role
+metadata:
+  name: mapping
+  namespace: observed
+  description: What mapper does in Substrate.
+  annotations:
+    openreplicant.com/evidence-filledBy: "docs/seed.md#L27 sha256:71835d336b74"
+spec:
+  of: system:substrate
+  filledBy: component:mapper
+  requiresApis:
+    - api:backstage-descriptor
+    - api:evidence-annotation

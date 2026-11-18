@@ -1,0 +1,15 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: mcp-server
+  namespace: blueprint
+  description: Substrate as an MCP server, for agents that want to change themselves.
+  annotations:
+    openreplicant.com/evidence-description: "docs/seed.md#L93 sha256:9fd054705c57"
+spec:
+  type: service
+  lifecycle: experimental
+  owner: group:observed/owner
+  system: system:substrate
+  providesApis:
+    - api:improve-mcp

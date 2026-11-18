@@ -1,0 +1,13 @@
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: skill-format
+  namespace: observed
+  description: A Claude Code skill: a directory with SKILL.md, frontmatter name and description, then instructions.
+  annotations:
+    openreplicant.com/evidence-definition: ".claude/skills/map/SKILL.md#L2 sha256:d704bce38fa3"
+spec:
+  type: file-format
+  lifecycle: production
+  owner: group:owner
+  definition: "A Claude Code skill: a directory with SKILL.md, frontmatter name and description, then instructions."

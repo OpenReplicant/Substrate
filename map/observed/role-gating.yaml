@@ -1,0 +1,13 @@
+apiVersion: openreplicant.com/v1alpha1
+kind: Role
+metadata:
+  name: gating
+  namespace: observed
+  description: What github does in Substrate.
+  annotations:
+    openreplicant.com/evidence-filledBy: "docs/seed.md#L108 sha256:0db909e2da1a"
+spec:
+  of: system:substrate
+  filledBy: resource:github
+  requiresApis:
+    - api:pull-request

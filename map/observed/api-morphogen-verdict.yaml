@@ -1,0 +1,13 @@
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: morphogen-verdict
+  namespace: observed
+  description: Morphogen's judgement of a change: cells in morphogen.yaml, a verdict as a required check.
+  annotations:
+    openreplicant.com/evidence-definition: "docs/seed.md#L30 sha256:5cd6426ec61b"
+spec:
+  type: protocol
+  lifecycle: production
+  owner: group:owner
+  definition: "Morphogen's judgement of a change: cells in morphogen.yaml, a verdict as a required check."

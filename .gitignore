@@ -2,11 +2,11 @@
 .env
 .state/
 *.local.yaml
-# the upstream clones (repos.yaml); each is its own git repository
+# the upstream clones; each is its own git repository
 repos/
 # Python
-.venv/
 __pycache__/
 # this machine's Claude Code settings
 .mcp.json
 .claude/settings.local.json
+morphogen

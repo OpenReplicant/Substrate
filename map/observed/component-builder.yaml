@@ -1,0 +1,18 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: builder
+  namespace: observed
+  description: The build skill: closes the gap from blueprint to observed, by pull request through the gate.
+  annotations:
+    openreplicant.com/evidence-description: "docs/seed.md#L28 sha256:8d3e8e540ea1"
+spec:
+  type: skill
+  lifecycle: experimental
+  owner: group:owner
+  system: system:substrate
+  providesApis:
+    - api:pull-request
+  consumesApis:
+    - api:skill-format
+    - api:backstage-descriptor
