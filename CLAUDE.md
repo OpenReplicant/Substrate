@@ -35,7 +35,9 @@ plans to work from. v1's databases are kept in the same Postgres volume (`workbe
    `rt_status`, `rt_logs`) and keep engine-specific code in `scripts/lib.sh`.
 6. **Nothing installed on the host** beyond git, python3 (standard library), the engine and its compose, and
    Claude Code. A tool goes into a container (`deploy/tools/Containerfile`, or the companion's).
-7. **Licences:** permissive or LGPL in the default stack. Check before adding.
+7. **Licences:** permissive or LGPL for what the repository contains or links into Substrate's code. A GPL part may
+   be a default when it is fetched at setup (never in the repository), runs unmodified in its own container and is
+   reached over a process boundary (S-146). Check before adding.
 8. **Every change ends with `scripts/check.sh` passing**, and `scripts/test.sh` where tests exist, or with the
    failure named and explained.
 9. **Morphogen is out of the build** while the owner refactors it elsewhere: do not touch `repos/morphogen` or

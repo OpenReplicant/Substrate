@@ -1,0 +1,4 @@
+6e742170d309016e5891a994e1ce1559c702a2ccd0075e67ef7157974f6406cb  kokoro-onnx/kokoro-v1.0.int8.onnx
+bca610b8308e8d99f32e6fe4197e7ec01679264efed0cac9140fe9c29f1fbf7d  kokoro-onnx/voices-v1.0.bin
+666903c76b9798caf2c210afd4f6cd60b08a8dbf9800ec8d7a3bc0d2148ac466  onnx-asr-parakeet-v3/config.json
+d58544679ea4bc6ac563d1f545eb7d474bd6cfa467f0a6e2c1dc1c7d37e3c35d  onnx-asr-parakeet-v3/vocab.txt
