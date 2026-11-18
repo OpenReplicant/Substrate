@@ -1,19 +1,18 @@
 #!/usr/bin/env python3
-"""The model gateway (spec step 18, S-77): Bifrost's config.json rendered from .env and streams.yaml.
+"""The model gateway (S-77): Bifrost's config.json rendered from .env and the callers below.
 
     python3 scripts/gateway.py render     # writes .state/gateway/config.json (no secret in it: Bifrost reads env.NAME)
-    python3 scripts/gateway.py keys       # the callers that get a key (each model handler in streams.yaml)
+    python3 scripts/gateway.py keys       # the callers that get a key
     bin/in-tools python3 scripts/gateway.py init   # its database and logins, in the tools container (up.sh runs it)
     bin/in-tools python3 scripts/gateway.py prune  # drop limits from its store that config.json no longer has (up.sh)
-    bin/in-tools python3 scripts/gateway.py meter CALL_ID...   # what the meter's login sees of these calls (the contract test)
-    bin/in-tools python3 scripts/gateway.py judge-meter open|close RUN_ID   # Morphogen's meter for judged runs (S-87)
+    bin/in-tools python3 scripts/gateway.py meter CALL_ID...   # what the meter's login sees of these calls
 
 Providers are the ones this machine has: OpenRouter when OPENROUTER_API_KEY is set (free models only, unless
 GATEWAY_OPENROUTER_MODELS says otherwise), Ollama when OLLAMA_URL is set. Every call is logged by the gateway in its
 own database (`gateway` on the stack's Postgres) without message content; a call with no key is refused; each
-caller has its own virtual key (an hourly cap when GATEWAY_REQUESTS_PER_HOUR is set), derived from GATEWAY_KEY_SECRET so the handlers plugin reaches the
-same key without it being stored (plugins/handlers/README.md, "Model handlers"). Keys and fields from Bifrost
-v2.3.2's transports/config.schema.json (read 2026-11-11).
+caller has its own virtual key (an hourly cap when GATEWAY_REQUESTS_PER_HOUR is set), named in .env or derived from
+GATEWAY_KEY_SECRET (caller_key), so a caller's process can reach its key without it being stored. Keys and fields
+from Bifrost v2.3.2's transports/config.schema.json (read 2026-11-11).
 """
 from __future__ import annotations
 
@@ -21,13 +20,10 @@ import base64
 import hashlib
 import hmac
 import json
-import re
 import subprocess
 import sys
-import time
 from pathlib import Path
 
-import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / ".state/gateway/config.json"
@@ -35,7 +31,8 @@ OUT = ROOT / ".state/gateway/config.json"
 
 NAMES = ("POSTGRES_PASSWORD", "DB_PORT", "OPENROUTER_API_KEY", "OLLAMA_URL", "GATEWAY_OPENROUTER_MODELS",
          "GATEWAY_REQUESTS_PER_HOUR", "GATEWAY_DB_PASSWORD", "GATEWAY_METER_PASSWORD", "GATEWAY_KEY_SECRET",
-         "GATEWAY_PORT", "WORKBENCH_EMBED_MODEL", "MORPHOGEN_JUDGE_KEY")
+         "GATEWAY_PORT", "COMPANION_MODELS", "COMPANION_DB_PASSWORD",
+         "LLM_MODEL", "JUDGE_DB_PASSWORD")
 
 
 def settings() -> dict[str, str]:
@@ -46,24 +43,26 @@ def settings() -> dict[str, str]:
 
 
 def caller_key(secret: str, caller: str) -> str:
-    """The virtual key a caller gets: the same formula as the handlers plugin's (handlers_plugin.caller_key)."""
+    """The virtual key a caller gets when .env names none: derived, so its process can compute it from the secret."""
     return "sk-bf-" + hmac.new(secret.encode(), caller.encode(), hashlib.sha256).hexdigest()[:40]
 
 
-# Callers that are not handlers, and the only providers each may use (S-83): Workbench's embeddings stay local.
-FIXED = {"workbench:embed": ("ollama",), "contract:model-api": ("openrouter", "ollama"),
-         # Morphogen's judged runs (S-87): the one key a judged run is given, by the meter below; local models only,
-         # so a verdict's hundred-odd calls spend no provider's quota and need no hourly cap
-         "judge:morphogen": ("ollama",)}
-JUDGE = "judge:morphogen"
-LOCAL = ("ollama",)
-FIXED_KEYS = {"workbench:embed": "WORKBENCH_EMBED_KEY", "judge:morphogen": "MORPHOGEN_JUDGE_KEY"}   # read from .env by the gateway, the server and the tools
+# Every caller, and the only providers each may use (S-83): the store's embeddings stay local. A caller is added
+# here when a step needs one. The companion (S-136, plan step 4): its session and its background tasks, each on the
+# owner's own Claude login (subscription mode: the gateway forwards the login's token to Anthropic and keeps the
+# call under the caller's key), held to Anthropic's models in COMPANION_MODELS.
+# The voice head (plan step 5) talks with the local model (llama.cpp, provider `local`) only: what the owner says
+# aloud stays on this machine (P3) unless the model hands a request to the companion.
+CALLERS = {"store:embed": ("ollama",), "companion:session": ("anthropic",), "companion:task": ("anthropic",),
+           "voice:head": ("local",), "companion:author": ("local",), "judge:voice": ("local",)}
+LOCAL = ("ollama", "local")
+FIXED_KEYS = {"store:embed": "STORE_EMBED_KEY", "companion:session": "COMPANION_SESSION_KEY",
+              "companion:task": "COMPANION_TASK_KEY", "voice:head": "VOICE_KEY",
+              "companion:author": "COMPANION_AUTHOR_KEY", "judge:voice": "JUDGE_KEY"}   # keys read from .env by the gateway and the caller
 
 
 def callers() -> list[str]:
-    spec = yaml.safe_load((ROOT / "streams.yaml").read_text()) or {}
-    return sorted(f"handler:{h}" for s in (spec.get("streams") or {}).values()
-                  for h, d in (s.get("handlers") or {}).items() if (d or {}).get("kind") == "model") + sorted(FIXED)
+    return sorted(CALLERS)
 
 
 def pg(env: dict, db: str = "gateway") -> dict:
@@ -78,7 +77,18 @@ def render(env: dict[str, str]) -> dict:
         providers["ollama"] = {"keys": [{"name": "ollama", "value": "", "models": ["*"], "weight": 1.0,
                                          "ollama_key_config": {"url": env["OLLAMA_URL"]}}],
                                "network_config": {"base_url": env["OLLAMA_URL"], "allow_private_network": True}}
-    allowed = {"openrouter": [m.strip() for m in (env.get("GATEWAY_OPENROUTER_MODELS") or "regex:.*:free").split(",") if m.strip()],
+    # the local model on llama.cpp's server (compose service llm), OpenAI-compatible, no key
+    if env.get("LLM_MODEL"):
+        providers["local"] = {
+            "keys": [{"name": "llm", "value": "no-key", "models": ["*"], "weight": 1.0}],   # llama-server has no --api-key: any value; an empty one counts as none
+            "network_config": {"base_url": "http://llm:8080", "default_request_timeout_in_seconds": 300,
+                               "allow_private_network": True},
+            "custom_provider_config": {"base_provider_type": "openai",
+                                       "allowed_requests": {"chat_completion": True, "chat_completion_stream": True}}}
+    # Anthropic with no key of its own: only calls carrying a Claude login (the companion's) can use it
+    providers["anthropic"] = {"keys": []}
+    allowed = {"local": ["*"], "anthropic": [m.strip() for m in (env.get("COMPANION_MODELS") or "regex:claude-haiku.*").split(",") if m.strip()],
+               "openrouter": [m.strip() for m in (env.get("GATEWAY_OPENROUTER_MODELS") or "regex:.*:free").split(",") if m.strip()],
                "ollama": ["regex:.*"]}
     secret = env.get("GATEWAY_KEY_SECRET") or ""
     # OpenRouter's free tier limits the account (20 calls a minute, 1000 a day: the owner, 2026-11-11, S-87) and
@@ -96,15 +106,15 @@ def render(env: dict[str, str]) -> dict:
             "auth_config": {"is_enabled": True, "admin_username": "admin", "admin_password": "env.GATEWAY_ADMIN_PASSWORD"},
             # one limit per caller: a limit several keys point at is one counter, shared (seen 2026-11-11, S-83)
             "rate_limits": [{"id": "rl-" + c.replace(":", "-"), "request_max_limit": per_hour, "request_reset_duration": "1h"}
-                            for c in callers() if not set(FIXED.get(c, providers)) <= set(LOCAL)] if secret and per_hour else [],
+                            for c in callers() if not set(CALLERS.get(c, providers)) <= set(LOCAL)] if secret and per_hour else [],
             "virtual_keys": [{
                 "id": "vk-" + c.replace(":", "-"), "name": c, "is_active": True,
                 "value": f"env.{FIXED_KEYS[c]}" if c in FIXED_KEYS else caller_key(secret, c),
                 "description": f"{c}'s calls, counted by the gateway",
                 # the hourly cap guards a provider's quota; a caller held to local models has none to guard
-                **({} if set(FIXED.get(c, providers)) <= set(LOCAL) or not per_hour else {"rate_limit_id": "rl-" + c.replace(":", "-")}),
+                **({} if set(CALLERS.get(c, providers)) <= set(LOCAL) or not per_hour else {"rate_limit_id": "rl-" + c.replace(":", "-")}),
                 "provider_configs": [{"provider": p, "allowed_models": allowed[p], "key_ids": ["*"]} for p in providers
-                                     if p in FIXED.get(c, providers)],
+                                     if p in CALLERS.get(c, providers)],
             } for c in callers()] if secret else [],
         },
     }
@@ -112,7 +122,7 @@ def render(env: dict[str, str]) -> dict:
 
 def init(env: dict[str, str]) -> None:
     """The gateway's database and its two logins, made once and kept: `gateway` owns the database (Bifrost makes
-    its tables there), `gateway_meter` may only read them (the handlers plugin's meter)."""
+    its tables there), `gateway_meter` may only read them (the meter)."""
     import psycopg
     from psycopg import sql
     admin = f"postgresql://postgres:{env['POSTGRES_PASSWORD']}@127.0.0.1:{env.get('DB_PORT') or 5432}"
@@ -157,7 +167,8 @@ def meter(env: dict[str, str], ids: list[str]) -> dict:
     url = f"postgresql://gateway_meter:{env['GATEWAY_METER_PASSWORD']}@127.0.0.1:{env.get('DB_PORT') or 5432}/gateway"
     with psycopg.connect(url, connect_timeout=5) as c:
         rows = c.execute("""select metadata::jsonb->>'x-wb-call', virtual_key_name, status, latency,
-                                   concat_ws(' ', input_history, output_message, content_summary, raw_request, raw_response)
+                                   concat_ws(' ', input_history, output_message, content_summary, raw_request, raw_response),
+                                   prompt_tokens, cached_read_tokens, upstream_latency
                               from logs where metadata::jsonb->>'x-wb-call' = any(%s)""", (ids,)).fetchall()
     with psycopg.connect(url, connect_timeout=5) as c:
         try:
@@ -165,65 +176,16 @@ def meter(env: dict[str, str], ids: list[str]) -> dict:
             writable = True
         except psycopg.Error:
             writable = False
-    return {"rows": {r[0]: {"caller": r[1], "status": r[2], "latency": float(r[3]) if r[3] is not None else None, "content": r[4] or ""}
+    # prompt and cached tokens, and the provider's own latency: whether a log that only grows kept its cache (S-104)
+    return {"rows": {r[0]: {"caller": r[1], "status": r[2], "latency": float(r[3]) if r[3] is not None else None, "content": r[4] or "",
+                            "prompt_tokens": r[5], "cached_read_tokens": r[6], "upstream_latency": float(r[7]) if r[7] is not None else None}
                      for r in rows}, "writable": writable}
-
-
-def judge_meter(env: dict[str, str], op: str, run_id: str) -> dict:
-    """Morphogen's meter for a judged run (its PLAN.md 7c; morphogen.local.yaml's gateway.meter):
-    `open RUN_ID` gives the run the judge's key, the only one it holds; `close RUN_ID` counts, from the gateway's
-    own record, every call made with that key since the run opened (runs are judged one at a time). In the tools
-    container: it needs psycopg."""
-    state = ROOT / ".state/gateway/judge"
-    if not re.fullmatch(r"[A-Za-z0-9-]{1,64}", run_id):
-        raise SystemExit(f"bad run id {run_id!r}")
-    f = state / run_id
-    if op == "open":
-        state.mkdir(parents=True, exist_ok=True)
-        f.write_text(repr(time.time()))
-        return {"env": {"WB_GATEWAY_KEY": env["MORPHOGEN_JUDGE_KEY"]}}
-    if op != "close":
-        raise SystemExit("judge-meter open|close RUN_ID")
-    import psycopg
-    import secrets as _secrets
-    import urllib.request
-    start = float(f.read_text())
-    # the gateway writes its record a few seconds after each call: a marker call of the meter's own, made once the
-    # run is over, under an id the run cannot know, closes the window once it is in the record
-    marker = "judge-meter-" + _secrets.token_hex(12)
-    key = env["MORPHOGEN_JUDGE_KEY"]
-    req = urllib.request.Request(f"http://127.0.0.1:{env.get('GATEWAY_PORT') or 8090}/v1/embeddings",
-                                 json.dumps({"model": env.get("WORKBENCH_EMBED_MODEL") or "ollama/qwen3-embedding:0.6b",
-                                             "input": "x"}).encode(),
-                                 {"Content-Type": "application/json", "x-bf-vk": key, "x-wb-call": marker})
-    urllib.request.urlopen(req, timeout=60).read()
-    url = f"postgresql://gateway_meter:{env['GATEWAY_METER_PASSWORD']}@127.0.0.1:{env.get('DB_PORT') or 5432}/gateway"
-    q = """with w as (select timestamp as until from logs where metadata::jsonb->>'x-wb-call' = %s)
-           select count(*), count(*) filter (where status = 'processing'), coalesce(sum(prompt_tokens), 0),
-                  coalesce(sum(completion_tokens), 0), coalesce(sum(cost), 0), count(*) filter (where status = 'success'),
-                  (select count(*) from w)
-             from logs where virtual_key_name = %s and timestamp >= to_timestamp(%s)
-              and timestamp <= coalesce((select until from w), 'infinity')
-              and coalesce(metadata::jsonb->>'x-wb-call', '') <> %s"""
-    with psycopg.connect(url, connect_timeout=5) as c:
-        for _ in range(120):
-            calls, busy, tin, tout, usd, ok, seen = c.execute(q, (marker, JUDGE, start, marker)).fetchone()
-            if seen and not busy:
-                break
-            time.sleep(0.5)
-        else:
-            raise SystemExit("the gateway's record did not show the meter's marker call within a minute")
-    f.unlink(missing_ok=True)
-    return {"calls": calls, "answered": ok, "tokens": int(tin) + int(tout), "tokens_in": int(tin),
-            "tokens_out": int(tout), "cost": float(usd)}
 
 
 def main() -> None:
     cmd = sys.argv[1] if len(sys.argv) > 1 else ""
     if cmd == "meter":
         print(json.dumps(meter(settings(), sys.argv[2:])))
-    elif cmd == "judge-meter" and len(sys.argv) == 4:
-        print(json.dumps(judge_meter(settings(), sys.argv[2], sys.argv[3])))
     elif cmd == "init":
         init(settings())
     elif cmd == "prune":

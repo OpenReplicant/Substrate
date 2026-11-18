@@ -30,12 +30,10 @@ start() {
   img_have=$("$ENGINE" inspect -f '{{.Image}}' "$NAME" 2>/dev/null || true)
   if running && [ "$want" = "$have" ] && [ "${img_want#sha256:}" = "${img_have#sha256:}" ]; then echo "  $NAME running"; return; fi
   "$ENGINE" rm -f "$NAME" >/dev/null 2>&1 || true
-  mkdir -p "$ROOT/.state/uv-cache"
   set -- --detach --name "$NAME" --label "substrate.mounts=$want" --network host \
     --cap-drop ALL --security-opt no-new-privileges \
     --user "$(id -u):$(id -g)" \
     -e "HOME=$HOME" \
-    -e "UV_CACHE_DIR=$ROOT/.state/uv-cache" -e "UV_PROJECT_ENVIRONMENT=$ROOT/.state/morphogen-venv" \
     -v "$ROOT:$ROOT" -w "$ROOT"
   if [ "$ENGINE" = podman ] && [ "$(id -u)" != 0 ]; then set -- "$@" --userns keep-id; fi   # files stay yours (rootless)
   for p in $list; do set -- "$@" -v "$p:$p"; done

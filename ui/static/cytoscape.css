@@ -1,0 +1,3 @@
+/* Cytoscape injects this rule as an inline <style> unless an element with id __________cytoscape_stylesheet exists
+   (cytoscape.min.js, its renderer's init); the page links this file under that id, so the CSP needs no unsafe-inline. */
+.__________cytoscape_container { position: relative; }

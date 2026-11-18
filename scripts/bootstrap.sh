@@ -1,6 +1,6 @@
 #!/bin/sh
-# Once per machine: check the few host tools, clone the projects in repos.yaml into repos/ (full clones you can push
-# from), and build every image. Everything else (Python packages, gitleaks, uv) lives in containers (S-19). Safe to run again: existing clones are left as they are.
+# Once per machine: check the few host tools and build every image (the upstream skill clones repos.yaml
+# projects when one is worked on). Everything else (Python packages, gitleaks, uv) lives in containers (S-19). Safe to run again: existing clones are left as they are.
 #
 #   scripts/bootstrap.sh
 set -eu
@@ -27,28 +27,12 @@ if [ -n "$required_missing" ]; then
   exit 1
 fi
 
-say "Upstream clones (repos.yaml, repos.local.yaml)"
-mkdir -p "$ROOT/repos"
-clone() {   # name
-  # repos.local.yaml (gitignored) may point a repository at another forge: a Forgejo, Gitea or GitLab mirror or fork
-  url=""
-  [ -f "$ROOT/repos.local.yaml" ] && url=$(sed -n "/^$1:/,/^[a-z]/s/^  url: //p" "$ROOT/repos.local.yaml")
-  [ -n "$url" ] || url=$(sed -n "/^$1:/,/^[a-z]/s/^  url: //p" "$ROOT/repos.yaml")
-  branch=$(sed -n "/^$1:/,/^[a-z]/s/^  branch: //p" "$ROOT/repos.yaml")
-  if [ -d "$ROOT/repos/$1/.git" ]; then
-    echo "  $1: present ($(git -C "$ROOT/repos/$1" rev-parse --abbrev-ref HEAD) at $(git -C "$ROOT/repos/$1" rev-parse --short HEAD))"
-  else
-    git clone --branch "$branch" "$url" "$ROOT/repos/$1"
-  fi
-}
-for r in $(sed -n 's/^\([a-z][a-z0-9_-]*\):$/\1/p' "$ROOT/repos.yaml"); do clone "$r"; done
-
 "$ROOT/scripts/settings.sh"
 "$ROOT/scripts/build.sh"
 
 say "Tools container"
 "$ROOT/scripts/tools.sh" start
-echo "  bin/morphogen, bin/gitleaks and Workbench's command now run inside it"
+echo "  bin/gitleaks and the scripts' Python now run inside it"
 
 say "Done"
 echo "Next: scripts/up.sh"

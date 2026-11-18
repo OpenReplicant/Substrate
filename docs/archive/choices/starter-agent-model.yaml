@@ -1,0 +1,70 @@
+# A choice made from the catalogs (docs/archive/tasks/starter-agent.md, stage 1; S-97, S-99): the one local model the starter
+# agent runs on. The candidates are the local chat models docs/choices/local-model.yaml already searched for and
+# pulled; their licences and public scores are recorded there and not repeated from memory here.
+question: Which local model, held fixed, should drive the starter agent's tool loop on research tasks?
+asked_by: owner
+asked_on: "2026-11-15"
+quote: "we could find the minimum-viable LLM for a benchmark (already scored) and then test changes to the harness by using the same LLM ... run low-cost local models to get a baseline and a diff"
+need:
+  - "runs in Ollama on this machine's GPU through the gateway, so a task and a judged run spend no provider's quota"
+  - "makes tool calls in the OpenAI tools format through the gateway, with arguments the tool accepts"
+  - "answers from what a tool returned, not from memory"
+  - "fast enough that a task of a few calls takes seconds"
+  - "the minimum-viable model: the cheapest that is clearly above the floor; a model at the ceiling cannot show a difference"
+searched:
+  - "docs/choices/local-model.yaml (2026-11-11): its search of Ollama and Hugging Face, and the three chat models pulled then; no new search, no model pulled"
+  - "the local model server, 2026-11-15: granite4:3b, qwen3:4b-instruct-2507-q4_K_M, qwen3.5:4b-q4_K_M are the chat models present"
+trial:
+  script: scripts/trials/starter-agent/run.py
+  run_on: "2026-11-15"
+  cases: >-
+    five questions written for the trial (two licences, which of two repositories was pushed to more recently, a
+    licence and whether it is permissive, find a repository by what it does), two tools reading GitHub's public API
+    (one repository's facts; a search's top five), at most six model calls a question; every tool result kept and
+    replayed, so each model saw the same world. Gold values are read from the same API by the script. No held-out case.
+  expected: tool calls in the format asked for, and answers that state what the tool returned
+  results: .state/trials/starter-agent/results.json
+verdict: >-
+  The need decides, not a judged comparison: all three made every tool call correctly (6 of 6, none malformed) and
+  answered all five questions rightly from what the tools returned, so the fastest and smallest is the pick. The
+  trial also shows these questions are too easy to be cases: every model is at the ceiling, and by the need's last
+  line a baseline at the ceiling cannot show a difference. Stage 3's cases must be harder (several hops, a registry
+  that answers NOASSERTION, the two-week rule, a question the tools cannot answer) until this model scores between
+  the floor and the ceiling.
+pick: granite4-3b
+reason: >-
+  Five of five right and grounded, 11 model calls, median 1.07 s a call, median 413 input tokens (most 814). It
+  answers in the fewest words. It is already the local model rank (S-87), so nothing new is pulled or loaded.
+candidates:
+  - name: granite4-3b
+    title: Granite 4.0 Micro (ollama granite4:3b)
+    registry: huggingface
+    repository: ibm-granite/granite-4.0-micro
+    tasks: [text-generation]
+    model: ollama/granite4:3b
+    outcome: picked
+    shortlisted: true
+    fit: "tool calls in the OpenAI format through the gateway; answers from the tool's result"
+    trial: "5/5 right, 5/5 grounded; 6 tool calls, 0 malformed; 11 model calls; median 1.07 s; median 413 input tokens"
+  - name: qwen3-4b-instruct-2507
+    title: Qwen3-4B-Instruct-2507 (ollama qwen3:4b-instruct-2507-q4_K_M)
+    registry: huggingface
+    repository: QwenLM/Qwen3
+    tasks: [text-generation]
+    model: ollama/qwen3:4b-instruct-2507-q4_K_M
+    outcome: rejected
+    shortlisted: true
+    fit: "the same; it made both lookups of the comparison question in one turn"
+    trial: "5/5 right, 5/5 grounded; 6 tool calls, 0 malformed; 10 model calls; median 1.43 s; median 369 input tokens"
+    reason: "As able as Granite on these questions and a third slower. The one to try next if harder cases put Granite at the floor."
+  - name: qwen3.5-4b
+    title: Qwen3.5-4B (ollama qwen3.5:4b-q4_K_M)
+    registry: huggingface
+    repository: QwenLM/Qwen3.5
+    tasks: [text-generation]
+    model: ollama/qwen3.5:4b-q4_K_M
+    outcome: rejected
+    shortlisted: true
+    fit: "the same, but it thinks before each reply and the gateway gives no way to turn that off (docs/choices/local-model.yaml)"
+    trial: "5/5 right, 5/5 grounded; 6 tool calls, 0 malformed; 10 model calls; median 7.92 s; median 497 input tokens"
+    reason: "Seven times slower a call for the same answers. Worth another look only if harder cases need its reasoning."

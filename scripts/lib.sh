@@ -3,7 +3,6 @@
 
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 case "$ROOT" in */scripts) ROOT=$(dirname "$ROOT") ;; esac   # sourced from scripts/runtime/
-MORPHOGEN="$ROOT/repos/morphogen"
 ENV_FILE="${SUBSTRATE_ENV_FILE:-$ROOT/.env}"   # a contract run points the env backend at a throwaway file
 
 # a value as written in .env (empty if unset)

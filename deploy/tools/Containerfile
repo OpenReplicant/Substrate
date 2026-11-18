@@ -14,8 +14,7 @@ ARG GITLEAKS_SHA256=551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f24
 RUN curl -fsSL -o /tmp/gitleaks.tgz "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
  && echo "${GITLEAKS_SHA256}  /tmp/gitleaks.tgz" | sha256sum -c - \
  && tar -xzf /tmp/gitleaks.tgz -C /usr/local/bin gitleaks && rm /tmp/gitleaks.tgz
-# uv 0.13.4 (MIT OR Apache-2.0) for Morphogen's commands; Workbench's pins (workbench/Containerfile) for its command and tests
-RUN pip install --no-cache-dir uv==0.13.4 "psycopg[binary]==3.3.6" PyYAML==6.0.3 starlette==1.10.0 uvicorn==0.54.0
-ENV UV_LINK_MODE=copy UV_PYTHON_DOWNLOADS=never
+# the scripts' Python: psycopg for Postgres, PyYAML for config (pins kept from v1)
+RUN pip install --no-cache-dir "psycopg[binary]==3.3.6" PyYAML==6.0.3
 # the user is set at run time to the host user (scripts/tools.sh)
 CMD ["sleep", "infinity"]

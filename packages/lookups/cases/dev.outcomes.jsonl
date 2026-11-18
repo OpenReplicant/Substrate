@@ -1,0 +1,48 @@
+{"id": "dev-001", "answer": "none", "field": "info.license", "url": "https://pypi.org/pypi/colorama/json", "read": "2026-11-15"}
+{"id": "dev-002", "answer": "GNU LGPL", "field": "info.license", "url": "https://pypi.org/pypi/nose/json", "read": "2026-11-15"}
+{"id": "dev-003", "answer": "MIT OR AFL-2.1", "field": "info.license", "url": "https://pypi.org/pypi/simplejson/json", "read": "2026-11-15"}
+{"id": "dev-004", "answer": "none", "field": "info.license", "url": "https://pypi.org/pypi/mock/json", "read": "2026-11-15"}
+{"id": "dev-005", "answer": "WTFPL", "field": "license", "url": "https://registry.npmjs.org/left-pad", "read": "2026-11-15"}
+{"id": "dev-006", "answer": "MIT/Apache-2.0", "field": "versions[num=2.0.1].license", "url": "https://crates.io/api/v1/crates/quick-error", "read": "2026-11-15"}
+{"id": "dev-007", "answer": "none", "field": "cardData.license", "url": "https://huggingface.co/api/models/sshleifer/tiny-gpt2", "read": "2026-11-15"}
+{"id": "dev-008", "answer": "other", "field": "cardData.license", "url": "https://huggingface.co/api/models/facebook/opt-125m", "read": "2026-11-15"}
+{"id": "dev-009", "answer": "1.17.0", "field": "info.version", "url": "https://pypi.org/pypi/six/json", "read": "2026-11-15"}
+{"id": "dev-010", "answer": "0.6.2", "field": "info.version", "url": "https://pypi.org/pypi/docopt/json", "read": "2026-11-15"}
+{"id": "dev-011", "answer": "3.7.2", "field": "dist-tags.latest", "url": "https://registry.npmjs.org/bluebird", "read": "2026-11-15"}
+{"id": "dev-012", "answer": "2.88.2", "field": "dist-tags.latest", "url": "https://registry.npmjs.org/request", "read": "2026-11-15"}
+{"id": "dev-013", "answer": "1.2.8", "field": "dist-tags.latest", "url": "https://registry.npmjs.org/minimist", "read": "2026-11-15"}
+{"id": "dev-014", "answer": "1.5.0", "field": "crate.max_stable_version", "url": "https://crates.io/api/v1/crates/byteorder", "read": "2026-11-15"}
+{"id": "dev-015", "answer": "0.3.26", "field": "crate.max_stable_version", "url": "https://crates.io/api/v1/crates/structopt", "read": "2026-11-15"}
+{"id": "dev-016", "answer": "0.1.10", "field": "crate.max_stable_version", "url": "https://crates.io/api/v1/crates/matches", "read": "2026-11-15"}
+{"id": "dev-017", "answer": "https://github.com/dateutil/dateutil", "field": "info.project_urls.Source", "url": "https://pypi.org/pypi/python-dateutil/json", "read": "2026-11-15"}
+{"id": "dev-018", "answer": "https://github.com/yaml/pyyaml", "field": "info.project_urls.Source Code", "url": "https://pypi.org/pypi/pyyaml/json", "read": "2026-11-15"}
+{"id": "dev-019", "answer": "https://github.com/stub42/pytz", "field": "info.project_urls.Source", "url": "https://pypi.org/pypi/pytz/json", "read": "2026-11-15"}
+{"id": "dev-020", "answer": "https://github.com/isaacs/node-mkdirp", "field": "repository.url", "url": "https://registry.npmjs.org/mkdirp", "read": "2026-11-15"}
+{"id": "dev-021", "answer": "https://github.com/vercel/ms", "field": "repository.url", "url": "https://registry.npmjs.org/ms", "read": "2026-11-15"}
+{"id": "dev-022", "answer": "https://github.com/rust-lang-nursery/lazy-static.rs", "field": "crate.repository", "url": "https://crates.io/api/v1/crates/lazy_static", "read": "2026-11-15"}
+{"id": "dev-023", "answer": "https://github.com/SimonSapin/rust-std-candidates", "field": "crate.repository", "url": "https://crates.io/api/v1/crates/matches", "read": "2026-11-15"}
+{"id": "dev-024", "answer": "https://github.com/KokaKiwi/rust-hex", "field": "crate.repository", "url": "https://crates.io/api/v1/crates/hex", "read": "2026-11-15"}
+{"id": "dev-025", "answer": "yes", "field": "urls[0].upload_time_iso_8601", "url": "https://pypi.org/pypi/six/json", "read": "2026-11-15"}
+{"id": "dev-026", "answer": "yes", "field": "urls[0].upload_time_iso_8601", "url": "https://pypi.org/pypi/termcolor/json", "read": "2026-11-15"}
+{"id": "dev-027", "answer": "no", "field": "urls[0].upload_time_iso_8601", "url": "https://pypi.org/pypi/simplejson/json", "read": "2026-11-15"}
+{"id": "dev-028", "answer": "yes", "field": "time[dist-tags.latest]", "url": "https://registry.npmjs.org/bluebird", "read": "2026-11-15"}
+{"id": "dev-029", "answer": "yes", "field": "time[dist-tags.latest]", "url": "https://registry.npmjs.org/underscore", "read": "2026-11-15"}
+{"id": "dev-030", "answer": "yes", "field": "versions[num=max_stable_version].created_at", "url": "https://crates.io/api/v1/crates/byteorder", "read": "2026-11-15"}
+{"id": "dev-031", "answer": "yes", "field": "versions[num=max_stable_version].created_at", "url": "https://crates.io/api/v1/crates/structopt", "read": "2026-11-15"}
+{"id": "dev-032", "answer": "no", "field": "versions[num=max_stable_version].created_at", "url": "https://crates.io/api/v1/crates/itoa", "read": "2026-11-15"}
+{"id": "dev-033", "answer": "develop", "field": "default_branch", "url": "https://api.github.com/repos/moment/moment", "read": "2026-11-15"}
+{"id": "dev-034", "answer": "master", "field": "default_branch", "url": "https://api.github.com/repos/jashkenas/underscore", "read": "2026-11-15"}
+{"id": "dev-035", "answer": "master", "field": "default_branch", "url": "https://api.github.com/repos/tartley/colorama", "read": "2026-11-15"}
+{"id": "dev-036", "answer": "main", "field": "default_branch", "url": "https://api.github.com/repos/isaacs/node-mkdirp", "read": "2026-11-15"}
+{"id": "dev-037", "answer": "master", "field": "default_branch", "url": "https://api.github.com/repos/uiri/toml", "read": "2026-11-15"}
+{"id": "dev-038", "answer": "main", "field": "default_branch", "url": "https://api.github.com/repos/yaml/pyyaml", "read": "2026-11-15"}
+{"id": "dev-039", "answer": "master", "field": "default_branch", "url": "https://api.github.com/repos/BurntSushi/byteorder", "read": "2026-11-15"}
+{"id": "dev-040", "answer": "main", "field": "default_branch", "url": "https://api.github.com/repos/jquery/jquery", "read": "2026-11-15"}
+{"id": "dev-041", "answer": "no", "field": "registry info.license=MIT; github license.spdx_id=MIT", "url": "https://pypi.org/pypi/six/json", "read": "2026-11-15"}
+{"id": "dev-042", "answer": "yes", "field": "registry info.license=none; github license.spdx_id=BSD-3-Clause", "url": "https://pypi.org/pypi/colorama/json", "read": "2026-11-15"}
+{"id": "dev-043", "answer": "no", "field": "registry info.license=MIT; github license.spdx_id=MIT", "url": "https://pypi.org/pypi/toml/json", "read": "2026-11-15"}
+{"id": "dev-044", "answer": "yes", "field": "registry license=MIT; github license.spdx_id=NOASSERTION", "url": "https://registry.npmjs.org/mkdirp", "read": "2026-11-15"}
+{"id": "dev-045", "answer": "no", "field": "registry license=MIT; github license.spdx_id=MIT", "url": "https://registry.npmjs.org/bluebird", "read": "2026-11-15"}
+{"id": "dev-046", "answer": "no", "field": "registry license=Apache-2.0; github license.spdx_id=Apache-2.0", "url": "https://registry.npmjs.org/request", "read": "2026-11-15"}
+{"id": "dev-047", "answer": "yes", "field": "registry versions[num=1.5.0].license=Unlicense OR MIT; github license.spdx_id=Unlicense", "url": "https://crates.io/api/v1/crates/byteorder", "read": "2026-11-15"}
+{"id": "dev-048", "answer": "yes", "field": "registry versions[num=0.4.3].license=MIT OR Apache-2.0; github license.spdx_id=Apache-2.0", "url": "https://crates.io/api/v1/crates/hex", "read": "2026-11-15"}

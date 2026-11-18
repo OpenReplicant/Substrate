@@ -3,7 +3,7 @@
 # shellcheck shell=sh
 
 rt_up() {
-  compose up -d
+  compose up -d --remove-orphans   # a service dropped from compose.yaml stops too
 }
 
 rt_down() {   # [--volumes]
