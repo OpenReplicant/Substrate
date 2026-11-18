@@ -1,8 +1,8 @@
 # Plan
 
 The one current plan. Since S-155 (2026-11-18) Substrate is the seed (`docs/seed.md`): a mapper, a builder and a
-reconciler, in files, with Morphogen as the judge outside (S-156). Soar on Postgres is its first target, in a
-repository of its own (`docs/soar.md`, S-154, S-157). Steps 1 to 10 below are kept as the record of the
+reconciler, in files, with Morphogen as the judge outside (S-156). The original Soar with an impasse hook to Substrate is its first target (S-160), in a
+repository of its own (`docs/soar.md`). Steps 1 to 10 below are kept as the record of the
 framework this tree was built for (S-125); their environment, companion and voice head move to the Soar
 repository (S-155).
 
@@ -16,7 +16,7 @@ repository (S-155).
 | D | The move: the store, the environment, the companion, the voice head, the local model and the UI to the Soar repository, one commit each side; `environment/judge.py`, `author.py`, `env.component`, `env.verdict` retired | this tree holds only what `docs/seed.md` keeps; `scripts/check.sh` passes on what remains |
 | E | The plugin: the mapper's skills trimmed, the reconciler's first skill, packaged for Claude Code | installed from GitHub into a fresh session, it maps a repository and opens a judged pull request |
 | F | The MCP server (S-158): `improve`, `status`, `explain`, `revert`, gate policy read from the target's base | an agent asks for an improvement and a gated pull request comes back |
-| G | Soar, in its repository, by its own spec: the reference kernel in a container and water jug's trace; then working memory and the decision cycle in Postgres matching it | Morphogen's conformance cell passes on water jug |
+| G | Soar, in its repository, by its spec (S-160): Soar 9.6.5 in a container playing Eaters through SML; the game adapter; the impasse hook to Substrate's `improve` | an unresolved impasse in a game comes back as a judged, gated change to the agent's rules, and the next episode plays better |
 
 ## Before S-155: the framework this tree was built for
 

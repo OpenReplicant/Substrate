@@ -1,165 +1,126 @@
-# Soar on Postgres, with LLM reasoning and beliefs with evidence
+# Soar, with Substrate on its impasses
 
-A design note (S-154, 2026-11-18). Substrate becomes a cognitive architecture: **Soar, rebuilt on Postgres, with
-an LLM resolving its impasses and a semantic memory of beliefs that carry their evidence.** A neuro-symbolic
-hybrid agent: the symbolic part decides fast and is inspectable; the neural part is called only where the
-symbolic part has no answer; what it works out is compiled back into rules, which are tested before they are
-trusted. Owner, 2026-11-18: "no one needs another LLM harness, but a Soar implementation on our stack would be
-something worth writing about, with whatever wraps an LLM for practicality."
+The spec for Substrate's first target (S-160, 2026-11-18; supersedes S-154's design, which is kept below as
+hypotheses). **The original Soar, unchanged, with one hook: an impasse its own knowledge cannot get out of goes
+to Substrate, which proposes a change, judged by Morphogen and let in by the gate.** Nothing else is ours. What
+Substrate adds over time, and whether it rediscovers anything we would have built in, is the result.
 
-## The choice (option C)
+Owner, 2026-11-18: "it might be good to implement something as close to original as possible, if it can just
+reach out to Substrate on any impasse and see what changes that way", and "our opinions should be removed but
+where there is value, leave them in a section on experimental hypothesis that could be trialed later... maybe
+they'll make it into catalogs of options substrate uses to modify the base."
 
-| | What | Why not, or why |
+## The litmus test: learning to play games
+
+Owner: "maybe just combining base Soar + Substrate we'll be able to interface with arbitrary games (embodied
+environment sim w/feedback) and have the framework to learn how to play. (somehow i think that's the litmus
+test)". So the test is: **given a game it has never seen, through one generic adapter, does Soar with the hook
+get better at it over episodes, and does what it learned make the next game faster to learn?**
+
+## The base
+
+- **Soar 9.6.5** (`releases/9.6.5`, 2026-05-06; BSD, its `LICENSE.md`, read 2026-11-18), built from source in
+  its own container, driven through its own interface (SML), with its own memories (semantic and episodic in its
+  SQLite, as the manual describes, ch. 6 and 7). Chunking and reinforcement learning are Soar's own, on or off as
+  Soar's settings allow.
+- **The agent starts with the least that lets it act**: the rules that read the adapter's input and write its
+  actions, and nothing about any game.
+
+## The only things we add
+
+1. **A game adapter**: an environment's observation onto Soar's input link, Soar's output-link commands onto the
+   environment's actions, its reward onto Soar's reward link (ch. 5). Written once against a standard environment
+   interface (which one, picked with the `research` skill; Gymnasium's observation, action and reward is the lead),
+   not per game. It is the judge's, not the agent's: Substrate may not change it.
+2. **The impasse hook**: Soar reaches impasses constantly as normal problem solving, so the hook fires only on one
+   its own knowledge cannot leave: no progress for N decision cycles, the goal-depth limit reached, or the same
+   impasse recurring across episodes. It calls Substrate's `improve` (`docs/seed.md`) with the trace: the impasse,
+   the working memory above it, the recent decisions, the episode's reward so far. N and the recurrence count are
+   settings, and the hook's only opinions.
+3. **Learning between episodes, not within**: `improve` takes minutes to hours, so a stuck episode ends (stalls,
+   times out or gives up), and Substrate's change, once let in, applies from the next one: new rules loaded into
+   the kernel, or a new build.
+
+## What Substrate may change, as Morphogen cells
+
+| Cell | `change` | Stays Soar? |
 | --- | --- | --- |
-| A | Soar's own kernel (C++, its Python bindings), Postgres as its environment, an LLM as an operator | quick and faithful, but Postgres is only the world it lives in, and "Soar plus an LLM" is already being done |
-| B | Soar's architecture rebuilt on Postgres | the version worth writing about, but without a check it drifts into "Soar-inspired" |
-| **C** | **B, checked against A**: the real kernel runs beside it as the reference, on the same agents and tasks | **chosen**: "we implemented Soar" becomes something shown, and every place we depart from Soar is named and argued |
+| rules | the agent's productions (`agent/**`) | yes: the reference check holds by construction |
+| settings | Soar's own parameters (learning on or off, RL's rates, memory settings), bounded | yes |
+| architecture | the kernel's source | no: this starts the architecture lineage |
 
-The reference: Soar 9.6.5 (`releases/9.6.5`, 2026-05-06; BSD, its `LICENSE.md`, read 2026-11-18), built from
-source in its own container, never linked into Substrate's code.
+Fixed, the judge's: the adapter, the games, the measures, the hook's thresholds, the gate policy.
 
-## Soar's mechanisms, and their form here
+## Measured
 
-From the Soar manual (https://soar.eecs.umich.edu/soar_manual/, chapters 2 to 7, read 2026-11-18). Rows marked
-*to confirm* rest on parts of chapter 2 not yet read whole (the decision cycle's phases, I/O, o-support).
+Per game: return per episode over episodes (the learning curve), episodes to a level of play, Substrate's model
+calls and cost per accepted change, changes proposed and let in. Across games: **generalisation**, on games held
+out by kind (none of the agents was built or tuned on them): how fast a new game is learned with what earlier
+games left, against starting fresh.
 
-| Soar (manual) | Here | Exists today |
-| --- | --- | --- |
-| **Working memory**: "a tuple consisting of three symbols: an identifier, an attribute, and a value", "a graph rooted in the states" (ch. 3) | a table of `(id, attr, value)` rows per agent, with the state graph as foreign keys; each WME timetagged (the row's id) | no; signals (`env.signal`) are what arrives on the input link |
-| **Input and output links** (*to confirm*) | the input link is written from signals (each environment's streams); the output link is read into actuator queues | yes: signals, and actuator queues behind gates (`env`, S-143) |
-| **Productions**: "Operators are proposed by rules that test features of the current state" (ch. 2) | rules as SQL matched against working memory, incrementally on change (a Rete or TREAT-like match over the WME table: the first thing to measure) | no |
-| **i-support and o-support**: elaborations are "automatically retracted when the situation changes"; applications make "persistent changes" (ch. 2) | i-supported rows carry the instantiation that made them and go when it unmatches; o-supported rows stay | no |
-| **Preferences and the decision**: "a fixed procedure that interprets preferences" (ch. 2); acceptable, reject, better, worse, best, worst, indifferent, numeric (ch. 3) | a preference table per decision; the decision procedure as one SQL function, run once per cycle | no |
-| **The decision cycle** (*to confirm*: input, proposal, decision, application, output) | one cycle per tick, over pgmq: input from signals, proposal and elaboration to quiescence, decision, application, output to actuators | the loop exists as pass-through, not as a cycle |
-| **Impasses**: tie, conflict, constraint failure, no change (ch. 3); "the goal in the substate is to resolve the impasse" (ch. 2) | a substate row; **its problem solving may be an LLM** (below) | pass-through is a crude impasse: nothing handles the signal, so the LLM gets it |
-| **Chunking**: "Soar's experience-based mechanism for learning new procedural knowledge", built by backtracing "through the instantiation graph" (ch. 4) | two kinds (below): Soar's own, for symbolic substates; **compiled from the LLM's result and proven by the judge**, for neural ones | the author and the judge (S-151), for one coarse component |
-| **Reinforcement learning**: Q-values as numeric-indifferent preferences of RL rules; Sarsa or Q-learning; reward on the reward link (ch. 5) | numeric preferences on rules, updated from rewards; rewards from the owner's decisions, overrides and the judge's measures | no |
-| **Semantic memory**: SQLite; stored deliberately; cue-based retrieval "whose augmentations exactly match an agent-supplied cue", ties by activation (ch. 6) | **the store**: statements with ranks, references and pinned spans; retrieval by cue over statements, activation as a column | yes, the store (S-135, S-138) |
-| **Episodic memory**: SQLite; recorded automatically, "the entire top-state of working memory"; retrieval as "a nearest-neighbor search" (ch. 7) | the record: working memory snapshots per output (or per cycle) beside `env.signal` and `env.action` | partly: the record of signals and actions |
+Compared with: **vanilla Soar** (the base, no hook, its own chunking and RL only); **a vanilla LLM agent** (a model
+in a harness, playing directly); **Soar with the hook**. The expectation: vanilla Soar learns only what its RL can
+reach from the starting rules; the LLM agent plays passably at a high, flat cost per move; Soar with the hook
+starts badly and improves, its cost per move near zero, its cost per change falling. Where it stops improving is
+where the base's scope ends (owner: "i think what we'll find is that Soar's scope is more narrow than what is
+needed for higher-generalization"), and whether Substrate then reaches for the architecture cell is the next
+result.
 
-The hierarchy of contexts the owner described (a primary agent starting sub-projects with their own context) is
-Soar's substate stack: a sub-project is a substate with its own working memory and goal, and its results return
-to the state above. Environments nesting (`docs/framework.md`) becomes that, not a separate mechanism.
+## Games
 
-## Where we depart from Soar, on purpose
+To be picked with the `research` skill, symbolic first, since Soar needs symbols on its input link:
+- Soar's own: Eaters and TankSoar (the tutorials' games), water jug and blocks world as puzzles.
+- Grid and text games with a standard interface and feedback (leads: BabyAI, MiniHack, Crafter, TextWorld, and the
+  games BALROG benchmarks agents on).
+- Later, games seen only as pixels: perception is then something Substrate has to build or choose, which is itself
+  a test.
 
-Each is a claim the write-up has to support with measurements.
+## Lineages
 
-1. **An LLM resolves impasses.** When no rule proposes an operator, or several tie, the substate's problem
-   solving may be an LLM call: it sees the superstate's working memory (serialised, the view, S-134) and
-   answers with an operator, preferences, or new WMEs as results. Whatever wraps the call (a plain chat request,
-   Claude Code, OpenCode) is plumbing inside the substate, chosen by measurement, not the architecture.
-2. **Chunking from an opaque reasoner.** Soar's chunking backtraces through the rules that fired in the
-   substate; an LLM's reasoning cannot be backtraced. So the chunk is written, not derived: from the impasse,
-   the superstate it saw and the result it returned, an author proposes a rule (conditions on the superstate,
-   the result as its action), and the judge tests it on held-out impasses of the same kind before it is used.
-   The manual itself lists correctness gaps in chunking ("correctness filters have not yet been implemented for
-   all the identified potential sources", ch. 4); here every learned rule is tested, which is the part that is
-   new.
-3. **Two grains of rule.** A production in SQL (symbolic, matched every cycle) and a card (a prompt and settings
-   for a model, S-151: neural, called by an operator). A chunk can be either; the cheaper one that passes wins.
-4. **Beliefs carry evidence.** Semantic memory is the store: a retrieved fact comes with its references and the
-   exact spans it rests on; a changed source flags what cites it (S-138), and a flagged belief retracts what was
-   elaborated from it. Soar's semantic memory has no notion of where a fact came from.
-5. **Acts are gated.** Output-link commands to the world go through actuators with gates (`free`, `propose`,
-   `deny`); a proposal waits for a person (S-143). Soar has no such boundary.
-6. **Reflexes outside the cycle.** Loops faster than a decision cycle can run (the voice head hearing and
-   speaking, S-149) stay outside it, and feed the input link with what they did.
-
-## The first body: the voice head (S-159)
-
-The voice head (S-149, S-153 in Substrate's tree) is the first body the hybrid lives in, and the interface to
-build real-time embodiment on: every later body (the VRM avatar, a game, a robot) has the same three parts. The
-code may or may not be reused; the shape is what carries over.
-
-| Layer | In the voice head | Rate | In a later body |
-| --- | --- | --- | --- |
-| **Reflexes**, outside the cycle | microphone frames, voice activity (Silero), speech to text (Parakeet), text to speech (Kokoro), playback, the mouth following loudness, stopping playback the instant the owner speaks | every 20 ms frame | motor control, physics, lip sync, a game's input timing |
-| **Soar**, System 1 decisions | turn-taking and what kind of reply: take the turn, wait, answer, ask again, hand over, back-channel ("mm"), stop | per decision cycle, a decision well inside a breath (budget to be measured) | where to look, when to move, which skill to use |
-| **An LLM in an impasse substate**, System 2 | the wording of a reply, when no rule has one; whether a request is real work, when rules cannot tell | seconds, streamed | a plan, an explanation, a new situation |
-
-**The input link** (what the reflexes write, as working memory elements): the owner speaking or silent, and for
-how long; a partial and a final transcript; the head's own state (speaking, the sentence it is on, how much is
-left); an interruption (the owner spoke over it, and after how much); the companion's answers arriving; the
-clock. **The output link** (commands the reflexes carry out): `say` (text, or a request for wording), `stop`,
-`wait`, `backchannel`, `handoff` (a request to the companion), `expression` (the face). Speaking is a command
-the reflexes carry out sentence by sentence, so Soar can stop it between cycles without waiting on speech.
-
-**Reward**, for reinforcement learning on the turn-taking rules: being talked over soon after starting
-(negative), a long silence after the owner finishes (negative), a handoff the companion completes (positive), a
-handoff it refuses as small talk (negative), the owner's explicit approval or correction (strongest). All of
-these are already in the voice head's record (`companion.voice.heard`, `companion.voice.said`: timings,
-interruptions, handoffs), so the first rules can be compared against the current voice head's behaviour on
-recorded conversations before any live one.
-
-**Chunking here:** when the LLM substate answers the same kind of utterance the same way (greetings, "what time
-is it", "hand that over"), the answer becomes a rule that replies with no model call; that is where the curve
-(model calls per utterance falling) should show first. **Measured:** time from the end of the owner's speech to
-the first word, interruptions per minute, handoff agreement on the judge's labelled cases (S-151's 30), and
-model calls per utterance, against the current voice head as the baseline.
-
-## Checked against the reference
-
-The same agents run on Soar 9.6.5 and on this implementation, and must make the same decisions:
-- the classic tasks shipped with Soar's tutorials and its unit tests (water jug first; which ones the repository
-  carries is to be read from it, not assumed)
-- a trace per run: each cycle's working memory changes, preferences, selected operator and impasses, compared
-  cycle by cycle (where Soar's own choice is random, the seed or the set of acceptable choices is compared)
-
-## Benchmarks, on both sides
-
-To be picked with the `research` skill; these are leads, not choices.
-- **Cognitive-architecture tasks:** Soar's own (water jug, blocks world, Eaters, TankSoar) and whatever the
-  literature uses to compare architectures.
-- **LLM-agent benchmarks:** text and game environments where agents are compared on success and cost (for
-  example ALFWorld, ScienceWorld, TextWorld, or BALROG's games, Crafter and BabyAI among them).
-- **What we would add:** beliefs under changing evidence (a source changes; does the agent stop acting on what
-  it said?).
-
-Measured on each: success; model calls, tokens and cost per decision; latency; and **the curve**: model calls per
-decision falling over the run as chunks replace impasses, with success holding. That curve is the result the
-architecture predicts.
-
-## Three agents compared, and three lineages (S-157)
-
-Compared on every benchmark: **vanilla Soar** (the 9.6.5 kernel, rules only), **a vanilla LLM agent** (a model in
-a harness, no Soar), and **the hybrid**. "Higher generalisation" is measured, not argued: tasks held out by kind
-(domains none of the three was built or tuned on); per task, success, model calls and cost; and how much of what
-was learned on one domain carries to the next. The expectation: vanilla Soar fails where it has no rules, the LLM
-agent succeeds at a high flat cost, the hybrid's cost falls. Where the hybrid stalls is where Soar's scope ends
-(owner: "i think what we'll find is that Soar's scope is more narrow than what is needed for higher-generalization").
-
-The hybrid may then change its own architecture: an impasse no rule and no LLM substate resolves becomes a call to
-Substrate's `improve` (`docs/seed.md`), judged and gated like any change. Since a changed architecture is no
-longer Soar, three lineages are kept: **conformant** (stays Soar, the reference check holds), **the hybrid as
-specified** (this note), and **the self-modifying hybrid**, which keeps going. Each is measured against both
-vanilla agents; how far the third drifts from the first is part of the result.
-
-## Where it lives
-
-In its own repository, built by Substrate (`docs/seed.md`) and judged by Morphogen. It carries its own spec (this
-note, tightened), its `catalog-info.yaml` and `morphogen.yaml`. Its first cell: conformance, scored as trace
-agreement with the reference kernel (run as a service image) on agents the builder never sees. From this tree it
-takes the store (as semantic memory), the environment's signals and gated actuators (as the input and output
-links), and the companion and the voice head (as the first agent that lives in it). The harness question
-(S-154's discussion) shrinks to which wrapper an impasse substate uses.
-
-Morphogen judges commits; chunks are learned at run time. Until a run-time judge exists, chunks are written to a
-rules file and judged in batches as commits.
+0. **The base with the hook**, rules and settings only: stays Soar.
+1. **Architecture changes** let in: no longer Soar; how far it drifts from lineage 0, and what it gains, are part
+   of the result.
 
 ## First steps
 
-1. The reference: Soar 9.6.5 built in a container, water jug run, its trace written out.
-2. Working memory, preferences and the decision cycle in Postgres; water jug's trace matches.
-3. Impasses with an LLM substate; a task with no rules at all, solved by the LLM, every impasse recorded.
-4. Chunking from those impasses, judged; the curve on that task.
-5. The voice head as the first body (above): its turn-taking as Soar rules with reinforcement learning, replies from an LLM substate, chunked; measured against the current voice head on its record, then live.
+1. Soar 9.6.5 in a container; a Soar agent driven through SML; Eaters played, its trace written out.
+2. The adapter, against the picked environment interface; one grid game played by the starting rules.
+3. The hook: an unresolved impasse reaches Substrate's `improve` with its trace; a change comes back as a pull
+   request on the agent's rules, judged and gated.
+4. The curve on that game; then a held-out game.
 
-## Open
+## Experimental hypotheses, to trial later
 
-- How rules are written: Soar's own syntax, parsed into SQL (so Soar's agents run unchanged, which conformance
-  needs), or a new syntax (not before conformance).
-- Incremental matching in Postgres: triggers, a Rete in a process beside it, or both; measured on Soar's
-  performance tests.
-- What a cycle is in real time: Soar runs as fast as it can; an agent with a voice and a body ticks on signals.
-- The write-up: where, when, and with what results.
+Our earlier design (S-154, S-159), kept for its value, not built in. Each becomes a candidate in a catalog Substrate
+may draw on when it changes the base; whether Substrate reaches for one unprompted is itself a finding.
+
+- **Soar rebuilt on Postgres.** Working memory as tables, rules as SQL matched on change, preferences and the
+  decision cycle as functions, pgmq for the cycle, pgvector and graphs for retrieval. Why it might pay: memory
+  shared with other agents and tools, queries across runs, scale. Checked, if built, against the kernel by
+  comparing traces cycle by cycle.
+- **An LLM resolving impasses inside a substate**, in seconds rather than between episodes: the superstate's
+  working memory serialised for it, an operator or preferences back. The hook already has an LLM in the loop
+  (Substrate's), but slowly and between episodes; this would put one inside the cycle.
+- **Chunking from an opaque reasoner**: an LLM's reasoning cannot be backtraced, so a chunk is written from the
+  impasse and its result and proven on held-out impasses before use. Morphogen judges commits, so until a run-time
+  judge exists such chunks would be judged in batches.
+- **Beliefs with evidence**: semantic memory whose facts carry their sources and the spans they rest on, flagged
+  when a source changes, retracting what was inferred from them.
+- **Gated acts**: output-link commands to the real world through actuators with `free`, `propose`, `deny` gates.
+- **Two grains of rule**: productions, and cards (a prompt and settings for a model) called by an operator.
+- **Reflexes and bodies**: loops faster than a decision cycle kept outside it (motor control, voice activity,
+  playback), feeding the input link. **The voice head as a body** (S-159): turn-taking as Soar decisions (take the
+  turn, wait, answer, hand over, back-channel, stop), the wording from a model, reward from being talked over,
+  long silences and handoffs, all already in its record. It needs answers within a breath, so it waits until
+  rules exist or an in-cycle LLM (above) is let in.
+- **Model calls per decision falling** as chunks replace impasses, when an LLM is in the cycle: the curve S-154
+  predicted.
+
+## Read for it
+
+The Soar manual, chapters 2 to 7 (https://soar.eecs.umich.edu/soar_manual/, read 2026-11-18): working memory as
+"a tuple consisting of three symbols: an identifier, an attribute, and a value" (ch. 3); impasses tie, conflict,
+constraint failure, no change (ch. 3); chunking "disabled by default" and with correctness filters not yet complete
+(ch. 4); RL as numeric-indifferent preferences, Sarsa or Q-learning, reward on the reward link (ch. 5); semantic and
+episodic memory in SQLite (ch. 6, 7). Chapter 2's decision cycle, I/O and o-support sections are still to be read
+whole, before the adapter is written.
