@@ -25,6 +25,7 @@ import mimetypes
 import os
 import re
 import sys
+import threading
 import time
 import urllib.request
 from pathlib import Path
@@ -217,9 +218,11 @@ class Session:
         q: asyncio.Queue = asyncio.Queue()
         loop = asyncio.get_running_loop()
 
+        stop = threading.Event()
+
         def pump():
             try:
-                for tok in reply.stream(card, prior, text, GATEWAY, KEY, LLM):
+                for tok in reply.stream(card, prior, text, GATEWAY, KEY, LLM, stop=stop):
                     loop.call_soon_threadsafe(q.put_nowait, tok)
             except Exception as e:                      # noqa: BLE001 - reported to the page, and the turn ends
                 loop.call_soon_threadsafe(q.put_nowait, e)
@@ -256,6 +259,7 @@ class Session:
                         await self.say(buf.strip(), said)
                     break
         except asyncio.CancelledError:
+            stop.set()                                  # the model stops too, not only the speaking
             self.history.append({"role": "assistant", "content": " ".join(said) + " (interrupted)"})
             self.rec.publish("companion.voice.said", {"text": " ".join(said), "by": LLM, "heard": heard, "component": comp_id,
                                                       "interrupted": True, "stt_ms": stt_ms, "first_audio_ms": first_ms}, "voice head")

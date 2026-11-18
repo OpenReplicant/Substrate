@@ -8,9 +8,11 @@ reasoning_effort, history_turns}, kpis (targets), tests [{utterance, expect_hand
 """
 from __future__ import annotations
 
+import http.client
 import json
 import re
 import time
+import urllib.error
 import urllib.request
 
 NAME = "voice_reply"
@@ -54,8 +56,26 @@ def params(card: dict) -> dict:
     return p
 
 
-def stream(card: dict, history: list[dict], utterance: str, gateway: str, key: str, model: str, call_id: str = ""):
-    """The reply, token by token, from the local model through the gateway."""
+def stream(card: dict, history: list[dict], utterance: str, gateway: str, key: str, model: str, call_id: str = "",
+           stop=None):
+    """The reply, token by token, from the local model through the gateway. A connection the model's server had
+    already closed (the gateway's 502, "closed connection before returning the first response byte", 2026-11-18)
+    is tried once more, if nothing has arrived yet. `stop` (a threading.Event) ends it early: closing the
+    connection makes llama.cpp stop generating, so an interrupted reply does not go on using the model."""
+    for attempt in (1, 2):
+        got = False
+        try:
+            for tok in _stream(card, history, utterance, gateway, key, model, call_id, stop):
+                got = True
+                yield tok
+            return
+        except (urllib.error.HTTPError, urllib.error.URLError, ConnectionError, http.client.HTTPException) as e:
+            retry = attempt == 1 and not got and (not isinstance(e, urllib.error.HTTPError) or e.code in (502, 503))
+            if not retry:
+                raise
+
+
+def _stream(card, history, utterance, gateway, key, model, call_id, stop):
     p = params(card)
     msgs = [{"role": "system", "content": p["system"]}] + (history[-p["history_turns"]:] if p["history_turns"] else []) \
         + [{"role": "user", "content": utterance}]
@@ -65,6 +85,8 @@ def stream(card: dict, history: list[dict], utterance: str, gateway: str, key: s
                                  {"Content-Type": "application/json", "x-bf-vk": key, "x-wb-call": call_id or f"reply-{time.time_ns()}"})
     with urllib.request.urlopen(req, timeout=120) as r:
         for line in r:
+            if stop is not None and stop.is_set():
+                return
             line = line.decode("utf-8", "replace").strip()
             if not line.startswith("data:"):
                 continue
