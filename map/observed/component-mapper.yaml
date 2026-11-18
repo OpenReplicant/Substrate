@@ -1,0 +1,18 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: mapper
+  namespace: observed
+  description: The map, catalog and research skills: sources into maps with evidence, and alternatives for each role.
+  annotations:
+    openreplicant.com/evidence-description: "docs/seed.md#L27 sha256:71835d336b74"
+spec:
+  type: skill
+  lifecycle: experimental
+  owner: group:owner
+  system: system:substrate
+  providesApis:
+    - api:backstage-descriptor
+    - api:evidence-annotation
+  consumesApis:
+    - api:skill-format

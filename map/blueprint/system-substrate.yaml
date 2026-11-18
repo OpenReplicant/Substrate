@@ -1,0 +1,10 @@
+apiVersion: backstage.io/v1alpha1
+kind: System
+metadata:
+  name: substrate
+  namespace: blueprint
+  description: The seed as designed.
+  annotations:
+    openreplicant.com/evidence-description: "docs/seed.md#L9 sha256:a54a223797f6"
+spec:
+  owner: group:observed/owner

@@ -1,0 +1,13 @@
+apiVersion: openreplicant.com/v1alpha1
+kind: Role
+metadata:
+  name: evidence-checking
+  namespace: observed
+  description: What check does in Substrate.
+  annotations:
+    openreplicant.com/evidence-filledBy: "docs/seed.md#L86 sha256:5b803fa0040e"
+spec:
+  of: system:substrate
+  filledBy: component:check
+  requiresApis:
+    - api:evidence-annotation

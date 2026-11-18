@@ -1,0 +1,11 @@
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: claude-code
+  namespace: observed
+  description: Claude Code: the harness the seed runs in.
+  annotations:
+    openreplicant.com/evidence-description: "docs/seed.md#L20 sha256:059d7a118c0a"
+spec:
+  type: harness
+  owner: group:owner

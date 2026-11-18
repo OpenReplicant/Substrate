@@ -1,0 +1,13 @@
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: evidence-annotation
+  namespace: observed
+  description: Evidence on a claim: an annotation pointing at lines of a file and their hash, or a URL and a date.
+  annotations:
+    openreplicant.com/evidence-definition: "docs/seed.md#L86 sha256:5b803fa0040e"
+spec:
+  type: file-format
+  lifecycle: production
+  owner: group:owner
+  definition: "Evidence on a claim: an annotation pointing at lines of a file and their hash, or a URL and a date."

@@ -1,0 +1,13 @@
+apiVersion: openreplicant.com/v1alpha1
+kind: Role
+metadata:
+  name: harness
+  namespace: observed
+  description: What claude-code does in Substrate.
+  annotations:
+    openreplicant.com/evidence-filledBy: "docs/seed.md#L20 sha256:059d7a118c0a"
+spec:
+  of: system:substrate
+  filledBy: resource:claude-code
+  requiresApis:
+    - api:skill-format

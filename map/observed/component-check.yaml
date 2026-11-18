@@ -1,0 +1,16 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: check
+  namespace: observed
+  description: check.py: is the map well formed, and is every piece of evidence still current.
+  annotations:
+    openreplicant.com/evidence-description: "check.py#L1 sha256:b529f4db4a2f"
+spec:
+  type: tool
+  lifecycle: experimental
+  owner: group:owner
+  system: system:substrate
+  consumesApis:
+    - api:backstage-descriptor
+    - api:evidence-annotation

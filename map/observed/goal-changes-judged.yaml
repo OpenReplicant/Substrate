@@ -1,0 +1,12 @@
+apiVersion: openreplicant.com/v1alpha1
+kind: Goal
+metadata:
+  name: changes-judged
+  namespace: observed
+  description: Every change that reaches main was judged outside the builder's reach, or its record says it was not.
+  annotations:
+    openreplicant.com/evidence-metric: "docs/seed.md#L115 sha256:51c1a19a7201"
+spec:
+  of: system:substrate
+  metric: "share of commits on main whose pull request carries a Morphogen verdict, or a gate label saying none was asked for"
+  target: 1.0

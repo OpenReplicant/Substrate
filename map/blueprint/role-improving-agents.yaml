@@ -1,0 +1,13 @@
+apiVersion: openreplicant.com/v1alpha1
+kind: Role
+metadata:
+  name: improving-agents
+  namespace: blueprint
+  description: What the MCP server does in Substrate as designed.
+  annotations:
+    openreplicant.com/evidence-filledBy: "docs/seed.md#L93 sha256:9fd054705c57"
+spec:
+  of: system:substrate
+  filledBy: component:mcp-server
+  requiresApis:
+    - api:improve-mcp

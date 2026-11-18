@@ -1,8 +1,8 @@
 # Substrate: the seed
 
-The spec for what Substrate is from here (S-155, 2026-11-18). It replaces the framework in
-`docs/framework.md` as the description of this repository; that page stays as the record of how we got here,
-and its environment, components and pass-through now belong to the targets Substrate builds, not to Substrate.
+The spec for what Substrate is from here (S-155, 2026-11-18). It replaces the framework this tree was
+built for (S-125, kept at the tag `framework-final`); its environment, components and pass-through now belong to
+the targets Substrate builds, not to Substrate.
 
 ## What it is
 
@@ -50,8 +50,8 @@ So the seed keeps everything in files:
 
 | Need | Form |
 | --- | --- |
-| The map | Backstage descriptor files (`catalog-info.yaml`): `Component`, `System`, `Domain`, `API`, `Resource` with `dependsOn`, `providesApis`, `consumesApis`; what Backstage lacks (roles, interfaces other than APIs, goals) as custom kinds under `openreplicant.com/v1alpha1` *(to confirm against Backstage's descriptor spec before writing the first file)* |
-| Evidence | on each claim: source, locator, the quoted text and its hash, as annotations; a check script rehashes them and lists what has gone stale |
+| The map | Backstage descriptor files, one entity per file under `map/`, listed by `catalog-info.yaml` (a `Location`); "The map format" below |
+| Evidence | an annotation per claim, pointing at lines of a file and their hash; `check.py` rehashes them and names what has gone stale |
 | Catalogs | candidates as entities in the same files; their measurements as trial output files and Morphogen's verdicts |
 | Working memory | plain files: notes, the plan, the reconciler's open gaps |
 | Long-term memory | git history and Morphogen's evidence log |
@@ -62,6 +62,30 @@ rebuilt from them, never the truth. Postgres belongs to targets that need it (So
 **Ontologies** are adopted only where a tool or a person on the other side speaks one: ArchiMate, BPMN or OCEL,
 OpenTelemetry, SOSA/SSN, PROV, an API's own spec. Choosing the vocabulary for a new domain is a step of the
 mapper, made from candidates like any other choice. There is no upper ontology.
+
+## The map format
+
+Read against Backstage's own docs (descriptor format, extending the model, references, well-known relations, at
+https://backstage.io/docs/features/software-catalog/, 2026-11-18): custom kinds must take an apiVersion under the
+adopter's own domain, and the docs advise few; annotation values are strings, keys `prefix/name` (name at most 63
+characters); unknown spec fields are stored but discouraged; references are `[kind:][namespace/]name`.
+
+- **Backstage's kinds where they fit:** `System` (a whole), `Component` (a part; `spec.subcomponentOf`,
+  `spec.system`, `spec.dependsOn`, `spec.providesApis`, `spec.consumesApis`), `API` (an **interface**: any
+  `spec.type` (`openapi`, `file-format`, `protocol`, `skill-format`...) and a `spec.definition` saying exactly what
+  crosses the boundary), `Resource` (something used, not built), `Domain`, `Group` (who owns).
+- **Two kinds of our own**, `apiVersion: openreplicant.com/v1alpha1`: **`Role`** (`spec.of`: the whole,
+  `spec.filledBy`: the part playing it now, `spec.requiresApis`: what anything filling it must provide) and
+  **`Goal`** (`spec.of`, `spec.metric`: how it is measured, in words a judge could apply, `spec.target`).
+- **The three kinds of map are namespaces:** `blueprint`, `described`, `observed`. The same name in two namespaces
+  is the same thing as designed and as found; the reconciler compares them.
+- **Catalogs:** a candidate is a `Component` with `spec.lifecycle: candidate` and the annotation
+  `openreplicant.com/candidate-for: role:NAME`; it is an alternative when it provides every API the role
+  requires. Measurements are annotations `openreplicant.com/measured-GOAL: "VALUE, PATH-OF-OUTPUT, DATE"`;
+  verdicts are Morphogen's.
+- **Evidence:** `openreplicant.com/evidence-FIELD: "PATH#La-b sha256:HASH"` (the field it backs, `-2` for a
+  second source), or `"URL YYYY-MM-DD"` for a page outside the repository. Write `sha256:new` and run
+  `python3 check.py --stamp`.
 
 ## Two ways in
 
@@ -76,7 +100,7 @@ mapper, made from candidates like any other choice. There is no upper ontology.
 | `explain` | a change | what changed, why, the measurements and the verdict |
 | `revert` | a change | the previous version, through the same gate |
 
-Results also arrive as pushed events, as the channel does today. A Soar agent at an impasse no rule and no LLM
+Results also arrive as pushed events (a Claude Code channel, as `framework-final` built one). A Soar agent at an impasse no rule and no LLM
 substate resolves can call `improve` on its own architecture; nothing in the seed treats that case specially.
 
 ## The gate
@@ -98,17 +122,17 @@ A repository Substrate builds keeps, in itself: its specs (blueprints), its `cat
 `morphogen.yaml` (cells, what may change, how better is measured), its gate policy. Any Substrate instance can
 pick it up from those alone. The first is the Soar repository (MetaSoar's `docs/spec.md`).
 
-## What this tree keeps, and where the rest goes
+## What this tree holds (S-162)
 
-| Kept here | Moves to the Soar repository as parts it may reuse | Retired |
-| --- | --- | --- |
-| the skills (`map`, `catalog`, `research`, `upstream`, `setup` trimmed); the trials and their results; `DECISIONS.md`; the gateway's config (`scripts/gateway.py`); `docs/privacy.md` | the store (`store/`, its schema, `store/mcp.py`), the environment (`environment/`, schema `env`, the channel), the companion, the voice head, the local model's service, the UI | `environment/judge.py` and `environment/author.py` (Morphogen judges; authors are whatever proposes); `env.component` and `env.verdict` |
-
-Moved, not deleted: the move happens when the Soar repository exists to receive them, in one commit each side.
+The skills (`map`, `catalog`, `research`, `build`, `reconcile`), the map of itself (`catalog-info.yaml`, `map/`),
+`check.py`, the docs (this spec, the plan) and `DECISIONS.md`. Everything else, the framework this tree was built
+for (the store on Postgres, the real-time environment and its channel, the companion, the voice head, the local
+model, components and Substrate's own judge, the UI, the gateway's config, the trials, `docs/privacy.md`), is at
+the tag `framework-final`: history, and a catalog of parts a target may take back. Nothing was moved into
+MetaSoar, which starts from plain Soar (S-160); its hypotheses name what it may want from here.
 
 ## Open
 
-- The custom kinds' exact shape, once Backstage's descriptor spec is read.
 - The reconciler's first version: what it reads and what it writes.
 - The MCP server's transport and auth when the asking agent is not on this machine.
 - How Morphogen's own `map` skill (drafting cells) and Substrate's mapper meet: Substrate writes the catalog,
