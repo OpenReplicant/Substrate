@@ -20,5 +20,7 @@ RUN curl -fsSL -o /tmp/cc.tgz "https://registry.npmjs.org/@anthropic-ai/claude-c
 RUN useradd --uid 1000 --create-home --shell /bin/bash companion
 USER companion
 WORKDIR /home/companion
-ENV PYTHONPATH=/app PYTHONDONTWRITEBYTECODE=1 DISABLE_AUTOUPDATER=1 CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1
+ENV PYTHONPATH=/app PYTHONDONTWRITEBYTECODE=1
+# not CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: with it set, channels are "not currently available" (seen 2026-11-17)
+ENV DISABLE_AUTOUPDATER=1
 CMD ["sh", "/app/deploy/companion/start.sh"]

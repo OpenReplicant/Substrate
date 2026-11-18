@@ -28,6 +28,8 @@ PY
 model=$(python3 -c 'from environment.companion import connect; v = connect().c.execute("select env.get(%s, %s)", ("companion", "model")).fetchone()[0]; print((v or {}).get("model") or "")' 2>/dev/null || true)
 export ANTHROPIC_MODEL="${model:-${COMPANION_MODEL:-claude-haiku-5-5}}"
 export ANTHROPIC_DEFAULT_HAIKU_MODEL="${COMPANION_MODEL:-claude-haiku-5-5}"
+# MCP tools in full, not deferred behind a tool-search tool the session does not have (--tools ''); seen 2026-11-17
+export ENABLE_TOOL_SEARCH=false
 tmux kill-server 2>/dev/null || true
 # the session: no built-in tools (S-134's lean profile), only the channel's; it hands real work to background tasks
 tmux new-session -d -s companion -x 200 -y 50 -c "$S" \
