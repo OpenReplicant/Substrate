@@ -66,6 +66,38 @@ Each is a claim the write-up has to support with measurements.
 6. **Reflexes outside the cycle.** Loops faster than a decision cycle can run (the voice head hearing and
    speaking, S-149) stay outside it, and feed the input link with what they did.
 
+## The first body: the voice head (S-159)
+
+The voice head (S-149, S-153 in Substrate's tree) is the first body the hybrid lives in, and the interface to
+build real-time embodiment on: every later body (the VRM avatar, a game, a robot) has the same three parts. The
+code may or may not be reused; the shape is what carries over.
+
+| Layer | In the voice head | Rate | In a later body |
+| --- | --- | --- | --- |
+| **Reflexes**, outside the cycle | microphone frames, voice activity (Silero), speech to text (Parakeet), text to speech (Kokoro), playback, the mouth following loudness, stopping playback the instant the owner speaks | every 20 ms frame | motor control, physics, lip sync, a game's input timing |
+| **Soar**, System 1 decisions | turn-taking and what kind of reply: take the turn, wait, answer, ask again, hand over, back-channel ("mm"), stop | per decision cycle, a decision well inside a breath (budget to be measured) | where to look, when to move, which skill to use |
+| **An LLM in an impasse substate**, System 2 | the wording of a reply, when no rule has one; whether a request is real work, when rules cannot tell | seconds, streamed | a plan, an explanation, a new situation |
+
+**The input link** (what the reflexes write, as working memory elements): the owner speaking or silent, and for
+how long; a partial and a final transcript; the head's own state (speaking, the sentence it is on, how much is
+left); an interruption (the owner spoke over it, and after how much); the companion's answers arriving; the
+clock. **The output link** (commands the reflexes carry out): `say` (text, or a request for wording), `stop`,
+`wait`, `backchannel`, `handoff` (a request to the companion), `expression` (the face). Speaking is a command
+the reflexes carry out sentence by sentence, so Soar can stop it between cycles without waiting on speech.
+
+**Reward**, for reinforcement learning on the turn-taking rules: being talked over soon after starting
+(negative), a long silence after the owner finishes (negative), a handoff the companion completes (positive), a
+handoff it refuses as small talk (negative), the owner's explicit approval or correction (strongest). All of
+these are already in the voice head's record (`companion.voice.heard`, `companion.voice.said`: timings,
+interruptions, handoffs), so the first rules can be compared against the current voice head's behaviour on
+recorded conversations before any live one.
+
+**Chunking here:** when the LLM substate answers the same kind of utterance the same way (greetings, "what time
+is it", "hand that over"), the answer becomes a rule that replies with no model call; that is where the curve
+(model calls per utterance falling) should show first. **Measured:** time from the end of the owner's speech to
+the first word, interruptions per minute, handoff agreement on the judge's labelled cases (S-151's 30), and
+model calls per utterance, against the current voice head as the baseline.
+
 ## Checked against the reference
 
 The same agents run on Soar 9.6.5 and on this implementation, and must make the same decisions:
@@ -121,7 +153,7 @@ rules file and judged in batches as commits.
 2. Working memory, preferences and the decision cycle in Postgres; water jug's trace matches.
 3. Impasses with an LLM substate; a task with no rules at all, solved by the LLM, every impasse recorded.
 4. Chunking from those impasses, judged; the curve on that task.
-5. The voice head and the companion as the first agent that lives in it.
+5. The voice head as the first body (above): its turn-taking as Soar rules with reinforcement learning, replies from an LLM substate, chunked; measured against the current voice head on its record, then live.
 
 ## Open
 
