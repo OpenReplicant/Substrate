@@ -1,8 +1,11 @@
 # Substrate
 
-An agent framework: you put an environment on a system you need, run it, and watch and change it. Its shape is
-`docs/framework.md`; what is built next is `docs/plan.md`, the one plan; every default and its reason is in
-`DECISIONS.md` (append-only). Read the plan first.
+The seed (S-155): the primitives for emergence, scoped as a coding and devops tool. A mapper, a builder and a
+reconciler, kept in files, with Morphogen as the judge outside (S-156); it builds other repositories, Soar on
+Postgres first (`docs/soar.md`). Its spec is `docs/seed.md`; what is built next is `docs/plan.md`, the one plan;
+every default and its reason is in `DECISIONS.md` (append-only). Read the plan first. `docs/framework.md` and the
+parts table below describe the framework this tree was built for (S-125); those parts move to the Soar
+repository (S-155, plan step D).
 
 This is the **fresh tree** (S-137). v1 is tagged `v1-final` and its plans are in `docs/archive/`: history, not
 plans to work from. v1's databases are kept in the same Postgres volume (`workbench`, `gateway`) and dumped in
@@ -42,8 +45,8 @@ plans to work from. v1's databases are kept in the same Postgres volume (`workbe
    reached over a process boundary (S-146). Check before adding.
 8. **Every change ends with `scripts/check.sh` passing**, and `scripts/test.sh` where tests exist, or with the
    failure named and explained.
-9. **Morphogen is out of the build** while the owner refactors it elsewhere: do not touch `repos/morphogen` or
-   depend on it. Fixes to an upstream project go by pull request (the `upstream` skill).
+9. **Morphogen is the judge, from GitHub** (S-156): install and call it from `OpenReplicant/Morphogen`, never
+   from `repos/morphogen`, which stays untouched (a judge run from a local clone would be the candidate). Fixes to an upstream project go by pull request (the `upstream` skill).
 
 ## Working with the owner
 

@@ -1,10 +1,26 @@
 # Plan
 
-The one current plan (S-124, 2026-11-17). It replaces the plans in `docs/archive/` (the spec and its build plan,
-the experiment-first direction, the handoff, the task briefs); those are kept as history and are not to be worked
-from. Every default and its reason is still in `DECISIONS.md`.
+The one current plan. Since S-155 (2026-11-18) Substrate is the seed (`docs/seed.md`): a mapper, a builder and a
+reconciler, in files, with Morphogen as the judge outside (S-156). Soar on Postgres is its first target, in a
+repository of its own (`docs/soar.md`, S-154, S-157). Steps 1 to 10 below are kept as the record of the
+framework this tree was built for (S-125); their environment, companion and voice head move to the Soar
+repository (S-155).
 
-## What Substrate is now
+## Now
+
+| # | Step | Done when |
+| --- | --- | --- |
+| A | The seed's spec, decisions and plan (`docs/seed.md`, S-155 to S-158) | on `main` by the owner's merge |
+| B | The Soar repository: the owner names it; created with `docs/soar.md` tightened into its spec and a `morphogen.yaml` with its first cell, conformance against Soar 9.6.5 | the repository exists and Morphogen's check runs on its pull requests |
+| C | The map format: Backstage's descriptor spec read; the custom kinds (role, interface, goal) and the evidence annotation fixed; Substrate's own map written in it, with the stale-evidence check | `catalog-info.yaml` describes this repository, the check passes, and Morphogen's Backstage loader reads it |
+| D | The move: the store, the environment, the companion, the voice head, the local model and the UI to the Soar repository, one commit each side; `environment/judge.py`, `author.py`, `env.component`, `env.verdict` retired | this tree holds only what `docs/seed.md` keeps; `scripts/check.sh` passes on what remains |
+| E | The plugin: the mapper's skills trimmed, the reconciler's first skill, packaged for Claude Code | installed from GitHub into a fresh session, it maps a repository and opens a judged pull request |
+| F | The MCP server (S-158): `improve`, `status`, `explain`, `revert`, gate policy read from the target's base | an agent asks for an improvement and a gated pull request comes back |
+| G | Soar, in its repository, by its own spec: the reference kernel in a container and water jug's trace; then working memory and the decision cycle in Postgres matching it | Morphogen's conformance cell passes on water jug |
+
+## Before S-155: the framework this tree was built for
+
+### What Substrate was
 
 An agent framework. You put an environment on a system you need, run it, and watch and change it in the UI,
 Substrate's web page over the store (`ui/`, S-140, S-141; rebuilt on the fresh tree, S-137). Its shape is `docs/framework.md` (S-125): the environment is data in
@@ -12,7 +28,7 @@ Postgres, pass-through to Claude Code is the default, components distilled from 
 tests them on cases their author never saw, and environments nest. Morphogen stays a part you can use as it is;
 no more work goes into it for now.
 
-## The fresh start (S-137)
+### The fresh start (S-137)
 
 v1 is tagged `v1-final` and archived. The fresh tree keeps only: the Postgres image (pgvector, pgmq, pg_cron,
 pgGraph), the model gateway (Bifrost, per-caller keys, the meter), Caddy, compose and `scripts/lib.sh`, the tools
@@ -20,7 +36,7 @@ container, `docs/privacy.md`, this plan, `docs/framework.md`, `DECISIONS.md`, `l
 and the `setup`, `research` and `upstream` skills. Everything else is rebuilt on the new store (S-135) or left
 in v1. v1's databases are in `.state/backups/` (2026-11-17); what people stated there comes back as data.
 
-## Steps
+### Steps
 
 | # | Step | Done when |
 | --- | --- | --- |
@@ -42,7 +58,7 @@ Self-levers beyond budget and model choice, and the other layers in `docs/framew
 need them, each tested against pass-through. The UI is no longer frozen: add what these steps need, and
 nothing they don't.
 
-## Deferred
+### Deferred
 
 Morphogen R&D (statistics, the judge's own gateway and meter, the queue, GitHub Actions, the evidence log), the
 case-and-scorer kit and the environment contract's generalisation, held-out cases by script, the paper catalog's
@@ -50,6 +66,9 @@ publication and reproductions, the hosted mapper and hosted judging, the slot mo
 (`docs/archive/slots.md`).
 
 ## The owner's to decide
+
+- The Soar repository's name (step B); registering Morphogen's GitHub App.
+- Which comes first as a business (Morphogen's hosted judge, Substrate's mapping as a service, the Soar write-up), and when each repository goes public.
 
 - Which game comes first (step 9), and which embodied environment after that (step 10).
 - Rotating the Postgres password; putting the Gemma model at the gateway.
