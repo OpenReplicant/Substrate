@@ -112,7 +112,7 @@ services:
     ports:
       - "127.0.0.1:${UI_PORT:-8100}:8100"
     healthcheck:
-      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8100/api/wholes', timeout=3)"]
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request as u; u.urlopen('http://127.0.0.1:8100/api/wholes', timeout=3)\""]
       interval: 10s
       retries: 10
     depends_on:
@@ -241,7 +241,8 @@ services:
       - ${NVIDIA_LIB_DIR:-/usr/lib/x86_64-linux-gnu}/libnvidia-ml.so.1:/usr/lib/x86_64-linux-gnu/libnvidia-ml.so.1:ro
       - ${NVIDIA_LIB_DIR:-/usr/lib/x86_64-linux-gnu}/libnvidia-ptxjitcompiler.so.1:/usr/lib/x86_64-linux-gnu/libnvidia-ptxjitcompiler.so.1:ro
     healthcheck:
-      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8880/health', timeout=3)"]
+      # as a shell command: Podman splits a CMD list's Python one-liner at its spaces (seen 2026-11-18)
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request as u; u.urlopen('http://127.0.0.1:8880/health', timeout=3)\""]
       interval: 10s
       retries: 30
 
