@@ -16,7 +16,7 @@ running=$(rt_status 2>/dev/null | awk 'NR > 1 {print $1}' | tr '\n' ' ')
 for s in $CORE; do
   case "$running" in *"-$s-"*) ;; *) bad "service $s is not running (scripts/logs.sh $s)" ;; esac
 done
-extra=$(printf '%s\n' $running | grep -v -e '-db-' -e '-gateway-' -e '-ollama-' -e '-ui-' -e '-environment-' -e '-companion-' || true)
+extra=$(printf '%s\n' $running | grep -v -e '-db-' -e '-gateway-' -e '-ollama-' -e '-ui-' -e '-environment-' -e '-companion-' -e '-llm-' -e '-voice-' || true)
 [ -z "$extra" ] && ok "only the core runs ($CORE)" || note "also running, outside the core: $(echo $extra)"
 if "$ROOT/bin/in-tools" python3 -c '
 import sys; sys.path.insert(0, "scripts")
@@ -60,6 +60,20 @@ if out=$(compose exec -T companion sh -c 'tmux has-session -t companion 2>/dev/n
     *) bad "companion   no session in its container (scripts/logs.sh companion)" ;;
   esac
 else bad "companion   its container does not answer (scripts/logs.sh companion)"; fi
+# The local model and the voice head (plan step 5), when COMPOSE_PROFILES in .env turns them on
+case ",$(env_value COMPOSE_PROFILES)," in *,llm,*)
+  case "$running" in *-llm-*) ;; *) bad "service llm is not running (scripts/logs.sh llm)" ;; esac
+  if [ "$("$ENGINE" inspect -f '{{.State.Health.Status}}' substrate-llm-1 2>/dev/null)" = healthy ]; then
+    ok "llm         $(env_value LLM_MODEL) on llama.cpp, at the gateway as local/$(env_value LLM_ALIAS)"
+  else note "llm         not healthy yet (a large model takes minutes to load; scripts/logs.sh llm)"; fi ;;
+esac
+case ",$(env_value COMPOSE_PROFILES)," in *,voice,*)
+  vp=$(env_value VOICE_PORT); vp=${vp:-8110}
+  case "$running" in *-voice-*) ;; *) bad "service voice is not running (scripts/logs.sh voice)" ;; esac
+  hdr=$(curl -s -D - -o /dev/null "http://127.0.0.1:$vp/" 2>/dev/null | tr -d '\r')
+  case "$hdr" in *" 200 "*"script-src 'self'"*) ok "voice       http://127.0.0.1:$vp/ (the companion's voice and face; press Start)" ;;
+    *) bad "the voice head does not answer at 127.0.0.1:$vp (scripts/logs.sh voice)" ;; esac ;;
+esac
 # The UI (S-140): its API answers from the store, under a CSP that allows scripts and styles from itself only
 ui="http://127.0.0.1:$(env_value UI_PORT || true)"; [ "$ui" = "http://127.0.0.1:" ] && ui=http://127.0.0.1:8100
 hdr=$(curl -s -D - -o /dev/null "$ui/api/wholes" 2>/dev/null | tr -d '\r')

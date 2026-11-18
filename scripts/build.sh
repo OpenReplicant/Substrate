@@ -3,7 +3,7 @@
 # keeps unchanged steps.
 #
 #   scripts/build.sh                    # db (Postgres with its extensions), tools, companion
-#   scripts/build.sh db|tools|companion
+#   scripts/build.sh db|tools|companion|voice
 set -eu
 . "$(dirname "$0")/lib.sh"
 
@@ -17,11 +17,17 @@ build_companion() {
     && echo "  substrate-companion:local (Claude Code, tmux, the channel's Python)"
 }
 
+build_voice() {
+  "$ENGINE" build -q -t substrate-voice:local -f "$ROOT/voice/Containerfile" "$ROOT/voice" >/dev/null \
+    && echo "  substrate-voice:local (speech in and out: sherpa-onnx, kokoro-onnx)"
+}
+
 say "Images ($ENGINE)"
 case "${1:-all}" in
   db) build_db ;;
   tools) build_tools ;;
   companion) build_companion ;;
-  all) build_db; build_tools; build_companion ;;
-  *) echo "usage: scripts/build.sh [db|tools|companion]" >&2; exit 1 ;;
+  voice) build_voice ;;
+  all) build_db; build_tools; build_companion; build_voice ;;
+  *) echo "usage: scripts/build.sh [db|tools|companion|voice]" >&2; exit 1 ;;
 esac

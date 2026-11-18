@@ -13,9 +13,10 @@ plans to work from. v1's databases are kept in the same Postgres volume (`workbe
 | The store | `store/` (schema in `store/sql/`, agent tools in `store/mcp.py`) on Postgres (`deploy/postgres`: pgvector, pgmq, pg_cron, pgGraph), database `substrate` | Wikibase's data model with OpenWiki's pinned evidence (S-135, S-138): entities, statements with ranks, references, spans, revisions, a page per entity; the agent's tools over MCP, and maps, roles, interfaces and catalogs (S-139; the `map` and `catalog` skills) |
 | The real-time environment | `environment/` (schema `env` in `store/sql/005_environment.sql`, the channel in `environment/channel.py`) on pgmq in the same Postgres | signals logged whole and fanned out as topics, a queue per actuator behind its gate (`free`, `propose`, `deny`), the channel into Claude Code, archived only on `ack` (S-143) |
 | The model gateway | container `gateway` (Bifrost), `scripts/gateway.py` | every model call goes through it with its caller's key and is recorded there, not by the caller (S-77) |
-| Local models | container `ollama` | the store's embeddings; local models later |
+| Local models | container `ollama`; container `llm` (llama.cpp, profile `llm`) | Ollama for the store's embeddings; the local chat model (Gemma 4 26B-A4B from `LLM_MODELS_DIR`) on llama.cpp, at the gateway as `local/gemma` (S-149) |
 | Tools | `bin/`, container `substrate-tools` | the scripts' Python and gitleaks, run in a container as you (S-19) |
 | The companion | `deploy/companion` (compose service `companion`), `environment/companion.py` (service `environment`), the UI's `#/companion` | the first environment: Claude Code on Haiku through the gateway's pass-through route on the owner's login, fed by the channel; it replies, starts background tasks and proposes budget and model changes (S-136, S-144) |
+| The voice head | `voice/` (compose service `voice`, profile `voice`) on 127.0.0.1:8110 | the companion's voice and face: microphone in over a WebSocket, Silero and Parakeet to text, the local model to answer, Kokoro to speak, a face that moves with it; hands real work to the companion (S-147, S-149) |
 | The UI | `ui/` (`ui/server.py`, `ui/static`), compose service `ui` on 127.0.0.1:8100 | the store's pages and maps as diagrams (S-140), read-only; v1's Workbench rebuilt, with no name of its own (S-141) |
 | Glue | `scripts/`, `deploy/` | brings the parts up and connects them |
 
@@ -58,8 +59,8 @@ scripts/bootstrap.sh       # once per machine: host tools, images, the tools con
 scripts/up.sh              # the stack (db, gateway, ollama, ui), the tools container, the databases; then check.sh
 scripts/check.sh           # is everything up and wired
 scripts/test.sh [FILE...]  # the test suites, in the tools container
-scripts/build.sh [db|tools|companion]
-scripts/logs.sh SERVICE    # db, gateway, ollama, ui, environment, companion
+scripts/build.sh [db|tools|companion|voice]
+scripts/logs.sh SERVICE    # db, gateway, ollama, ui, environment, companion, llm, voice
 scripts/tools.sh start|stop|status
 scripts/down.sh [--volumes]   # stop (deleting data asks first)
 python3 scripts/gateway.py render|keys   # the gateway's config from .env and its callers

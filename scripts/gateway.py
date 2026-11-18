@@ -31,7 +31,8 @@ OUT = ROOT / ".state/gateway/config.json"
 
 NAMES = ("POSTGRES_PASSWORD", "DB_PORT", "OPENROUTER_API_KEY", "OLLAMA_URL", "GATEWAY_OPENROUTER_MODELS",
          "GATEWAY_REQUESTS_PER_HOUR", "GATEWAY_DB_PASSWORD", "GATEWAY_METER_PASSWORD", "GATEWAY_KEY_SECRET",
-         "GATEWAY_PORT", "COMPANION_MODELS", "COMPANION_DB_PASSWORD")
+         "GATEWAY_PORT", "COMPANION_MODELS", "COMPANION_DB_PASSWORD",
+         "LLM_MODEL")
 
 
 def settings() -> dict[str, str]:
@@ -50,10 +51,13 @@ def caller_key(secret: str, caller: str) -> str:
 # here when a step needs one. The companion (S-136, plan step 4): its session and its background tasks, each on the
 # owner's own Claude login (subscription mode: the gateway forwards the login's token to Anthropic and keeps the
 # call under the caller's key), held to Anthropic's models in COMPANION_MODELS.
-CALLERS = {"store:embed": ("ollama",), "companion:session": ("anthropic",), "companion:task": ("anthropic",)}
-LOCAL = ("ollama",)
+# The voice head (plan step 5) talks with the local model (llama.cpp, provider `local`) only: what the owner says
+# aloud stays on this machine (P3) unless the model hands a request to the companion.
+CALLERS = {"store:embed": ("ollama",), "companion:session": ("anthropic",), "companion:task": ("anthropic",),
+           "voice:head": ("local",)}
+LOCAL = ("ollama", "local")
 FIXED_KEYS = {"store:embed": "STORE_EMBED_KEY", "companion:session": "COMPANION_SESSION_KEY",
-              "companion:task": "COMPANION_TASK_KEY"}   # keys read from .env by the gateway and the caller
+              "companion:task": "COMPANION_TASK_KEY", "voice:head": "VOICE_KEY"}   # keys read from .env by the gateway and the caller
 
 
 def callers() -> list[str]:
@@ -72,9 +76,17 @@ def render(env: dict[str, str]) -> dict:
         providers["ollama"] = {"keys": [{"name": "ollama", "value": "", "models": ["*"], "weight": 1.0,
                                          "ollama_key_config": {"url": env["OLLAMA_URL"]}}],
                                "network_config": {"base_url": env["OLLAMA_URL"], "allow_private_network": True}}
+    # the local model on llama.cpp's server (compose service llm), OpenAI-compatible, no key
+    if env.get("LLM_MODEL"):
+        providers["local"] = {
+            "keys": [{"name": "llm", "value": "no-key", "models": ["*"], "weight": 1.0}],   # llama-server has no --api-key: any value; an empty one counts as none
+            "network_config": {"base_url": "http://llm:8080", "default_request_timeout_in_seconds": 300,
+                               "allow_private_network": True},
+            "custom_provider_config": {"base_provider_type": "openai",
+                                       "allowed_requests": {"chat_completion": True, "chat_completion_stream": True}}}
     # Anthropic with no key of its own: only calls carrying a Claude login (the companion's) can use it
     providers["anthropic"] = {"keys": []}
-    allowed = {"anthropic": [m.strip() for m in (env.get("COMPANION_MODELS") or "regex:claude-haiku.*").split(",") if m.strip()],
+    allowed = {"local": ["*"], "anthropic": [m.strip() for m in (env.get("COMPANION_MODELS") or "regex:claude-haiku.*").split(",") if m.strip()],
                "openrouter": [m.strip() for m in (env.get("GATEWAY_OPENROUTER_MODELS") or "regex:.*:free").split(",") if m.strip()],
                "ollama": ["regex:.*"]}
     secret = env.get("GATEWAY_KEY_SECRET") or ""

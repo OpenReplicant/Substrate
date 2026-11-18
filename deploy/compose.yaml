@@ -56,6 +56,7 @@ services:
       STORE_EMBED_KEY: ${STORE_EMBED_KEY:?set in .env}
       COMPANION_SESSION_KEY: ${COMPANION_SESSION_KEY:?set in .env}
       COMPANION_TASK_KEY: ${COMPANION_TASK_KEY:?set in .env}
+      VOICE_KEY: ${VOICE_KEY:?set in .env}
     volumes:
       - ../.state/gateway/config.json:/app/data/config.json:ro   # over the tmpfs: its stores are in Postgres
     ports:
@@ -162,7 +163,68 @@ services:
       db: {condition: service_healthy}
       gateway: {condition: service_started}
 
+  # The local model (plan step 5): llama.cpp's server on the GPU (as deploy/compose.nvidia.yaml gives it to Ollama:
+  # device nodes and the driver's libraries, no CDI, no root), serving LLM_MODEL from LLM_MODELS_DIR read-only.
+  # Reached only through the gateway (provider local). Started with the profile `llm` (COMPOSE_PROFILES in .env).
+  llm:
+    profiles: [llm]
+    image: ${LLM_IMAGE:-ghcr.io/ggml-org/llama.cpp:server-cuda12-b12098}
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+    entrypoint: ["sh", "-c", "exec /app/llama-server -m \"/models/$$LLM_MODEL\" --host 0.0.0.0 --port 8080 --alias \"$$LLM_ALIAS\" --jinja $$LLM_ARGS"]
+    environment:
+      LLM_MODEL: ${LLM_MODEL:-}
+      LLM_ALIAS: ${LLM_ALIAS:-gemma}
+      LLM_ARGS: ${LLM_ARGS:--ngl 999 --cpu-moe -c 16384 -ctk q4_0 -ctv q4_0 -fa auto}
+    devices:
+      - /dev/nvidia0
+      - /dev/nvidiactl
+      - /dev/nvidia-uvm
+      - /dev/nvidia-uvm-tools
+    volumes:
+      - ${LLM_MODELS_DIR:-/nonexistent}:/models:ro
+      - ${NVIDIA_LIB_DIR:-/usr/lib/x86_64-linux-gnu}/libcuda.so.1:/usr/lib/x86_64-linux-gnu/libcuda.so.1:ro
+      - ${NVIDIA_LIB_DIR:-/usr/lib/x86_64-linux-gnu}/libcuda.so.1:/usr/lib/x86_64-linux-gnu/libcuda.so:ro
+      - ${NVIDIA_LIB_DIR:-/usr/lib/x86_64-linux-gnu}/libnvidia-ml.so.1:/usr/lib/x86_64-linux-gnu/libnvidia-ml.so.1:ro
+      - ${NVIDIA_LIB_DIR:-/usr/lib/x86_64-linux-gnu}/libnvidia-ptxjitcompiler.so.1:/usr/lib/x86_64-linux-gnu/libnvidia-ptxjitcompiler.so.1:ro
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://127.0.0.1:8080/health"]
+      interval: 10s
+      retries: 60
+
+  # The voice head (plan step 5, S-147): the companion's voice and face at 127.0.0.1:VOICE_PORT. Hears and speaks on
+  # the CPU; talks with the local model through the gateway (voice:head, local only); hands real work to the
+  # companion as the owner's message. Its models are fetched once into their own volume. Profile `voice`.
+  voice:
+    profiles: [voice]
+    image: localhost/substrate-voice:local
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+    tmpfs: [/tmp]
+    environment:
+      VOICE_HOST: 0.0.0.0
+      VOICE_PORT: "8110"
+      VOICE_KEY: ${VOICE_KEY:?set in .env}
+      VOICE_STYLE: ${VOICE_STYLE:-af_heart}
+      VOICE_THREADS: ${VOICE_THREADS:-4}
+      VOICE_SILENCE_S: ${VOICE_SILENCE_S:-0.6}
+      LLM_NAME: local/${LLM_ALIAS:-gemma}
+      STORE_URL: postgresql://postgres:${POSTGRES_PASSWORD:?set in .env}@db:5432/substrate
+    volumes:
+      - voice-models:/models
+      - ../voice:/app/voice:ro
+    ports:
+      - "127.0.0.1:${VOICE_PORT:-8110}:8110"
+    depends_on:
+      db: {condition: service_healthy}
+      gateway: {condition: service_started}
+
 volumes:
+  voice-models:
+    name: ${VOICE_VOLUME:-substrate_voice-models}   # Parakeet, Silero and Kokoro (about 230 MB), fetched once
   companion-home:
     name: ${COMPANION_VOLUME:-substrate_companion-home}   # its Claude login and its session's history
   ollama-models:

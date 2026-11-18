@@ -37,6 +37,14 @@ def main():
           embed["provider_configs"])
     check("its key is read from .env", embed["value"] == "env.STORE_EMBED_KEY", embed["value"])
     check("the providers are configured", sorted(cfg["providers"]) == ["anthropic", "ollama", "openrouter"], sorted(cfg["providers"]))
+    local = gateway.render({**env, "LLM_MODEL": "model.gguf"})
+    lk = {k["name"]: k for k in local["governance"]["virtual_keys"]}
+    check("with a local model, it is a provider of its own", "local" in local["providers"]
+          and local["providers"]["local"]["network_config"]["base_url"] == "http://llm:8080")
+    check("the voice head reaches the local model only (what is said aloud stays here)",
+          [p["provider"] for p in lk["voice:head"]["provider_configs"]] == ["local"], lk["voice:head"]["provider_configs"])
+    check("the companion does not reach the local model", all(p["provider"] == "anthropic" for c in ("companion:session", "companion:task")
+                                                               for p in lk[c]["provider_configs"]))
     check("Anthropic has no key of its own (only a caller's Claude login reaches it)", cfg["providers"]["anthropic"] == {"keys": []})
     for c in ("companion:session", "companion:task"):
         pc = keys[c]["provider_configs"]
