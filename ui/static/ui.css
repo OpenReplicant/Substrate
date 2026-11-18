@@ -59,3 +59,5 @@ header .nav { color: var(--accent); text-decoration: none; }
 #say { display: flex; gap: 8px; padding: 10px 0 14px; border-top: 1px solid var(--line); }
 #say textarea { flex: 1; resize: vertical; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); color: var(--fg); font: inherit; }
 @media (max-width: 640px) { #list { display: none; } #convo li { max-width: 100%; } }
+#comps { padding: 0 0 12px; color: var(--muted); font-size: 12.5px; }
+#comps li { margin: 4px 0; } #comps small { display: block; }

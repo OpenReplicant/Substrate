@@ -65,7 +65,7 @@ def main():
 
 def run(c, url, admin):
     check("the schema applies", store.migrate(c) == ["001_store.sql", "002_graph.sql", "003_components.sql", "004_map.sql",
-                                                    "005_environment.sql", "006_logins.sql"])
+                                                    "005_environment.sql", "006_logins.sql", "007_components.sql"])
     check("the graph builds", store.project(c)["nodes"] > 0)
     check("and applying it again changes nothing", store.migrate(c) == [])
 

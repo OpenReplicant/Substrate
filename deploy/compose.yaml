@@ -57,6 +57,8 @@ services:
       COMPANION_SESSION_KEY: ${COMPANION_SESSION_KEY:?set in .env}
       COMPANION_TASK_KEY: ${COMPANION_TASK_KEY:?set in .env}
       VOICE_KEY: ${VOICE_KEY:?set in .env}
+      COMPANION_AUTHOR_KEY: ${COMPANION_AUTHOR_KEY:?set in .env}
+      JUDGE_KEY: ${JUDGE_KEY:?set in .env}
     volumes:
       - ../.state/gateway/config.json:/app/data/config.json:ro   # over the tmpfs: its stores are in Postgres
     ports:
@@ -152,6 +154,7 @@ services:
       ANTHROPIC_BASE_URL: http://gateway:8080/anthropic_passthrough
       ANTHROPIC_CUSTOM_HEADERS: "x-bf-vk: ${COMPANION_SESSION_KEY:?set in .env}"
       COMPANION_TASK_KEY: ${COMPANION_TASK_KEY:?set in .env}
+      COMPANION_AUTHOR_KEY: ${COMPANION_AUTHOR_KEY:?set in .env}
       COMPANION_MODEL: ${COMPANION_MODEL:-claude-haiku-5-5}
       STORE_URL: postgresql://companion:${COMPANION_DB_PASSWORD:?set in .env}@db:5432/substrate
     volumes:
@@ -159,9 +162,34 @@ services:
       - ../environment:/app/environment:ro
       - ../store:/app/store:ro
       - ../deploy/companion:/app/deploy/companion:ro
+      - ../voice:/app/voice:ro                  # the reply component's code, for its author (environment/author.py)
     depends_on:
       db: {condition: service_healthy}
       gateway: {condition: service_started}
+
+  # The judge (S-151): tests a component's new version against the active one on cases its author cannot read
+  # (judge/cases, mounted here only; the record's held-out slice), as its own login, through the gateway on the
+  # local model; a version it finds better becomes a proposal the owner decides. Profile `voice` (its first
+  # component is the voice head's).
+  judge:
+    <<: *locked
+    profiles: [voice]
+    image: localhost/substrate-tools:local
+    command: ["python3", "-m", "environment.judge"]
+    working_dir: /app
+    user: "65534:65534"
+    environment:
+      PYTHONDONTWRITEBYTECODE: "1"
+      STORE_URL: postgresql://judge:${JUDGE_DB_PASSWORD:?set in .env}@db:5432/substrate
+      JUDGE_KEY: ${JUDGE_KEY:?set in .env}
+      JUDGE_MODEL: local/${LLM_ALIAS:-gemma}
+    volumes:
+      - ../environment:/app/environment:ro
+      - ../store:/app/store:ro
+      - ../voice:/app/voice:ro
+      - ../judge/cases:/cases:ro
+    depends_on:
+      db: {condition: service_healthy}
 
   # The local model (plan step 5): llama.cpp's server on the GPU (as deploy/compose.nvidia.yaml gives it to Ollama:
   # device nodes and the driver's libraries, no CDI, no root), serving LLM_MODEL from LLM_MODELS_DIR read-only.
@@ -193,6 +221,30 @@ services:
       interval: 10s
       retries: 60
 
+  # Text-to-speech on the GPU (S-150): Kokoro-FastAPI (Apache-2.0; espeak-ng inside, S-146), the owner's local
+  # copy of ghcr.io/remsky/kokoro-fastapi-gpu:latest (v0.10.0, image fed40d86539c), beside the local model. The voice
+  # head uses it when TTS_URL is set and falls back to Kokoro on the CPU when it does not answer. Profile `voice`.
+  tts:
+    profiles: [voice]
+    image: ${TTS_IMAGE:-ghcr.io/remsky/kokoro-fastapi-gpu:latest}
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+    devices:
+      - /dev/nvidia0
+      - /dev/nvidiactl
+      - /dev/nvidia-uvm
+      - /dev/nvidia-uvm-tools
+    volumes:
+      - ${NVIDIA_LIB_DIR:-/usr/lib/x86_64-linux-gnu}/libcuda.so.1:/usr/lib/x86_64-linux-gnu/libcuda.so.1:ro
+      - ${NVIDIA_LIB_DIR:-/usr/lib/x86_64-linux-gnu}/libcuda.so.1:/usr/lib/x86_64-linux-gnu/libcuda.so:ro
+      - ${NVIDIA_LIB_DIR:-/usr/lib/x86_64-linux-gnu}/libnvidia-ml.so.1:/usr/lib/x86_64-linux-gnu/libnvidia-ml.so.1:ro
+      - ${NVIDIA_LIB_DIR:-/usr/lib/x86_64-linux-gnu}/libnvidia-ptxjitcompiler.so.1:/usr/lib/x86_64-linux-gnu/libnvidia-ptxjitcompiler.so.1:ro
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8880/health', timeout=3)"]
+      interval: 10s
+      retries: 30
+
   # The voice head (plan step 5, S-147): the companion's voice and face at 127.0.0.1:VOICE_PORT. Hears and speaks on
   # the CPU; talks with the local model through the gateway (voice:head, local only); hands real work to the
   # companion as the owner's message. Its models are fetched once into their own volume. Profile `voice`.
@@ -212,6 +264,7 @@ services:
       VOICE_THREADS: ${VOICE_THREADS:-4}
       VOICE_SILENCE_S: ${VOICE_SILENCE_S:-0.6}
       LLM_NAME: local/${LLM_ALIAS:-gemma}
+      TTS_URL: ${TTS_URL:-}
       STORE_URL: postgresql://postgres:${POSTGRES_PASSWORD:?set in .env}@db:5432/substrate
     volumes:
       - voice-models:/models

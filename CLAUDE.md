@@ -17,6 +17,7 @@ plans to work from. v1's databases are kept in the same Postgres volume (`workbe
 | Tools | `bin/`, container `substrate-tools` | the scripts' Python and gitleaks, run in a container as you (S-19) |
 | The companion | `deploy/companion` (compose service `companion`), `environment/companion.py` (service `environment`), the UI's `#/companion` | the first environment: Claude Code on Haiku through the gateway's pass-through route on the owner's login, fed by the channel; it replies, starts background tasks and proposes budget and model changes (S-136, S-144) |
 | The voice head | `voice/` (compose service `voice`, profile `voice`) on 127.0.0.1:8110 | the companion's voice and face: microphone in over a WebSocket, Silero and Parakeet to text, the local model to answer, Kokoro to speak, a face that moves with it; hands real work to the companion (S-147, S-149) |
+| Components and the judge | `env.component` and `env.verdict` (`store/sql/007_components.sql`), `environment/author.py`, `environment/judge.py` (compose service `judge`), `judge/cases` (the judge's only) | every version of a component with its card; an author proposes from the record, the judge tests it against the active one on cases the author cannot read, the owner activates (S-151) |
 | The UI | `ui/` (`ui/server.py`, `ui/static`), compose service `ui` on 127.0.0.1:8100 | the store's pages and maps as diagrams (S-140), read-only; v1's Workbench rebuilt, with no name of its own (S-141) |
 | Glue | `scripts/`, `deploy/` | brings the parts up and connects them |
 

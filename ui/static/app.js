@@ -206,7 +206,10 @@ async function refresh() {
   $("waiting").replaceChildren(...d.waiting.map(w => {
     const why = w.input.why ? ` — ${w.input.why}` : "";
     const what = w.actuator === "companion.budget" ? `daily budget ${Number(w.input.daily_tokens).toLocaleString()} tokens`
-      : w.actuator === "companion.model" ? `switch to ${w.input.model}` : JSON.stringify(w.input);
+      : w.actuator === "companion.model" ? `switch to ${w.input.model}`
+      : w.actuator === "companion.activate" ? `make version ${w.input.version} of ${w.input.name} active. The judge measured (now → new): `
+        + Object.entries(w.input.kpis || {}).map(([k, [a, b]]) => `${k.replace(/_/g, " ")} ${a} → ${b}`).join(", ")
+      : JSON.stringify(w.input);
     const decide = approve => async () => {
       try { await post("/api/companion/decide", {action: w.action, approve}); refresh(); }
       catch (err) { $("status").textContent = err.message; }
@@ -215,6 +218,9 @@ async function refresh() {
     yes.onclick = decide(true); no.onclick = decide(false);
     return el("div", {class: "proposal"}, el("span", {text: `The companion proposes: ${what}${why}`}), yes, no);
   }));
+  $("components").replaceChildren(...(d.components || []).map(c => el("li", {},
+    el("span", {text: `${c.name} v${c.version} · ${c.status}${c.outcome ? " · judged " + c.outcome : ""}`}),
+    c.rationale ? el("small", {text: c.rationale}) : null)));
   if (key === lastConvo) return;
   lastConvo = key;
   const box = $("convo"), atEnd = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
@@ -243,6 +249,11 @@ $("say").addEventListener("submit", async ev => {
   try { await post("/api/companion/say", {text}); $("text").value = ""; await refresh(); $("convo").scrollTop = $("convo").scrollHeight; }
   catch (err) { $("status").textContent = err.message; }
   finally { $("text").disabled = false; $("text").focus(); }
+});
+$("improve").addEventListener("click", async () => {
+  const why = $("text").value.trim();
+  try { await post("/api/companion/improve", {why: why || null}); $("text").value = ""; $("status").textContent = "Asked for a new version of the voice reply; the judge will test it."; refresh(); }
+  catch (err) { $("status").textContent = err.message; }
 });
 $("text").addEventListener("keydown", ev => {
   if (ev.key === "Enter" && !ev.shiftKey) { ev.preventDefault(); $("say").requestSubmit(); }

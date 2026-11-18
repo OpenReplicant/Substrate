@@ -49,6 +49,10 @@ ACTUATORS = {
                "Input: {\"daily_tokens\": N, \"why\": \"...\"}."),
     "model": ("propose", "Propose a different model for this session; the owner decides. "
               "Input: {\"model\": \"claude-...\", \"why\": \"...\"}."),
+    "improve": ("free", "Ask for a new version of one of your components, written from the record and then tested by the "
+                "judge on cases you cannot see. Input: {\"component\": \"voice_reply\", \"why\": \"what to improve\"}."),
+    "activate": ("propose", "Make a component version the judge found better the active one; the owner decides. "
+                 "The judge files these; input {\"component\": id, ...}."),
 }
 LOGIN = "companion"          # the container's database login (scripts/db.py init makes it, a member of env_agent)
 SOURCE = "substrate:companion"
@@ -72,10 +76,14 @@ def setup(e: Env, login: str = LOGIN) -> None:
         if have is None:
             e.actuator(f"{ENV}.{name}", gate, SOURCE, text)
     e.subscribe(SESSION_QUEUE, PATTERNS)
-    for q in (SESSION_QUEUE, f"act_{ENV}_task"):
+    for q in (SESSION_QUEUE, f"act_{ENV}_task", f"act_{ENV}_improve"):
         e.c.execute("select env.allow(%s, %s)", (q, login))
     if e.c.execute("select env.get(%s, 'budget')", (ENV,)).fetchone()[0] is None:
         e.c.execute("select env.set(%s, 'budget', %s, %s)", (ENV, json.dumps({"daily_tokens": DEFAULT_BUDGET}), SOURCE))
+    from voice import reply
+    if not e.c.execute("select 1 from env.component where env = %s and name = %s", (ENV, reply.NAME)).fetchone():
+        cid = e.c.execute("select env.submit_component(%s, %s, %s, %s)", (ENV, reply.NAME, json.dumps(reply.SEED), SOURCE)).fetchone()[0]
+        e.c.execute("select env.activate(%s, %s)", (cid, SOURCE))
     print(f"  companion: actuators {', '.join(ACTUATORS)}; session queue {SESSION_QUEUE}; login {login} may read it and the task queue")
 
 
@@ -147,6 +155,13 @@ def apply(e: Env, name: str, m: dict) -> None:
             e.done(action, {"daily_tokens": n})
         else:
             e.done(action, {"error": "daily_tokens must be a positive whole number"}, False)
+    elif name == "activate":
+        person = e.c.execute("select decided_by from env.action where id = %s", (action,)).fetchone()[0]
+        try:
+            e.c.execute("select env.activate(%s, %s)", (int(inp.get("component")), person or "?"))
+            e.done(action, {"active": inp.get("component")})
+        except (psycopg.Error, TypeError, ValueError) as x:
+            e.done(action, {"error": str(x).splitlines()[0]}, False)
     elif name == "model":
         model = inp.get("model")
         if isinstance(model, str) and MODEL.match(model):
@@ -163,7 +178,7 @@ def sense() -> None:
     while True:
         try:
             e = e if e and not e.c.closed else connect()
-            for name in ("reply", "budget", "model"):
+            for name in ("reply", "budget", "model", "activate"):
                 for m in e.read(f"act_{ENV}_{name}", 60, 10):
                     apply(e, name, m)
             if time.monotonic() >= next_tick:
@@ -218,6 +233,16 @@ def run() -> None:
             if want and want != model:
                 set_model(want)
                 model = want
+            for m in e.read(f"act_{ENV}_improve", 1200, 1):
+                inp = m.get("input") or {}
+                try:
+                    from environment.author import improve
+                    cid = improve(str(inp.get("component") or "voice_reply"), inp.get("why"), m.get("by") or "companion")
+                    e.done(m["action"], {"submitted": cid})
+                    log(f"improve {m['action']}: submitted component {cid} for judging")
+                except Exception as x:                # noqa: BLE001 - reported as the action's result
+                    e.done(m["action"], {"error": f"{type(x).__name__}: {x}"}, False)
+                    log(f"improve {m['action']}: {x}")
             for m in e.read(f"act_{ENV}_task", TASK_TIMEOUT + 60, 1):
                 prompt = (m.get("input") or {}).get("prompt")
                 if not isinstance(prompt, str) or not prompt.strip():

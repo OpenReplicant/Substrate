@@ -16,6 +16,7 @@ In the stack it is the compose service `ui` (deploy/compose.yaml), published on 
                                 proposals, in order), the proposals waiting, the latest meter, its budget and model
   POST /api/companion/say       {"text"}: the owner says something (env.publish companion.owner.message)
   POST /api/companion/decide    {"action", "approve", "reason"}: the owner decides a proposal (env.decide)
+  POST /api/companion/improve   {"why"}: the owner asks for a new version of the voice reply component (S-151)
 
 Every response carries the UI's Content-Security-Policy (deploy/caddy/Caddyfile's, without frames): scripts and
 styles only from this origin. Reads are on a read-only session; the store's writes go through the agent's tools
@@ -140,11 +141,16 @@ def companion(store: Store, limit: int = 200) -> dict:
     meter = store.query("select body, at from env.signal where key = 'companion.meter.spend' order by id desc limit 1")
     gates = store.query("select name, gate, set_by from env.actuator where name like 'companion.%%' order by name")
     settings = store.query("select name, value, set_by, at from env.current where env = 'companion'")
+    comps = store.query("select c.id, c.name, c.version, c.status, c.author, c.card->>'rationale', v.outcome, v.kpis "
+                        "from env.component c left join env.verdict v on v.component = c.id "
+                        "where c.env = 'companion' order by c.id desc limit 10")
     return {"owner": OWNER, "conversation": convo,
             "waiting": [{"action": i, "actuator": n, "input": inp, "by": c, "at": at.isoformat()} for i, n, inp, c, at in waiting],
             "meter": {**meter[0][0], "at": meter[0][1].isoformat()} if meter else None,
             "gates": {n: {"gate": g, "set_by": b} for n, g, b in gates},
-            "settings": {n: {"value": v, "set_by": b, "at": at.isoformat()} for n, v, b, at in settings}}
+            "settings": {n: {"value": v, "set_by": b, "at": at.isoformat()} for n, v, b, at in settings},
+            "components": [{"id": i, "name": n, "version": v, "status": st, "author": au, "rationale": ra, "outcome": o, "kpis": k}
+                           for i, n, v, st, au, ra, o, k in comps]}
 
 
 def post(writer: Store, path: str, body: dict) -> tuple[int, object]:
@@ -155,6 +161,13 @@ def post(writer: Store, path: str, body: dict) -> tuple[int, object]:
         sid = writer.query("select env.publish('companion.owner.message', %s::jsonb, %s)",
                            (json.dumps({"text": text.strip()}), OWNER))[0][0]
         return 200, {"signal": sid}
+    if path == "/api/companion/improve":
+        why = body.get("why")
+        if not (why is None or isinstance(why, str)) or len(why or "") > 2000:
+            return 400, {"error": "improve takes an optional reason (text)"}
+        action, status = writer.query("select * from env.act('companion.improve', %s::jsonb, %s)",
+                                      (json.dumps({"component": "voice_reply", "why": (why or "").strip() or None}), OWNER))[0]
+        return 200, {"action": action, "status": status}
     if path == "/api/companion/decide":
         action, approve, reason = body.get("action"), body.get("approve"), body.get("reason")
         if not isinstance(action, int) or not isinstance(approve, bool) or not (reason is None or isinstance(reason, str)):

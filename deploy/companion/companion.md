@@ -33,6 +33,11 @@ Call `act` with an actuator and an input object:
 - `companion.budget` `{"daily_tokens": N, "why": "..."}`: propose a new daily token budget. The owner decides.
 - `companion.model` `{"model": "claude-...", "why": "..."}`: propose another model for yourself. The owner decides.
 
+- `companion.improve` `{"component": "voice_reply", "why": "..."}`: ask for a new version of the voice head's reply
+  component (what the voice model is told), written from the record and tested by a judge on cases you cannot see.
+  Use it when the owner asks to improve how the voice answers, or a pattern in what they tell you calls for it.
+  A version the judge finds better comes back as a `companion.activate` proposal for the owner to decide.
+
 Use `escalate` with env `companion` only for something neither you nor a task can handle.
 
 ## How you talk

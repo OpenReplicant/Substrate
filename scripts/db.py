@@ -55,6 +55,8 @@ def init(env: dict[str, str]) -> None:
     print(f"  the store's schema: {'applied ' + ', '.join(applied) if applied else 'up to date'}")
     if env.get("COMPANION_DB_PASSWORD"):
         companion_login(env)
+    if env.get("JUDGE_DB_PASSWORD"):
+        judge_login(env)
     print(f"  the store's graph: built, {graph['nodes']} nodes and {graph['edges']} edges")
 
 
@@ -71,6 +73,19 @@ def companion_login(env: dict[str, str]) -> None:
         from environment import Env
         from environment.companion import setup
         setup(Env(c))
+
+
+def judge_login(env: dict[str, str]) -> None:
+    """The judge's login (store/sql/007_components.sql): a member of env_judge, so it reads the record and records
+    verdicts, and cannot activate a component or decide a proposal."""
+    from psycopg import sql
+    with connect(env, DB) as c:
+        c.autocommit = True
+        if not c.execute("select 1 from pg_roles where rolname = 'judge'").fetchone():
+            c.execute("create role judge login")
+        c.execute(sql.SQL("alter role judge password {}").format(sql.Literal(env["JUDGE_DB_PASSWORD"])))
+        c.execute("grant env_judge to judge")
+    print("  judge: login judge (env_judge)")
 
 
 def import_v1(env: dict[str, str]) -> None:

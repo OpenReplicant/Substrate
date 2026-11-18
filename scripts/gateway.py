@@ -32,7 +32,7 @@ OUT = ROOT / ".state/gateway/config.json"
 NAMES = ("POSTGRES_PASSWORD", "DB_PORT", "OPENROUTER_API_KEY", "OLLAMA_URL", "GATEWAY_OPENROUTER_MODELS",
          "GATEWAY_REQUESTS_PER_HOUR", "GATEWAY_DB_PASSWORD", "GATEWAY_METER_PASSWORD", "GATEWAY_KEY_SECRET",
          "GATEWAY_PORT", "COMPANION_MODELS", "COMPANION_DB_PASSWORD",
-         "LLM_MODEL")
+         "LLM_MODEL", "JUDGE_DB_PASSWORD")
 
 
 def settings() -> dict[str, str]:
@@ -54,10 +54,11 @@ def caller_key(secret: str, caller: str) -> str:
 # The voice head (plan step 5) talks with the local model (llama.cpp, provider `local`) only: what the owner says
 # aloud stays on this machine (P3) unless the model hands a request to the companion.
 CALLERS = {"store:embed": ("ollama",), "companion:session": ("anthropic",), "companion:task": ("anthropic",),
-           "voice:head": ("local",)}
+           "voice:head": ("local",), "companion:author": ("local",), "judge:voice": ("local",)}
 LOCAL = ("ollama", "local")
 FIXED_KEYS = {"store:embed": "STORE_EMBED_KEY", "companion:session": "COMPANION_SESSION_KEY",
-              "companion:task": "COMPANION_TASK_KEY", "voice:head": "VOICE_KEY"}   # keys read from .env by the gateway and the caller
+              "companion:task": "COMPANION_TASK_KEY", "voice:head": "VOICE_KEY",
+              "companion:author": "COMPANION_AUTHOR_KEY", "judge:voice": "JUDGE_KEY"}   # keys read from .env by the gateway and the caller
 
 
 def callers() -> list[str]:

@@ -1,0 +1,30 @@
+{"utterance": "Hi there, how's it going?", "expect_handoff": false}
+{"utterance": "Good morning.", "expect_handoff": false}
+{"utterance": "Thanks, that's all for now.", "expect_handoff": false}
+{"utterance": "What's your name?", "expect_handoff": false}
+{"utterance": "Can you hear me okay?", "expect_handoff": false}
+{"utterance": "Tell me a quick joke.", "expect_handoff": false}
+{"utterance": "How do you say thank you in French?", "expect_handoff": false}
+{"utterance": "What's seven times eight?", "expect_handoff": false}
+{"utterance": "I'm feeling a bit tired today.", "expect_handoff": false}
+{"utterance": "Say that again, please.", "expect_handoff": false}
+{"utterance": "What's a good name for a cat?", "expect_handoff": false}
+{"utterance": "Do you like music?", "expect_handoff": false}
+{"utterance": "Okay, stop talking for a moment.", "expect_handoff": false}
+{"utterance": "Explain what a black hole is in a sentence.", "expect_handoff": false}
+{"utterance": "Never mind.", "expect_handoff": false}
+{"utterance": "What's the capital of Australia?", "expect_handoff": false}
+{"utterance": "Give me a word that rhymes with orange.", "expect_handoff": false}
+{"utterance": "Find out how much disk space my machine has left.", "expect_handoff": true}
+{"utterance": "Look up the weather in Portland for tomorrow.", "expect_handoff": true}
+{"utterance": "Can you check which Python version your container runs?", "expect_handoff": true}
+{"utterance": "Read my plan document and summarize the next step.", "expect_handoff": true}
+{"utterance": "Search the web for reviews of the Quest 3 passthrough.", "expect_handoff": true}
+{"utterance": "Write a script that renames my photos by date and save it.", "expect_handoff": true}
+{"utterance": "What changed in the repository since yesterday?", "expect_handoff": true}
+{"utterance": "Make a list of everything on my calendar this week.", "expect_handoff": true}
+{"utterance": "Download the latest llama.cpp release notes and tell me what's new.", "expect_handoff": true}
+{"utterance": "Check whether the gateway logged any errors today.", "expect_handoff": true}
+{"utterance": "Plan a three day trip to Seattle with hotels and prices.", "expect_handoff": true}
+{"utterance": "Compare the prices of three mechanical keyboards online.", "expect_handoff": true}
+{"utterance": "Remind me tomorrow at nine to call the dentist.", "expect_handoff": true}

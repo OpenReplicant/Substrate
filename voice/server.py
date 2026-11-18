@@ -36,6 +36,8 @@ from websockets.asyncio.server import serve
 from websockets.datastructures import Headers
 from websockets.http11 import Response
 
+from voice import reply
+
 ROOT = Path(__file__).resolve().parent
 STATIC = ROOT / "static"
 MODELS = Path(os.environ.get("VOICE_MODELS") or "/models")
@@ -44,19 +46,9 @@ LLM = os.environ.get("LLM_NAME") or "local/gemma"
 KEY = os.environ.get("VOICE_KEY", "")
 THREADS = int(os.environ.get("VOICE_THREADS") or 4)
 VOICE = os.environ.get("VOICE_STYLE") or "af_heart"
+TTS_URL = os.environ.get("TTS_URL", "").rstrip("/")
 CSP = ("default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; "
        "media-src 'self' blob:; frame-ancestors 'none'; object-src 'none'; base-uri 'none'")
-SYSTEM = """You are the owner's companion, speaking with them out loud. Your words are turned into speech, so:
-answer in one to three short spoken sentences; no lists, headings, markdown, emoji or code; say numbers the way a
-person says them. Be warm, plain and direct, like a capable friend.
-
-You cannot look things up, run anything, read files or remember beyond this conversation. A separate companion
-(Claude, with tools, working in the background) can. When the owner asks for real work (finding something out,
-anything with files, the web, their machine, a plan, a long answer), say briefly that you are handing it over, then
-end your reply with one line of its own: HANDOFF: <the request, complete and self-contained>. Its answer will be
-read out when it comes. Do not hand over small talk or what you can answer yourself.
-
-What you hear is a speech-to-text transcript and may have small mistakes; if it makes no sense, ask once."""
 SENTENCE = re.compile(r"(.+?[.!?…])\s+", re.S)     # a sentence ends at its mark and the space after it (not "3.13")
 
 
@@ -94,6 +86,7 @@ class Models:
         self.vad_cfg, self.sherpa = cfg, sherpa_onnx
         os.environ.setdefault("ONNX_NUM_THREADS", str(THREADS))
         self.tts = Kokoro(str(MODELS / "kokoro-v1.0.int8.onnx"), str(MODELS / "voices-v1.0.bin"))
+        self.tts_down_until = 0.0
 
     def vad(self):
         return self.sherpa.VoiceActivityDetector(self.vad_cfg, buffer_size_in_seconds=60)
@@ -105,6 +98,16 @@ class Models:
         return s.result.text.strip()
 
     def speak(self, text: str) -> bytes:
+        """24 kHz 16-bit mono PCM: from Kokoro on the GPU (TTS_URL, S-150) when it answers, else Kokoro here on the CPU."""
+        if TTS_URL and time.monotonic() >= self.tts_down_until:
+            try:
+                body = json.dumps({"model": "kokoro", "input": text, "voice": VOICE, "response_format": "pcm", "stream": False}).encode()
+                req = urllib.request.Request(f"{TTS_URL}/v1/audio/speech", body, {"Content-Type": "application/json"})
+                with urllib.request.urlopen(req, timeout=20) as r:
+                    return r.read()
+            except (OSError, ValueError) as e:
+                log(f"Kokoro on the GPU did not answer ({e}); on the CPU for a minute")
+                self.tts_down_until = time.monotonic() + 60
         a, _ = self.tts.create(text, voice=VOICE, speed=1.0, lang="en-us")
         return (np.clip(a, -1, 1) * 32767).astype(np.int16).tobytes()
 
@@ -137,35 +140,26 @@ class Record:
             self.c = None
             return []
 
+    def reply_component(self) -> tuple[int | None, dict]:
+        """The active version of the reply component (S-151), read again at most every 10 s; the seed if none."""
+        now = time.monotonic()
+        if now - getattr(self, "_card_at", -1e9) > 10:
+            try:
+                row = self.conn().execute("select id, card from env.active_component('companion', %s)", (reply.NAME,)).fetchone()
+                self._card = (row[0], row[1]) if row else (None, reply.SEED)
+            except psycopg.Error as e:
+                log(f"record: {e}")
+                self.c = None
+                self._card = getattr(self, "_card", (None, reply.SEED))
+            self._card_at = now
+        return self._card
+
     def last_reply(self) -> int:
         try:
             return self.conn().execute("select coalesce(max(id), 0) from env.action where actuator = 'companion.reply'").fetchone()[0]
         except psycopg.Error:
             self.c = None
             return 0
-
-
-def chat_stream(messages: list[dict]):
-    """The local model's reply, token by token (OpenAI-style streaming through the gateway)."""
-    # no thinking: Gemma 4 thinks before answering by default, about 6 s to the first word here; without, 0.4 s
-    body = json.dumps({"model": LLM, "messages": messages, "stream": True, "temperature": 0.7, "max_tokens": 400,
-                       "reasoning_effort": os.environ.get("VOICE_REASONING") or "none"}).encode()
-    req = urllib.request.Request(f"{GATEWAY}/v1/chat/completions", body,
-                                 {"Content-Type": "application/json", "x-bf-vk": KEY, "x-wb-call": f"voice-{time.time_ns()}"})
-    with urllib.request.urlopen(req, timeout=120) as r:
-        for line in r:
-            line = line.decode("utf-8", "replace").strip()
-            if not line.startswith("data:"):
-                continue
-            data = line[5:].strip()
-            if data == "[DONE]":
-                return
-            try:
-                delta = json.loads(data)["choices"][0].get("delta") or {}
-            except (ValueError, KeyError, IndexError):
-                continue
-            if delta.get("content"):
-                yield delta["content"]
 
 
 class Session:
@@ -215,16 +209,17 @@ class Session:
         if not text:
             return await self.state("listening")
         await self.send({"type": "heard", "text": text})
-        self.rec.publish("companion.voice.heard", {"text": text, "audio_s": round(len(seg) / 16000, 2), "stt_ms": stt_ms}, "owner (voice)")
+        heard = self.rec.publish("companion.voice.heard", {"text": text, "audio_s": round(len(seg) / 16000, 2), "stt_ms": stt_ms}, "owner (voice)")
+        comp_id, card = await asyncio.to_thread(self.rec.reply_component)
+        prior = list(self.history)
         self.history.append({"role": "user", "content": text})
-        msgs = [{"role": "system", "content": SYSTEM}] + self.history[-20:]
         said, buf, first_ms, handoff = [], "", None, None
         q: asyncio.Queue = asyncio.Queue()
         loop = asyncio.get_running_loop()
 
         def pump():
             try:
-                for tok in chat_stream(msgs):
+                for tok in reply.stream(card, prior, text, GATEWAY, KEY, LLM):
                     loop.call_soon_threadsafe(q.put_nowait, tok)
             except Exception as e:                      # noqa: BLE001 - reported to the page, and the turn ends
                 loop.call_soon_threadsafe(q.put_nowait, e)
@@ -262,11 +257,15 @@ class Session:
                     break
         except asyncio.CancelledError:
             self.history.append({"role": "assistant", "content": " ".join(said) + " (interrupted)"})
+            self.rec.publish("companion.voice.said", {"text": " ".join(said), "by": LLM, "heard": heard, "component": comp_id,
+                                                      "interrupted": True, "stt_ms": stt_ms, "first_audio_ms": first_ms}, "voice head")
             raise
-        reply = " ".join(said)
-        self.history.append({"role": "assistant", "content": reply + (f"\nHANDOFF: {handoff.strip()}" if handoff else "")})
-        self.rec.publish("companion.voice.said", {"text": reply, "by": LLM, "stt_ms": stt_ms, "first_audio_ms": first_ms,
-                                                  "turn_ms": round((time.perf_counter() - t0) * 1000)}, "voice head")
+        spoken = " ".join(said)
+        self.history.append({"role": "assistant", "content": spoken + (f"\nHANDOFF: {handoff.strip()}" if handoff else "")})
+        self.rec.publish("companion.voice.said", {"text": spoken, "by": LLM, "heard": heard, "component": comp_id,
+                                                  "handoff": (handoff or "").strip() or None, "stt_ms": stt_ms,
+                                                  "first_audio_ms": first_ms, "turn_ms": round((time.perf_counter() - t0) * 1000)},
+                         "voice head")
         if handoff and handoff.strip():
             self.rec.publish("companion.owner.message", {"text": f"(said by voice) {text}\n(the voice head's summary) {handoff.strip()}"},
                              "owner (voice, relayed by the voice head)")
@@ -298,7 +297,8 @@ async def warm():
     """Read the voice prompt into the model once, so the owner's first sentence finds it cached: just after the
     model loads, reading those 243 tokens took 14 s (the weights paged in from disk); cached, 0.55 s."""
     def once():
-        for _ in chat_stream([{"role": "system", "content": SYSTEM}, {"role": "user", "content": "Hello."}]):
+        _, card = Record().reply_component()
+        for _ in reply.stream(card, [], "Hello.", GATEWAY, KEY, LLM):
             pass
     while True:
         try:

@@ -35,7 +35,9 @@
       <form id="say">
         <textarea id="text" rows="2" placeholder="Say something to the companion (Enter sends, Shift+Enter for a new line)" aria-label="Message"></textarea>
         <button type="submit">Send</button>
+        <button type="button" id="improve" title="Ask for a new version of the voice reply component (the text box, if filled, says why)">Improve voice</button>
       </form>
+      <details id="comps"><summary>Components</summary><ol id="components"></ol></details>
     </div>
   </section>
   <aside id="side" hidden>
