@@ -11,6 +11,15 @@ From the record, the system writes **components** that handle what repeats, each
 is for, how it is measured and how it is tested. A **judge** tests each new version against the one in use, on
 cases its author never saw, and **you** decide what goes live.
 
+It is four parts, each its own repository (S-153):
+
+| Part | What it is |
+| --- | --- |
+| **Substrate** (this repository) | environments, streams and gated actuators, pass-through to Claude Code, components with cards, the judge interface, the model gateway, the UI |
+| **[Knowledge Kernel](https://github.com/OpenReplicant/kernel)**, the store | everything known, each statement with who said it, its source and how sure; permissions enforced by Postgres per caller; review before anything counts; recall by words and by meaning (BM25 and pgvector) |
+| **[MetaSoar](https://github.com/OpenReplicant/MetaSoar)**, the cognitive layer | how an agent perceives, attends, predicts and learns inside an environment, with the predictions that would show its model wrong; today it plays ARC-AGI-3 games and Super Mario Bros. from the screen |
+| **The judge** | an interface: a candidate in, a verdict out, on cases its author never saw; [Morphogen](https://github.com/OpenReplicant/Morphogen) is one filler |
+
 All of that now runs end to end once, on one component (the voice head's replies). The rest of the framework is
 described in [`docs/framework.md`](docs/framework.md) and built as the plan's steps need it.
 

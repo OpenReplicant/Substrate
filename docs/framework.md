@@ -30,6 +30,8 @@ from signals, and records its interpretation as claims). Interpreters are compon
 has a card and its claims carry its name. A person's statement is their claim; the interview transcript is the
 signal.
 
+*Where the store lives moved to the Knowledge Kernel (S-153); the model below is still the target, reached through the kernel's D-101.*
+
 **The store (decided, S-135): Wikibase's data model in Postgres, with OpenWiki's pinned evidence.** An
 **entity** (an item, or a property, itself an entity) has **statements**: a property, a typed value, qualifiers,
 a rank (preferred, normal, deprecated) and **references**. A reference says who stated it (a parser's run, an
@@ -53,13 +55,14 @@ foreign key), `interpreter` (who, and which version of a component), `confidence
 accepted, retracted) and `retracted_by`, and a change of belief is a new claim, never an edit. Graphiti has no
 Postgres backend, so it is a model to borrow from, not a part to add.
 
-## Three parts
+## The parts (S-153)
 
-| Part | Does | Is not |
-| --- | --- | --- |
-| **Substrate** | the environment, pass-through, the record, components and their cards, the hierarchy | a harness: Claude Code is the harness |
-| **The UI and the store** | Substrate's web UI (`ui/`) and the store: the stream, the review lane, each component's card and verdicts, the map | a separate product (S-120) |
-| **The judge** | an interface: a card and a candidate in, a verdict out, on cases the candidate's author cannot read | a framework; Morphogen is one filler of it, optional |
+| Part | Repository | Does | Is not |
+| --- | --- | --- | --- |
+| **Substrate** | this one | the environment, streams and gated actuators, pass-through, the record, components and their cards, the hierarchy, the gateway, the UI | a harness: Claude Code is the harness |
+| **The store** | [Knowledge Kernel](https://github.com/OpenReplicant/kernel) | items and claims with provenance, each caller its own Postgres login under row-level security, the review lane, recall (BM25 and pgvector), reasoning (conclusions with premises, truth maintenance), the agent's MCP tools | Substrate's own: `store/` serves until step 3d moves it (`docs/store-to-kernel.md`) |
+| **The cognitive layer** | [MetaSoar](https://github.com/OpenReplicant/MetaSoar) | how an agent inside an environment perceives, attends, predicts and learns: perception from pixels, the workspace and attention, simulators and surprise, a lockstep runtime for worlds faster than the wall clock; its hypothesis and the predictions that would show it wrong (`docs/cognitive-model.md` there) | required: pass-through works without it, and each of its parts is judged against pass-through like any component |
+| **The judge** | an interface here; Morphogen is one filler | a card and a candidate in, a verdict out, on cases the candidate's author cannot read | a framework; Morphogen is optional |
 
 ## The environment is data (decided)
 
