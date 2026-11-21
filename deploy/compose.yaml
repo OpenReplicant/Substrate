@@ -93,8 +93,8 @@ services:
   # init, once the database exists); kernel runs the validator that applies the change sets agents and the exporter
   # submit, as the kernel's one login, which switches to each part's own role (never a superuser). kernel-export is the
   # one-off exporter of the old `store` schema (scripts/kernel.sh export). The agents' MCP server is the stdio one,
-  # started by scripts/kernel.sh mcp in the profile substrate (Substrate's nine tools). Not tried on this machine's
-  # Podman yet (S-154).
+  # started by scripts/kernel.sh mcp in the profile substrate (Substrate's nine tools). First deployed on Podman
+  # 2026-11-21 (S-155).
   kernel-init:
     profiles: [kernel-admin]
     image: localhost/substrate-kernel:local

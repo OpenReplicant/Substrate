@@ -11,20 +11,22 @@
 #   scripts/kernel.sh mcp NAME           # the stdio MCP server for that login (what .mcp.json runs)
 set -eu
 . "$(dirname "$0")/lib.sh"
+# --no-deps: these need db up, not restarted. Without it, Podman's compose recreated db on every run, which restarted
+# Postgres and left the gateway unable to resolve `db` (first deploy, 2026-11-21, S-155). scripts/up.sh starts db first.
 
 image() { if [ "$ENGINE" = podman ]; then echo localhost/substrate-kernel:local; else echo substrate-kernel:local; fi; }
 
 case "${1:-}" in
   init)
-    compose run --rm kernel-init
+    compose run --rm --no-deps kernel-init
     ;;
   export)
-    compose run --rm kernel-export
+    compose run --rm --no-deps kernel-export
     ;;
   login)
     name=${2:?usage: scripts/kernel.sh login NAME}
     mkdir -p "$ROOT/.state/kernel"
-    out=$(compose run --rm -T kernel-init kk agent add "$name" | grep '^{' | tail -1)
+    out=$(compose run --rm --no-deps -T kernel-init kk agent add "$name" | grep '^{' | tail -1)
     printf '%s' "$out" | python3 -c '
 import json, os, sys
 root, name, port = sys.argv[1:4]
