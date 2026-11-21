@@ -13,5 +13,5 @@ morphogen:
 # and the substrate profile of its MCP server) are merged, the branch that holds them; then main.
 kernel:
   url: https://github.com/OpenReplicant/kernel
-  branch: claude/mcp-substrate-profile
-  checked: bf6ff760f743576ec27533cdc79ce876798c9194   # 2026-11-20 (D-103 the exporter, D-104 the read model, D-105 the profile)
+  branch: main
+  checked: 94b578d21222e4faea26a459376e3d4508344cac   # 2026-11-21 main with #117 and #118 (D-103 the exporter, D-104 the read model, D-105 the profile)
