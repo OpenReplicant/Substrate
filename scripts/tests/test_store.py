@@ -299,11 +299,11 @@ async def kernel_tools(session, ids, k):
 
     hammer, tool, bike, drive, fit, chain, belt, other = (ids[x] for x in ("hammer", "tool", "bike", "drive", "fit", "chain", "belt", "other"))
     listed = {t.name: t for t in (await session.list_tools()).tools}
-    check("kernel MCP: Substrate's nine tools, and no `violations`", set(listed) == {
-        "search", "read", "expand", "locate", "path", "alternatives", "create_item", "say", "deprecate"}, sorted(listed))
+    check("kernel MCP: Substrate's ten tools, `violations` among them", set(listed) == {
+        "search", "read", "expand", "locate", "path", "alternatives", "violations", "create_item", "say", "deprecate"}, sorted(listed))
     check("kernel MCP: path takes `from` and `to`, as the store's does", set(listed["path"].input_schema["properties"]) == {"from", "to"})
     text, err = await call("violations")
-    check("kernel MCP: `violations` is refused", err and "not in your profile" in text, text)
+    check("kernel MCP: `violations` answers", not err, text)
 
     text, err = await call("search", query="mallet")
     check("search finds by an alias, the id first", not err and text.splitlines()[0].split()[0] == hammer, text)

@@ -65,8 +65,8 @@ verdicts come later, from trials and a judge (the catalog skill).
 ## 6. Check
 
 `read` the whole's page; `path` from the whole to an interface; `alternatives` for a role (a role named where an
-interface belongs shows up as nothing providing it). There is no `violations` tool yet: constraints are checked
-by a processor still to be built (plan step 3d). Tell the owner what is mapped, what was left out and why, what
+interface belongs shows up as nothing providing it); `violations` for what breaks a property's constraints (single value, format,
+one of, value type), reported by the kernel's constraint checker and never blocking a write. Tell the owner what is mapped, what was left out and why, what
 you are unsure of, and where to see it: the UI draws the map at `http://127.0.0.1:8100/#/map/<id>`, and shows an
 interface a role requires but its filler lacks as missing. If you got something wrong, `deprecate` your own
 statement (its claim id) with the reason, and say the right one.

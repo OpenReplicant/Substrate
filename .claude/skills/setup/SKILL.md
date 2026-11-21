@@ -56,7 +56,7 @@ again. Known causes:
 ## 4. The agent's door to the kernel
 
 `scripts/kernel.sh login claude-code` makes the agent's own login (kept in `.state/kernel/`, mode 600, never
-printed) and puts the `kernel` MCP server in `.mcp.json` in the `substrate` profile: Substrate's nine tools as
+printed) and puts the `kernel` MCP server in `.mcp.json` in the `substrate` profile: Substrate's ten tools as
 `mcp__kernel__*`, for the map, catalog and research skills. Restart Claude Code to load it.
 
 **Check:** `scripts/check.sh` shows the kernel's entities and wholes, and the UI at `http://127.0.0.1:8100/` lists

@@ -7,7 +7,7 @@
 #   scripts/kernel.sh export             # the store's items and statements as kernel change sets (safe to run again:
 #                                        # an unchanged item submits nothing); the kernel service applies them
 #   scripts/kernel.sh login NAME         # an agent's own login (printed nowhere: .state/kernel/NAME.env, mode 600) and
-#                                        # its MCP entry `kernel` in .mcp.json (the profile substrate: nine tools)
+#                                        # its MCP entry `kernel` in .mcp.json (the profile substrate: ten tools)
 #   scripts/kernel.sh mcp NAME           # the stdio MCP server for that login (what .mcp.json runs)
 set -eu
 . "$(dirname "$0")/lib.sh"
