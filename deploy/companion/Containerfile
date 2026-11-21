@@ -4,7 +4,7 @@
 #   scripts/build.sh companion
 #
 # The session reaches models only through the gateway (ANTHROPIC_BASE_URL), on the owner's own Claude login made
-# once inside it (scripts/companion.sh login), and the database only as the `companion` login (store/sql/006).
+# once inside it (scripts/companion.sh login), and the database only as the `companion` login (environment/sql/006).
 FROM docker.io/library/python:3.13.17-slim-bookworm
 RUN apt-get update && apt-get install -y --no-install-recommends tmux ca-certificates curl git procps \
  && rm -rf /var/lib/apt/lists/*

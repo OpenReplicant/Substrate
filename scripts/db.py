@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""The store's database (S-135): made once beside v1's, which stay in the same volume until imported from.
+"""The databases beside v1's, which stay in the same volume: `substrate` (the environment's schema `env`) and `kernel`
+(the Knowledge Kernel's, S-154).
 
-    bin/in-tools python3 scripts/db.py init        # wait for Postgres, make the `substrate` database if missing,
-                                                   # and apply the store's schema (store/sql/) not yet applied
-    bin/in-tools python3 scripts/db.py import-v1   # v1's people's statements and open decisions (store/import_v1.py)
+    bin/in-tools python3 scripts/db.py init        # wait for Postgres, make the `substrate` and `kernel` databases if
+                                                   # missing, and apply the environment's schema (environment/sql/) not yet
+                                                   # applied
 
 It waits up to a minute for Postgres to take connections, and stops at once on a refused password: that never
 comes right by waiting, and most often means the volume outlived the .env that made it (the setup skill says how
@@ -64,20 +65,18 @@ def init(env: dict[str, str]) -> None:
         else:
             c.execute(f"create database {KERNEL_DB} encoding 'UTF8' template template0")
             print(f"  database {KERNEL_DB}: made (the kernel's schema: scripts/kernel.sh init)")
-    import store
+    from environment.db import migrate
     with connect(env, DB) as c:
-        applied = store.migrate(c)
-        graph = store.project(c)
-    print(f"  the store's schema: {'applied ' + ', '.join(applied) if applied else 'up to date'}")
+        applied = migrate(c)
+    print(f"  the environment's schema: {'applied ' + ', '.join(applied) if applied else 'up to date'}")
     if env.get("COMPANION_DB_PASSWORD"):
         companion_login(env)
     if env.get("JUDGE_DB_PASSWORD"):
         judge_login(env)
-    print(f"  the store's graph: built, {graph['nodes']} nodes and {graph['edges']} edges")
 
 
 def companion_login(env: dict[str, str]) -> None:
-    """The companion's container's login (store/sql/006_logins.sql): a member of env_agent, so it may publish, act
+    """The companion's container's login (environment/sql/006_logins.sql): a member of env_agent, so it may publish, act
     and read the queues it is given, and nothing else; then its actuators and queues (environment.companion)."""
     from psycopg import sql
     with connect(env, DB) as c:
@@ -92,7 +91,7 @@ def companion_login(env: dict[str, str]) -> None:
 
 
 def judge_login(env: dict[str, str]) -> None:
-    """The judge's login (store/sql/007_components.sql): a member of env_judge, so it reads the record and records
+    """The judge's login (environment/sql/007_components.sql): a member of env_judge, so it reads the record and records
     verdicts, and cannot activate a component or decide a proposal."""
     from psycopg import sql
     with connect(env, DB) as c:
@@ -104,20 +103,9 @@ def judge_login(env: dict[str, str]) -> None:
     print("  judge: login judge (env_judge)")
 
 
-def import_v1(env: dict[str, str]) -> None:
-    import store
-    from store import import_v1
-    with connect(env, "workbench") as v1, connect(env, DB) as c:
-        v1.execute("set default_transaction_read_only = on")
-        counts = import_v1.run(v1, store.Store(c, actor="store:import-v1"))
-    print("  imported from v1: " + ", ".join(f"{v} {k}" for k, v in counts.items()))
-
-
 def main() -> None:
     if sys.argv[1:] == ["init"]:
         init(settings())
-    elif sys.argv[1:] == ["import-v1"]:
-        import_v1(settings())
     else:
         print(__doc__)
         sys.exit(2)

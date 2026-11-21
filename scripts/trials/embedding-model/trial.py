@@ -1,4 +1,7 @@
-"""The store's embedding model (Q120), research skill step 3: every candidate on the same cases from the store.
+"""Historical (S-156): reads the old `store` schema, which stays in database `substrate` until the owner drops it; the
+store package it was written against is retired.
+
+The store's embedding model (Q120), research skill step 3: every candidate on the same cases from the store.
 
 Cases: each DECISIONS.md row that a store page names (S-n), asked two ways, by the row's bold title and by the
 owner's quoted words; the right answers are the pages naming that row. Documents: every page in store.page.

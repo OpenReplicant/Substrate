@@ -29,16 +29,14 @@ else bad "the substrate database does not answer: $(tail -1 /tmp/substrate-check
 rm -f /tmp/substrate-check.$$
 if out=$("$ROOT/bin/in-tools" python3 -c '
 import sys; sys.path[:0] = ["scripts", "."]
-import store; from db import connect, DB; from gateway import settings
+from environment import db as envdb; from db import connect, DB; from gateway import settings
 with connect(settings(), DB) as c:
-    done = {r[0] for r in c.execute("select name from public.store_migration")}
-    todo = sorted(f.name for f in store.SQL.glob("*.sql") if f.name not in done)
+    done = {r[0] for r in c.execute("select name from public.env_migration")} if c.execute("select to_regclass($$public.env_migration$$)").fetchone()[0] else set()
+    todo = sorted(f.name for f in envdb.SQL.glob("*.sql") if f.name not in done)
     if todo: raise SystemExit("schema not applied: " + ", ".join(todo))
-    e, s, f, v = c.execute("select (select count(*) from store.entity), (select count(*) from store.statement), (select count(distinct f.statement_id) from store.flag f join store.statement st on st.id = f.statement_id where st.rank <> $$deprecated$$), (select count(*) from store.violation)").fetchone()
-    stale = len(store.stale_file_spans(c, store.SQL.parent.parent))
-    print(f"{e} entities, {s} statements, {f} flagged, {v} constraint violations, {stale} cited file lines changed")' 2>&1); then
-  ok "store       $out (MCP: bin/in-tools python3 -m store.mcp)"
-else bad "the store: $(printf '%s\n' "$out" | tail -1) (bin/in-tools python3 scripts/db.py init)"; fi
+    print("schema applied: " + ", ".join(sorted(done)))' 2>&1); then
+  ok "environment schema $out"
+else bad "the environment's schema: $(printf '%s\n' "$out" | tail -1) (bin/in-tools python3 scripts/db.py init)"; fi
 # The Knowledge Kernel (S-154): the read model the UI and the agents' substrate profile answer from
 if out=$("$ROOT/bin/in-tools" python3 -c '
 import sys; sys.path[:0] = ["scripts", "."]
@@ -47,7 +45,7 @@ with psycopg.connect(kernel_url(settings()), autocommit=True) as c:
     c.execute("set role kkm_view_substrate")
     e, w, n = c.execute("select (select count(*) from substrate.entity), (select count(*) from substrate.wholes), (select count(*) from api.claims where status in ($$normal$$, $$preferred$$))").fetchone()
     print(f"{e} entities, {w} wholes, {n} usable claims")' 2>&1); then
-  ok "kernel      $out (MCP: scripts/kernel.sh login NAME, then mcp__kernel__*; the store schema is still exported from, scripts/kernel.sh export)"
+  ok "kernel      $out (MCP: scripts/kernel.sh login NAME, then mcp__kernel__*)"
 else bad "the kernel: $(printf '%s\n' "$out" | tail -1) (scripts/kernel.sh init)"; fi
 # The real-time environment (plan step 3c): signals, queues and proposals waiting for a person
 if out=$("$ROOT/bin/in-tools" python3 -c '

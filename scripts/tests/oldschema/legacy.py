@@ -1,15 +1,16 @@
-"""The store (S-135): Wikibase's data model in Postgres with OpenWiki's pinned evidence. The rules live in the
-schema (store/sql/); this is a thin way to write and read it.
+"""The old `store` schema's writer, kept only to build fixtures for the one-off exporter (S-156).
 
-    from store import Store, person, interpreter, parser, rule
-    s = Store(conn, actor="claude-code")              # who the revisions name
-    with s.edit("what this edit does"):               # one transaction, one revision per entity it touches
+Substrate's store (S-135) lives in the Knowledge Kernel now (S-153, S-154). Its schema (001_store.sql,
+003_components.sql, 004_map.sql here) and this writer stay as test fixtures so the kernel's encoder-substrate, which
+reads that schema from a machine that has not exported yet (scripts/kernel.sh export), is still tested end to end.
+Nothing else imports this.
+
+    from legacy import Store, person, interpreter, parser
+    apply(conn)                                       # the three schema files, in order
+    s = Store(conn, actor="test")
+    with s.edit("what this edit does"):
         q = s.item("Workbench", key="workbench", description="...")
-        p = s.property("lifecycle", "string", key="lifecycle")
-        s.say(q, p, "production", by=person("pete"))
-    s.render(q); s.search("work"); s.expand(q); s.locate(q)
-
-`conn` is a psycopg connection with autocommit on (each call outside `edit` is its own transaction).
+        s.say(q, s.id("instance-of"), s.id("role"), by=person("pete"))
 """
 from __future__ import annotations
 
@@ -21,31 +22,15 @@ from pathlib import Path
 
 from psycopg.types.json import Jsonb
 
-SQL = Path(__file__).parent / "sql"
+SQL = Path(__file__).parent
 SOME, NONE = object(), object()       # Wikibase's "unknown value" and "no value"
 
 
-def migrate(conn) -> list[str]:
-    """Apply the schema files not yet applied, each in its own transaction; returns their names."""
-    conn.execute("create table if not exists public.store_migration (name text primary key, applied_at timestamptz not null default now())")
-    done = {r[0] for r in conn.execute("select name from public.store_migration")}
-    applied = []
-    for f in sorted(SQL.glob("*.sql")):
-        if f.name in done:
-            continue
+def apply(conn) -> None:
+    """The old schema's files the exporter reads (not the graph's, nor the env schema, which lives in environment/sql/)."""
+    for f in ("001_store", "003_components", "004_map"):
         with conn.transaction():
-            conn.execute(f.read_text())
-            conn.execute("insert into public.store_migration (name) values (%s)", (f.name,))
-        applied.append(f.name)
-    return applied
-
-
-def project(conn) -> dict:
-    """Build pgGraph's graph of usable entity-valued statements (outside a transaction: pgGraph builds apart from
-    the one that registered its tables). Its triggers keep it current from then on."""
-    nodes, edges = conn.execute("select nodes_loaded, edges_loaded from graph.build()").fetchone()
-    return {"nodes": nodes, "edges": edges}
-
+            conn.execute((SQL / f"{f}.sql").read_text())
 
 @dataclass(frozen=True)
 class Ref:
@@ -217,101 +202,3 @@ class Store:
         sid, ch = self.c.execute("select span_id, change from store.read_span(%s, %s, %s, %s)",
                                  (uri, locator, text, media_type)).fetchone()
         return str(sid), ch
-
-    def resolve(self, ref: str) -> str:
-        """An entity by its id (Q12, P3) or its key."""
-        return ref if re.fullmatch(r"[QP][1-9]\d*", ref) else self.id(ref)
-
-    # Reading ------------------------------------------------------------------------------------------
-
-    def alternatives(self, role) -> list[dict]:
-        """What provides every interface a role requires, and whether (and where) it fills the role now."""
-        rows = self.c.execute("select entity, label, fills_now, in_whole, provides from store.alternatives(%s)", (role,)).fetchall()
-        return [{"entity": e, "label": la, "fills_now": f, "in_whole": w, "provides": pr} for e, la, f, w, pr in rows]
-
-    def render(self, entity, all_ranks=False) -> str | None:
-        return self.c.execute("select store.render(%s, %s)", (entity, all_ranks)).fetchone()[0]
-
-    def search(self, query, limit=10) -> list[dict]:
-        rows = self.c.execute("select id, label, description, score from store.search(%s, %s)", (query, limit)).fetchall()
-        return [{"id": i, "label": la, "description": d, "score": round(s, 3)} for i, la, d, s in rows]
-
-    def expand(self, entity) -> list[dict]:
-        """One hop: the entity's usable statements, and the usable statements whose value it is."""
-        rows = self.c.execute("""
-            select 'out', u.id, u.property, p.label, u.value_entity, store.fmt(u.property, u.snak, u.value, u.value_entity), u.rank
-            from store.usable u join store.entity p on p.id = u.property where u.subject = %(e)s
-            union all
-            select 'in', u.id, u.property, p.label, u.subject, format('%%s (%%s)', s.label, s.id), u.rank
-            from store.usable u join store.entity p on p.id = u.property join store.entity s on s.id = u.subject
-            where u.value_entity = %(e)s
-            order by 1 desc, 4, 6""", {"e": entity}).fetchall()
-        return [{"direction": d, "statement": str(sid), "property": p, "property_label": pl, "entity": ent,
-                 "value": v, "rank": r} for d, sid, p, pl, ent, v, r in rows]
-
-    def locate(self, target) -> list[dict]:
-        """The evidence behind an entity's statements (all ranks) or one statement: each reference, its span's
-        pinned text, whether the span has changed since, and a rule's premises."""
-        where = "s.subject = %s" if re.fullmatch(r"[QP]\d+", str(target)) else "s.id = %s::uuid"
-        rows = self.c.execute(f"""
-            select s.id, store.gloss(s.id), s.rank, r.id, r.by_kind, r.by_name, r.by_version, r.run, r.note,
-                   so.uri, sp.locator, sp.text, sp.hash, sp.superseded_at is not null,
-                   (select array_agg(pr.statement_id::text order by pr.statement_id) from store.premise pr where pr.reference_id = r.id),
-                   (select string_agg(distinct f.reason, '; ') from store.flag f where f.statement_id = s.id)
-            from store.statement s join store.cites c on c.statement_id = s.id join store.reference r on r.id = c.reference_id
-                 left join store.span sp on sp.id = r.span_id left join store.source so on so.id = sp.source_id
-            where {where} order by s.created_at, s.id, r.created_at""", (target,)).fetchall()
-        out = []
-        for sid, gloss, rank, rid, kind, name, ver, run, note, uri, loc, text, h, changed, prem, flag in rows:
-            ref = {"reference": str(rid), "by": kind, "name": name, "version": ver, "run": run, "note": note}
-            if uri:
-                ref["span"] = {"source": uri, "locator": loc, "text": text, "hash": h, "changed_since": changed}
-            if prem:
-                ref["premises"] = prem
-            out.append({"statement": str(sid), "says": gloss, "rank": rank, "flagged": flag, **ref})
-        return out
-
-    def path(self, a, b, max_depth=12) -> list[dict]:
-        """The shortest path from entity a to entity b along statements that are not deprecated, in their direction."""
-        rows = self.c.execute("select step, entity, label, via, via_label, statement from store.path(%s, %s, %s)", (a, b, max_depth)).fetchall()
-        return [{"step": s, "entity": e, "label": la, "via": v, "via_label": vl, "statement": str(st) if st else None}
-                for s, e, la, v, vl, st in rows]
-
-    def flags(self) -> list[dict]:
-        rows = self.c.execute("select statement_id, span_id, via, reason, store.gloss(statement_id) from store.flag "
-                              "order by reason, statement_id").fetchall()
-        return [{"statement": str(s), "span": str(sp), "via": str(v) if v else None, "reason": r, "says": g}
-                for s, sp, v, r, g in rows]
-
-    def violations(self) -> list[dict]:
-        rows = self.c.execute("select statement_id, subject, property, kind, message from store.violation "
-                              "order by subject, property, kind").fetchall()
-        return [{"statement": str(s), "subject": su, "property": p, "kind": k, "message": m} for s, su, p, k, m in rows]
-
-
-def stale_file_spans(conn, root: Path) -> list[dict]:
-    """Current spans of file: sources, cited by a statement in use, whose text is no longer at their locator (Lnn or
-    Lnn-mm) in the file under root, or whose file is gone. A wrong locator or a mistyped quote shows up here too."""
-    rows = conn.execute(
-        "select distinct sp.id, s.uri, sp.locator, sp.text from store.span sp join store.source s on s.id = sp.source_id "
-        "join store.reference r on r.span_id = sp.id join store.cites ci on ci.reference_id = r.id "
-        "join store.statement st on st.id = ci.statement_id "
-        "where s.uri like 'file:%%' and sp.superseded_at is null and st.rank <> 'deprecated' order by s.uri, sp.locator").fetchall()
-    out = []
-    for sid, uri, loc, text in rows:
-        m = re.fullmatch(r"L(\d+)(?:-(\d+))?", loc)
-        if not m:
-            continue                                      # a locator that is not a line range is not checked here
-        f = root / uri[len("file:"):]
-        if not f.is_file():
-            out.append({"span": str(sid), "uri": uri, "locator": loc, "why": "file gone"})
-            continue
-        a, b = int(m[1]), int(m[2] or m[1])
-        lines = f.read_text(errors="replace").split("\n")
-        if text in "\n".join(lines[a - 1:b]):
-            continue
-        n = text.count("\n") + 1                     # a window as tall as the quote, wherever it now starts
-        moved = [i + 1 for i in range(len(lines)) if text in "\n".join(lines[i:i + n])]
-        out.append({"span": str(sid), "uri": uri, "locator": loc,
-                    "why": f"moved to L{moved[0]}" if len(moved) == 1 else "not at that locator"})
-    return out
