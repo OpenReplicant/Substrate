@@ -1,14 +1,24 @@
 ---
 name: map
-description: Take a thing apart into its parts, the roles each part plays and the interfaces that make parts interchangeable, and write it into the store with evidence - any thing, software or not (a codebase, this machine, a bicycle, a team, a process). Use when the owner asks what something is made of, how its parts work together, what could be swapped or changed, or before cataloging alternatives for a part (the catalog skill).
+description: Take a thing apart into its parts, the roles each part plays and the interfaces that make parts interchangeable, and write it into the store (the Knowledge Kernel) with evidence - any thing, software or not (a codebase, this machine, a bicycle, a team, a process). Use when the owner asks what something is made of, how its parts work together, what could be swapped or changed, or before cataloging alternatives for a part (the catalog skill).
 ---
 
 # Map: what a thing is made of, and what makes its parts interchangeable
 
-A map is statements in the store (S-139), through its MCP tools (`mcp__store__*`): a **whole** *has part* a
+A map is claims in the store (S-139), which is the Knowledge Kernel (S-153, S-154), through its MCP server's
+`substrate` profile (`mcp__kernel__*`: `search`, `read`, `expand`, `locate`, `path`, `alternatives`, `create_item`,
+`say`, `deprecate`; `scripts/kernel.sh login NAME` puts the server in `.mcp.json`): a **whole** *has part* a
 **part**, qualified by *object has role* the **role** the part plays there; a role *requires interface* the
 **interfaces** anything filling it must provide; a part *provides interface* them. Everything you write is your
 claim: it enters at normal rank and cites you, and the owner can prefer or deprecate it.
+
+What differs from the store's own tools (D-105): a write is a change set the kernel's validator applies, so
+`say` and `create_item` may wait a few seconds, and answer that the change set is still pending (say so, and
+`read` again before you build on it). A new item's id is a long Q number (`Q1763700000123456`), and a statement
+is named by its claim id or `#handle` (shown after each line you read), not a uuid. Properties go by key
+(`has-part`), Wikidata P number or IRI. Quantities keep the amount only: put the unit in the metric's words.
+Every line you read ends with the claims it rests on and their belief: cite them when you tell the owner what is
+true.
 
 ## 1. Find the whole, and the question
 
@@ -42,7 +52,9 @@ The quote is the source's text at that locator: copy it from the file (print the
 quote one locator the same way every time you cite it. A different quote at the same locator reads as the source
 having changed: it supersedes the earlier span and flags every statement that cited it. Prefer stable places (a
 schema line, a decision row) to long lines that change often. `scripts/check.sh` counts cited file lines that are
-no longer at their locator; `store.stale_file_spans` says which, and where a moved line went.
+no longer at their locator (`store.stale_file_spans`, on the old `store` schema until the span-change watcher
+is built on the kernel, a later item of plan step 3d: until then the kernel does not flag a statement whose span
+changed, and `locate` shows no span hash).
 
 ## 5. Goals
 
@@ -52,8 +64,9 @@ verdicts come later, from trials and a judge (the catalog skill).
 
 ## 6. Check
 
-`read` the whole's page; `path` from the whole to an interface; `violations` for the whole and its parts (a role
-named where an interface belongs shows up here). Tell the owner what is mapped, what was left out and why, what
+`read` the whole's page; `path` from the whole to an interface; `alternatives` for a role (a role named where an
+interface belongs shows up as nothing providing it). There is no `violations` tool yet: constraints are checked
+by a processor still to be built (plan step 3d). Tell the owner what is mapped, what was left out and why, what
 you are unsure of, and where to see it: the UI draws the map at `http://127.0.0.1:8100/#/map/<id>`, and shows an
 interface a role requires but its filler lacks as missing. If you got something wrong, `deprecate` your own
-statement with the reason, and say the right one.
+statement (its claim id) with the reason, and say the right one.
