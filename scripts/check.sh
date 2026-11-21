@@ -9,14 +9,14 @@ fails=0
 ok()   { printf '  ok    %s\n' "$*"; }
 bad()  { printf '  FAIL  %s\n' "$*"; fails=$((fails + 1)); }
 note() { printf '  note  %s\n' "$*"; }
-CORE="db gateway ollama ui environment companion"
+CORE="db gateway ollama kernel ui environment companion"
 
 say "Services ($RUNTIME on $ENGINE)"
 running=$(rt_status 2>/dev/null | awk 'NR > 1 {print $1}' | tr '\n' ' ')
 for s in $CORE; do
   case "$running" in *"-$s-"*) ;; *) bad "service $s is not running (scripts/logs.sh $s)" ;; esac
 done
-extra=$(printf '%s\n' $running | grep -v -e '-db-' -e '-gateway-' -e '-ollama-' -e '-ui-' -e '-environment-' -e '-companion-' -e '-llm-' -e '-voice-' -e '-judge-' -e '-tts-' || true)
+extra=$(printf '%s\n' $running | grep -v -e '-db-' -e '-gateway-' -e '-ollama-' -e '-kernel-' -e '-ui-' -e '-environment-' -e '-companion-' -e '-llm-' -e '-voice-' -e '-judge-' -e '-tts-' || true)
 [ -z "$extra" ] && ok "only the core runs ($CORE)" || note "also running, outside the core: $(echo $extra)"
 if "$ROOT/bin/in-tools" python3 -c '
 import sys; sys.path.insert(0, "scripts")
@@ -39,6 +39,16 @@ with connect(settings(), DB) as c:
     print(f"{e} entities, {s} statements, {f} flagged, {v} constraint violations, {stale} cited file lines changed")' 2>&1); then
   ok "store       $out (MCP: bin/in-tools python3 -m store.mcp)"
 else bad "the store: $(printf '%s\n' "$out" | tail -1) (bin/in-tools python3 scripts/db.py init)"; fi
+# The Knowledge Kernel (S-154): the read model the UI and the agents' substrate profile answer from
+if out=$("$ROOT/bin/in-tools" python3 -c '
+import sys; sys.path[:0] = ["scripts", "."]
+import psycopg; from db import kernel_url; from gateway import settings
+with psycopg.connect(kernel_url(settings()), autocommit=True) as c:
+    c.execute("set role kkm_view_substrate")
+    e, w, n = c.execute("select (select count(*) from substrate.entity), (select count(*) from substrate.wholes), (select count(*) from api.claims where status in ($$normal$$, $$preferred$$))").fetchone()
+    print(f"{e} entities, {w} wholes, {n} usable claims")' 2>&1); then
+  ok "kernel      $out (MCP: scripts/kernel.sh login NAME, then mcp__kernel__*; the store schema is still exported from, scripts/kernel.sh export)"
+else bad "the kernel: $(printf '%s\n' "$out" | tail -1) (scripts/kernel.sh init)"; fi
 # The real-time environment (plan step 3c): signals, queues and proposals waiting for a person
 if out=$("$ROOT/bin/in-tools" python3 -c '
 import sys; sys.path[:0] = ["scripts", "."]

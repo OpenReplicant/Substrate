@@ -20,10 +20,20 @@ sys.path.insert(0, __import__("os").path.join(HERE, ".."))
 from gateway import settings  # noqa: E402  (the same env_value path, so the secrets slot is honoured)
 
 DB = "substrate"
+KERNEL_DB = "kernel"      # the Knowledge Kernel's database in the same Postgres (S-154); its schema is installed by kk init
 
 
 def admin_url(env: dict[str, str], db: str = "postgres") -> str:
     return f"postgresql://postgres:{env['POSTGRES_PASSWORD']}@127.0.0.1:{env.get('DB_PORT') or 5432}/{db}"
+
+
+def kernel_url(env: dict[str, str]) -> str:
+    """The UI's way in to the kernel: KERNEL_URL from .env, else the kernel's own login kk_authenticator (which the
+    UI switches to the read model's role) on the `kernel` database, from the host."""
+    if env.get("KERNEL_URL"):
+        return env["KERNEL_URL"]
+    return (f"postgresql://kk_authenticator:{env['KK_AUTHENTICATOR_PASSWORD']}@127.0.0.1:{env.get('DB_PORT') or 5432}"
+            f"/{KERNEL_DB}")
 
 
 def connect(env: dict[str, str], db: str = "postgres"):
@@ -48,6 +58,12 @@ def init(env: dict[str, str]) -> None:
         else:
             c.execute(f"create database {DB} encoding 'UTF8' template template0")
             print(f"  database {DB}: made (pg_cron runs in it from Postgres's next start)")
+    with connect(env) as c:
+        if c.execute("select 1 from pg_database where datname = %s", (KERNEL_DB,)).fetchone():
+            print(f"  database {KERNEL_DB}: present (the kernel's schema: scripts/kernel.sh init)")
+        else:
+            c.execute(f"create database {KERNEL_DB} encoding 'UTF8' template template0")
+            print(f"  database {KERNEL_DB}: made (the kernel's schema: scripts/kernel.sh init)")
     import store
     with connect(env, DB) as c:
         applied = store.migrate(c)

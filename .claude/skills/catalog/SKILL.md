@@ -1,11 +1,11 @@
 ---
 name: catalog
-description: Find alternatives for a role a part plays - search the catalogs (package registries, vendors, parts lists, directories) for candidates that provide the interfaces the role requires, write them into the store with evidence, and set up how they will be measured against the whole's goals. Use when the owner asks what else could do a part's job, whether something better exists, or what to replace a part with; after the map skill has named the role. For Substrate's own components, the research skill wraps this one.
+description: Find alternatives for a role a part plays - search the catalogs (package registries, vendors, parts lists, directories) for candidates that provide the interfaces the role requires, write them into the store (the Knowledge Kernel) with evidence, and set up how they will be measured against the whole's goals. Use when the owner asks what else could do a part's job, whether something better exists, or what to replace a part with; after the map skill has named the role. For Substrate's own components, the research skill wraps this one.
 ---
 
 # Catalog: what else could fill a role
 
-Works on a role the map skill named (S-139), through the store's MCP tools (`mcp__store__*`). A candidate is an
+Works on a role the map skill named (S-139), through the kernel's MCP tools in the `substrate` profile (`mcp__kernel__*`; the map skill says what differs from the old store's tools). A candidate is an
 item that *provides interface* what the role *requires interface*; `alternatives` lists every one that does,
 and which fills the role now.
 
@@ -36,7 +36,8 @@ old) and say which, with the source quoted.
 `alternatives` again: those that fit. Measuring is a trial on the same cases for each candidate and for what
 fills the role now, against real data where there is some: a script that prints one line per candidate and
 case, its output kept as the source. Each result is a *measurement* (`measurement`) on the candidate,
-qualified by *goal* (`for-goal`) and *point in time* (`point-in-time`), with the output as evidence.
+qualified by *goal* (`for-goal`) and *point in time* (`point-in-time`), with the output as evidence; a quantity keeps its
+amount only, so the unit goes in the goal's metric.
 
 Whether a candidate is better is a judge's verdict, not yours: *verdict* (`verdict`: `verdict-better`,
 `verdict-worse`, `verdict-same`) qualified by *for role*, *against* and *goal*, cited to the judge. Until a judge
@@ -47,4 +48,4 @@ decide; say what you would pick and why.
 
 The candidates that fit, the ones ruled out and why, the measurements, and what you recommend. A change to the
 whole (a part replaced) is the owner's: once they decide, `say` the new *has part* with its role, and
-`deprecate` your own old statement with the reason (a person's is theirs to deprecate).
+`deprecate` your own old statement (its claim id) with the reason (a person's is theirs to deprecate).

@@ -88,8 +88,55 @@ services:
       interval: 10s
       retries: 30
 
+  # The Knowledge Kernel (S-153, S-154), the store: its own database `kernel` in the db above, from the image built out
+  # of repos/kernel (scripts/build.sh kernel). kernel-init installs its schema and default modules (scripts/kernel.sh
+  # init, once the database exists); kernel runs the validator that applies the change sets agents and the exporter
+  # submit, as the kernel's one login, which switches to each part's own role (never a superuser). kernel-export is the
+  # one-off exporter of the old `store` schema (scripts/kernel.sh export). The agents' MCP server is the stdio one,
+  # started by scripts/kernel.sh mcp in the profile substrate (Substrate's nine tools). Not tried on this machine's
+  # Podman yet (S-154).
+  kernel-init:
+    profiles: [kernel-admin]
+    image: localhost/substrate-kernel:local
+    command: ["kk", "init"]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: [/tmp]
+    environment:
+      KK_ADMIN_URL: postgresql://postgres:${POSTGRES_PASSWORD:?set in .env}@db:5432/kernel
+      KK_AUTHENTICATOR_PASSWORD: ${KK_AUTHENTICATOR_PASSWORD:?set in .env}
+    depends_on:
+      db: {condition: service_healthy}
+
+  kernel:
+    <<: *locked
+    image: localhost/substrate-kernel:local
+    command: ["kk", "serve", "--only", "validator"]
+    tmpfs: [/tmp]
+    environment:
+      DATABASE_URL: postgresql://kk_authenticator:${KK_AUTHENTICATOR_PASSWORD:?set in .env}@db:5432/kernel
+      KK_JWT_SECRET: ${KK_JWT_SECRET:?set in .env}
+    depends_on:
+      db: {condition: service_healthy}
+
+  kernel-export:
+    profiles: [kernel-admin]
+    image: localhost/substrate-kernel:local
+    command: ["python3", "-m", "encoder_substrate"]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: [/tmp]
+    environment:
+      DATABASE_URL: postgresql://kk_authenticator:${KK_AUTHENTICATOR_PASSWORD:?set in .env}@db:5432/kernel
+      SUBSTRATE_STORE_URL: postgresql://postgres:${POSTGRES_PASSWORD:?set in .env}@db:5432/substrate
+    depends_on:
+      db: {condition: service_healthy}
+
   # The UI (S-140, S-141: Substrate's UI, no name of its own): the store's pages and maps, read-only, on the standard
-  # library (ui/server.py) in the tools image. It sees only ui/ and reaches Postgres as db.
+  # library (ui/server.py) in the tools image. It sees only ui/ and reaches Postgres as db: the entities, pages and
+  # maps from the kernel's read model (S-154), the companion's page from the substrate database.
   ui:
     <<: *locked
     image: localhost/substrate-tools:local
@@ -105,6 +152,9 @@ services:
       PGDATABASE: substrate
       PGPASSWORD: ${POSTGRES_PASSWORD:?set in .env}
       OWNER_NAME: ${OWNER_NAME:-owner}
+      STORE_BACKEND: ${STORE_BACKEND:-kernel}
+      KERNEL_URL: ${KERNEL_URL:-}
+      KK_AUTHENTICATOR_PASSWORD: ${KK_AUTHENTICATOR_PASSWORD:?set in .env}   # empty KERNEL_URL: the kernel's login, as ui/server.py kernel_url()
     volumes:
       - ../ui:/app/ui:ro
       - ../environment:/app/environment:ro      # the companion's page: what the owner says is published through it
