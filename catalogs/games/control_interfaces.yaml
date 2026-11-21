@@ -1,0 +1,735 @@
+# Control interfaces for software agents in games and virtual worlds
+# Research catalog. Every fact comes from a page read during this session (URL in `sources`).
+# "unknown" = not confirmed from a page read. Dates are the ones the page showed; "not shown" = the page showed none.
+# Fetch date context: 2026-11-21.
+
+summary:
+  best_for_copiloting_a_persons_controller:
+    - name: "Xbox Controller Assist (Copilot)"
+      why: "Built into Xbox for two controllers acting as one. A person and a helper share one character. Shipped by the platform, no code needed. Limits on PC and on which platforms are not confirmed from a page."
+    - name: "Virtual gamepad on Linux via uinput"
+      why: "An agent process can create a virtual gamepad or keyboard device and write input events. Works on any Linux game that reads evdev. Needs device permissions. The kernel page does not show whether root or a group is needed."
+    - name: "RetroArch Network Control Interface (UDP 55355)"
+      why: "Documented UDP commands for pause, save state, frame advance and reading or writing core memory. Good for emulated games and for an agent that reads state directly. Keep it on localhost, as the page gives no authentication."
+    - name: "VRChat OSC input endpoints"
+      why: "Documented /input axes and buttons for movement and actions, plus the chatbox. A person's client can accept an agent's OSC input. VRChat ToS bans automation, so use only where the platform allows it."
+  best_for_agent_as_own_avatar_in_social_world:
+    - name: "ChilloutVR OSC (/input and /avatar/parameters)"
+      why: "Documented OSC input and avatar parameter endpoints, with OSCQuery discovery. Use with care: the official page calls it a first iteration. The agent's own account and presence still need checking against the game's terms, which were not read."
+    - name: "ResoniteLink (WebSocket) with a MCP bridge"
+      why: "Read and write the live data model in a running Resonite session (slots, components). Permission is set in-world (Builder, host, ResoniteLinkPermissions). Spawning and moving objects is possible. Presence as a user is not documented."
+    - name: "LibreMetaverse on OpenSimulator"
+      why: "A C# library that logs in as a Second Life or OpenSimulator client, with movement, chat, building and inventory. OpenSimulator is a BSD server you can run yourself, so it is the one place an agent can be a full avatar with a clear licence. Second Life's terms were not confirmed."
+  already_speaking_mcp:
+    - name: "Roblox Studio built-in MCP server"
+      why: "Official. Built into Studio, stdio transport, reads the data model, edits scripts, runs playtests and simulates keyboard and mouse. It is for the creator in Studio, not for players in live servers."
+    - name: "Unity MCP (CoplayDev)"
+      why: "MIT, 50 tools, editor plugin, last release v10.3.0 dated 2026-10-04 per its page. Drives the editor, not a live player session."
+    - name: "Godot MCP (yanhuifair)"
+      why: "386 tools; run and stop the game, runtime screenshot, step and freeze. Has a token option and localhost bind. AGPL-3.0."
+    - name: "Unreal MCP (Epic, experimental)"
+      why: "Official plugin, Streamable HTTP at 127.0.0.1:8000/mcp, loopback only and no auth layer. Runs inside the editor."
+    - name: "ResoniteLink MCP bridges (rassi0429, sandraschi, esnya FluxMcp)"
+      why: "Three community MCP servers for Resonite. FluxMcp is archived. The other two talk to ResoniteLink."
+    - name: "GTerm (Garry's Mod)"
+      why: "MIT. Its MCP interface runs console commands and Lua on a Garry's Mod server, with an optional secret."
+
+gaps:
+  - "No official bot or agent-presence API was found for Garry's Mod, Neos, ChilloutVR or Roblox live servers. The Roblox Open Cloud API is for publishing, data stores and messaging, not for in-world avatars (from its docs overview page)."
+  - "Second Life, Roblox and Resonite terms on bots and automation: not read (fetch blocked, 403, 404, or no rule page reached). ToS column is unknown for these."
+  - "VirtualPad, the reported successor to ViGEmBus: its own page was not read; only a DS4Windows discussion names it. Licence reported as proprietary by one commenter, unconfirmed."
+  - "BizHawk Lua API documentation (docs.bizhawk.org) could not be reached (DNS not in the session's allowed domains). Only the GitHub README was read."
+  - "Steam Input anti-cheat and double-input behaviour: the best-practices page does not state them."
+  - "Xbox Controller Assist platform list and PC behaviour: the support page did not load; the Xbox news article was read instead."
+  - "PlayStation Access controller third-party software API: not found on the pages read."
+  - "Cloud and remote play for second players: how a guest's controller input reaches the host in Remote Play Together was not stated on the Steamworks page read."
+  - "Neos VR: cloud services shut down in 2025 per a Wikipedia mirror surfaced in search only (not fetched). Not included as an entry."
+  - "Latency figures are missing for almost every entry; only Sunshine and Moonlight target low latency, and the pages do not give numbers."
+  - "Minecraft excluded by brief. Anti-cheat rules for Valorant, Fortnite and Call of Duty not read."
+  - "Computer-use model agents for games: only research papers were read (Cradle, NitroGen, VideoGameBench). No vendor game agent product was confirmed."
+
+entries:
+
+  - id: resonitelink-ws
+    name: "ResoniteLink"
+    kind: B
+    platform: "Resonite (social VR)"
+    urls:
+      - "https://yellow-dog-man.github.io/ResoniteLink"
+      - "https://wiki.resonite.com/ResoniteLink"
+    connection:
+      protocol: "WebSocket; any language"
+      observe: "Structured scene data: slots, components, members (getSlot-style operations named on the docs search, not confirmed on the landing page)"
+      do: "Read and write slots and components (addSlot, addComponent named in search snippet from yellow-dog-man docs)"
+    shared_control: unknown
+    multiplayer_presence: "unknown. Not documented as a user avatar."
+    permissions: "Turned on from the Session tab of the dash. In worlds it needs at least Builder permission, host status, and the world's ResoniteLinkPermissions setting not disallowing it."
+    official_or_community: official (Yellow Dog Man Studios; copyright line on page)
+    licence: "not stated on the page read"
+    last_release_or_commit: "not shown; landing page says beta, open to significant breaking changes, and links version 0.13.1"
+    policy: "No bot or automation rule found on the pages read."
+    latency: unknown
+    sources:
+      - "https://yellow-dog-man.github.io/ResoniteLink (read: WebSocket layer, beta warning)"
+      - "https://wiki.resonite.com/ResoniteLink (read: enabling and permission gating)"
+
+  - id: resonite-official-api
+    name: "Resonite official API (SkyFrost)"
+    kind: B
+    platform: "Resonite (cloud services)"
+    urls:
+      - "https://wiki.resonite.com/API"
+    connection:
+      protocol: "REST at https://api.resonite.com/, SignalR hub at wss://api.resonite.com/hub, token auth header"
+      observe: "Sessions, users, messages, platform info, stats, records, groups, assets"
+      do: "Account and cloud operations. Not avatar or world control."
+    shared_control: no
+    multiplayer_presence: "unknown; the API is account and cloud, not in-world presence"
+    permissions: "Login with credentials (UID and TOTP header if 2FA); tokens last 30 days with rememberMe, else 24 hours"
+    official_or_community: official, but page says "heavy WIP" and no support or guarantees
+    licence: unknown
+    last_release_or_commit: not shown
+    policy: "No rule about bots or automated accounts on the page. The page lists a third-party chat-bot Node module as a project, which is not a policy."
+    latency: "SignalR server-driven notifications (per wiki)"
+    sources:
+      - "https://wiki.resonite.com/API (read: endpoints, auth, WIP warning)"
+
+  - id: fluxmcp
+    name: "FluxMcp (ProtoFlux MCP mod)"
+    kind: B
+    platform: "Resonite"
+    urls:
+      - "https://github.com/esnya/FluxMcp"
+    connection:
+      protocol: "MCP server inside a ResoniteModLoader mod; TCP listener with bind address and port settings"
+      observe: "ProtoFlux graphs (per project description); tool list not read"
+      do: "Edit ProtoFlux logic (per description)"
+    shared_control: unknown
+    multiplayer_presence: no
+    permissions: "Runs locally as a mod; needs ResoniteModLoader"
+    official_or_community: community
+    licence: MIT
+    last_release_or_commit: "archived 2026-03-10 per page; the README says the feature is now official via ResoniteLink. No release listed."
+    policy: unknown
+    latency: unknown
+    sources:
+      - "https://github.com/esnya/FluxMcp (read: TCP server, MIT, archived 2026-03-10, requirements)"
+
+  - id: resolink-mcp
+    name: "ResoniteLink MCP (rassi0429)"
+    kind: B
+    platform: "Resonite"
+    urls:
+      - "https://github.com/rassi0429/resolink-mcp"
+    connection:
+      protocol: "MCP server and CLI over ResoniteLink WebSocket (default ws://localhost:29551); MCP transport appears to be stdio (Claude Desktop example launches node)"
+      observe: "get_slot, find_slot, get_component, get_component_info, search_components, list_categories, get_component_source, grep_source"
+      do: "add_slot, update_slot, remove_slot, add_component, update_component, remove_component, import_texture_file, connect, disconnect (19 tools total)"
+    shared_control: unknown
+    multiplayer_presence: no
+    permissions: "Uses the world's ResoniteLink access (see resonitelink-ws)"
+    official_or_community: community
+    licence: MIT
+    last_release_or_commit: "not shown; 38 commits, no releases"
+    policy: "No security or auth statement on the page. Warns not to delete system objects (deleting a User entry kicks that user)."
+    latency: "Malformed requests can cause timeouts (page)"
+    sources:
+      - "https://github.com/rassi0429/resolink-mcp (read: tools, port, MIT, warnings)"
+
+  - id: resonite-mcp-sandraschi
+    name: "resonite-mcp (sandraschi)"
+    kind: B
+    platform: "Resonite"
+    urls:
+      - "https://github.com/sandraschi/resonite-mcp"
+    connection:
+      protocol: "FastMCP server; stdio via python -m resonite_mcp --stdio; web dashboard at http://localhost:10978; talks to ResoniteLink (protocol 0.13.1 per README)"
+      observe: "Dashboard state; tool detail in docs/TOOLS.md (not read)"
+      do: "Spawn objects, avatar and tracking tuning, world building, asset downloads (per description)"
+    shared_control: unknown
+    multiplayer_presence: unknown
+    permissions: "Local; no auth statement read"
+    official_or_community: community
+    licence: MIT
+    last_release_or_commit: "version 1.1.0 per page; commit date not shown; changelog mentions 2026-09-02 entries"
+    policy: unknown
+    latency: unknown
+    sources:
+      - "https://github.com/sandraschi/resonite-mcp (read: v1.1.0, stdio, port 10978, ResoniteLink backend, MIT)"
+
+  - id: vrchat-osc
+    name: "VRChat OSC (avatar parameters, input, chatbox)"
+    kind: B
+    platform: "VRChat"
+    urls:
+      - "https://docs.vrchat.com/docs/osc-overview"
+      - "https://docs.vrchat.com/docs/osc-as-input-controller"
+      - "https://docs.vrchat.com/docs/osc-avatar-parameters"
+    connection:
+      protocol: "OSC. Default receive port 9000, send port 9001 (--osc=9000:127.0.0.1:9001). Transport UDP not named on the page."
+      observe: "Avatar parameters the avatar sends; read-only built-in parameters (Animator Parameters page)"
+      do: "/input axes (Vertical, Horizontal, LookHorizontal, MoveHoldFB, spin axes) and buttons (MoveForward, Jump, Run, UseRight, GrabLeft ...), /chatbox/input (max 144 characters, 9 lines), /chatbox/typing, custom avatar parameters"
+    shared_control: "Input endpoints drive the local player, so an agent can share the controller with a person only if both send to the same client. Not documented as a shared-control feature."
+    multiplayer_presence: "Yes in effect: the agent runs as the logged-in user's own client and avatar. A second account is not documented."
+    permissions: "Enable in the Action Menu under Osc > Enabled"
+    official_or_community: official
+    licence: "not applicable (proprietary client)"
+    last_release_or_commit: "not applicable to docs; docs are current"
+    policy: "Terms section 13.2(j) (fetched via hello.vrchat.com/legal) prohibits any robot, spambot, spider, crawler, scraper or other automated means or interface not provided by VRChat, and any engine, software tool, agent, device or mechanism not provided by VRChat to access the Platform. Section 13.2(i) bans access inconsistent with individual human usage. Section 13.3 says anti-cheat may detect modified clients (Mods). Section 12 bans modification and circumvention. OSC is documented, but the terms' wording on agents still applies; ask VRChat before running an agent."
+    latency: "Real time over UDP per OSC; no figures on the page"
+    sources:
+      - "https://docs.vrchat.com/docs/osc-overview (read: ports, enabling, scope)"
+      - "https://docs.vrchat.com/docs/osc-as-input-controller (read: endpoints, chatbox limits)"
+      - "https://docs.vrchat.com/docs/osc-avatar-parameters (search snippet only: /avatar/change, JSON mappings)"
+      - "https://hello.vrchat.com/legal (read: links to Terms; Terms text with sections 12, 13.2, 13.3 returned in that fetch)"
+
+  - id: vrcosc
+    name: "VRCOSC"
+    kind: B
+    platform: "VRChat"
+    urls:
+      - "https://github.com/Lachee/VRCOSC"
+    connection:
+      protocol: "Windows desktop app; OSC router and module system (C# / osu!framework); router passes other OSC apps through to avoid port clashes"
+      observe: "Module sources (heart rate, hardware stats, media, speech-to-text, weather, clock)"
+      do: "Sends avatar parameters, input buttons and axes, chatbox text and typing (per description)"
+    shared_control: unknown
+    multiplayer_presence: "Same as vrchat-osc: runs as the user's own client"
+    permissions: "Local app"
+    official_or_community: community
+    licence: GPL-3.0
+    last_release_or_commit: "not shown on the page"
+    policy: "Same VRChat terms as vrchat-osc"
+    latency: unknown
+    sources:
+      - "https://github.com/Lachee/VRCOSC (read: modules, OSC handling, GPL-3.0)"
+
+  - id: vrchat-osc-lib
+    name: "VRChatOSCLib (ChrisFeline)"
+    kind: B
+    platform: "VRChat"
+    urls:
+      - "https://github.com/ChrisFeline/VRChatOSCLib"
+    connection:
+      protocol: "C# library (.NET Core 6) sending OSC"
+      observe: "none listed"
+      do: "Avatar parameters (bool, float, int), input buttons and axes, chatbox text and typing, arbitrary OSC paths"
+    shared_control: unknown
+    multiplayer_presence: "as vrchat-osc"
+    permissions: "none beyond the OSC setting"
+    official_or_community: community
+    licence: MIT
+    last_release_or_commit: "not shown; 11 commits"
+    policy: "VRChat terms apply"
+    latency: unknown
+    sources:
+      - "https://github.com/ChrisFeline/VRChatOSCLib (read: C#, capabilities, MIT)"
+
+  - id: chilloutvr-osc
+    name: "ChilloutVR OSC"
+    kind: B
+    platform: "ChilloutVR"
+    urls:
+      - "https://docs.chilloutvr.net/chilloutvr/game/osc"
+    connection:
+      protocol: "OSC with OSCQuery for discovery; ports not on the page read (see OSC launch arguments page, not read)"
+      observe: "/avatar/parameters/<name> reads and writes; face tracking uses VRCFaceTracking unified expression names"
+      do: "/input/<input_name> simulates game inputs (jump, move); /avatar/change switches avatars; /avatar/profile/change; /chatbox/input and /chatbox/typing"
+    shared_control: unknown
+    multiplayer_presence: "unknown; the agent drives a local client"
+    permissions: "Disabled by default; enable under Settings > Implementation > OSC"
+    official_or_community: official
+    licence: "not applicable"
+    last_release_or_commit: "docs say 'first iteration'; date not shown"
+    policy: "ChilloutVR terms not read"
+    latency: "real time over the local network (page)"
+    sources:
+      - "https://docs.chilloutvr.net/chilloutvr/game/osc (read: endpoints, enabling, status)"
+      - "https://steamdb.info/patchnotes/19748411 (search snippet only: OSC added)"
+
+  - id: unity-mcp
+    name: "Unity MCP (CoplayDev)"
+    kind: B
+    platform: "Unity editor (games and apps built with Unity)"
+    urls:
+      - "https://github.com/CoplayDev/unity-mcp"
+    connection:
+      protocol: "Python 3.10+ MCP server (run with uv) linked to a Unity Editor plugin; transport named as unknown on the page (remote auth mentioned)"
+      observe: "Scene and asset state from the editor"
+      do: "Create scenes and GameObjects, edit C# scripts, manage assets, run tests, profile, build (50 tool entrypoints)"
+    shared_control: no
+    multiplayer_presence: no (editor tool, not a live player)
+    permissions: "Editor plugin install via Package Manager"
+    official_or_community: community
+    licence: MIT
+    last_release_or_commit: "v10.3.0, dated 2026-10-04 on the page; 2,040 commits on beta branch"
+    policy: "not applicable to games under development"
+    latency: unknown
+    sources:
+      - "https://github.com/CoplayDev/unity-mcp (read: tools, plugin, MIT, v10.3.0 date)"
+
+  - id: godot-mcp-yanhuifair
+    name: "Godot MCP (yanhuifair)"
+    kind: B
+    platform: "Godot 4.x editor and running game"
+    urls:
+      - "https://github.com/yanhuifair/Godot-MCP"
+    connection:
+      protocol: "MCP over stdio (default) or SSE / Streamable HTTP at 127.0.0.1:3000; editor plugin on TCP 127.0.0.1:9876; runtime bridge on 127.0.0.1:9877"
+      observe: "Runtime tools: runtime_screenshot, runtime_freeze, runtime_step (11 tools); editor tools 140"
+      do: "editor_play, editor_stop, run_project, stop_project, scene and file edits"
+    shared_control: unknown
+    multiplayer_presence: no
+    permissions: "Optional GODOT_MCP_TOKEN"
+    official_or_community: community
+    licence: AGPL-3.0
+    last_release_or_commit: "not shown; changelog version 1.12.16; 72 commits"
+    policy: "not applicable to own games"
+    latency: unknown
+    sources:
+      - "https://github.com/yanhuifair/Godot-MCP (read: transports, ports, tools, AGPL-3.0)"
+      - "https://www.godotengine.org/asset-library/asset/5434 (search snippet only)"
+
+  - id: unreal-mcp-epic
+    name: "Unreal MCP (Epic, experimental)"
+    kind: B
+    platform: "Unreal Engine 5 editor (docs page for UE 5.9)"
+    urls:
+      - "https://dev.epicgames.com/documentation/unreal-engine/unreal-mcp-in-unreal-editor"
+    connection:
+      protocol: "MCP server inside the editor; Streamable HTTP and SSE; stdio and WebSocket not supported"
+      observe: "Toolset tools across actors, Blueprints, materials, MetaSounds, PCG, Niagara, Sequencer, profiling, automation tests"
+      do: "Edits via toolsets; four meta-tools (list_toolsets, describe_toolsets, describe_tools, call_tool) with tool search on"
+    shared_control: no
+    multiplayer_presence: no
+    permissions: "Enable in Edit > Plugins; loopback only by default; Origin allow-list; no authentication layer"
+    official_or_community: official (Epic), marked Experimental
+    licence: "not stated on the page read"
+    last_release_or_commit: "not shown"
+    policy: "Page warns: any local process or allowed-origin browser page can call its tools. Do not expose beyond the local machine."
+    latency: unknown
+    sources:
+      - "https://dev.epicgames.com/documentation/unreal-engine/unreal-mcp-in-unreal-editor (read: enabling, endpoint, transports, security)"
+
+  - id: unreal-mcp-runreal
+    name: "unreal-mcp (runreal)"
+    kind: B
+    platform: "Unreal Engine 5.4+ editor"
+    urls:
+      - "https://github.com/runreal/unreal-mcp"
+    connection:
+      protocol: "Node MCP server (npx @runreal/unreal-mcp) over Unreal's built-in Python remote execution; no engine plugin to compile"
+      observe: "editor_run_python output"
+      do: "editor_run_python runs arbitrary Python in the editor"
+    shared_control: no
+    multiplayer_presence: no
+    permissions: "Enable Python Editor Script Plugin and Enable Remote Execution; bind address default 127.0.0.1"
+    official_or_community: community (not an Unreal project)
+    licence: MIT
+    last_release_or_commit: "not shown; 24 commits, no releases"
+    policy: "Page: agents get full access to the editor; review changes before approving"
+    latency: unknown
+    sources:
+      - "https://github.com/runreal/unreal-mcp (read: setup, warning, MIT)"
+
+  - id: roblox-studio-mcp
+    name: "Roblox Studio built-in MCP server"
+    kind: B
+    platform: "Roblox Studio (creator tool) and playtests"
+    urls:
+      - "https://create.roblox.com/docs/studio/mcp"
+    connection:
+      protocol: "MCP over stdio; enabled in Studio via Assistant > Manage MCP Servers > Enable Studio as MCP server"
+      observe: "Instance hierarchy (search_game_tree, inspect_instance), scripts, console output, viewport capture"
+      do: "Edit instances and scripts (multi_edit), execute_luau in Edit, Client or Server datamodel, start and stop play mode, simulate character navigation, keyboard and mouse input, insert assets"
+    shared_control: "Simulated keyboard and mouse in a playtest; not a shared controller for a live server"
+    multiplayer_presence: no (playtest and editing only)
+    permissions: "Local; Open Cloud calls need credentials separately. Doc says: only connect clients you trust."
+    official_or_community: official
+    licence: "not applicable"
+    last_release_or_commit: "not shown on the page; DevForum said MCP support would be fully supported in early March (2026 post)"
+    policy: "Roblox Terms and Community Standards were not read (403 and 404). Unknown whether automation of live experiences is allowed."
+    latency: unknown
+    sources:
+      - "https://create.roblox.com/docs/studio/mcp (read: enabling, capabilities, stdio, trust warning)"
+      - "https://devforum.roblox.com/t/studio-mcp-server-updates-and-external-llm-support-for-assistant/4415631 (search snippet only)"
+
+  - id: roblox-open-cloud
+    name: "Roblox Open Cloud"
+    kind: B
+    platform: "Roblox (experiences, data stores, messaging, place publishing)"
+    urls:
+      - "https://create.roblox.com/docs/cloud/reference"
+      - "https://create.roblox.com/docs/cloud/llms.txt"
+    connection:
+      protocol: "REST over HTTPS; API keys or OAuth 2.0"
+      observe: "Data stores, messaging, place publishing"
+      do: "Publish places, read and write data stores, send messages to servers"
+    shared_control: no
+    multiplayer_presence: "no; server-side services, not an in-world avatar"
+    permissions: "API keys with scopes; cookie-authenticated legacy endpoints may change without notice"
+    official_or_community: official
+    licence: "not applicable"
+    last_release_or_commit: "docs last updated 2026-05-20 (llms.txt header)"
+    policy: "Roblox Terms not read (403). Unknown."
+    latency: unknown
+    sources:
+      - "https://create.roblox.com/docs/cloud/llms.txt (search snippet: last updated 2026-05-20)"
+      - "https://create.roblox.com/docs/cloud/reference (search snippet: REST, keys, OAuth)"
+
+  - id: libremetaverse
+    name: "LibreMetaverse"
+    kind: B
+    platform: "Second Life and OpenSimulator (grid clients)"
+    urls:
+      - "https://github.com/cinderblocks/libremetaverse"
+    connection:
+      protocol: "C# (.NET) client library; Second Life protocol over UDP (protocol detail not read)"
+      observe: "Object tracking via examples (PrimInspector), chat, inventory, land, group state"
+      do: "Login, movement, chat, building, inventory, group and land actions"
+    shared_control: no
+    multiplayer_presence: "yes: an agent logs in as its own avatar in a grid with humans"
+    permissions: "Needs an avatar account on the grid"
+    official_or_community: community (fork of libopenmetaverse)
+    licence: BSD-3-Clause
+    last_release_or_commit: "not shown; 5,489 commits"
+    policy: "Second Life terms not read (secondlife.com TOS pages 404 via both URLs). Unknown."
+    latency: unknown
+    sources:
+      - "https://github.com/cinderblocks/libremetaverse (read: features, BSD-3-Clause, C# targets)"
+
+  - id: opensimulator
+    name: "OpenSimulator"
+    kind: B
+    platform: "OpenSimulator grids (self-hosted virtual world server)"
+    urls:
+      - "https://github.com/opensim/opensim"
+    connection:
+      protocol: "Second Life-style login URI (typically port 9000); client-side bots connect as avatars"
+      observe: "World state via the viewer or bot client"
+      do: "Whatever the logged-in avatar can do"
+    shared_control: unknown
+    multiplayer_presence: yes, on a grid you run
+    permissions: "Grid owner controls accounts"
+    official_or_community: community, BSD server project
+    licence: BSD
+    last_release_or_commit: "not shown; page calls it alpha"
+    policy: "Set by the grid operator, so none universal"
+    latency: unknown
+    sources:
+      - "https://github.com/opensim/opensim (read: BSD, login URI, alpha note)"
+
+  - id: gterm-gmod
+    name: "GTerm (Garry's Mod external console)"
+    kind: B
+    platform: "Garry's Mod servers"
+    urls:
+      - "https://github.com/Earu/GTerm"
+    connection:
+      protocol: "WebSocket server (ws://localhost:27512/ws/, default) and MCP server (port 27513); gmod module over localhost TCP 127.0.0.1:27514; same host as the server"
+      observe: "Console output as JSON; game status; game and disk file reads; screenshots"
+      do: "Console commands, Lua execution, file reads, opt-in tool packages"
+    shared_control: no
+    multiplayer_presence: no (server control, not a player)
+    permissions: "Optional APISecret (WebSocket) and MCPSecret (passed as query string)"
+    official_or_community: community
+    licence: MIT
+    last_release_or_commit: "not shown; 123 commits, 31 stars"
+    policy: "Garry's Mod terms not read. No official external bot API found in search."
+    latency: unknown
+    sources:
+      - "https://github.com/Earu/GTerm (read: ports, secrets, MIT, MCP tools)"
+
+  - id: vigembus
+    name: "ViGEmBus (virtual Xbox and DualShock driver)"
+    kind: A
+    platform: "Windows 10/11"
+    urls:
+      - "https://github.com/nefarius/ViGEmBus"
+    connection:
+      protocol: "Kernel bus driver; user-mode client library (ViGEmClient) creates virtual pads"
+      observe: none
+      do: "Create virtual Xbox 360 and DualShock 4 pads; send button and stick state"
+    shared_control: "Feeds one virtual pad, so an agent and a person can share one pad only through a merging layer (not on the page)"
+    multiplayer_presence: no
+    permissions: "Driver install needs admin"
+    official_or_community: community (project retired)
+    licence: BSD-3-Clause
+    last_release_or_commit: "archived by owner 2023-11-02 (read-only). Retired; no successor named on the repo page."
+    policy: "Not stated on the repo"
+    latency: unknown
+    sources:
+      - "https://github.com/nefarius/ViGEmBus (read: RETIRED, BSD-3-Clause, archived 2023-11-02, Windows 10/11 for 1.17+)"
+      - "https://github.com/fangscode/vigembus (search snippet only: no new features, moving to successor)"
+      - "https://github.com/Ryochan7/DS4Windows/discussions/3124 (search snippet only: names VirtualPad)"
+
+  - id: linux-uinput
+    name: "Linux uinput virtual input device"
+    kind: A
+    platform: "Linux (any game reading evdev or libinput)"
+    urls:
+      - "https://www.kernel.org/doc/html/latest/input/uinput.html"
+    connection:
+      protocol: "Write to /dev/uinput; ioctls UI_SET_EVBIT, UI_SET_KEYBIT, UI_SET_RELBIT, UI_DEV_SETUP, UI_DEV_CREATE; write input_event structs"
+      observe: none
+      do: "Keys, buttons (EV_KEY), relative axes (EV_REL), sync (EV_SYN). Gamepad axes and force feedback are not covered on the page."
+    shared_control: "A second process writing to a separate virtual device can share input; the kernel page does not describe merging"
+    multiplayer_presence: no (local device)
+    permissions: "Needs access to /dev/uinput (page does not state root or group)"
+    official_or_community: official kernel docs
+    licence: "unknown (kernel docs page read; licence not read)"
+    last_release_or_commit: "kernel docs page labelled 7.4.0-rc3"
+    policy: "Anti-cheat often treats synthetic input as cheating; not read for specific games"
+    latency: "No figures on page"
+    sources:
+      - "https://www.kernel.org/doc/html/latest/input/uinput.html (read: setup steps, event types, kernel version label)"
+
+  - id: steam-input
+    name: "Steam Input (virtual Xbox pad and API)"
+    kind: A
+    platform: "Windows, macOS, Linux (Steam)"
+    urls:
+      - "https://partner.steamgames.com/doc/features/steam_controller/steam_input_gamepad_emulation_bestpractices"
+      - "https://partner.steamgames.com/doc/api/isteaminput"
+    connection:
+      protocol: "Steam client maps controllers to actions; Steam Overlay injects an emulated Xbox device on Windows; ISteamInput API for games"
+      observe: "Controller action state through ISteamInput (for games)"
+      do: "Controller mapping in Steam (for players). The page does not say a third program can inject input through Steam."
+    shared_control: "Not documented as shared control"
+    multiplayer_presence: no
+    permissions: "Steam client"
+    official_or_community: official (Valve)
+    licence: "unknown (not read)"
+    last_release_or_commit: "not shown"
+    policy: "Steam best-practices page has no anti-cheat statement. Its index lists an Anti-cheat section (not read)."
+    latency: unknown
+    sources:
+      - "https://partner.steamgames.com/doc/features/steam_controller/steam_input_gamepad_emulation_bestpractices (read: Xbox emulation, Linux and macOS driver)"
+
+  - id: steam-remote-play-together
+    name: "Steam Remote Play Together (direct input API)"
+    kind: A
+    platform: "Steam (PC and Steam Link devices)"
+    urls:
+      - "https://partner.steamgames.com/doc/features/remoteplay"
+      - "https://partner.steamgames.com/doc/api/isteamremoteplay"
+    connection:
+      protocol: "Steamworks API ISteamRemotePlay; GetInput after BEnableRemotePlayTogetherDirectInput()"
+      observe: "Remote Play Together input from guests (mouse and keyboard can be separated or merged)"
+      do: "Invites via BSendRemotePlayTogetherInvite; session queries"
+    shared_control: "Yes at game level: remote players feed input into a session the developer enables"
+    multiplayer_presence: "Guests join as players; an agent would need a Steam account and a human-run client"
+    permissions: "Developer enables the feature per game"
+    official_or_community: official (Valve)
+    licence: "unknown (not read)"
+    last_release_or_commit: "not shown"
+    policy: "Not read on a rule page"
+    latency: "Not stated on the page"
+    sources:
+      - "https://partner.steamgames.com/doc/features/remoteplay (read: sessions, invitations, enabling)"
+      - "https://partner.steamgames.com/doc/features/steam_controller/steam_input_gamepad_emulation_bestpractices (search snippet: GetInput note)"
+
+  - id: xbox-controller-assist
+    name: "Xbox Controller Assist (formerly Copilot)"
+    kind: A
+    platform: "Xbox consoles and Windows PC with Xbox accessories"
+    urls:
+      - "https://news.xbox.com/en-us/2024/08/21/xbox-accessibility-adaptive-joystick-thumbstick-toppers/"
+      - "https://www.thegamer.com/xbox-series-x-copilot-mode-opens-accessibility-disabled-gamers/ (search snippet only)"
+    connection:
+      protocol: "Platform feature linking two controllers into one input (settings path from search snippet: Accessibility > Controller > Copilot)"
+      observe: none
+      do: "Second controller contributes input to the first's pad (pilot and copilot)"
+    shared_control: "yes, by design: person and helper share one character"
+    multiplayer_presence: no
+    permissions: "Set up in the console or PC accessories app"
+    official_or_community: official (Microsoft)
+    licence: "not applicable"
+    last_release_or_commit: "2024-08-21 article; Adaptive Joystick launch early 2025 per article"
+    policy: "Platform feature; achievements stay with the pilot (search snippet)"
+    latency: unknown
+    sources:
+      - "https://news.xbox.com/en-us/2024/08/21/xbox-accessibility-adaptive-joystick-thumbstick-toppers/ (read: Controller Assist link to Adaptive Joystick)"
+      - "https://support.xbox.com/en-US/help/account-profile/accessibility/controller-assist (fetch returned only page heading)"
+
+  - id: ps5-access-controller
+    name: "PlayStation Access controller"
+    kind: A
+    platform: "PS5"
+    urls:
+      - "https://www.playstation.com/en-us/accessories/access-controller/"
+    connection:
+      protocol: "Hardware controller paired to a PS5; 30 profiles configured in console settings; four 3.5 mm expansion ports"
+      observe: none
+      do: "Up to two Access controllers combined as one virtual controller, optionally with a DualSense or DualSense Edge"
+    shared_control: "Two Access controllers work together as one virtual controller, optionally with a DualSense (page); a second person's control is not described"
+    multiplayer_presence: no
+    permissions: "Set in PS5 settings. No third-party software API found."
+    official_or_community: official (Sony)
+    licence: "not applicable"
+    last_release_or_commit: "not shown"
+    policy: "not read"
+    latency: unknown
+    sources:
+      - "https://www.playstation.com/en-us/accessories/access-controller/ (read: profiles, ports, multi-controller)"
+
+  - id: retroarch-nci
+    name: "RetroArch Network Control Interface"
+    kind: A
+    platform: "RetroArch (emulated games across many cores)"
+    urls:
+      - "https://docs.libretro.com/development/retroarch/network-control-interface/"
+    connection:
+      protocol: "UDP text commands; default port 55355; enable with network_cmd_enable"
+      observe: "READ_CORE_MEMORY, GET_STATUS, GET_CONFIG_PARAM, VERSION"
+      do: "WRITE_CORE_MEMORY, SAVE_STATE, PAUSE_TOGGLE, FRAMEADVANCE, FAST_FORWARD_HOLD and other *_HOLD actions, SHOW_MSG. PRESS and RELEASE not documented."
+    shared_control: "Not documented; an agent can send commands while a person plays with a controller"
+    multiplayer_presence: no
+    permissions: "UDP; no authentication documented"
+    official_or_community: official (libretro)
+    licence: "not read"
+    last_release_or_commit: "not shown"
+    policy: "Writing memory disables RetroArch achievements hardcore mode (page)"
+    latency: "Not stated"
+    sources:
+      - "https://docs.libretro.com/development/retroarch/network-control-interface/ (read: port, commands, memory notes)"
+
+  - id: bizhawk
+    name: "BizHawk (multi-system emulator with Lua)"
+    kind: A
+    platform: "Windows (emulated consoles)"
+    urls:
+      - "https://github.com/TASEmulators/BizHawk"
+      - "https://docs.bizhawk.org/ (not reachable: DNS blocked)"
+    connection:
+      protocol: "Lua console and C#/.NET external tools; virtual pad input mapper; no network API found on the README"
+      observe: "Memory view, search and edit for hardware components (README)"
+      do: "Lua scripts can drive the emulator; the README lists a Virtual Pad tool for TAStudio"
+    shared_control: unknown
+    multiplayer_presence: no
+    permissions: "Local"
+    official_or_community: community
+    licence: "MIT for EmuHawk and DiscoHawk; other files not covered (README)"
+    last_release_or_commit: "not shown on the README read"
+    policy: "not read"
+    latency: unknown
+    sources:
+      - "https://github.com/TASEmulators/BizHawk (read: Lua and C#, Virtual Pad, MIT scope)"
+
+  - id: sunshine-moonlight
+    name: "Sunshine host and Moonlight client"
+    kind: A
+    platform: "PC host (Windows, Linux, macOS via broker) and Moonlight clients"
+    urls:
+      - "https://github.com/LizardByte/Sunshine"
+      - "https://github.com/moonlight-stream/moonlight-qt"
+    connection:
+      protocol: "Game streaming host with web UI for pairing; Moonlight client pairs with Sunshine or NVIDIA GameStream"
+      observe: "The stream of the host's game (video and audio) to the client"
+      do: "Gamepad emulation on the host (generic, DualShock, DualSense, Switch Pro, Xbox). Keyboard and mouse streaming not confirmed on the page read."
+    shared_control: "A remote person plays the host's game; an agent would need to sit where the client is"
+    multiplayer_presence: no
+    permissions: "Pairing via web UI; no REST API documented on the page read"
+    official_or_community: community (LizardByte)
+    licence: "GPL-3.0 for both (pages)"
+    last_release_or_commit: "not shown on the pages read"
+    policy: "not read"
+    latency: "Stated as low-latency on the page; no figures"
+    sources:
+      - "https://github.com/LizardByte/Sunshine (read: GPL-3.0, web UI, gamepad emulation table)"
+      - "https://github.com/moonlight-stream/moonlight-qt (read: pairs with Sunshine and GameStream, GPL-3.0)"
+
+  - id: autohotkey-send
+    name: "AutoHotkey (Send and SendPlay)"
+    kind: A
+    platform: "Windows"
+    urls:
+      - "https://www.autohotkey.com/docs/v2/lib/Send.htm"
+    connection:
+      protocol: "Scripting language; Send sends simulated keystrokes and mouse clicks to the active window; SendPlay as an alternative mode"
+      observe: "none (window and key hooks not read)"
+      do: "Keys, key holds with {Key down} and {Key up}, mouse clicks"
+    shared_control: "Yes in a loose sense: a script can add inputs while a person plays"
+    multiplayer_presence: no
+    permissions: "Local"
+    official_or_community: community
+    licence: "unknown (not read on this page)"
+    last_release_or_commit: "not read"
+    policy: "Macros are banned in many games; see policy_notes (Ubisoft, Bungie)"
+    latency: "SetKeyDelay controls press duration; Text mode ignores it (page)"
+    sources:
+      - "https://www.autohotkey.com/docs/v2/lib/Send.htm (read: Send behaviour, SendPlay for unusual input, key timing)"
+
+  - id: cradle-gcc
+    name: "Cradle (General Computer Control agent)"
+    kind: A
+    platform: "Red Dead Redemption 2, Stardew Valley, Cities: Skylines, Dealer's Life 2 and other software (per README)"
+    urls:
+      - "https://github.com/BAAI-Agents/Cradle"
+      - "https://iclr.cc/virtual/2024/22162"
+      - "https://proceedings.mlr.press/v267/tan25h.html"
+    connection:
+      protocol: "Screenshots in; keyboard and mouse actions out via executable code; uses OpenAI or Claude API keys (README)"
+      observe: "Screen frames (and optional audio, per paper)"
+      do: "Keyboard and mouse input, including game menus and missions"
+    shared_control: no (agent drives the same input a person would)
+    multiplayer_presence: no
+    permissions: "Local; model API keys in .env"
+    official_or_community: research (BAAI-Agents)
+    licence: MIT
+    last_release_or_commit: "README shows 35 commits; latest dated item 2024-06-27"
+    policy: "Game ToS not read. Multiplayer or anti-cheat titles not in the list."
+    latency: "Paper describes slow reasoning steps; no figures read"
+    sources:
+      - "https://github.com/BAAI-Agents/Cradle (read: games, MIT, model API dependency, dates)"
+      - "https://arxiv.org/abs/2403.03186v1 (search snippet: GCC setting, six modules)"
+
+  - id: nitrogen
+    name: "NitroGen (gaming foundation model)"
+    kind: A
+    platform: "Games in a multi-game benchmark environment (per abstract)"
+    urls:
+      - "https://arxiv.org/abs/2601.02427"
+    connection:
+      protocol: "Vision-action model: frames in, actions out; training data from gameplay videos with controller overlays"
+      observe: "Frames"
+      do: "Actions (gamepad action per search snippet; execution method not confirmed)"
+    shared_control: unknown
+    multiplayer_presence: no
+    permissions: "Research weights; release status claimed by authors"
+    official_or_community: "research (authors not confirmed from a page read)"
+    licence: "paper CC BY-SA 4.0 (arXiv listing); code and weights licence unknown"
+    last_release_or_commit: "not reported"
+    policy: "Not read"
+    latency: "not reported"
+    sources:
+      - "https://arxiv.org/abs/2601.02427 (read: model description, licence of paper; no input or latency detail)"
+
+  - id: videogamebench
+    name: "VideoGameBench"
+    kind: A
+    platform: "Game Boy (PyBoy), MS-DOS (JS-DOS), browser games"
+    urls:
+      - "https://github.com/alexzhang13/VideoGameBench"
+    connection:
+      protocol: "Screenshots and prompt.txt per step to a vision-language model; emulator control; real-time and --lite (pause while thinking) modes"
+      observe: "Frames (screenshots each step)"
+      do: "Mouse clicks at screen positions for PC games; button names for Game Boy not read"
+    shared_control: no
+    multiplayer_presence: no
+    permissions: "User must own the games"
+    official_or_community: research benchmark
+    licence: MIT (codebase; games not included)
+    last_release_or_commit: "not shown; 24 commits"
+    policy: "Games must be legally owned (page)"
+    latency: "Real-time mode runs model calls async; Lite pauses the game (page)"
+    sources:
+      - "https://github.com/alexzhang13/VideoGameBench (read: platforms, modes, MIT, ownership note)"
+
+policy_notes:
+  - who: Ubisoft (Rainbow Six Siege)
+    quote: 'Using adapters or devices to run macros, rapid-fire scripts, or automation; Using bots, scripts, or automation to mimic player behavior and farm XP or resources' 
+    source: ubisoft.com player protection core rules (read by the researcher; not re-checked)
+  - who: Bungie (Destiny 2)
+    quote: "programmable controllers, keyboard and mouse adapters, advanced macros, or automation via artificial intelligence"
+    source: Kotaku, 2023-04-14, reporting Bungie's policy (secondary); applies in PvE too

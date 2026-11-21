@@ -1,0 +1,732 @@
+title: "Interfaces for an AI game master on a running multiplayer game or world"
+as_of: "2026-11-21"
+method: >
+  Each entry was built from pages read in this session (WebFetch) or from search result snippets
+  (WebSearch). Facts from snippets are marked "(snippet)". Pages that returned 403, 404 or 503 are
+  named in gaps. Nothing was downloaded or run. "unknown" means no page read answered the question.
+
+gaps:
+  - "Roll20 Help Center (help.roll20.net API article) and wiki.roll20.net/API:Dev returned 403 on fetch; the Pro-subscription rule for Roll20 comes from community forum snippets, not an official page."
+  - "Owlbear Rodeo docs (docs.owlbear.rodeo/extensions) returned 403; the SDK README says the communication model and read/write capabilities are documented there, which I could not read."
+  - "Roblox MessagingService page returned 404; Roblox Open Cloud overview fetched but does not list MessagingService, Universes or Luau execution as claimed in the brief. Server-script facts come from a Creator Hub search snippet."
+  - "Resonite host-permissions wiki page returned 404; ResoniteLink docs say the library is beta and that breaking changes are possible, but do not say what clients can read or write."
+  - "VRChat Udon docs page (docs.vrchat.com/docs/udon) returned 404; Udon facts come from creators.vrchat.com search snippets and feedback posts."
+  - "wiki.vg Minecraft RCON page returned 503. Minecraft RCON setup facts come only from MCP-server README snippets (enable-rcon, port 25575)."
+  - "Factorio RCON protocol details (wire format, command set) are not on any page read; only the flags --rcon-port, --rcon-bind and --rcon-password are confirmed from the command-line parameters page."
+  - "Garry's Mod: the official site fetched did not describe Lua, server or Workshop scripting. Server-side Lua facts (RunConsoleCommand, blocked ConCommands) come from wiki search snippets. The Lua function reference pages were not fetched."
+  - "Minecraft Paper plugin API: docs.papermc.io index fetched; the Entity API subpage returned 404. Plugin-loading and player/world API details are unknown from fetched pages. Licence for Paper is not stated on any page read."
+  - "Fabric: fabricmc.net/about returned 404. Licence facts (Apache-2.0 for Loader and API, CC0 for Yarn) come from search snippets only."
+  - "Valheim, Rust, ARK, 7 Days to Die, Project Zomboid, Vintage Story, Space Engineers (Torch), Conan Exiles: no primary developer or modding-API page was read. Command and plugin facts come from hosting-provider guides or search snippets."
+  - "Arma 3 Zeus: command reference pages (addCuratorEditableObjects, BIS_fnc_curatorObjectRegisteredTable, spawn functions) were not read; the Steam forum usage was reported as not working by its poster."
+  - "Godot and Unreal: official pages were seen only as search snippets. Unity was not searched."
+  - "Licences are unknown for most entries because the licence line was not on a page read. Last-release or last-commit dates are unknown for most entries; GitHub pages often showed commit counts without dates."
+  - "Existing LLM game-master projects were searched for Minecraft, Foundry, Factorio, Garry's Mod, Rust, and Evennia. Other games were not searched for existing AI projects, so existing_ai_gm there is unknown rather than none."
+  - "No platform's terms of service were read for hosting or modding rules except where stated in the entry."
+  - "The catalog directory already held control_interfaces.yaml, game_envs.yaml, npc_mods.yaml and spotcheck.md from an earlier pass. They were not read or changed."
+
+summary:
+  easiest_first_gm_prototype:
+    pick: "minecraft-gamemastermc"
+    why: "Apache-2.0 Paper/Bukkit plugin that already lets an OpenAI-compatible model read live state and run admin actions. Read on its Modrinth page. The RCON route (minecraft-rcon-mcp) is an alternative that needs no plugin install, but has a narrower verified action set."
+  richest_action_set:
+    pick: "minecraft-gamemastermc"
+    why: "Its Modrinth page lists player management, gamemode, give, teleport, heal, spawn and remove entities, block edits, weather, logs, plugins and console commands, with owner toggles. Foundry VTT (client API, GM-level) is a richer data model but its action surface was not read on a page."
+  already_has_ai_or_mcp:
+    - "minecraft-gamemastermc (plugin, AI admin actions)"
+    - "minecraft-rcon-mcp (MCP over RCON, MIT)"
+    - "foundry-vtt (Familiar MCP, adambdooley MCP bridge; snippets)"
+    - "factorio-learning-environment (LLM agent framework, not a GM)"
+    - "garrys-mod-lua (GTerm MCP, snippet)"
+    - "evennia (LLM chat-bot contrib, mentioned on docs index)"
+
+entries:
+
+  - id: minecraft-paper-plugin-api
+    name: "Paper / Bukkit / Spigot plugin API"
+    urls:
+      - "https://docs.papermc.io/paper/dev/api"
+    game_or_platform: "Minecraft Java Edition, dedicated server (Paper)"
+    read_state: "Index page only. Lists Event API (listeners, custom events, chat events), Entity API (teleportation, display entities, mob goals, pathfinder), Command API, Inventories, Persistent data containers, Scheduling. Player and world-read details are unknown from the page read."
+    actions: "Teleport and spawn entities, add display entities, set mob goals (per index listing). Other actions unknown from pages read."
+    connection: "In-process Java plugin loaded by the server (plugin API)."
+    auth_and_permissions: "Server operator installs the plugin in the server's plugin folder (unknown from page read, general knowledge not used). In-game commands use Paper's command API."
+    multiplayer: "Dedicated server. Player count not stated on page read."
+    licence: "unknown (page states no licence; copyright notice only)"
+    activity: "Docs page 'Last updated Apr 22, 2025' (page footer); copyright 2026."
+    existing_ai_gm: "See minecraft-gamemastermc (Bukkit/Paper plugin)."
+    tos_notes: "Page says it is not an official Minecraft website and gives a disclaimer."
+    notes: "Paper plugin loading and the Experimental 'Paper plugins' system are linked but not read. Dialog API introduced in 1.21.7 (page)."
+    sources:
+      - "https://docs.papermc.io/paper/dev/api (read)"
+
+  - id: minecraft-rcon
+    name: "Minecraft Java RCON (server console over TCP)"
+    urls:
+      - "https://wiki.vg/RCON (503, not read)"
+      - "https://github.com/scotteratigan/minecraft-rcon-mcp"
+    game_or_platform: "Minecraft Java Edition, dedicated server"
+    read_state: "No direct read. Output of 'list' and similar commands comes back as the RCON response (per MCP server README)."
+    actions: "Any server console command, as run by the RCON client (scotteratigan README says run_command runs any server command over RCON)."
+    connection: "RCON (wire protocol not read; wiki.vg returned 503). Configured via server.properties per MCP README snippets."
+    auth_and_permissions: "Server owner sets enable-rcon, rcon.password and rcon.port in server.properties (snippet: Peterson MCP README, port 25575). Whoever holds the password has full console power."
+    multiplayer: "Dedicated server."
+    licence: "n/a (protocol)"
+    activity: "unknown"
+    existing_ai_gm: "Several MCP servers wrap RCON (see minecraft-rcon-mcp; Peterson, rgbkrk and Railway templates are snippets in leads)."
+    tos_notes: "unknown"
+    notes: "Full RCON access is all-or-nothing. Command set is whatever the server accepts."
+    sources:
+      - "https://github.com/scotteratigan/minecraft-rcon-mcp (read)"
+      - "https://glama.ai/mcp/servers/@Peterson047/Minecraft-MCP-Server (snippet)"
+
+  - id: minecraft-gamemastermc
+    name: "GameMasterMC (AI game master plugin)"
+    urls:
+      - "https://modrinth.com/mod/gamemastermc"
+    game_or_platform: "Minecraft Java Edition, Bukkit and Paper, 1.21.x"
+    read_state: "Model reads server state through its admin tools (the Modrinth page lists inspect logs and list plugins; the 'live server state' wording is from a search snippet)."
+    actions: "Manage players, change gamemodes, give items, teleport players, heal or feed, spawn or remove entities, edit blocks, change weather, inspect logs, list plugins, run console commands. Owners can enable or disable each action and restrict console-level commands."
+    connection: "Plugin; calls any OpenAI-compatible chat-completions API (hosted, private gateway or local model server) (Modrinth page)."
+    auth_and_permissions: "Server owner installs the plugin and sets which AI actions are enabled. Model cannot exceed the enabled action set (page says owners can restrict)."
+    multiplayer: "Dedicated server (plugin). Player count not stated."
+    licence: "Apache-2.0 (Modrinth page)"
+    activity: "Modrinth shows 'Updated 7 months ago' (relative; no calendar date)."
+    existing_ai_gm: "Is itself an AI game-master plugin; the page describes it as an admin/control tool, not a storyteller."
+    tos_notes: "unknown"
+    notes: "Strongest verified action set among Minecraft entries. Model-agnostic. Admin-style, so narrative behaviour is the builder's job."
+    sources:
+      - "https://modrinth.com/mod/gamemastermc (read)"
+
+  - id: minecraft-rcon-mcp
+    name: "minecraft-rcon-mcp (scotteratigan)"
+    urls:
+      - "https://github.com/scotteratigan/minecraft-rcon-mcp"
+    game_or_platform: "Minecraft Java Edition, dedicated server"
+    read_state: "get_ai_chat_status (listener health, history size, model, memory config); run_command returns RCON output; scripts can query world state ('inspect or modify the live world' per README)."
+    actions: "run_command (any server command via RCON); remember (appends a note to a memory file, scopes server or capability); list_scripts and run_script (bundled Python toolbox incl. structure builders and world queries). README says the world can be modified. Kick, teleport and give are not named on the page; they would go through run_command but this is unverified."
+    connection: "MCP server (Python 3.14+) over RCON; optional in-game chat agent."
+    auth_and_permissions: "RCON password must match the server's; owner enables enable-rcon on the server. Anthropic API key only for the in-game chat feature (README)."
+    multiplayer: "Dedicated Java server. Player count not stated."
+    licence: "MIT"
+    activity: "unknown (16 commits shown, no dates)"
+    existing_ai_gm: "Has an in-game AI chat agent (Claude) that players can talk to; it is the closest existing 'LLM in the world' MCP for Minecraft."
+    tos_notes: "unknown"
+    notes: "Good for a fast prototype: the agent gets console plus a script toolbox with no plugin install."
+    sources:
+      - "https://github.com/scotteratigan/minecraft-rcon-mcp (read)"
+
+  - id: minecraft-fabric-server-mods
+    name: "Fabric (mod loader and Fabric API)"
+    urls:
+      - "https://fabricmc.net/about/ (404, not read)"
+      - "https://github.com/FabricMC/fabric-loader (snippet)"
+      - "https://modrinth.com/mod/fabric-api (snippet)"
+    game_or_platform: "Minecraft Java Edition, mod loader (Fabric)"
+    read_state: "unknown from pages read (Fabric API hooks not read)."
+    actions: "unknown from pages read."
+    connection: "Mods loaded by Fabric Loader (Java); server-side mechanics not read on a page."
+    auth_and_permissions: "Server owner installs mods on the server."
+    multiplayer: "unknown (dedicated-server support for mods not read)."
+    licence: "Apache-2.0 for Fabric Loader and Fabric API; Yarn mappings CC0 (snippet: search results; not read from the official pages)."
+    activity: "unknown"
+    existing_ai_gm: "unknown (no Fabric AI GM was read)."
+    tos_notes: "Third-party mods have different licences (snippet: LGPL-3.0-only, MIT, CC-BY-NC-SA-4.0 examples)."
+    notes: "Included as the platform under which a server-side GM mod would sit. Verify before use: no page for Fabric's hooks was read."
+    sources:
+      - "Search snippets only (WebSearch: Fabric licence)."
+
+  - id: factorio-runtime-lua
+    name: "Factorio runtime Lua API (mods and scenarios)"
+    urls:
+      - "https://lua-api.factorio.com/latest/"
+    game_or_platform: "Factorio (headless or client)"
+    read_state: "Event-driven runtime; mods react to fired events and reach game objects through classes. Exact surfaces, entities, players and events are on subpages not read."
+    actions: "unknown from pages read (page says the runtime allows interaction with the world 'in a number of ways')."
+    connection: "Lua mod inside the game; modified Lua 5.2 (page)."
+    auth_and_permissions: "Mods loaded by the server's mod set; admin status (for commands) is granted by the server admin list."
+    multiplayer: "Multiplayer server supported; player count not stated on page read."
+    licence: "unknown"
+    activity: "Runtime API version 2.1.25 shown on page."
+    existing_ai_gm: "See factorio-learning-environment (LLM agent, not a GM)."
+    tos_notes: "unknown"
+    notes: "Scenario-script entity creation and io/os restrictions not on the page read."
+    sources:
+      - "https://lua-api.factorio.com/latest/ (read)"
+
+  - id: factorio-headless-rcon-admin
+    name: "Factorio headless server: RCON flags, console and admin list"
+    urls:
+      - "https://wiki.factorio.com/command_line_parameters"
+      - "https://wiki.factorio.com/Console"
+      - "https://wiki.factorio.com/Multiplayer"
+    game_or_platform: "Factorio dedicated (headless) server"
+    read_state: "Players and admin status via console commands; server-settings.json and server-adminlist.json on disk. Live state beyond that is not on pages read."
+    actions: "Admin commands from the Console page: /kick, /ban, /unban, /mute, /unmute, /purge, /config get/set (e.g. max-players, password), /server-save, /promote, /demote, /permissions groups, /open <player>, /swap-players. Server console only: /save <name>, /quit."
+    connection: "RCON: --rcon-port N, --rcon-bind ADDRESS:PORT, --rcon-password PASSWORD (command-line page). Console on the server process. server-adminlist.json holds admin usernames."
+    auth_and_permissions: "Admins listed in server-adminlist.json or promoted in game; /promote and /demote are admin-only."
+    multiplayer: "Headless dedicated server; max_players 0 means no limit (Multiplayer page)."
+    licence: "unknown"
+    activity: "unknown"
+    existing_ai_gm: "factorio-learning-environment (LLM agent; RCON/Lua route not confirmed on its page)."
+    tos_notes: "unknown"
+    notes: "Command set above is admin-level; spawn, weather and event commands were not in the pages read. Factorio RCON wire protocol not read."
+    sources:
+      - "https://wiki.factorio.com/command_line_parameters (read)"
+      - "https://wiki.factorio.com/Console (read)"
+      - "https://wiki.factorio.com/Multiplayer (read)"
+
+  - id: factorio-learning-environment
+    name: "Factorio Learning Environment (LLM agent framework)"
+    urls:
+      - "https://github.com/JackHopkins/factorio-learning-environment"
+    game_or_platform: "Factorio"
+    read_state: "Agent sees environment output as an output stream from executed code (page)."
+    actions: "Agent writes a Python program each step; environment executes it and adds classes and functions to its namespace (page). Exact action list not on page."
+    connection: "REPL-style code synthesis (page). Underlying game link (RCON, Lua) not stated on page read."
+    auth_and_permissions: "unknown"
+    multiplayer: "unknown"
+    licence: "LICENSE file linked; type not named on page"
+    activity: "887 commits shown; no date."
+    existing_ai_gm: "Not a GM; an agent-training environment for building factories."
+    tos_notes: "unknown"
+    notes: "Relevant as an existing LLM-in-game pattern (code synthesis). Does not show spawn or world-change capability on page read."
+    sources:
+      - "https://github.com/JackHopkins/factorio-learning-environment (read)"
+
+  - id: garrys-mod-lua
+    name: "Garry's Mod server Lua (with GTerm MCP console)"
+    urls:
+      - "https://gmod.facepunch.com/ (read: no scripting detail)"
+      - "https://wiki.facepunch.com/gmod/Global.RunConsoleCommand (snippet)"
+      - "https://github.com/Earu/GTerm (snippet)"
+    game_or_platform: "Garry's Mod (Source engine sandbox, Steam)"
+    read_state: "Server Lua can read players, entities and timers (libraries named in the wiki, snippet only). GTerm MCP exposes run_gmod_command and list_gmod_directory (snippet)."
+    actions: "RunConsoleCommand runs a console command (server side or client side). Blocked commands fail with 'Command is blocked' (wiki snippet). GTerm: run any console command, browse server files (snippet)."
+    connection: "Lua addon on the server; GTerm uses an xconsole add-on and an MCP server with websocket (snippet)."
+    auth_and_permissions: "Server owner installs addons and GTerm (requires MCP enabled in its config and an optional secret, snippet). Blocked ConCommands list limits what RunConsoleCommand can do."
+    multiplayer: "Dedicated server (GTerm and snippets). Player count and listen-server support not stated on pages read."
+    licence: "unknown"
+    activity: "Wiki snippet: Player:RunConsoleCommand listed as added in 2026.10.26, possibly Dev branch (snippet; may be stale)."
+    existing_ai_gm: "GTerm MCP and gmod-mcp projects (beekamai, TheRolists) exist (snippet). No AI GM found."
+    tos_notes: "Official site fetched did not describe modding rules; Steam Workshop terms not read."
+    notes: "The wiki warns that RunConsoleCommand input from clients should not be passed straight through (snippet). Relevant for an agent that receives player chat."
+    sources:
+      - "https://gmod.facepunch.com/ (read)"
+      - "WebSearch snippets: wiki.facepunch.com RunConsoleCommand; github.com/Earu/GTerm"
+
+  - id: valheim-bepinex-admin
+    name: "Valheim dedicated server: admin commands, BepInEx and Valheim Plus"
+    urls:
+      - "https://nodecraft.com/support/games/valheim/setup/enable-all-admin-commands-on-a-valheim-server (snippet)"
+      - "https://nodecraft.com/support/games/valheim/adding-plugins-to-your-valheim-server-using-bepinex (snippet)"
+      - "https://thunderstore.io/c/valheim/p/sighsorry/ServerManager/v/1.2.2/ (snippet)"
+    game_or_platform: "Valheim dedicated server (Steam)"
+    read_state: "Admin list in adminlist.txt (Platform User ID); save and world key commands (IONOS, snippet). No API for reading state found."
+    actions: "Kick, ban (sources disagree on whether ban is permanent), save, set and reset world keys, world modifiers, cheat-style item commands only with devcommands mod (snippet)."
+    connection: "In-game console (-console launch option, F5 per Shockbyte snippet); BepInEx plugins (.dll) in server plugins folder."
+    auth_and_permissions: "Admins listed by Platform User ID in adminlist.txt. Devcommands plugin needed for cheat commands (snippet). Being an admin does not unlock devcommands (Nodecraft snippet)."
+    multiplayer: "Dedicated server; player count unknown."
+    licence: "unknown"
+    activity: "unknown"
+    existing_ai_gm: "unknown (not searched)."
+    tos_notes: "unknown; no official modding docs were found in search."
+    notes: "Official Valheim docs and BepInEx docs were not read. Conflicting ban behaviour across sources."
+    sources:
+      - "WebSearch snippets only (Valheim admin commands; BepInEx and Valheim Plus)."
+
+  - id: rust-carbon-oxide
+    name: "Rust server: WebRCON, Oxide and Carbon plugin frameworks"
+    urls:
+      - "https://wiki.facepunch.com/rust/Carbon (snippet)"
+      - "https://facepunch.github.io/webrcon (snippet)"
+      - "https://github.com/NickRimmer/RustApi (snippet)"
+    game_or_platform: "Rust dedicated server (Facepunch)"
+    read_state: "WebRCON console output; RustApi (community) adds a JSON web API with permission-limited access (snippet)."
+    actions: "Plugin commands: oxide.load, oxide.unload, oxide.reload, oxide.grant, oxide.revoke; Carbon hot-reloads Harmony plugins (snippet)."
+    connection: "WebSocket WebRCON (not Source RCON) (snippet: LinuxGSM and hosting guides; Facepunch wiki for Carbon). Plugins in C#."
+    auth_and_permissions: "RCON gives full access; RustApi gives limited access by permission (snippet). Owner changes need server.writecfg to persist (snippet)."
+    multiplayer: "Dedicated server; player count not stated on pages read."
+    licence: "unknown"
+    activity: "unknown"
+    existing_ai_gm: "None found in search."
+    tos_notes: "unknown"
+    notes: "Carbon is documented as Oxide-compatible (snippet). Most command details come from hosting-provider guides."
+    sources:
+      - "WebSearch snippets only (Rust Oxide, Carbon, WebRCON)."
+
+  - id: ark-serverapi
+    name: "ARK: Survival Evolved ArkServerAPI and RCON tools"
+    urls:
+      - "https://github.com/ServersHub (snippet)"
+      - "https://ark-server-api.com/resources/x-adminlink.422/ (snippet)"
+      - "https://docs.tip4serv.com/games/ark-survival-evolved (snippet)"
+    game_or_platform: "ARK: Survival Evolved (Windows) and ARK: Survival Ascended (ASA Server API)"
+    read_state: "RCON and plugin queries; ARKon and BattleMetrics RCON tool show player lists and chat (snippet)."
+    actions: "Plugin commands such as GiveItem, which Tip4Serv says RCON cannot run (snippet)."
+    connection: "RCON; ArkServerAPI C# plugin framework (snippet)."
+    auth_and_permissions: "RCON password or in-game admin; BattleMetrics offers per-admin permissions so the RCON password is not shared (snippet)."
+    multiplayer: "Dedicated server; player count not stated."
+    licence: "unknown (ArkServerAPI described as open source; licence not read)."
+    activity: "unknown"
+    existing_ai_gm: "None found."
+    tos_notes: "unknown"
+    notes: "Two generations (ARK and ASA) with different server APIs; confirm target before use."
+    sources:
+      - "WebSearch snippets only (ArkServerAPI, RCON tools)."
+
+  - id: seven-days-to-die
+    name: "7 Days to Die: telnet, web console and web API mods"
+    urls:
+      - "https://7d2d.net/7-days-to-die-server-commands/ (snippet)"
+      - "https://github.com/1249993110/7DaysToDie-ServerKit (snippet)"
+    game_or_platform: "7 Days to Die dedicated server"
+    read_state: "Command output over telnet or web console; ServerKit provides RESTful APIs and a web panel (snippet)."
+    actions: "Server console commands (per 7d2d.net command reference, V3.3/V3.4 per snippet). Exact spawn or weather commands not read."
+    connection: "Telnet (TelnetEnabled in serverconfig.xml, snippet), built-in web console, community mod web APIs (ServerKit, Allocs mod, snippet)."
+    auth_and_permissions: "Telnet password grants admin-level access (snippet)."
+    multiplayer: "Dedicated server; player count not stated."
+    licence: "unknown"
+    activity: "7d2d.net says it was checked against V3.4 stable (snippet)."
+    existing_ai_gm: "None found."
+    tos_notes: "unknown"
+    notes: "ServerKit default admin credentials are documented in its README (snippet); change them."
+    sources:
+      - "WebSearch snippets only."
+
+  - id: project-zomboid
+    name: "Project Zomboid: server admin commands and Lua reload"
+    urls:
+      - "https://pzwiki.net/wiki/Admin_commands (snippet)"
+    game_or_platform: "Project Zomboid dedicated server"
+    read_state: "Command output in console or chat; sendpulse sends performance info (snippet)."
+    actions: "Admin commands such as /quit (save and quit), /reloadoptions, /reloadlua and /reloadalllua (snippet). Other spawn and teleport commands not read."
+    connection: "Server console or in-game slash commands (snippet)."
+    auth_and_permissions: "Admin levels: admin, moderator, overseer, gm, observer (snippet). Sources disagree on the grant syntax."
+    multiplayer: "Dedicated server; player count not stated."
+    licence: "unknown"
+    activity: "unknown"
+    existing_ai_gm: "None found (not searched)."
+    tos_notes: "unknown"
+    notes: "Lua modding API not read; the search returned no official Lua docs."
+    sources:
+      - "WebSearch snippets only."
+
+  - id: vintage-story
+    name: "Vintage Story: serverconfig.json, /serverconfig and roles"
+    urls:
+      - "https://wiki.vintagestory.at/index.php/Server_Config (snippet)"
+      - "https://wiki.vintagestory.at/index.php/Serverconfig (snippet)"
+    game_or_platform: "Vintage Story dedicated server"
+    read_state: "serverconfig.json; in-game /serverconfig command (snippet)."
+    actions: "Change settings live through /serverconfig (snippet). Roles array controls permissions and land-claim limits (snippet)."
+    connection: "In-game commands and the config file (snippet). Mod API not found."
+    auth_and_permissions: "Roles in serverconfig.json (snippet)."
+    multiplayer: "Dedicated server; player count not stated."
+    licence: "unknown"
+    activity: "unknown"
+    existing_ai_gm: "None found."
+    tos_notes: "unknown"
+    notes: "Mod API not found in the search; treat as a gap, not as absent."
+    sources:
+      - "WebSearch snippets only."
+
+  - id: space-engineers-torch
+    name: "Space Engineers dedicated server: Torch plugins and SEWebAPI"
+    urls:
+      - "https://github.com/TorchAPI/Torch (snippet)"
+      - "https://github.com/TorchAPI/Essentials (snippet)"
+      - "https://github.com/Jimmacle/SEWebAPI (snippet)"
+    game_or_platform: "Space Engineers dedicated server"
+    read_state: "SEWebAPI exposes grids over a RESTful HTTP interface (snippet). Torch admin utilities (snippet)."
+    actions: "Torch plugins for admin tools (Essentials, snippet). Grid control through SEWebAPI (snippet)."
+    connection: "Torch (server plugin host, snippet); RESTful HTTP for SEWebAPI (snippet); official server plugin support noted on SE wiki (snippet)."
+    auth_and_permissions: "Torch.cfg lists plugin GUIDs (snippet)."
+    multiplayer: "Dedicated server; player count not stated."
+    licence: "unknown"
+    activity: "Snippet: check plugin compatibility after each game update."
+    existing_ai_gm: "None found."
+    tos_notes: "unknown"
+    notes: "Torch developer API docs not found in search."
+    sources:
+      - "WebSearch snippets only."
+
+  - id: terraria-tshock
+    name: "Terraria: TSAPI and TShock"
+    urls:
+      - "https://github.com/Pryaxis/TSAPI"
+      - "https://github.com/Pryaxis/TShock"
+    game_or_platform: "Terraria dedicated server (TShock)"
+    read_state: "TSAPI 'Direct access to all methods inside Terraria Server itself' and hooks for the most used events (TSAPI README)."
+    actions: "Through hooks and direct method access (TSAPI README). TShock toolbox: groups, permissions, item bans, server-side characters, anti-cheat (TShock README)."
+    connection: "Plugins placed in the ServerPlugins folder and run by TSAPI (TSAPI README). Language of plugins not stated on page read."
+    auth_and_permissions: "TShock groups and permissions (TShock README). Operator sets them."
+    multiplayer: "Dedicated server; player count not stated."
+    licence: "GPL-3.0 (both TSAPI and TShock repos)"
+    activity: "Release and commit dates not shown on either page read (Releases empty)."
+    existing_ai_gm: "None found."
+    tos_notes: "unknown"
+    notes: "TShock docs for plugin developers are stated as work in progress (README). A separate REST API reference is outdated (snippet)."
+    sources:
+      - "https://github.com/Pryaxis/TSAPI (read)"
+      - "https://github.com/Pryaxis/TShock (read)"
+
+  - id: roll20-api-sandbox
+    name: "Roll20 API sandbox (Roll20 Mods)"
+    urls:
+      - "https://github.com/Roll20/roll20-api-scripts"
+      - "https://wiki.roll20.net/API:Dev (403, not read)"
+      - "https://help.roll20.net/hc/en-us/articles/360037256714-API-Scripts (403, not read)"
+    game_or_platform: "Roll20 virtual tabletop (browser)"
+    read_state: "Scripts access campaign objects and chat (API:Dev, not read). script.json 'modifies' lists the objects a script reads and writes (repo README)."
+    actions: "Unknown from pages read; the repo README says to avoid aggressive object manipulation where possible."
+    connection: "Server-side API sandbox script (exact sandbox details not read)."
+    auth_and_permissions: "Pro subscription needed by the game creator to run API scripts (community forum snippets; official help article not read). Plus is not enough (forum staff replies, snippet)."
+    multiplayer: "Hosted tabletop; player count not stated."
+    licence: "MIT for the community scripts repo (repo README)."
+    activity: "unknown"
+    existing_ai_gm: "None found."
+    tos_notes: "Forum staff reply snippet: a Pro friend can promote you to GM in their game; staff said that does not violate terms."
+    notes: "Official pages returned 403; treat the Pro rule as needing confirmation against the help article."
+    sources:
+      - "https://github.com/Roll20/roll20-api-scripts (read)"
+      - "WebSearch snippets (Roll20 forum and wiki)"
+
+  - id: foundry-vtt
+    name: "Foundry Virtual Tabletop (client JS API, hooks, MCP modules)"
+    urls:
+      - "https://foundryvtt.com/api/"
+      - "https://foundryvtt.com/packages/foundry-api-bridge (snippet)"
+      - "https://glama.ai/mcp/servers/Gnuminator/Foundry-VTT-MCP (snippet)"
+    game_or_platform: "Foundry Virtual Tabletop, version 14"
+    read_state: "Documents and data, canvas layers and placeables, Roll class, via the client API (page). Hooks are the main extension point (page)."
+    actions: "Create or update documents and placeables, roll dice, UI apps (client API, page). Server-side API not public (page says dist and node_modules are for the server, not for developers)."
+    connection: "Client-side JavaScript module (page). MCP bridges run as a module plus external server (snippets)."
+    auth_and_permissions: "A GM (Game Master) user runs the world; MCP bridges like adambdooley's are GM-only (snippet)."
+    multiplayer: "Table size not stated; a GM plus players in the same world."
+    licence: "Documentation: '© 2026 Foundry Gaming LLC. All Rights Reserved' (page). Community MCP bridges: adambdooley MIT (snippet)."
+    activity: "Foundry 14.370 Stable shown on API page."
+    existing_ai_gm: "Familiar MCP Server: AI co-pilot for Foundry (193 tools, v13 and v14, snippet). Foundry MCP Bridge (adambdooley, MIT, 75 tools, snippet). Foundry API Bridge (snippet). foundry-browser-mcp (snippet)."
+    tos_notes: "unknown"
+    notes: "Best existing MCP coverage for a tabletop GM. The client-only API means bridges run through a logged-in GM browser or a module."
+    sources:
+      - "https://foundryvtt.com/api/ (read)"
+      - "WebSearch snippets (Foundry MCP projects)"
+
+  - id: owlbear-rodeo-sdk
+    name: "Owlbear Rodeo extensions (SDK)"
+    urls:
+      - "https://github.com/owlbear-rodeo/sdk"
+      - "https://docs.owlbear.rodeo/extensions/ (403, not read)"
+    game_or_platform: "Owlbear Rodeo (browser virtual tabletop)"
+    read_state: "unknown (the SDK README points to docs for read capabilities)."
+    actions: "unknown (the SDK README points to docs for write capabilities)."
+    connection: "npm package @owlbear-rodeo/sdk (README). Communication model not stated on page read."
+    auth_and_permissions: "unknown"
+    multiplayer: "Browser app with rooms; player count not stated."
+    licence: "MIT (SDK README)."
+    activity: "Copyright 2023 on README page; no release date read."
+    existing_ai_gm: "None found (not searched)."
+    tos_notes: "unknown"
+    notes: "Only the README was read; the capability answer is a gap."
+    sources:
+      - "https://github.com/owlbear-rodeo/sdk (read)"
+
+  - id: evennia-mud
+    name: "Evennia (Python MU* framework)"
+    urls:
+      - "https://www.evennia.com/docs/latest/index.html"
+    game_or_platform: "Text MUD / MU* server (Python)"
+    read_state: "Typeclasses, scripts, commands and the message path (docs index). Read depends on code the developer writes."
+    actions: "Commands and command sets, scripts and typeclasses, timers via TickerHandler (docs index). Full action set is what the developer codes."
+    connection: "Portal and Server processes (docs index). Telnet and web client are typical but not read on pages."
+    auth_and_permissions: "Admin accounts with Evennia permission levels (not read)."
+    multiplayer: "Multi-user MUD server by design (docs)."
+    licence: "unknown (page links to licensing FAQ, not read)."
+    activity: "Latest released version 6.0.0 (docs index)."
+    existing_ai_gm: "Docs index mention an optional LLM 'Chat-bot AI' contrib under rpg, with an llm entry (docs index)."
+    tos_notes: "unknown"
+    notes: "The most code-native option here: a GM is just an Evennia script or account. The LLM contrib is the existing AI hook."
+    sources:
+      - "https://www.evennia.com/docs/latest/index.html (read)"
+
+  - id: nwnx-ee-neverwinter-nights
+    name: "Neverwinter Nights: EE (NWNX:EE plugins and DM tools)"
+    urls:
+      - "https://nwnxee.github.io/unified/ (snippet for API reference)"
+      - "https://github.com/nwnxee/unified (snippet)"
+      - "https://nwn.wiki/x/boNGAg (snippet)"
+    game_or_platform: "Neverwinter Nights: Enhanced Edition, server module (Aurora toolset)"
+    read_state: "Plugin functions from NWNX:EE reference (snippet): player and util groups; a function resends palettes to a DM."
+    actions: "NWNX plugin calls from NWScript; tweaks such as disabling dm_spawnitem (snippet)."
+    connection: "NWScript module scripts calling NWNX plugins (snippet). Only Linux natively supported (snippet)."
+    auth_and_permissions: "dm_login <password> gives a DM client temporary DM powers; setserveradminpassword sets the server admin password (nwn.wiki snippet)."
+    multiplayer: "Dedicated server supported; player count not stated."
+    licence: "unknown"
+    activity: "Latest release build8193.36.12-HEAD (snippet)."
+    existing_ai_gm: "None found. No DM-client plugin found."
+    tos_notes: "unknown"
+    notes: "DM client extension not found. The NWNX route is server-side only (search snippets)."
+    sources:
+      - "WebSearch snippets only (NWNX:EE, nwn.wiki)."
+
+  - id: arma-3-zeus
+    name: "Arma 3 Zeus (Curator) game-master interface"
+    urls:
+      - "https://community.bistudio.com/wiki/Curator (snippet)"
+      - "https://community.bistudio.com/wiki/Arma_3_Field_Manual_-_Zeus (snippet)"
+    game_or_platform: "Arma 3 (Bohemia Interactive)"
+    read_state: "Curator interface; CuratorObjectRegistered event sets costs per object (snippet)."
+    actions: "Spawn and edit units through Zeus; addCuratorEditableObjects (Steam forum usage reported not working, snippet). Other spawn command names not read."
+    connection: "In-game Curator (Zeus) interface; scripting commands with a Curator prefix (snippet)."
+    auth_and_permissions: "Mission sets the curator unit, a player UID or server admin (Curator page snippet)."
+    multiplayer: "Dedicated server supported; player count not stated."
+    licence: "unknown"
+    activity: "unknown"
+    existing_ai_gm: "None found."
+    tos_notes: "unknown"
+    notes: "Command reference pages were not read; the closest analogue to a god's-eye GM in a shooter."
+    sources:
+      - "WebSearch snippets only (BI wiki Curator, Zeus field manual)."
+
+  - id: roblox-open-cloud-server-scripts
+    name: "Roblox: Open Cloud REST APIs and server scripts"
+    urls:
+      - "https://create.roblox.com/docs/cloud/open-cloud (read)"
+      - "https://create.roblox.com/docs/reference/engine/classes/ServerScriptService (snippet)"
+      - "https://create.roblox.com/docs/en-us/scripting/locations (snippet)"
+    game_or_platform: "Roblox experiences (server authoritative)"
+    read_state: "Open Cloud: data stores, memory stores, user restrictions, inventory (page). Server scripts see the whole server world (snippet)."
+    actions: "Open Cloud: update games, restart servers, manage user restrictions (page). In-game server Scripts can change any server state (server scripts never replicate, snippet)."
+    connection: "Open Cloud REST (API keys or OAuth 2.0, page); HttpService from game to a subset of Open Cloud (page); server Scripts in ServerScriptService (snippet). MessagingService page returned 404."
+    auth_and_permissions: "Open Cloud: API keys or OAuth (page). Experience owner or team permissions (not read)."
+    multiplayer: "Roblox servers host up to a server cap (not read)."
+    licence: "Roblox Creator terms (not read)."
+    activity: "unknown"
+    existing_ai_gm: "None found."
+    tos_notes: "Roblox Creator terms not read. Snippet: remotes are not secured by default, so server code must validate client input."
+    notes: "Two routes: an agent outside the experience through Open Cloud, or a server Script that is the agent's body inside the game."
+    sources:
+      - "https://create.roblox.com/docs/cloud/open-cloud (read)"
+      - "WebSearch snippets (Creator Hub ServerScriptService)"
+
+  - id: resonite-resonitelink
+    name: "Resonite: headless host and ResoniteLink (WebSocket)"
+    urls:
+      - "https://yellow-dog-man.github.io/ResoniteLink/ (read)"
+      - "https://wiki.resonite.com/Headless_server_software/Setup (snippet)"
+    game_or_platform: "Resonite (headless host; engine details not read)"
+    read_state: "ResoniteLink: a WebSocket interop layer for external tools (page); what it can read is not stated on the page read."
+    actions: "unknown from pages read. Host permissions page returned 404."
+    connection: "WebSocket (ResoniteLink, beta, breaking changes possible, page). Headless host software (wiki snippet)."
+    auth_and_permissions: "unknown"
+    multiplayer: "Multi-user sessions; player count not stated."
+    licence: "Copyright only (page footer); no licence stated on page read."
+    activity: "ResoniteLink described as beta (page)."
+    existing_ai_gm: "rassi0429/resolink-mcp (MCP over ResoniteLink, glama snippet)."
+    tos_notes: "unknown"
+    notes: "Interop layer is young; the capability answer needs the reference implementation on GitHub, not read."
+    sources:
+      - "https://yellow-dog-man.github.io/ResoniteLink/ (read)"
+      - "WebSearch snippets (Resonite headless wiki; glama resolink-mcp)"
+
+  - id: vrchat-udon
+    name: "VRChat Udon (world scripting, networking limits)"
+    urls:
+      - "https://creators.vrchat.com/worlds/udon/networking/network-details (snippet)"
+      - "https://creators.vrchat.com/worlds/udon/networking/events/ (snippet)"
+      - "https://udonsharp.docs.vrchat.com/networking-tips-&-tricks (snippet)"
+    game_or_platform: "VRChat worlds (Udon, UdonSharp)"
+    read_state: "Synced Udon variables; each GameObject is owned by one player (VRCPlayerApi) at a time (snippet). Limits are the main constraint."
+    actions: "Only the owner of an object can change its synced variables (snippet). Network events capped at 16 KB total parameters (snippet)."
+    connection: "Udon behaviours inside the world; network events (snippet)."
+    auth_and_permissions: "World creator and instance owner (not read)."
+    multiplayer: "Instances of up to a player cap (not read)."
+    licence: "Proprietary platform terms (not read)."
+    activity: "unknown"
+    existing_ai_gm: "None found."
+    tos_notes: "Udon docs say networking is 'very finicky' (snippet). Community-reported rate limits are unofficial (feedback snippet)."
+    notes: "Limit to note: a god's-eye GM cannot freely write to objects it does not own. Official Udon docs page returned 404."
+    sources:
+      - "WebSearch snippets only (creators.vrchat.com, udonsharp docs)."
+
+  - id: opensimulator-region-modules
+    name: "OpenSimulator region modules (IRegionModule)"
+    urls:
+      - "https://sledjhamr.org/cgit/opensim-SC/tree/OpenSim/Framework/IScene.cs?h=0.9.0.1 (snippet)"
+      - "https://sledjhamr.org/cgit/opensim-SC/tree/OpenSim/ApplicationPlugins/RegionModulesController/RegionModulesControllerPlugin.cs (snippet)"
+    game_or_platform: "OpenSimulator (virtual world server, Second Life style)"
+    read_state: "Module interfaces on the scene (IScene RegisterModuleInterface, RequestModuleInterface, snippet). How a module reads region state was not confirmed."
+    actions: "Module lifecycle: Initialise, PostInitialise, RegionLoaded (snippet). Actions depend on the module written."
+    connection: "C# region modules loaded by the region modules controller (snippet)."
+    auth_and_permissions: "Region owner or estate manager (not read)."
+    multiplayer: "Multi-region grid; player count not stated."
+    licence: "unknown"
+    activity: "Source snippets from 0.7.x to 0.9.x branches (snippet); current master not read."
+    existing_ai_gm: "None found."
+    tos_notes: "unknown"
+    notes: "Source-code snippets only; the OpenSimulator getting-started page was not read."
+    sources:
+      - "WebSearch snippets only (sledjhamr.org source comments)."
+
+  - id: luanti-mods
+    name: "Luanti (formerly Minetest) mods and privileges"
+    urls:
+      - "https://docs.luanti.org/for-players/privileges/ (read)"
+      - "https://docs.luanti.org/for-creators/api (read: no function list)"
+      - "https://github.com/luanti-org/luanti/blob/master/doc/lua_api.md (named as the engine API source)"
+    game_or_platform: "Luanti voxel engine (server and client), mods in Lua"
+    read_state: "unknown from pages read: the modding API overview names sections (Timing and Event loop, Persistence, Object Properties) but the function list is in lua_api.md, which was not read. Privilege system tells what a player may do."
+    actions: "Privileges listed for a game master: teleport and bring (move players), give (items), fly, fast, noclip, kick, ban, settime, rollback, protection_bypass, server (maintenance). Mod-defined privileges via register_privilege (snippet)."
+    connection: "Lua mod inside the server; server chat commands; privileges granted by the server or a privileged player."
+    auth_and_permissions: "Privileges granted with privs (grant and revoke other players' privileges), basic_privs. Player named in minetest.conf 'name' has all privileges and cannot have them revoked (snippet)."
+    multiplayer: "Dedicated server; player count not stated."
+    licence: "unknown (engine licence page not read)."
+    activity: "Server commands reference current for version 5.9.0 (snippet)."
+    existing_ai_gm: "None found."
+    tos_notes: "unknown"
+    notes: "Privilege model is the cleanest permission system in this list. Engine API function details not read."
+    sources:
+      - "https://docs.luanti.org/for-players/privileges/ (read)"
+      - "https://docs.luanti.org/for-creators/api (read)"
+
+  - id: godot-dedicated-server
+    name: "Godot dedicated servers (headless export)"
+    urls:
+      - "https://docs.godotengine.org/en/stable/tutorials/export/exporting_for_dedicated_servers.html (snippet)"
+    game_or_platform: "Any Godot 4 game (engine), server build"
+    read_state: "Whatever the game code reads; no built-in world-state API (generic engine)."
+    actions: "Whatever the game code does (generic engine)."
+    connection: "Headless run with --headless; export preset 'Export as dedicated server' (snippet). Custom protocol through Godot multiplayer or sockets (not read)."
+    auth_and_permissions: "Game-defined."
+    multiplayer: "Game-defined."
+    licence: "unknown (engine licence not read on a page in this session)."
+    activity: "Docs versions 4.3 to 4.7 seen (snippet)."
+    existing_ai_gm: "None found."
+    tos_notes: "unknown"
+    notes: "A generic host, not a game. Build an admin channel into the game and the agent speaks to it."
+    sources:
+      - "WebSearch snippets (Godot docs)"
+
+  - id: unreal-dedicated-server
+    name: "Unreal Engine dedicated server (GameMode and authority)"
+    urls:
+      - "https://dev.epicgames.com/documentation/en-us/unreal-engine/networking-overview-for-unreal-engine (snippet)"
+    game_or_platform: "Any Unreal game, dedicated server build"
+    read_state: "Server holds authority; GameMode exists only on the server (Epic Blueprint guide snippet). Game code defines what is visible."
+    actions: "Game-defined. Server RPCs and server-side gameplay code."
+    connection: "Unreal networking (replication, RPCs). Custom admin channel must be built."
+    auth_and_permissions: "Authority is server-side in built-in networking (snippet). Client authority is per-object (forum snippet)."
+    multiplayer: "Dedicated servers run headless by default (4.27 docs snippet)."
+    licence: "Unreal Engine EULA (not read)."
+    activity: "Docs versions 4.27 and current (snippet)."
+    existing_ai_gm: "None found."
+    tos_notes: "unknown"
+    notes: "Generic host, like Godot. Epic's current GameMode authority page not read."
+    sources:
+      - "WebSearch snippets (Epic networking and dedicated server docs)"
+
+  - id: left4dead-ai-director
+    name: "Left 4 Dead AI Director (pacing director, inside a game)"
+    urls:
+      - "https://cdn.fastly.steamstatic.com/apps/valve/2009/ai_systems_of_l4d_mike_booth.pdf (snippet)"
+      - "https://developer.valvesoftware.com/wiki/Left_4_Dead (snippet)"
+    game_or_platform: "Left 4 Dead (Valve), with the Director as in-game AI"
+    read_state: "Director reads player progress, distance and situation (snippets from Valve wiki and designer quotes)."
+    actions: "Controls pacing, spawns infected and item placement (snippet: 'controls pacing and item placement')."
+    connection: "Inside the game engine (no external interface)."
+    auth_and_permissions: "Game-internal; no player-facing permission model."
+    multiplayer: "unknown (player count not read; the Valve wiki snippet describes co-op)."
+    licence: "Commercial game (not read)."
+    activity: "Left 4 Dead 2 introduced Director 2.0 (snippet)."
+    existing_ai_gm: "Not an LLM. The design pattern (rule-based director) is the pattern a GM agent would sit on top of."
+    tos_notes: "n/a"
+    notes: "Reference pattern, not an interface. Design intent: distance equals difficulty (Chet Faliszek, snippet). No formal Valve paper found; the GDC talk was not confirmed."
+    sources:
+      - "WebSearch snippets only."
+
+  - id: chatrpg-arxiv-2502-19519
+    name: "ChatRPG: game-master LLM for single-player RPGs (arXiv 2502.19519)"
+    urls:
+      - "https://arxiv.org/abs/2502.19519 (read)"
+    game_or_platform: "Single-player text RPG (LLM game master)"
+    read_state: "The GM reads its own game state and the player's input through prompts (V1), and reasons with ReAct tools in V2 (paper)."
+    actions: "V2 uses a ReAct-style agentic loop with actions (paper). Action list not read on abstract page."
+    connection: "LLM prompts; multi-agent architecture in V2 (paper abstract)."
+    auth_and_permissions: "Single player."
+    multiplayer: "Single player (paper)."
+    licence: "unknown (paper page shows no code link)."
+    activity: "Submitted 26 Feb 2025; v2 6 Mar 2025 (arXiv page)."
+    existing_ai_gm: "This is the GM system itself."
+    tos_notes: "n/a"
+    notes: "Paper says the agentic version is better for modularity and immersion. The arXiv abstract page showed no code link (the snippet claim that code is public was not confirmed on the page); ChatRPG v3 (five agents, SENNA) is a snippet and no repo link was found."
+    sources:
+      - "https://arxiv.org/abs/2502.19519 (read)"
+
+  - id: labyrinth-function-gm-2409-06949
+    name: "Function-calling LLM game master for Labyrinth RPG (arXiv 2409.06949)"
+    urls:
+      - "https://arxiv.org/abs/2409.06949 (read)"
+    game_or_platform: "Tabletop RPG (Jim Henson's Labyrinth: The Adventure Game), LLM-run"
+    read_state: "Game state held through functions the LLM calls (abstract)."
+    actions: "Game-specific controls exposed as functions (abstract). Exact function list not read."
+    connection: "LLM function calling (abstract)."
+    auth_and_permissions: "Single game."
+    multiplayer: "Table game; player count not stated."
+    licence: "unknown (no code link on abstract page)."
+    activity: "Submitted 11 Sep 2024 (v1)."
+    existing_ai_gm: "This is the GM research itself."
+    tos_notes: "n/a"
+    notes: "Reports better narrative quality and state-update consistency with function calling (abstract). Useful as the pattern for a 'controls as functions' GM."
+    sources:
+      - "https://arxiv.org/abs/2409.06949 (read)"
+
+  - id: ai-dungeon
+    name: "AI Dungeon (AI text adventure)"
+    urls:
+      - "https://aidungeon.com/ (read)"
+    game_or_platform: "AI Dungeon (web and app, text adventure)"
+    read_state: "unknown (the page does not describe internal state)."
+    actions: "Players guide every choice online or in the app (page). Developer actions not described."
+    connection: "unknown (no developer API, mods or plugins on page)."
+    auth_and_permissions: "Players, creators of adventures."
+    multiplayer: "Single-player stories (not read; page does not say)."
+    licence: "unknown"
+    activity: "Release notes link (page)."
+    existing_ai_gm: "Is an AI narrator in its own right; the page does not use the phrase 'game master'."
+    tos_notes: "unknown"
+    notes: "Closed product. Shows the consumer AI-GM experience, not an interface you can drive."
+    sources:
+      - "https://aidungeon.com/ (read)"
+
+leads_not_verified:
+  - "minecraft: NSR-AI (curseforge bukkit plugin, Adaptive Narrative Memory, Gemini/ChatGPT; snippet)"
+  - "minecraft: ExAI and PaperChat (modrinth, LLM in-game assistants; snippet)"
+  - "minecraft: HelloGPT (modrinth; snippet)"
+  - "minecraft: GPTGodMC / GoogleGeminiAIGod (hangar.papermc.io; snippet, novelty)"
+  - "minecraft: Peterson047/Minecraft-MCP-Server (FastMCP, RCON, SSE; glama and mcpservers snippets)"
+  - "minecraft: rgbkrk Docker Minecraft MCP (itzg/docker-minecraft-server; snippet)"
+  - "minecraft: Railway minecraft-mcp template (snippet)"
+  - "minecraft: mineflayer bot API (github.com/mineflayer/mineflayer returned 404; not read)"
+  - "garrys-mod: gmod-mcp beekamai (RCON, Lua execution, screenshots, SFTP; snippet)"
+  - "garrys-mod: TheRolists gmod-mcp (server state snapshot; snippet)"
+  - "garrys-mod: mcp-gmod-rcon npm package (snippet)"
+  - "rust: RustApi (github NickRimmer; JSON web API; snippet)"
+  - "rust: Facepunch WebRCON web client (facepunch.github.io/webrcon; snippet)"
+  - "ark: Xadminlink and ARKon RCON client (snippet)"
+  - "ark: BattleMetrics ARK RCON tool (snippet)"
+  - "7-days-to-die: CSMM web dashboard (7d2d.net/csmm; snippet)"
+  - "7-days-to-die: BadCompanySM-WebUI using Allocs mod web API (snippet)"
+  - "space-engineers: TorchAPI Torch and Essentials (snippet, not read)"
+  - "foundry-vtt: Familiar MCP Server (193 tools, v13 and v14, GM co-pilot; snippet)"
+  - "foundry-vtt: adambdooley foundry-vtt-mcp (MIT, 75 tools, Claude Desktop; snippet)"
+  - "foundry-vtt: foundry-browser-mcp (snippet)"
+  - "evennia: LLM chat-bot contrib (docs index only; not read)"
+  - "chatrpg v3 (five-agent SENNA, snippet; repo not found)"
+  - "calypso (arXiv 2308.07540; human DM assistant, snippet; no code link seen)"
+  - "samvoisin/ai-dungeon-master (GPT-4 via LangChain, Discord; github snippet)"
+  - "thesis: fine-tuned DM on Critical Role transcripts (studenttheses.uu.nl; snippet)"
+  - "Unity (dedicated server and netcode hooks): not searched"
+  - "Conan Exiles, Core, Hytale-style engines: not searched"
+  - "Arma 3 Zeus command reference (addCuratorEditableObjects, BIS_fnc_curatorObjectRegisteredTable): not read"
+  - "ResoniteLink reference GitHub (Yellow-Dog-Man/ResoniteLink): not read"
+  - "Valheim, Rust, ARK official docs: not read (only hosting guides and snippets)"

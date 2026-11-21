@@ -1,0 +1,1046 @@
+# Catalog: game mods and plugins that let an LLM drive NPC speech, dialogue and/or actions
+# Compiled 2026-11-21. Every fact comes from a page read with WebFetch (URL given per entry), unless a
+# field says "search snippet only". "unknown" = not found on a page read. Nexus Mods pages returned
+# HTTP 403/404 to the fetch tool, and GitHub API access was not enabled in this session, so GitHub
+# commit and release dates are only those shown on the repo landing pages (often none).
+#
+# Field key:
+#   openai_compatible: yes | no | unknown  (quote in notes or source line)
+#   custom_base_url:   yes | no | unknown
+#   read_status: fetched (project page read) | partial (only a mirror, store page or search summary read)
+
+summary: |
+  Entries: 33 (see below). Scope: Skyrim, Fallout 4, Bannerlord, Stardew Valley, Minecraft, Garry's Mod,
+  RimWorld, STALKER Anomaly, Kenshi, Cyberpunk 2077, GTA V, Baldur's Gate 3, The Sims 4, plus Unity, Unreal,
+  Godot and Python frameworks.
+
+  Custom OpenAI-compatible endpoint, stated on a page read (explicit quote): 5 entries. Mantella, SkyrimNet,
+  Smart Villagers AI (Minecraft), AI Companion Fabric (Minecraft), Sentient Sands (Kenshi). Three more have a
+  configurable base URL but do not say OpenAI-compatible: Mindcraft, LoraCore and Talking Villagers (Ollama
+  native URL). RimTalk has a "Custom API settings" screen with presets, and its details are unknown.
+
+  Most promising for an outside agent to drive:
+  1. AI Companion Fabric (Minecraft): LGPLv3, documented local OpenAI-compatible endpoint with a base URL
+     setting, actions (mine, craft, build, combat), file updated Oct 2026. Singleplayer and LAN only.
+  2. Smart Villagers AI (Minecraft): Apache-2.0, OpenAI-compatible and Ollama presets, the mod (not the
+     model) decides offers, progress and payment, client and server, file updated Oct 2026.
+  3. Mindcraft (Minecraft, framework): MIT, per-model url field, Mineflayer action layer. Built for bots, but
+     its own docs warn against public servers when coding is enabled.
+  4. Player2 (free local app, localhost:4315; Godot and Unity SDKs in the catalog): the only entry with a
+     documented NPC spawn/chat/despawn API for third-party tools, but the endpoint details come from a vendor
+     blog, not the live docs, and it is a hosted-account service.
+  5. Mantella (Skyrim, Fallout 4): AGPL-3.0, OpenAI-compatible, Whisper/Moonshine STT and Piper/xVASynth/XTTS
+     TTS, but its game-side control is dialogue and speech, not general actions.
+
+  Gaps I could not fill: Nexus-only mods (Mantella's own Nexus page, AliveNpcs, Neural Harvest, AI Influence,
+  Starfield AISS, Sims AI Chat) returned no page to the fetch tool, so their facts stay at search-snippet
+  level and are listed under leads_not_verified. Last-commit dates are unknown for most GitHub repos
+  (no date shown on the landing page). Licences are unknown for several projects. Multiplayer behaviour
+  is unknown for most mods. No anti-cheat or ToS review was done beyond what the pages state.
+  Conflicts flagged: Bannerlord.ChatGPT search summary said local gguf is supported; the repo page does not
+  say so, so the page wins. Smart Villagers' GitHub was listed as a profile in search; the CurseForge page
+  names MeherBenSalem/CivilizationAI, which is used here.
+
+entries:
+
+  # ---------------- Skyrim / Fallout ----------------
+
+  - name: Mantella
+    games: [Skyrim Special Edition, Skyrim VR, Fallout 4, Fallout 4 VR]
+    urls:
+      project: "https://www.nexusmods.com/skyrimspecialedition/mods/98631 (Nexus page: fetch returned 403, facts from docs site and search snippet)"
+      docs: https://art-from-the-machine.github.io/Mantella/
+      source: https://github.com/art-from-the-machine/Mantella
+    read_status: fetched (GitHub and docs site); Nexus page not readable
+    ai_controls:
+      speech_dialogue: yes. Player speaks, NPC answers aloud. NPCs can start conversations and join group conversations.
+      voice: STT Moonshine or Whisper; TTS Piper, xVASynth or XTTS (GitHub README).
+      actions: "'dynamic actions' named on the docs site, detail unknown."
+      memory: yes. "NPCs remember past conversations with you" (docs site).
+    connection:
+      openai_compatible: "yes"
+      custom_base_url: yes (the exact config key was not confirmed on a page read)
+      local_models: yes. "Run everything locally on your own hardware" and "Works with local models (Llama, Gemma, etc)" (docs site).
+      other: Built-in service choice in the Mantella UI for OpenAI, OpenRouter, NanoGPT and local models (docs site).
+    speech:
+      stt: Moonshine or Whisper
+      tts: Piper, xVASynth, XTTS
+    licence: AGPL-3.0 (GitHub README "AGPL-3.0 license")
+    open_source: "yes"
+    activity:
+      last_release_or_commit: unknown (landing page shows 620 commits, no date, no releases)
+      rough: large install base; docs site says "350k+ downloads" (Nexus figure quoted on docs site)
+    player_mode: single-player per the mod's usage; multiplayer not stated
+    notes: >
+      Dialogue and speech only as far as the pages say. Nexus page not readable, so the Nexus version and date are unknown.
+      The mod's own text: "Mantella is free and open source."
+    sources:
+      - https://github.com/art-from-the-machine/Mantella
+      - https://art-from-the-machine.github.io/Mantella/
+      - https://www.nexusmods.com/skyrimspecialedition/mods/98631 (403 on fetch)
+
+  - name: Mantella Fallout 4 VR ESP (companion to Mantella backend)
+    games: [Fallout 4 VR]
+    urls:
+      source: https://github.com/YetAnotherModder/Fallout-4-VR-Mantella-Mod
+    read_status: fetched
+    ai_controls:
+      speech_dialogue: yes (ESP integrates LLM dialogue into F4VR NPC responses)
+      voice: unknown (Sound/Voice folder present; no STT described)
+      actions: unknown
+      memory: unknown
+    connection:
+      openai_compatible: unknown
+      custom_base_url: unknown
+      local_models: unknown on this page; it uses the separate Mantella backend
+      other: depends on the Mantella backend
+    speech:
+      stt: none described
+      tts: unknown (Mantella voice models referenced)
+    licence: MIT (GitHub "MIT license")
+    open_source: "yes"
+    activity:
+      last_release_or_commit: unknown (20 commits, no dates, no releases)
+    player_mode: unknown
+    notes: "Requires F4SE, SUP F4SEVR, Fallout 4 Version Check Patcher. Known bug: 'Mantella may crash while loading older voice models'. NPC targeting includes turrets."
+    sources:
+      - https://github.com/YetAnotherModder/Fallout-4-VR-Mantella-Mod
+
+  - name: SkyrimNet
+    games: [Skyrim Special Edition, Skyrim VR]
+    urls:
+      project: https://github.com/MinLL/SkyrimNet-GamePlugin
+      docs: https://goncalo22.github.io/SkyrimNet-GamePlugin/Features/overview (search result only, not read)
+    read_status: fetched (GitHub README)
+    ai_controls:
+      speech_dialogue: yes
+      voice: local speech recognition; local and cloud TTS with voice cloning (GitHub)
+      actions: "yes. 'an NPC can follow you, hand over gold, craft you a shield, draw a weapon or walk away'. Actions come from a library other mods can extend. Separate mods add more: 'SeverActions lists 70+ actions' (GitHub)."
+      memory: yes. "Every NPC has a private memory, recalled by meaning, that fades with time unless it mattered." NPCs can keep diaries.
+    connection:
+      openai_compatible: yes. "Use an OpenRouter key, or any OpenAI-compatible service." (GitHub)
+      custom_base_url: unknown (OpenAI-compatible is stated; the key name was not seen)
+      local_models: yes. "the model runs on your own PC through LM Studio, Ollama, KoboldCpp or llama.cpp" (GitHub)
+      other: Fateless hosted paid service ("One account for everything SkyrimNet needs").
+    speech:
+      stt: local speech recognition (Whisper named in the CUDA note)
+      tts: default PocketTTS in-process; local and cloud engines
+    licence: "unknown (page says: 'SkyrimNet ... is not open source' and points to a LICENSE file; text not shown)"
+    open_source: no (per the page's own statement)
+    activity:
+      last_release_or_commit: unknown (1,068 commits, no dates shown)
+      version: "'SkyrimNet Beta29 or later' is referenced for Fateless support"
+    player_mode: "'It all runs as a single Skyrim mod.' Multiplayer not stated"
+    notes: Installs as a native Windows DLL. Serves a browser UI at localhost:8080 (search snippet only). Paid Fateless tier is optional.
+    sources:
+      - https://github.com/MinLL/SkyrimNet-GamePlugin
+      - https://goncalo22.github.io/SkyrimNet-GamePlugin/Features/overview (search snippet only)
+
+  - name: CHIM server (HerikaServer, aiagent branch)
+    games: [Skyrim (CHIM mod, SKSE plugin)]
+    urls:
+      project: https://github.com/language-coder/HerikaServer (public fork of abeiro/HerikaServer)
+      mod_page: https://www.nexusmods.com/skyrimspecialedition/mods/126330 (search snippet only, not read)
+    read_status: fetched (GitHub landing page only)
+    ai_controls:
+      speech_dialogue: yes. "Any NPC can be an AI, including group conversations."
+      voice: STT and TTS folders present; MeloTTS and XTTS named
+      actions: yes. "Function calling action commands", examples trading, moving, attacking. A functions folder exists.
+      memory: yes. "Long-term memory for in-game characters" (feature list)
+    connection:
+      openai_compatible: unknown (page names ChatGPT, MeloTTS, koboldcpp, Openrouter, XTTS)
+      custom_base_url: unknown
+      local_models: koboldcpp named. Search snippet says models must follow "instruct" style.
+      other: ChatGPT and OpenRouter
+    speech:
+      stt: provider-based (folder present), engine not named on page
+      tts: MeloTTS, XTTS named
+    licence: MIT-LICENSE file in tree (name not confirmed on page text)
+    open_source: yes (per file tree)
+    activity:
+      last_release_or_commit: unknown (2,681 commits on aiagent branch, no date, no releases)
+    player_mode: unknown
+    notes: The page is a landing page only. Endpoint compatibility needs the repo docs.
+    sources:
+      - https://github.com/language-coder/HerikaServer
+
+  - name: Inworld Skyrim Mod (source code)
+    games: [Skyrim]
+    urls:
+      source: https://github.com/BlocTheWorker/Inworld-Skyrim-Mod
+      playable: Nexus Mods 91294 (search result only; the author page says the playable mod is only on Nexus)
+    read_status: fetched (GitHub README)
+    ai_controls:
+      speech_dialogue: yes (free-form conversation via Inworld)
+      voice: unknown
+      actions: unknown
+      memory: unknown
+    connection:
+      openai_compatible: no (Inworld cloud service)
+      custom_base_url: unknown
+      local_models: no mention
+      other: Inworld cloud, credentials and workspace secrets
+    speech:
+      stt: unknown
+      tts: unknown
+    licence: unknown (not stated on page)
+    open_source: unknown (source is public; no licence shown)
+    activity:
+      last_release_or_commit: unknown (15 commits, no dates)
+    player_mode: unknown
+    notes: "'This is a SOURCE CODE. This is not a downloadable mod for players.' Needs SKSE, SkyUI, UIExtensions. Author says code is 'very amateurly written'."
+    sources:
+      - https://github.com/BlocTheWorker/Inworld-Skyrim-Mod
+
+  # ---------------- Bannerlord ----------------
+
+  - name: Bannerlord.ChatGPT
+    games: [Mount & Blade II: Bannerlord]
+    urls:
+      source: https://github.com/wonderingmark123/Bannerlord.ChatGPT
+      mod_page: https://www.nexusmods.com/mountandblade2bannerlord/mods/6514 (linked from search; not read)
+    read_status: fetched
+    ai_controls:
+      speech_dialogue: yes. "You could talk to the villagers, companions, and lords freely." The LLM opens the conversation.
+      voice: unknown (none mentioned)
+      actions: none described
+      memory: none mentioned
+    connection:
+      openai_compatible: no (page sets up the OpenAI platform API key only)
+      custom_base_url: unknown
+      local_models: not mentioned on page (search summary said gguf is supported; page does not confirm)
+      other: OpenAI API key file
+    speech:
+      stt: none described
+      tts: none described
+    licence: unknown (no licence stated on page)
+    open_source: yes (public repo; licence unknown)
+    activity:
+      last_release_or_commit: unknown (9 commits, no date)
+      tested_on: game version 1.2.8 (page)
+    player_mode: single-player (mission view only; "any conversation started from the map won't be able to call this mod")
+    notes: Works only in mission view.
+    sources:
+      - https://github.com/wonderingmark123/Bannerlord.ChatGPT
+
+  # ---------------- Baldur's Gate 3 ----------------
+
+  - name: Inworld BG3 companion mod (Inworld-BaldursGate-Mod)
+    games: [Baldur's Gate 3]
+    urls:
+      source: https://github.com/BlocTheWorker/Inworld-BaldursGate-Mod
+      mod_page: https://nexusmods.com/baldursgate3/mods/8179 (search result only)
+    read_status: fetched (GitHub README)
+    ai_controls:
+      speech_dialogue: yes (free-form conversation with companions)
+      voice: speech in (records audio and sends to Inworld)
+      actions: not described
+      memory: not mentioned
+    connection:
+      openai_compatible: "no"
+      custom_base_url: unknown (not stated)
+      local_models: no. Uses "Inworld Backend via gRPC Streaming".
+      other: Inworld cloud API key and secret, stored in Windows Credential Manager
+    speech:
+      stt: Inworld cloud (audio is transmitted)
+      tts: unknown
+    licence: MIT (GitHub)
+    open_source: "yes"
+    activity:
+      last_release_or_commit: unknown (3 commits, no date, no releases)
+    player_mode: unknown
+    notes: Windows desktop app. Cost not stated; the author thanks Inworld "for their development key".
+    sources:
+      - https://github.com/BlocTheWorker/Inworld-BaldursGate-Mod
+
+  # ---------------- Stardew Valley ----------------
+
+  - name: Social Valley
+    games: [Stardew Valley]
+    urls:
+      project: https://www.curseforge.com/stardewvalley/mods/social-valley
+      nexus: https://www.nexusmods.com/stardewvalley/mods/36338 (403 on fetch)
+      source: https://github.com/CarlosNahuelcoy/SocialValley
+    read_status: fetched (CurseForge page)
+    ai_controls:
+      speech_dialogue: yes. Left-click an NPC for AI chat; right-click keeps vanilla dialogue.
+      voice: none described
+      actions: none described
+      memory: "not mentioned. Context: 'Dialogue changes based on weather, time, clothes, and what you're holding.'"
+    connection:
+      openai_compatible: unknown
+      custom_base_url: unknown
+      local_models: "'Works locally to keep your conversations private and lag-free.' (CurseForge, no detail)"
+      other: Player2 (free) is required (CurseForge). OpenRouter and manual keys appear only in a Nexus search summary, not on the CurseForge page.
+    speech:
+      stt: none described
+      tts: none described
+    licence: conflicting. Page licence field says "All Rights Reserved"; description says "Fork freely under the MIT license."
+    open_source: yes (source is public per page; licence conflicting)
+    activity:
+      last_release_or_commit: Jun 22, 2026 (version 1.6.15, marked latest release)
+    player_mode: unknown
+    notes: "SMAPI required. Newer release adds 'Sign in with Player2 Account'. Cost: Player2 free per page."
+    sources:
+      - https://www.curseforge.com/stardewvalley/mods/social-valley
+      - https://github.com/CarlosNahuelcoy/SocialValley (linked from CurseForge page; repo not read)
+
+  - name: Autonomous Valley
+    games: "[Stardew Valley] (inferred from repo description 'Stardew Village NPCs')"
+    urls:
+      source: https://github.com/abhiaagarwal/autonomousvalley
+    read_status: fetched (GitHub landing page)
+    ai_controls:
+      speech_dialogue: described only as "powered by LLMs and RAG"
+      voice: unknown
+      actions: unknown
+      memory: RAG-based knowledge per repo description
+    connection:
+      openai_compatible: unknown
+      custom_base_url: unknown
+      local_models: unknown
+      other: unknown
+    speech:
+      stt: unknown
+      tts: unknown
+    licence: MIT (GitHub; "Copyright (c) 2024 Abhi Agarwal")
+    open_source: "yes"
+    activity:
+      last_release_or_commit: unknown (6 commits, no dates, no releases)
+    player_mode: unknown
+    notes: Page never says "mod"; solution file suggests C#. Treat as a prototype until the README is read.
+    sources:
+      - https://github.com/abhiaagarwal/autonomousvalley
+
+  # ---------------- Minecraft ----------------
+
+  - name: Smart Villagers AI
+    games: [Minecraft (Fabric, Forge, NeoForge)]
+    urls:
+      project: https://www.curseforge.com/minecraft/mc-mods/smart-villagers-ai
+      source: https://github.com/MeherBenSalem/CivilizationAI
+    read_status: fetched (CurseForge page)
+    ai_controls:
+      speech_dialogue: yes. "The AI just words the reply." The mod decides offers, progress and payments.
+      voice: TTS optional through Simple Voice Chat. STT not mentioned.
+      actions: requests (fetch items, slay monsters) with emerald and XP rewards; the mod tracks them. Not free-form.
+      memory: yes. Villagers draw on "your last conversations". Command "/villagerai memory clear".
+    connection:
+      openai_compatible: yes. "works with any OpenAI-compatible AI provider, a local model, or no AI at all"
+      custom_base_url: yes by implication (CUSTOM provider preset); base URL key not stated on page
+      local_models: yes. "Ollama and LM Studio run models on your own computer."
+      other: presets DEEPSEEK, NANOGPT, NANOGPT_SUBSCRIPTION, OPENAI, OPENROUTER, OLLAMA, LMSTUDIO, CUSTOM in config/smartvillagers/config.toml
+    speech:
+      stt: none described
+      tts: Simple Voice Chat (optional)
+    licence: Apache-2.0
+    open_source: "yes"
+    activity:
+      last_release_or_commit: Oct 25, 2026 (smartvillagers-neoforge-26.3-2.0.0.jar, latest release)
+    player_mode: client and server ("Install the mod on the server, or in your game for single player.")
+    notes: Players must accept AI consent before chat goes to a provider. No key needed; built-in dialogue used without one. Paid items on the page (NightBeam Pro) are optional.
+    sources:
+      - https://www.curseforge.com/minecraft/mc-mods/smart-villagers-ai
+
+  - name: AI Companion Fabric (ai-companion)
+    games: [Minecraft (Fabric)]
+    urls:
+      project: https://www.curseforge.com/minecraft/mc-mods/ai-companion-fabric
+      source: https://github.com/adevivo/ai-companion
+    read_status: fetched (CurseForge page)
+    ai_controls:
+      speech_dialogue: yes (companions follow chat commands)
+      voice: optional spoken output via local Kokoro TTS container; audio plays client-side
+      actions: yes. "they mine, collect, craft, engage in combat, and build structures via a proven task engine"; also use skills, eat and equip gear.
+      memory: not listed
+    connection:
+      openai_compatible: yes. "a local OpenAI-compatible server (llama.cpp, Ollama, LM Studio, …)"
+      custom_base_url: yes. Base URL "no trailing slash and no /v1; the mod appends /v1/chat/completions itself." Default llm.endpoint http://localhost:3030
+      local_models: yes (llama.cpp, Ollama, LM Studio)
+      other: cloud API option also listed; per-session request cap on spend; single config file selects endpoint
+    speech:
+      stt: none described
+      tts: Kokoro (default endpoint http://localhost:8880)
+    licence: "LGPLv3 (CurseForge: 'GNU Lesser General Public License version 3 (LGPLv3)')"
+    open_source: "yes"
+    activity:
+      last_release_or_commit: Oct 13, 2026 (aicompanion-0.4.3+mc1.21.11.jar)
+    player_mode: singleplayer and Open-to-LAN with trusted people. "not ready for a public multiplayer server"; has run on a dedicated server since 0.2.4 with shared rosters.
+    notes: Best fit on this list for an outside agent that wants a documented local endpoint and in-game actions. Minecraft versions 1.21.11 and 1.20.1 listed; check the file.
+    sources:
+      - https://www.curseforge.com/minecraft/mc-mods/ai-companion-fabric
+
+  - name: Talking Villagers
+    games: [Minecraft (Fabric, server-side)]
+    urls:
+      project: https://www.curseforge.com/minecraft/mc-mods/talkingvillagers
+      source: https://github.com/ball534/talkingVillagers-mod (linked as "Source" on CurseForge; repo not read)
+    read_status: fetched (CurseForge page)
+    ai_controls:
+      speech_dialogue: yes (sneak + right-click a villager to talk)
+      voice: none (replies appear as floating text or in chat)
+      actions: opinions (-100 to +100, affects trade), elections, mayor, marriage, births, gossip, grief. Not free-form game actions.
+      memory: yes. Villagers "remember" insults and raids; know player and feelings.
+    connection:
+      openai_compatible: unknown (not stated)
+      custom_base_url: yes. config key base_url, default local Ollama on port 11434; example http://192.168.1.50:11434
+      local_models: yes (Ollama); suggests llama3.2:3b
+      other: "cloud: none ('No API key, no account, no cloud, no cost.')"
+    speech:
+      stt: none
+      tts: none
+    licence: "'All Rights Reserved' (CurseForge page licence field)"
+    open_source: unknown (source link present; licence reserved per page)
+    activity:
+      last_release_or_commit: "Aug 6, 2026 (CurseForge: 'Updated 3 months ago')"
+    player_mode: server-side; "every player can join with an unmodded client"; works in singleplayer too
+    notes: "If Ollama is slow or missing, villagers simply go quiet."
+    sources:
+      - https://www.curseforge.com/minecraft/mc-mods/talkingvillagers
+
+  - name: LoraCore
+    games: [Minecraft (Fabric 1.20.6)]
+    urls:
+      project: https://www.curseforge.com/minecraft/mc-mods/loracore
+      source: https://github.com/Beykus-Y/LoraCore
+    read_status: fetched (CurseForge page)
+    ai_controls:
+      speech_dialogue: yes (villager interactions, /ask advice)
+      voice: none described
+      actions: limited. Friendship, gifts, AI-generated fetch quests and structure names. No game actions taken by the AI on its own, per page.
+      memory: yes. "The AI remembers your past interactions."
+    connection:
+      openai_compatible: unknown (OpenAI key required)
+      custom_base_url: yes. "(Optional) You can also change the API URL or select a different AI model."
+      local_models: not mentioned
+      other: OpenAI API key required; "Without it, AI features will not function."
+    speech:
+      stt: none
+      tts: none
+    licence: MIT (GitHub link on page)
+    open_source: "yes"
+    activity:
+      last_release_or_commit: Jul 17, 2026 (CurseForge "Last Update")
+    player_mode: CurseForge says "Client & Server", but the overview calls it a "single-player world". Multiplayer unclear.
+    notes: Tagged Experimental. Cost of OpenAI usage not stated.
+    sources:
+      - https://www.curseforge.com/minecraft/mc-mods/loracore
+
+  - name: Mindcraft
+    games: [Minecraft (Mineflayer bots; framework, not a mod)]
+    urls:
+      project: https://github.com/mindcraft-bots/mindcraft (README says it was started by kolbytn)
+    read_status: fetched (GitHub landing page)
+    ai_controls:
+      speech_dialogue: yes (chat with the player)
+      voice: narration via speak_model, "We only support openai and google for voice synthesis."
+      actions: yes. LLM-driven Mineflayer bots take tasks (e.g. "Collect at least four logs"). Code execution is optional and disabled by default.
+      memory: not persistent per page; embedding models select relevant examples
+    connection:
+      openai_compatible: unknown (per-model url field, example https://api.openai.com/v1/)
+      custom_base_url: yes. "Supported through a per-model url field."
+      local_models: yes, Ollama ("For local models we support ollama"); vllm listed with no docs; llama.cpp not mentioned
+      other: 17 APIs listed including OpenAI, Google, Anthropic, DeepSeek, Mistral, Groq, OpenRouter
+    speech:
+      stt: none described
+      tts: openai or google only
+    licence: MIT
+    open_source: "yes"
+    activity:
+      last_release_or_commit: unknown (1,673 commits on develop, no date, no releases). Search summary says maintainers are slow on issues; not verified on a page.
+    player_mode: "Warned: 'Do not connect this bot to public servers with coding enabled.' Online play needs a Microsoft account."
+    notes: "'The code is sandboxed, but still vulnerable to injection attacks.' Good model for an outside agent that drives a bot via code, but safety caveats apply."
+    sources:
+      - https://github.com/mindcraft-bots/mindcraft
+
+  - name: Voyager
+    games: [Minecraft (research agent; Fabric mods)]
+    urls:
+      source: https://github.com/MineDojo/Voyager
+    read_status: fetched (GitHub README)
+    ai_controls:
+      speech_dialogue: none (it is an explorer agent, not an NPC system)
+      voice: none
+      actions: yes. Automatic curriculum, skill library of executable code, iterative prompting with feedback.
+      memory: skill library persists between runs (per README description)
+    connection:
+      openai_compatible: no (uses OpenAI GPT-4 directly)
+      custom_base_url: unknown
+      local_models: not mentioned
+      other: "You need to have an OpenAI API key to use Voyager."
+    speech:
+      stt: none
+      tts: none
+    licence: MIT
+    open_source: "yes"
+    activity:
+      last_release_or_commit: unknown (35 commits, no date, no release)
+    player_mode: single-player research setup
+    notes: Requires Python 3.9+ and Node.js 16.13.0+. Tested on Ubuntu 20.04, Windows 11, macOS. Listed as a reference point, not an NPC mod.
+    sources:
+      - https://github.com/MineDojo/Voyager
+
+  # ---------------- Garry's Mod ----------------
+
+  - name: AI-NPCs-GMod
+    games: [Garry's Mod]
+    urls:
+      source: https://github.com/SonnyTaylor/AI-NPCs-GMod
+    read_status: fetched (GitHub README)
+    ai_controls:
+      speech_dialogue: yes, real-time chat with NPCs
+      voice: TTS via Google TTS, Microsoft (SAPI) voices and Fish Audio (paid per character)
+      actions: "yes: 'follow, stay, come, wander, attack, stop attacking, flee, switch weapon, drop weapon, open doors and gesture'"
+      memory: yes. "They remember you between sessions" (profiles in garrysmod/data/ai_npc/profiles/)
+    connection:
+      openai_compatible: unknown
+      custom_base_url: unknown
+      local_models: yes via Ollama ("point it at your own machine"); base URL setting not documented
+      other: Groq, OpenRouter, OpenAI, DeepSeek
+    speech:
+      stt: none (chat is typed)
+      tts: Google TTS, SAPI, Fish Audio
+    licence: MIT
+    open_source: "yes"
+    activity:
+      last_release_or_commit: unknown (77 commits, no date, no releases)
+    player_mode: unknown
+    notes: Also says the NPC "knows what is happening", including health, nearby entities and recent events.
+    sources:
+      - https://github.com/SonnyTaylor/AI-NPCs-GMod
+
+  - name: gm_ollama
+    games: "[Garry's Mod] (library, not an NPC mod)"
+    urls:
+      source: https://github.com/earu/gm_ollama
+    read_status: fetched (GitHub README)
+    ai_controls:
+      speech_dialogue: building block only (Lua bindings for Ollama API); chat command example
+      voice: none
+      actions: none documented
+      memory: none documented
+    connection:
+      openai_compatible: no (Ollama native API)
+      custom_base_url: yes. "Ollama.SetConfig(url, timeout)", default "http://localhost:11434"
+      local_models: yes (Ollama)
+      other: binary module, server and client DLLs
+    speech:
+      stt: none
+      tts: none
+    licence: MIT
+    open_source: "yes"
+    activity:
+      last_release_or_commit: unknown (18 commits, no date, no releases)
+    player_mode: server and client modules
+    notes: Build needs a Rust toolchain (cargo build --release). Use as a backend for other GMod code.
+    sources:
+      - https://github.com/earu/gm_ollama
+
+  - name: gpt-gmod
+    games: [Garry's Mod]
+    urls:
+      source: https://github.com/ratholedev/gpt-gmod
+    read_status: fetched (GitHub landing page)
+    ai_controls:
+      speech_dialogue: yes, chat-level ChatGPT calls from Lua
+      voice: none
+      actions: none described
+      memory: none mentioned
+    connection:
+      openai_compatible: no (ChatGPT API)
+      custom_base_url: unknown
+      local_models: no
+      other: default model gpt-3.5-turbo; max response 64 tokens
+    speech:
+      stt: none
+      tts: none
+    licence: MIT
+    open_source: "yes"
+    activity:
+      last_release_or_commit: unknown (7 commits, no date)
+    player_mode: unknown
+    notes: Small proof of concept; the page says "Max response 64 tokens (~254 symbols)".
+    sources:
+      - https://github.com/ratholedev/gpt-gmod
+
+  # ---------------- RimWorld ----------------
+
+  - name: RimTalk
+    games: [RimWorld]
+    urls:
+      project: https://steamcommunity.com/sharedfiles/filedetails/comments/3551203752 (Steam Workshop item 3551203752; discussion and changelog pages read)
+      source: unknown (no official GitHub found; a mirror at gh.r-mj.com/jlibrary/RimTalk exists and is unofficial)
+    read_status: partial (Steam changelog and search-linked Steam guide read; no official repo)
+    ai_controls:
+      speech_dialogue: yes (AI-generated pawn dialogue, context and event filters per mirror README)
+      voice: unknown
+      actions: unknown (Event Filter setting; mirror README)
+      memory: unknown (Persona Director add-on exists per catalogue; not read)
+    connection:
+      openai_compatible: unknown
+      custom_base_url: yes, a "Custom API settings" screen exists; "Added OpenCode Zen and OpenCode GO provider presets to Custom API settings" (Update 1.4.2, Oct 15)
+      local_models: yes. "Local and LAN servers (Ollama, LM Studio, etc.) work over plain http://" (Update 1.4.0, Oct 12); Local Brain described in Steam guide
+      other: Cloud Brain via Google Gemini recommended (Steam guide, paid API key); Player2 switching noted in changelog
+    speech:
+      stt: unknown
+      tts: unknown
+    licence: unknown
+    open_source: unknown
+    activity:
+      last_release_or_commit: Nov 19 (Update 1.4.7 at 5:00pm, year not shown on page; the changelog sits in the 2026 series)
+    player_mode: unknown
+    notes: Steam guide reports "unsafe links" error when pointing at a LAN server (Steam comment). Mirror README dated 01/20/2026 is unofficial.
+    sources:
+      - https://steamcommunity.com/sharedfiles/filedetails/changelog/3551203752
+      - https://steamcommunity.com/workshop/filedetails/discussion/3551203752/600788619628883247 (search-linked; read for the guide content)
+      - https://gh.r-mj.com/jlibrary/RimTalk (unofficial mirror)
+
+  - name: SocialInteractions (Local AI Social Interactions)
+    games: [RimWorld]
+    urls:
+      source: https://github.com/gavinblair/SocialInteractions
+    read_status: fetched (GitHub README)
+    ai_controls:
+      speech_dialogue: yes (social interactions in RimWorld)
+      voice: none mentioned
+      actions: not described
+      memory: not mentioned
+    connection:
+      openai_compatible: "no"
+      custom_base_url: unknown
+      local_models: yes; Ollama with llama3.2:3b. "using a locally installed LLM"
+      other: none
+    speech:
+      stt: none
+      tts: none
+    licence: unknown (not stated)
+    open_source: yes (public repo)
+    activity:
+      last_release_or_commit: unknown (5 commits, no dates; 2 stars per page)
+    player_mode: unknown
+    notes: "'This is only tested on a Mac.' Install by cloning into the RimWorld Mods folder."
+    sources:
+      - https://github.com/gavinblair/SocialInteractions
+
+  # ---------------- Other games ----------------
+
+  - name: TALKER (STALKER Anomaly / GAMMA)
+    games: "[STALKER Anomaly] (not in the requested list; included as a close analogue)"
+    urls:
+      source: https://github.com/Mirrowel/TALKER (fork of danclave/TALKER)
+    read_status: fetched (GitHub README)
+    ai_controls:
+      speech_dialogue: yes. "A LLM powered dialogue generator"
+      voice: STT via hold-to-talk (Left Alt); transcription service chosen in launcher; "gemini-proxy" voice provider NOT IMPLEMENTED
+      actions: NPC speaks on triggers (firefight, reload, anomaly triggered)
+      memory: short-term event context only; no persistent memory described
+    connection:
+      openai_compatible: unknown
+      custom_base_url: unknown
+      local_models: "yes (Ollama: 'ollama serve')"
+      other: LLM-API-Key-Proxy recommended (many providers); direct OpenAI and OpenRouter keys
+    speech:
+      stt: launcher-selected transcription service
+      tts: unknown
+    licence: MIT
+    open_source: "yes"
+    activity:
+      last_release_or_commit: unknown (216 commits, no dates)
+    player_mode: unknown
+    notes: Built for the GAMMA modpack per install notes.
+    sources:
+      - https://github.com/Mirrowel/TALKER
+
+  - name: Sentient Sands
+    games: [Kenshi]
+    urls:
+      project: https://harvicus.itch.io/sentientsands
+      source: unknown (none listed on page)
+    read_status: fetched (itch.io page)
+    ai_controls:
+      speech_dialogue: yes. "This mod completely overhauls Kenshi's dialogue system by hooking the game into a Large Language Model."
+      voice: Talk, Whisper and Yell modes (whisper is one-on-one)
+      actions: "yes. 'The AI can also act on what you say': recruit, attack, trade, change relations."
+      memory: yes. "saved permanently to your campaign folder"
+    connection:
+      openai_compatible: yes. "compatible with any OpenAI-compatible provider," configured through JSON files in the server folder.
+      custom_base_url: yes (through the JSON config; key name not seen)
+      local_models: unknown (OpenAI-compatible includes local servers only if the user runs one; not stated)
+      other: ships pre-configured for Player2
+    speech:
+      stt: Whisper mode named on the page; engine not specified
+      tts: unknown
+    licence: unknown (not stated)
+    open_source: unknown
+    activity:
+      last_release_or_commit: unknown; page status "In development"
+    player_mode: unknown
+    notes: Requires RE_Kenshi and KenshiLib (both linked). Pay what you want, listed under Free.
+    sources:
+      - https://harvicus.itch.io/sentientsands
+      - https://github.com/BFrizzleFoShizzle/RE_Kenshi/releases/tag/v0.3.0 (dependency, linked from page)
+
+  - name: Interactive LLM-Powered NPCs
+    games: [Cyberpunk 2077, Assassin's Creed Valhalla, GTA 5 and other open-world games (general, not per-game)]
+    urls:
+      source: https://github.com/AkshitIreddy/Interactive-LLM-Powered-NPCs
+    read_status: fetched (GitHub landing page)
+    ai_controls:
+      speech_dialogue: yes (speak a name, then dialogue)
+      voice: speech in via SpeechRecognition; TTS via Edge-TTS with a per-character voice.py; facial animation via SadTalker
+      actions: unknown (facial recognition and webcam emotion recognition affect responses)
+      memory: yes. "vector stores to provide limitless memory capacity for NPCs"; Chromadb local vectorstore
+    connection:
+      openai_compatible: "no"
+      custom_base_url: unknown
+      local_models: no mention (Cohere set-up; GPT-4 option)
+      other: Cohere trial API key in apikeys.json; GPT-4 option needs code changes
+    speech:
+      stt: SpeechRecognition package
+      tts: Edge-TTS, per-character voice.py
+    licence: MIT
+    open_source: "yes"
+    activity:
+      last_release_or_commit: unknown (310 commits, no date)
+    player_mode: unknown
+    notes: Runs as an outside process that listens to the microphone and webcam. It is not an in-game mod.
+    sources:
+      - https://github.com/AkshitIreddy/Interactive-LLM-Powered-NPCs
+
+  - name: Generative Texting
+    games: [Cyberpunk 2077]
+    urls:
+      source: https://github.com/liuhVIP/generative-texting (fork of KarkatSG/generative-texting)
+    read_status: fetched (GitHub README)
+    ai_controls:
+      speech_dialogue: yes, text messages with Panam and Judy (named on page)
+      voice: none
+      actions: none; the page says it is texting only
+      memory: not mentioned
+    connection:
+      openai_compatible: "no"
+      custom_base_url: unknown (no endpoint setting mentioned)
+      local_models: not mentioned
+      other: AI Horde (crowdsourced); future plans for GPT and Claude "not implemented"
+    speech:
+      stt: none
+      tts: none
+    licence: unknown
+    open_source: yes (public repo; licence not stated)
+    activity:
+      last_release_or_commit: unknown (37 commits, no date)
+    player_mode: unknown
+    notes: Mentions possible hallucinated locations.
+    sources:
+      - https://github.com/liuhVIP/generative-texting
+
+  - name: Simcronia
+    games: [The Sims 4]
+    urls:
+      source: https://github.com/CarlosNahuelcoy/Simcronia
+    read_status: fetched (GitHub landing page)
+    ai_controls:
+      speech_dialogue: yes. Social interactions become text dialogue ("Translates social actions into natural text.")
+      voice: none mentioned
+      actions: social actions translated to text; XML interaction definitions in package/
+      memory: listed as "Maintains coherence throughout conversations" (no implementation detail)
+    connection:
+      openai_compatible: unknown
+      custom_base_url: unknown (fixed Player2 URL http://127.0.0.1:4315/v1 named; others "permitted but not documented")
+      local_models: not mentioned
+      other: Player2 required and cannot be removed
+    speech:
+      stt: none
+      tts: none
+    licence: GPL-3.0 with additional protection terms (README)
+    open_source: "yes"
+    activity:
+      last_release_or_commit: unknown (2 commits, no date)
+    player_mode: unknown
+    notes: Requires Player2 App running locally.
+    sources:
+      - https://github.com/CarlosNahuelcoy/Simcronia
+
+  # ---------------- Frameworks and engines ----------------
+
+  - name: LLM for Unity (undreamai/LLMUnity)
+    games: [any Unity game]
+    urls:
+      source: https://github.com/undreamai/LLMUnity
+    read_status: fetched (GitHub landing page)
+    ai_controls:
+      speech_dialogue: yes. "Create characters in Unity with LLMs!"
+      voice: none listed
+      actions: none listed
+      memory: RAG-based semantic search for character knowledge
+    connection:
+      openai_compatible: no (remote server uses LlamaLib binaries, not OpenAI-compatible per page)
+      custom_base_url: unknown
+      local_models: yes. Runs GGUF models locally "without internet access"; llama.cpp based
+      other: "Supports remote server setup"
+    speech:
+      stt: none
+      tts: none
+    licence: Apache-2.0 per page ("The license of LLM for Unity is Apache 2.0"). Search summaries differ; check LICENSE.
+    open_source: "yes"
+    activity:
+      last_release_or_commit: unknown (1,434 commits, no date, no release)
+    player_mode: unknown
+    notes: Tested on Unity 2021 LTS, 2022 LTS, 2023, Unity 6. Android needs IL2CPP and ARM64. Models carry their own licences.
+    sources:
+      - https://github.com/undreamai/LLMUnity
+
+  - name: NobodyWho (Godot)
+    games: [any Godot 4.5+ game]
+    urls:
+      source: https://github.com/nobodywho-ooo/nobodywho
+      godot_store: https://store.godotengine.org/asset/nobodywho/nobodywho/ (search link, not read)
+    read_status: fetched (GitHub landing page)
+    ai_controls:
+      speech_dialogue: inference engine; NPC dialogue is the target use (per Godot forum and asset library names; page itself does not describe NPCs)
+      voice: TTS Kokoro, Pocket TTS, Supertonic (local WAV); STT Whisper; VAD Silero
+      actions: "'Fast, type-safe tool calling' (function signatures become grammars)"
+      memory: unknown (page describes model memory use only)
+    connection:
+      openai_compatible: "yes, as a server it exposes OpenAI Chat Completions ('experimental local server ... implements the OpenAI Chat Completions API', http://127.0.0.1:8888). Client-side use of remote endpoints: unknown."
+      custom_base_url: unknown
+      local_models: yes, GGUF via llama.cpp
+      other: remote models are downloaded and cached on first use
+    speech:
+      stt: Whisper
+      tts: Kokoro, Pocket TTS, Supertonic
+    licence: EUPL-1.2 ("You may use it in proprietary and commercial projects, free of charge.")
+    open_source: "yes"
+    activity:
+      last_release_or_commit: unknown (2,134 commits; no dates or version on page)
+    player_mode: unknown
+    notes: Godot 4.5+ via AssetLib. Desktop and Android only; no iOS export.
+    sources:
+      - https://github.com/nobodywho-ooo/nobodywho
+
+  - name: godot-llm (Adriankhl)
+    games: [any Godot game]
+    urls:
+      source: https://github.com/Adriankhl/godot-llm
+    read_status: fetched (GitHub landing page)
+    ai_controls:
+      speech_dialogue: general LLM plugin; README says "LLM has great potential in NPC models"
+      voice: none
+      actions: none listed
+      memory: RAG and vector database support (not NPC-specific)
+    connection:
+      openai_compatible: no mention
+      custom_base_url: no mention
+      local_models: yes (GGUF, llama.cpp; model_path property)
+      other: Hugging Face model download (search summary, not confirmed on page)
+    speech:
+      stt: none
+      tts: none
+    licence: MIT
+    open_source: "yes"
+    activity:
+      last_release_or_commit: unknown (283 commits, no date)
+    player_mode: unknown
+    notes: Godot version not stated; a TODO mentions waiting for Godot 4.3 support.
+    sources:
+      - https://github.com/Adriankhl/godot-llm
+
+  - name: Player2 AI NPC (Godot plugin)
+    games: [any Godot game using Player2]
+    urls:
+      source: https://github.com/elefant-ai/player2-ai-npc-godot
+    read_status: fetched (GitHub landing page)
+    ai_controls:
+      speech_dialogue: yes. "To spawn in an AI NPC agent that can talk and perform actions in the world"
+      voice: STT node Player2STT; TTS node Player2TTS
+      actions: tool calling ("the agent can invoke functions you define")
+      memory: "'Cloud user data storage, with a 4 MB quota per user per game' (not described as NPC memory)"
+    connection:
+      openai_compatible: no (Player2 web API; authentication required)
+      custom_base_url: no (no endpoint change documented)
+      local_models: via Player2 App, not documented here
+      other: Player2 App or web API with a client_id from the developer portal
+    speech:
+      stt: Player2 STT
+      tts: Player2 TTS
+    licence: GPL-3.0 (LICENSE)
+    open_source: "yes"
+    activity:
+      last_release_or_commit: unknown (210 commits, no date)
+    player_mode: unknown
+    notes: Page says the plugin "uses free AI APIs from the player2 App" and the developer side is free. Earlier search snippet claimed a localhost:4315 port; the page does not say this.
+    sources:
+      - https://github.com/elefant-ai/player2-ai-npc-godot
+
+  - name: Player2 Unity SDK (unity-player2-sdk)
+    games: [any Unity game using Player2]
+    urls:
+      source: https://github.com/elefant-ai/unity-player2-sdk
+    read_status: fetched (GitHub landing page)
+    ai_controls:
+      speech_dialogue: yes (NpcManager and Player2Npc chat)
+      voice: TTS and Player2STT (real-time speech-to-text)
+      actions: yes. "whenever the model decides the NPC should act, HandleFunctionCall fires on the main thread"
+      memory: unknown
+    connection:
+      openai_compatible: unknown
+      custom_base_url: unknown. Troubleshooting mentions "valid API key and base URL" on NpcManager; no field described.
+      local_models: no mention
+      other: "'Instant authentication if Player2 App is running locally'; otherwise browser fallback"
+    speech:
+      stt: Player2STT.cs (real-time)
+      tts: enabled per NPC
+    licence: MIT
+    open_source: "yes"
+    activity:
+      last_release_or_commit: unknown (77 commits, no date)
+    player_mode: unknown
+    notes: Player2 separately says NPC API endpoints are under /npc/games/{game_id}/npcs/ (search snippet from Player2 blog only; not read).
+    sources:
+      - https://github.com/elefant-ai/unity-player2-sdk
+
+  - name: LLM Connect (Unreal Engine plugin)
+    games: [any Unreal Engine project]
+    urls:
+      source: https://github.com/yigit-altun-rootrootq/LLM-Connect
+      marketplace: Fab listing (page says "Purchase or add it to your Library"; not read)
+    read_status: fetched (GitHub landing page)
+    ai_controls:
+      speech_dialogue: LLM calls for characters (blueprint-only)
+      voice: none listed
+      actions: none listed
+      memory: "'no data is stored by the plugin' (privacy statement, not memory)"
+    connection:
+      openai_compatible: no (provider list, no generic OpenAI-compatible option described)
+      custom_base_url: "partial. 'For Ollama and LM Studio (Default: http://localhost:11434)' server address configurable."
+      local_models: yes (Ollama and LM Studio; "chosen model to be pre-installed")
+      other: OpenAI, Gemini, Claude, DeepSeek, Mistral, xAI, Cohere, OpenRouter, Hugging Face Router
+    speech:
+      stt: none
+      tts: none
+    licence: unknown (not stated on page)
+    open_source: unknown (GitHub holds docs; plugin may be closed)
+    activity:
+      last_release_or_commit: unknown (17 commits, no dates)
+    player_mode: unknown
+    notes: Paid plugin on Fab (price not stated on page).
+    sources:
+      - https://github.com/yigit-altun-rootrootq/LLM-Connect
+
+  - name: Convai Unreal Engine SDK (game3dstudios fork)
+    games: [any Unreal Engine project using Convai]
+    urls:
+      source: https://github.com/game3dstudios/convai-unrealengine-sdk (fork of Conv-AI/Convai-UnrealEngine-SDK)
+      vendor: Convai (Unity asset store listing and Fab listings seen in search; not read)
+    read_status: fetched (GitHub landing page)
+    ai_controls:
+      speech_dialogue: yes (backstory, name, voice type)
+      voice: speech-to-text, text-to-speech (Sound Wave), microphone capture
+      actions: yes. "Allows your character to respond with intelligent actions based on player's interaction."
+      memory: not mentioned on page
+    connection:
+      openai_compatible: "no"
+      custom_base_url: no (not mentioned)
+      local_models: no (not mentioned; requires Convai cloud per "integrations with all of Convai's APIs")
+      other: Convai cloud API key (implied, not explicitly stated)
+    speech:
+      stt: Convai cloud
+      tts: Convai cloud (Sound Wave output)
+    licence: unknown (LICENSE.md linked; type not shown)
+    open_source: unknown
+    activity:
+      last_release_or_commit: unknown (179 commits, no dates, no releases)
+    player_mode: unknown
+    notes: Pricing conflicting across third-party guides; not confirmed on the Convai site.
+    sources:
+      - https://github.com/game3dstudios/convai-unrealengine-sdk
+
+  - name: AI Character Engine (ai-character-engine)
+    games: [general (Python library; not an engine plugin)]
+    urls:
+      source: https://github.com/Luciferjimmy/ai-character-engine
+    read_status: fetched (GitHub landing page)
+    ai_controls:
+      speech_dialogue: yes (Character and Conversation classes)
+      voice: none listed
+      actions: none listed
+      memory: "'Remembers relationships and past interactions' (get_conversation_history(limit=10)); storage not detailed"
+    connection:
+      openai_compatible: no (Ollama only)
+      custom_base_url: unknown
+      local_models: yes, Ollama (example phi3)
+      other: none
+    speech:
+      stt: none
+      tts: none
+    licence: MIT
+    open_source: "yes"
+    activity:
+      last_release_or_commit: unknown (5 commits, no date; 6 stars and 2 forks on page)
+    player_mode: unknown
+    notes: The page carries marketing claims (e.g. "Perfect consistency across 100+ conversations") with no data behind them; treat as unverified. Consulting and support prices are on the page but are not relevant to the code.
+    sources:
+      - https://github.com/Luciferjimmy/ai-character-engine
+
+  # ---------------- Entries deliberately not counted ----------------
+  # Not in entries: the items below were only seen in search results, so no fact about them was read.
+  # They belong in leads_not_verified.
+
+leads_not_verified:
+  # Search snippets only. Each needs its own page read before any fact is used.
+  - name: AliveNpcs (Stardew Valley)
+    note: Nexus page seen in search (mod ID not confirmed). Snippet says Gemini or OpenAI-compatible/local endpoint, memory, gossip, multiplayer foundation in 1.5.0.
+  - name: Neural Harvest (Stardew Valley)
+    note: Nexus page seen in search (ID not confirmed). Snippet says Python dialogue server, OpenAI full mode, GitHub repo unknown.
+  - name: Autonomous Valley variants and other Stardew LLM mods (ValleyTalk, AIValley)
+    note: Nexus pages in search results, not read.
+  - name: "AI Influence (Mount & Blade II: Bannerlord)"
+    note: "Backends per search summary: OpenRouter, Player2 (localhost:4315), Ollama, KoboldCpp, DeepSeek. Nexus mod ID 9915 cited in a third-party listing. No repo found."
+  - name: Inworld Bannerlord mod (BlocTheWorker)
+    note: Found on the author's GitHub per search; page not read.
+  - name: STOBE (DwemerDynamics)
+    note: Search summary said Kenshi; the github.com/DwemerDynamics/STOBE URL returned 404 to the fetch tool, so the game and facts are unconfirmed.
+  - name: AISS / AI Settled Systems (Starfield)
+    note: Nexus 17392 or 17608 in search results (ID not confirmed). Snippet says LM Studio at http://127.0.0.1:1234 and SFSE dependency.
+  - name: Project Frosty (Starfield)
+    note: Nexus page in search results; snippet says it supports gemini, ollama, lmstudio.
+  - name: Talk2NPC AI for GTA Enhanced and Hearsay (GTA V)
+    note: gta5-mods pages in search results. Snippets say Gemini cloud for brains; Hearsay uses ElevenLabs voices. Not read.
+  - name: GTA 5 Enhanced Conversation Mod (Venator5824)
+    note: Snippet says local Phi-3 GGUF and Whisper-style speech model, single-player only, "grey area" legal status. Config repo URL returned 404 to the fetch tool.
+  - name: CyberAI (Cyberpunk 2077)
+    note: Snippets say OpenAI API; repo linked from Nexus mod 28512 (not read).
+  - name: Convai Cyberpunk mod (Nexus 13135)
+    note: Snippet says cloud Convai with actions. Not read.
+  - name: Sims AI Chat / Sims AI Dialogue (CurseForge)
+    note: Snippets say replaces simlish with AI dialogue, v0.6.1 on 2026-05-16, conversation memory. Not read.
+  - name: SimsGPT (ModDB)
+    note: Desktop app paired with the Sims mod. Not read.
+  - name: Herika / CHIM Nexus page (mod 126330)
+    note: Covered via the server repo; mod page not read.
+  - name: Karmic Villagers, CreatureChat, Speaking Villagers, AI Villager Chat (Minecraft)
+    note: CurseForge/Modrinth pages in search results. Not read. Karmic Villagers snippet says local GPU need 4 GB VRAM.
+  - name: RimTalk Persona Director and EchoColony (RimWorld)
+    note: Catalogue and Steam pages in search results. Not read.
+  - name: Inworld AI Unreal SDK (inworld-ai/inworld-unreal-sdk)
+    note: GitHub URL returned 404 to the fetch tool. Search snippet says last updated Oct 3, 2024. Inworld pricing not confirmed on a page read.
+  - name: Convai pricing and API docs
+    note: Third-party pricing conflicts. convai.com not read.
+  - name: Mantella's Nexus page (mod 98631)
+    note: returned 403; the version and date stay unknown.
+  - name: Herika / Pantella
+    note: No page found for "Pantella"; search returned Mantella only. Treated as not found.
+  - name: Mantella Mantella-Spell (Skyrim spell version) and Fallout 4 gun version
+    note: Mentioned on the Mantella search result only.
+  - name: Inworld companion mod for Bannerlord and Skyrim Nexus pages
+    note: Search results only.
+
+# Gaps to close in a follow-up
+gaps:
+  - Nexus Mods pages return 403 or 404 to the fetch tool (Mantella, AliveNpcs, Neural Harvest, Social Valley, Sentient Sands' Nexus, and others). Reading them needs a browser or the Nexus API.
+  - GitHub API was not enabled in this session (gh returned "GitHub access ... not enabled"), so commit and release dates are only what the landing pages show, which is often nothing.
+  - Licences unknown for: AI Companion Fabric (stated LGPLv3 on CurseForge, not confirmed on the repo), RimTalk, SocialInteractions, Sentient Sands, Bannerlord.ChatGPT, LLM Connect, Convai Unreal SDK, SkyrimNet (not open source per page; licence text not shown).
+  - Multiplayer behaviour unknown for most entries.
+  - Safety, anti-cheat and ToS review: not done beyond what each page states. Multiplayer servers that ban mods are not checked for any game.
+  - Games with no verified open-source entry: Starfield, GTA V (only search-level leads), The Sims (Simcronia only), Kenshi (Sentient Sands only, no repo), Baldur's Gate 3 (Inworld mod only, a cloud service), Stardew (3 projects; Neural Harvest and AliveNpcs unverified).
+  - No direct check of any mod's actual local-model behaviour; claims are as stated by each page.

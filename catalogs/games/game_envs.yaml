@@ -1,0 +1,1114 @@
+# Game environments where a software agent can play as a player (alone, or with or against humans).
+# Every fact comes from a page read during this session (URLs in each entry's sources).
+# "unknown" = not stated on the pages read. Pages that returned 403/404 are named in the entry.
+# Read date: 2026-11-21 (captured page footers show GitHub's own copyright year only, not project dates).
+
+summary:
+  best_for_coop_with_human:
+    - name: Overcooked-AI
+      why: "README calls it a benchmark for fully cooperative human-AI task performance and links human-human and human-AI gameplay data plus a playable demo with agents."
+      source: https://github.com/HumanCompatibleAI/overcooked_ai
+    - name: Google Research Football
+      why: "README says human-controlled players use the same interface as agents and that gamepad, external bots and agents are all supported player types, with both sides controllable at once. Repo is archived (Aug 19, 2026)."
+      source: https://github.com/google-research/football
+    - name: Mineflayer / Mindcraft
+      why: "Bots join online-mode Minecraft servers with a Microsoft account (Mineflayer README, Mindcraft README). Mindcraft warns against public servers with coding enabled, so co-op is possible but needs care. Co-op behaviour itself is unknown from these pages."
+      source: https://github.com/PrismarineJS/mineflayer ; https://github.com/mindcraft-bots/mindcraft
+  best_measurable_scores:
+    - name: MineDojo
+      why: "README: 3142 tasks in the current release (1581 programmatic, 1560 creative, 1 playthrough), Gym-style interface."
+      source: https://github.com/MineDojo/MineDojo
+    - name: Crafter
+      why: "README defines a score as the geometric mean of achievement success rates, with a 17-action discrete space and 64x64x3 image observations."
+      source: https://github.com/danijar/crafter
+    - name: TextArena
+      why: "README advertises 100+ single, two and multi-player text games with a public leaderboard at textarena.ai/leaderboard (scoring method not stated on the README)."
+      source: https://github.com/LeonGuertler/TextArena
+    - name: BALROG
+      why: "README points to a leaderboard at balrogai.com; the benchmark games and scoring are not stated on the README."
+      source: https://github.com/balrog-ai/BALROG
+    - name: SMAC
+      why: "Cooperative multi-agent micromanagement benchmark on StarCraft II (README); the win-rate metric is not stated on the README page read."
+      source: https://github.com/oxwhirl/smac
+  cheapest_to_start_locally:
+    - name: Overcooked-AI
+      why: "MIT licence, a Python benchmark with no commercial game to own (README)."
+      source: https://github.com/HumanCompatibleAI/overcooked_ai
+    - name: Crafter
+      why: "MIT licence, open-world survival in a 2D Gym-style environment with no game to buy (README)."
+      source: https://github.com/danijar/crafter
+    - name: PettingZoo
+      why: "MIT licence, multi-agent Gymnasium-like library with cooperative Butterfly and SISL environments (README). Note the install size of each family is unknown."
+      source: https://github.com/Farama-Foundation/PettingZoo
+  gaps:
+    - "No Lichess bot API page could be read: lichess.org/api returned 403 and github.com/lichess-org/lichess-bot returned 404. Lichess rules for bots are therefore unconfirmed."
+    - "Valve's Dota 2 scripting wiki returned 403; the Dota entry relies on the community moddota docs. Official-match bot rules are unknown."
+    - "Screeps Terms of Service and Introduction pages could not be read (404, and an overview page only). Bot rules on the official server are unknown."
+    - "Factorio: the RCON settings are confirmed from the wiki command-line page, but no page read states whether RCON is used by any agent project, and Factorio's price is unknown."
+    - "Among Us: only the AmongAgents repo was read. Golechha and Milkowski/Weninger papers were seen as search snippets only and their code is unverified."
+    - "GameBench: the Joshuaclymer README did not list its games. The 9-environment count comes from a search snippet and the arXiv abstract page was not fetched."
+    - "Diplomacy: the Cicero repo is archived and its webDiplomacy connection details are not documented on the README."
+    - "Pokemon Showdown bot rules: the official bot policy was not found. A Smogon forum post mentions a mandatory bot registry; it is unverified and not linked to an official page."
+    - "Most repos show no release or commit date in the captured page, so activity is marked unknown unless an archive notice says otherwise."
+    - "No entry was run or downloaded; no install was attempted."
+
+entries:
+
+  - name: Mineflayer
+    game: Minecraft (Java Edition)
+    urls:
+      - https://github.com/PrismarineJS/mineflayer
+    connection:
+      api_type: "Node.js library (createBot), speaks the Minecraft network protocol to a server."
+      observation: "Structured: entity tracking, block queries, inventory, chat (README capability list; full reference is api.md, not read)."
+      action: "Method calls: digging, building, attacking, using vehicles, inventory, chat."
+    multiplayer:
+      can_join_humans: "Likely, README covers online-mode servers with Microsoft auth and offline-mode servers (not stated as multiplayer)."
+      co_op: unknown
+      competitive: unknown
+      players: unknown
+      private_server: "Yes, offline-mode and LAN connections are described."
+    timing:
+      real_time: true
+      speed_control: unknown
+    licence:
+      library: MIT
+      game_needs_owning: "Yes, bots log in with a Microsoft account for online servers (README); the game itself is not described as free."
+    tos_anticheat: "Not stated on the README. Only server-side auth is described."
+    activity: "Page shows 2,992 commits; no date and no release on page (unknown)."
+    scores_or_tasks: "No built-in benchmark on the README."
+    sources:
+      - https://github.com/PrismarineJS/mineflayer
+
+  - name: Voyager
+    game: Minecraft
+    urls:
+      - https://github.com/MineDojo/Voyager
+    connection:
+      api_type: "Mineflayer (Node.js) under a Python/LLM harness; Fabric mod on the Minecraft side (README)."
+      observation: "Unknown from README; agent is an LLM writing executable skill code."
+      action: "Executable JavaScript skills stored in a skill library (README)."
+    multiplayer:
+      can_join_humans: unknown
+      co_op: unknown
+      competitive: unknown
+      players: "Single player; the README setup selects Singleplayer and opens to LAN."
+      private_server: "Yes, single-player world."
+    timing:
+      real_time: true
+      speed_control: unknown
+    licence:
+      library: MIT
+      game_needs_owning: "Yes, Minecraft is required (README setup)."
+      model_key: "Needs an OpenAI API key for GPT-4 (README)."
+    tos_anticheat: unknown
+    activity: "35 commits on page; no date (unknown)."
+    scores_or_tasks: "Item-discovery progress and tech-tree milestones are the README's evaluation (not read in detail)."
+    sources:
+      - https://github.com/MineDojo/Voyager
+
+  - name: Mindcraft
+    game: Minecraft
+    urls:
+      - https://github.com/mindcraft-bots/mindcraft
+    connection:
+      api_type: "Mineflayer (Node.js) with LLM provider API keys; joins LAN on localhost port 55916 or online servers (README)."
+      observation: "Text via LLM prompts (details unknown)."
+      action: "LLM-chosen Mineflayer actions; LLM code execution is optional and off by default (allow_insecure_coding)."
+    multiplayer:
+      can_join_humans: "Yes, online servers are supported; the README says it needs a Microsoft/Minecraft account."
+      co_op: unknown
+      competitive: unknown
+      players: unknown
+      private_server: "Yes, LAN world on localhost."
+    timing:
+      real_time: true
+      speed_control: unknown
+    licence:
+      library: MIT
+      game_needs_owning: "Yes, Microsoft/Minecraft account required for online servers (README)."
+    tos_anticheat: "README warns: do not connect this bot to public servers with coding enabled. Minecraft server ToS is not discussed."
+    activity: "1,673 commits on develop branch; no date (unknown)."
+    scores_or_tasks: "Not stated on the README page."
+    sources:
+      - https://github.com/mindcraft-bots/mindcraft
+
+  - name: MineDojo
+    game: Minecraft
+    urls:
+      - https://github.com/MineDojo/MineDojo
+    connection:
+      api_type: "Python Gym-style interface on a Minecraft-based simulator (README)."
+      observation: "Multimodal: RGB, compass, voxels (README)."
+      action: "Compound action space: movement, camera, attack, craft (README)."
+    multiplayer:
+      can_join_humans: unknown
+      co_op: unknown
+      competitive: unknown
+      players: "Single agent per task (inferred from Gym-style interface; not stated)."
+      private_server: unknown
+    timing:
+      real_time: unknown
+      speed_control: unknown
+    licence:
+      library: MIT
+      data: "YouTube and Reddit databases CC BY 4.0; Wiki database CC BY-NC-SA 3.0 (README)."
+      game_needs_owning: unknown
+    tos_anticheat: unknown
+    activity: "34 commits on main; no date (unknown). Releases section empty."
+    scores_or_tasks: "3142 tasks: 1581 programmatic, 1560 creative, 1 playthrough (README)."
+    sources:
+      - https://github.com/MineDojo/MineDojo
+
+  - name: MineRL
+    game: Minecraft
+    urls:
+      - https://github.com/minerllabs/minerl
+    connection:
+      api_type: "Python package with Gym environments and data access (README)."
+      observation: "Pixels only by default; 640x360 in v1.0 (README)."
+      action: "GUI and mouse control only; craft and smelt actions removed in v1.0 (README)."
+    multiplayer:
+      can_join_humans: unknown
+      co_op: unknown
+      competitive: unknown
+      players: unknown
+      private_server: unknown
+    timing:
+      real_time: unknown
+      speed_control: unknown
+    licence:
+      library: unknown (README links a License page, type not stated in the capture)
+      game_needs_owning: "Yes, Minecraft is required (implied; not read directly)."
+    tos_anticheat: unknown
+    activity: "797 commits on dev; no release date. Notice: June 2024 data mirrors down (README)."
+    scores_or_tasks: "BASALT tasks such as MineRLBasaltBuildVillageHouse-v0 (README example)."
+    sources:
+      - https://github.com/minerllabs/minerl
+
+  - name: Project Malmo
+    game: Minecraft
+    urls:
+      - https://github.com/microsoft/malmo
+    connection:
+      api_type: "Minecraft mod with a network protocol; Python agents launched separately; MalmoEnv gives a Gym-like wrapper (README)."
+      observation: "Defined by XML missions; detail not stated on README."
+      action: "Defined by XML missions and agent commands; detail not stated."
+    multiplayer:
+      can_join_humans: unknown
+      co_op: unknown
+      competitive: unknown
+      players: "MalmoEnv uses one client instance and one port (README); player count otherwise unknown."
+      private_server: "Yes, runs a local client (launchClient -port 10001)."
+    timing:
+      real_time: unknown
+      speed_control: unknown
+    licence:
+      library: MIT
+      game_needs_owning: "Yes, Minecraft is required (README runs the client)."
+    tos_anticheat: unknown
+    activity: "Repository archived by owner on Aug 18, 2026 and read-only (README)."
+    scores_or_tasks: unknown
+    sources:
+      - https://github.com/microsoft/malmo
+
+  - name: PySC2
+    game: StarCraft II
+    urls:
+      - https://github.com/google-deepmind/pysc2
+    connection:
+      api_type: "Python RL environment wrapping Blizzard's StarCraft II Machine Learning API (README)."
+      observation: "Feature layers from the game's interface (README); an alternative richer format is noted via C++ wrappers."
+      action: "Actions specify screen points (README)."
+    multiplayer:
+      can_join_humans: unknown
+      co_op: unknown
+      competitive: "Two agents can play each other; built-in AI opponents by difficulty flags (README)."
+      players: 2
+      private_server: unknown (requires full game client 3.16.1 or later)
+    timing:
+      real_time: true
+      speed_control: "Game speed changes via PgUp/PgDn in the human UI; agent step control not documented on README."
+    licence:
+      library: Apache-2.0
+      game_needs_owning: "Yes, the full StarCraft II game is required (README)."
+    tos_anticheat: unknown
+    activity: "581 commits; no release date on page (unknown)."
+    scores_or_tasks: "Mini-games and full game results; metric not stated on README."
+    sources:
+      - https://github.com/google-deepmind/pysc2
+
+  - name: StarCraft II API (s2client-proto)
+    game: StarCraft II
+    urls:
+      - https://github.com/Blizzard/s2client-proto
+    connection:
+      api_type: "Protobuf protocol definition of the official game API (README). Transport details not on README; see docs/protocol.md."
+      observation: "Defined by the protobuf protocol (not read)."
+      action: "Defined by the protobuf protocol (not read)."
+    multiplayer:
+      can_join_humans: unknown
+      co_op: unknown
+      competitive: unknown
+      players: unknown
+      private_server: unknown
+    timing:
+      real_time: unknown
+      speed_control: unknown
+    licence:
+      library: "MIT (repo); PROTOCOL_LICENSE file present."
+      game_needs_owning: "Yes, retail client; downloads need the AI and Machine Learning License (README)."
+    tos_anticheat: "Blizzard's AI and Machine Learning License governs downloads. README lists intended uses: scripted bots, ML bots, replay analysis, tool-assisted human play."
+    activity: "219 commits; no date (unknown)."
+    scores_or_tasks: unknown
+    sources:
+      - https://github.com/Blizzard/s2client-proto
+
+  - name: SMAC (StarCraft Multi-Agent Challenge)
+    game: StarCraft II (micromanagement scenarios)
+    urls:
+      - https://github.com/oxwhirl/smac
+    connection:
+      api_type: "Python on top of PySC2 and Blizzard's SC2 ML API (README)."
+      observation: "Per-agent observations plus global state (get_obs, get_state) (README example)."
+      action: "One action per controlled unit per step, chosen from available actions (get_avail_agent_actions) (README example)."
+    multiplayer:
+      can_join_humans: unknown
+      co_op: "Yes, cooperative MARL: each unit is controlled by its own agent (README)."
+      competitive: "Scenarios pit learned units against built-in AI (README; detail not read)."
+      players: "One learning agent per friendly unit; number varies by scenario (unknown)."
+      private_server: unknown
+    timing:
+      real_time: unknown
+      speed_control: unknown
+    licence:
+      library: MIT
+      game_needs_owning: "Yes, requires StarCraft II (README)."
+    tos_anticheat: unknown
+    activity: "120 commits; no date (unknown)."
+    scores_or_tasks: "Scenario win rate is the usual SMAC metric; the README page read does not state it."
+    sources:
+      - https://github.com/oxwhirl/smac
+
+  - name: OpenRA
+    game: Red Alert, Tiberian Dawn, Dune 2000 (distributed mods)
+    urls:
+      - https://github.com/OpenRA/OpenRA
+    connection:
+      api_type: "Lua scripting for missions (README link to docs.openra.net). No bot or agent API on README."
+      observation: unknown
+      action: unknown
+    multiplayer:
+      can_join_humans: "Yes, multiplayer matches and a dedicated game server (README)."
+      co_op: unknown
+      competitive: "Yes, multiplayer (README)."
+      players: unknown
+      private_server: "Yes, dedicated game server (README)."
+    timing:
+      real_time: true
+      speed_control: unknown
+    licence:
+      library: GPL-3.0
+      game_needs_owning: "Not stated; the distributed mods are free (README says distributed mods include reimagined titles)."
+    tos_anticheat: unknown
+    activity: "No release date on page (unknown)."
+    scores_or_tasks: unknown
+    sources:
+      - https://github.com/OpenRA/OpenRA
+
+  - name: Overcooked-AI
+    game: Overcooked (research re-implementation)
+    urls:
+      - https://github.com/HumanCompatibleAI/overcooked_ai
+    connection:
+      api_type: "Python environment (overcooked_mdp.py, overcooked_env.py) (README)."
+      observation: "Not stated on README; see the linked tutorial."
+      action: "Not stated on README."
+    multiplayer:
+      can_join_humans: "Yes; README supports human-AI play and provides a demo with previously trained agents."
+      co_op: "Yes, fully cooperative benchmark (README)."
+      competitive: "No, fully cooperative (README)."
+      players: 2
+      private_server: "Local; it is a local Python package."
+    timing:
+      real_time: unknown
+      speed_control: unknown
+    licence:
+      library: MIT
+      game_needs_owning: "No, it is a research re-implementation (README)."
+    tos_anticheat: "Not applicable."
+    activity: "690 commits; no date (unknown). Releases empty. DRL and BC implementations are deprecated (README)."
+    scores_or_tasks: "Reward is soups delivered (README: deliver soups as fast as possible)."
+    sources:
+      - https://github.com/HumanCompatibleAI/overcooked_ai
+
+  - name: Hanabi Learning Environment
+    game: Hanabi (card game)
+    urls:
+      - https://github.com/deepmind/hanabi-learning-environment
+    connection:
+      api_type: "Python: rl_env.py (Gym-like) and pyhanabi.py for non-RL methods (README)."
+      observation: "Not described on README."
+      action: "Not described on README."
+    multiplayer:
+      can_join_humans: "No human UI on README; examples are scripts."
+      co_op: unknown (not stated on README page)
+      competitive: unknown
+      players: unknown
+      private_server: "Local library."
+    timing:
+      real_time: unknown
+      speed_control: unknown
+    licence:
+      library: Apache-2.0
+      game_needs_owning: "No."
+    tos_anticheat: "Not applicable. README says it is not an officially supported Google product."
+    activity: "Repository archived by owner on Apr 18, 2024; read-only (README)."
+    scores_or_tasks: unknown
+    sources:
+      - https://github.com/deepmind/hanabi-learning-environment
+
+  - name: Lichess Bot API (and lichess-bot)
+    game: Chess (Lichess)
+    urls:
+      - https://lichess.org/api (returned 403 when read)
+      - https://github.com/lichess-org/lichess-bot (returned 404 when read)
+    connection:
+      api_type: "Lichess HTTP/streaming API for bot accounts; lichess-bot is a bridge to UCI engines (not read)."
+      observation: unknown
+      action: unknown
+    multiplayer:
+      can_join_humans: "Unknown; both pages could not be read."
+      co_op: "No, chess."
+      competitive: "Yes, chess."
+      players: 2
+      private_server: unknown
+    timing:
+      real_time: unknown
+      speed_control: unknown
+    licence:
+      library: unknown
+      game_needs_owning: "No."
+    tos_anticheat: unknown (rules page not read)
+    activity: unknown
+    scores_or_tasks: "Ratings on the platform (not read)."
+    sources:
+      - https://lichess.org/api (403)
+      - https://github.com/lichess-org/lichess-bot (404)
+
+  - name: Crafter
+    game: Crafter (open-world survival, 2D)
+    urls:
+      - https://github.com/danijar/crafter
+    connection:
+      api_type: "Python Gym-style environment (README)."
+      observation: "Images 64x64x3 (README)."
+      action: "17 categorical actions (README)."
+    multiplayer:
+      can_join_humans: unknown
+      co_op: unknown
+      competitive: unknown
+      players: unknown (README does not state the agent count)
+      private_server: "Local."
+    timing:
+      real_time: false
+      speed_control: unknown
+    licence:
+      library: MIT
+      game_needs_owning: "No."
+    tos_anticheat: "Not applicable."
+    activity: "161 commits, status stable release; no date (unknown)."
+    scores_or_tasks: "Crafter score (geometric mean of achievement success rates); sparse reward +1 per achievement (README)."
+    sources:
+      - https://github.com/danijar/crafter
+
+  - name: NetHack Learning Environment (NLE)
+    game: NetHack
+    urls:
+      - https://github.com/facebookresearch/nle (returned 404 when read)
+      - https://github.com/heiner/nle (new home per the archived repo's README, not read)
+    connection:
+      api_type: "Gym-style Python environment (examples use gym.make) (README at original URL, read via a cached copy)."
+      observation: "Text (NLE Language Wrapper gives language representations); the raw observation format is unknown."
+      action: "Discrete actions, optionally given as text (README)."
+    multiplayer:
+      can_join_humans: unknown
+      co_op: unknown
+      competitive: unknown
+      players: 1
+      private_server: "Local."
+    timing:
+      real_time: false
+      speed_control: unknown
+    licence:
+      library: unknown
+      game_needs_owning: "No (NetHack is open source)."
+    tos_anticheat: unknown
+    activity: "Repository archived by owner on May 6, 2024 (README at the page read)."
+    scores_or_tasks: "NetHackScore-v0 environment (README)."
+    sources:
+      - https://github.com/facebookresearch/nle (README read; archive notice on page)
+
+  - name: ViZDoom
+    game: Doom (ZDoom engine)
+    urls:
+      - https://github.com/mwydmuch/ViZDoom
+    connection:
+      api_type: "Python and C++ library over the ZDoom engine (README)."
+      observation: "Screen buffer, depth buffer, object labels, audio buffer, actor lists, in-game messages (README)."
+      action: "Not described on README."
+    multiplayer:
+      can_join_humans: "Yes, async and sync single-player and multiplayer modes are supported (README). Networking method not described."
+      co_op: unknown
+      competitive: "Multiplayer exists; deathmatch-style use is not stated."
+      players: unknown
+      private_server: "Local."
+    timing:
+      real_time: "Async mode is real time; sync mode steps frames (README)."
+      speed_control: "Sync mode up to 7000 steps/s single-threaded; in-game time scaling in async mode (README). Pause not stated."
+    licence:
+      library: MIT
+      game_needs_owning: "Doom WADs are needed; ownership not stated on README (unknown)."
+    tos_anticheat: unknown
+    activity: "No release date on page (unknown). Install notes mention versions 1.3.0 and 1.2.4."
+    scores_or_tasks: "Not stated on README (scenario rewards are defined by the user)."
+    sources:
+      - https://github.com/mwydmuch/ViZDoom
+
+  - name: Melting Pot
+    game: Multi-agent social scenarios (substrates and scenarios; underlying platform not stated on README)
+    urls:
+      - https://github.com/google-deepmind/meltingpot
+    connection:
+      api_type: "Python multi-agent RL environment suite (README)."
+      observation: "Not stated on README (docs/index.md linked)."
+      action: "Not stated on README."
+    multiplayer:
+      can_join_humans: unknown
+      co_op: "Mixed-motive social scenarios: cooperation, competition, deception (README)."
+      competitive: "Yes, the suite tests competition (README)."
+      players: unknown per substrate
+      private_server: "Local."
+    timing:
+      real_time: false
+      speed_control: unknown
+    licence:
+      library: Apache-2.0
+      game_needs_owning: "No."
+    tos_anticheat: "Not applicable."
+    activity: "808 commits; no date (unknown)."
+    scores_or_tasks: "Over 50 substrates and over 256 test scenarios (README); evaluation is generalisation to new social partners."
+    sources:
+      - https://github.com/google-deepmind/meltingpot
+
+  - name: PettingZoo
+    game: Multi-agent library (Atari multi-player, Butterfly, Classic, SISL)
+    urls:
+      - https://github.com/Farama-Foundation/PettingZoo
+    connection:
+      api_type: "Python library; AEC and Parallel APIs (README)."
+      observation: "Returned by env.last() (observation, reward, termination, truncation, info) (README)."
+      action: "Per-agent action spaces via env.action_space(agent) (README)."
+    multiplayer:
+      can_join_humans: unknown
+      co_op: "Yes; Butterfly and SISL are cooperative (README)."
+      competitive: "Yes; Atari multi-player includes competitive and mixed games (README)."
+      players: "Varies by environment (unknown)."
+      private_server: "Local."
+    timing:
+      real_time: false
+      speed_control: unknown
+    licence:
+      library: MIT (README link; text not in capture)
+      game_needs_owning: "Atari ROMs needed for Atari families (README mention of Atari 2600 games; ROM handling not read)."
+    tos_anticheat: unknown
+    activity: "No release date on page (unknown)."
+    scores_or_tasks: "Not a score set; per-environment rewards."
+    sources:
+      - https://github.com/Farama-Foundation/PettingZoo
+
+  - name: Neural MMO
+    game: Neural MMO (MMO-style survival, 2D)
+    urls:
+      - https://github.com/neuralmmo/environment
+    connection:
+      api_type: "Python environment (README intro only read)."
+      observation: unknown
+      action: unknown
+    multiplayer:
+      can_join_humans: unknown
+      co_op: unknown
+      competitive: unknown
+      players: "Massively multi-agent (README); exact count unknown."
+      private_server: "Local."
+    timing:
+      real_time: false
+      speed_control: unknown
+    licence:
+      library: MIT
+      game_needs_owning: "No."
+    tos_anticheat: "Not applicable."
+    activity: "1,528 commits on 2.1 branch; no date (unknown)."
+    scores_or_tasks: unknown
+    sources:
+      - https://github.com/neuralmmo/environment
+
+  - name: Screeps
+    game: Screeps (MMO programming game)
+    urls:
+      - https://docs.screeps.com/api/
+      - https://docs.screeps.com/ (overview only; intro and ToS pages returned 404)
+    connection:
+      api_type: "JavaScript code runs on the server each tick; objects accessed through the game API (API reference)."
+      observation: "Structured: Game.rooms, Game.getObjectById, visibility-limited; Game.map.getRoomTerrain works broadly (API reference)."
+      action: "Method calls on game objects (creep.moveTo, creep.harvest) returning result codes (API reference)."
+    multiplayer:
+      can_join_humans: "Yes, shared world with other players' code (API reference shows foreign segments and market orders)."
+      co_op: unknown
+      competitive: "Yes, shared world; players can be hostile (API shows visibility limits; the rules page not read)."
+      players: unknown
+      private_server: unknown (private-server mode not documented on pages read; 'Simulation Room' mentioned)
+    timing:
+      real_time: "Tick-based: Game.time is a tick counter, CPU per tick (API reference)."
+      speed_control: unknown
+    licence:
+      library: unknown
+      game_needs_owning: "Free to play (unknown from pages read)."
+    tos_anticheat: unknown (Terms of Service page returned 404)
+    activity: unknown
+    scores_or_tasks: "Game.market and in-game controllers; no formal benchmark found."
+    sources:
+      - https://docs.screeps.com/api/
+
+  - name: Factorio Learning Environment (FLE)
+    game: Factorio
+    urls:
+      - https://github.com/JackHopkins/factorio-learning-environment
+    connection:
+      api_type: "Python program submitted by the agent; cluster started with fle cluster start in Docker (README). RCON use is in the repo's docs (deepwiki, not read)."
+      observation: "stdout and stderr of the last program (README)."
+      action: "Agent generates a Python program each step (README)."
+    multiplayer:
+      can_join_humans: unknown
+      co_op: unknown
+      competitive: unknown
+      players: unknown
+      private_server: "Yes, a local cluster in Docker (README)."
+    timing:
+      real_time: unknown
+      speed_control: unknown
+    licence:
+      library: unknown (LICENSE linked, type not stated)
+      game_needs_owning: "Yes, Factorio is needed (README implies a cluster of game servers; not confirmed)."
+    tos_anticheat: unknown
+    activity: "887 commits; no date (unknown)."
+    scores_or_tasks: "Described as a non-saturating, open-ended evaluation (README)."
+    sources:
+      - https://github.com/JackHopkins/factorio-learning-environment
+
+  - name: Factorio (Lua mods, RCON and dedicated server)
+    game: Factorio
+    urls:
+      - https://lua-api.factorio.com/latest/ (API docs, version 2.1.25 shown)
+      - https://wiki.factorio.com/Command_line_parameters
+      - https://wiki.factorio.com/Multiplayer
+    connection:
+      api_type: "Lua mod API (settings, prototype and runtime stages) (lua-api page). RCON via server command-line options --rcon-port, --rcon-bind, --rcon-password (wiki Command_line_parameters)."
+      observation: "Lua runtime events and game objects (lua-api page). RCON output not described on pages read."
+      action: "Lua runtime calls (lua-api page); RCON commands (not listed on pages read)."
+    multiplayer:
+      can_join_humans: "Yes, LAN and public servers (wiki Multiplayer)."
+      co_op: "Yes, multiplayer game."
+      competitive: unknown
+      players: unknown
+      private_server: "Yes, headless dedicated server with --start-server; no character in game; pauses when no players connected unless no-auto-pause (wiki Multiplayer)."
+    timing:
+      real_time: true
+      speed_control: "Server pauses when empty unless no-auto-pause (wiki Multiplayer)."
+    licence:
+      library: unknown (Factorio licence not read)
+      game_needs_owning: "Yes, the game is needed (not read; price unknown)."
+    tos_anticheat: "Public listing needs a Factorio login (wiki Multiplayer). Other rules unknown."
+    activity: "Versioned API docs (2.1.25); no release date read."
+    scores_or_tasks: unknown
+    sources:
+      - https://lua-api.factorio.com/latest/
+      - https://wiki.factorio.com/Command_line_parameters
+      - https://wiki.factorio.com/Multiplayer
+
+  - name: Luanti (formerly Minetest)
+    game: Luanti voxel engine (games are built on it)
+    urls:
+      - https://github.com/luanti-org/luanti
+    connection:
+      api_type: "Lua mods on a C++ engine; dedicated server with Docker (README)."
+      observation: unknown (mod API docs not read)
+      action: unknown
+    multiplayer:
+      can_join_humans: "Yes, dedicated server (README docs)."
+      co_op: unknown
+      competitive: unknown
+      players: unknown
+      private_server: "Yes, self-hosted server (README)."
+    timing:
+      real_time: true
+      speed_control: unknown
+    licence:
+      library: LGPL-2.1 (COPYING.LESSER present)
+      game_needs_owning: "No (open-source engine; game content licences vary)."
+    tos_anticheat: unknown
+    activity: "No release date on page (unknown)."
+    scores_or_tasks: unknown
+    sources:
+      - https://github.com/luanti-org/luanti
+
+  - name: tModLoader (Terraria)
+    game: Terraria (1.4.5 branch)
+    urls:
+      - https://github.com/tModLoader/tModLoader
+    connection:
+      api_type: "Mod loader for the game; mods are created by the community (README). Agent API: unknown."
+      observation: unknown
+      action: unknown
+    multiplayer:
+      can_join_humans: "Friends need to install TML to play together (README). Dedicated server not mentioned."
+      co_op: "Yes, multiplayer with friends (README)."
+      competitive: unknown
+      players: unknown
+      private_server: unknown
+    timing:
+      real_time: true
+      speed_control: unknown
+    licence:
+      library: MIT
+      game_needs_owning: "Yes, Terraria is needed (implied; not confirmed on README)."
+    tos_anticheat: unknown
+    activity: "6,853 commits; no date (unknown). README notes the repo may be ahead of the release."
+    scores_or_tasks: unknown
+    sources:
+      - https://github.com/tModLoader/tModLoader
+
+  - name: SMAPI (Stardew Valley)
+    game: Stardew Valley
+    urls:
+      - https://github.com/Pathoschild/SMAPI
+    connection:
+      api_type: "C# mod API and loader (README)."
+      observation: "Mod events (README lists events for mods)."
+      action: "Mod code; API surface not read."
+    multiplayer:
+      can_join_humans: "Multiplayer not mentioned on README."
+      co_op: unknown
+      competitive: unknown
+      players: unknown
+      private_server: unknown
+    timing:
+      real_time: true
+      speed_control: unknown
+    licence:
+      library: LGPL-3.0
+      game_needs_owning: "Yes, the game is needed (implied; not read)."
+    tos_anticheat: unknown
+    activity: "4,655 commits; no release date on page (unknown)."
+    scores_or_tasks: unknown
+    sources:
+      - https://github.com/Pathoschild/SMAPI
+
+  - name: Dota 2 bot scripting
+    game: Dota 2
+    urls:
+      - https://developer.valvesoftware.com/wiki/Dota_Bot_Scripting (search snippet; the wiki page was not read)
+      - https://docs.moddota.com/lua_bots/ (community API docs, read)
+      - https://developer.valvesoftware.com/wiki/Dota_2_Workshop_Tools/Scripting (returned 403)
+    connection:
+      api_type: "Lua API via GetBot() (moddota). Where the scripts live (a bots folder under vscripts) is from a wiki snippet only, not the cited page."
+      observation: "CDOTA_Bot_Script getters: GetHealth, GetMana, GetLocation, GetNearbyHeroes, GetNearbyCreeps; global GetUnitList, GetGameState (moddota)."
+      action: "Action_, ActionPush_, ActionQueue_ and ActionImmediate_ prefixes, e.g. MoveToLocation, AttackUnit, PurchaseItem (moddota; semantics of prefixes not stated)."
+    multiplayer:
+      can_join_humans: unknown
+      co_op: "Bots are on teams with humans in standard matches (not confirmed from read pages)."
+      competitive: "Yes, Dota is competitive; bot scripts control heroes."
+      players: unknown (not stated on pages read)
+      private_server: "Local game with bot scripts (wiki snippet)."
+    timing:
+      real_time: true
+      speed_control: unknown
+    licence:
+      library: unknown
+      game_needs_owning: "Yes, Dota 2 is free to play on Steam (unknown from read pages)."
+    tos_anticheat: unknown (official-match bot rules not read)
+    activity: unknown
+    scores_or_tasks: unknown
+    sources:
+      - https://docs.moddota.com/lua_bots/
+      - https://developer.valvesoftware.com/wiki/Dota_Bot_Scripting (search result)
+
+  - name: Cicero (Meta) and webDiplomacy tooling
+    game: Diplomacy (board game with negotiation)
+    urls:
+      - https://github.com/facebookresearch/diplomacy_cicero
+    connection:
+      api_type: "Python agent code (ParlAI, parlai_diplomacy); fairdiplomacy_external connects agents to webdiplomacy.net (README, no mechanism stated)."
+      observation: "Game state and chat messages (README does not specify format)."
+      action: "Moves and natural-language messages (README does not specify format)."
+    multiplayer:
+      can_join_humans: "Yes, live games on webdiplomacy.net (README connector; forum notes an API key is needed)."
+      co_op: "Negotiation; alliances are the core mechanic (game rules not read)."
+      competitive: "Yes, Diplomacy is competitive (rules not read on page)."
+      players: unknown (player count not stated on pages read)
+      private_server: unknown
+    timing:
+      real_time: unknown
+      speed_control: unknown
+    licence:
+      library: "MIT (code); fairdiplomacy_external under AGPL (README)."
+      model_weights: "CC-BY-NC 4.0; password-protected files (README)."
+      game_needs_owning: "No, webDiplomacy is a website."
+    tos_anticheat: "webDiplomacy API key requirement (forum thread; webdiplomacy.net contrib link, not an official policy page)."
+    activity: "Archived by owner on Apr 17, 2025 (README)."
+    scores_or_tasks: unknown
+    sources:
+      - https://github.com/facebookresearch/diplomacy_cicero
+      - https://webdiplomacy.net/contrib/phpBB3/viewtopic.php?p=319409 (search result, not read)
+
+  - name: AmongAgents (Among Us-style text social deduction)
+    game: Among Us-style text game (own environment, not the commercial game)
+    urls:
+      - https://github.com/cyzus/among-agents
+    connection:
+      api_type: "Python framework; run with python main.py (README)."
+      observation: "Text (README)."
+      action: "Text messages and game actions (README does not detail)."
+    multiplayer:
+      can_join_humans: "Yes, include_human option adds a human player (README)."
+      co_op: "Crewmates work together to find impostors; impostors sabotage (README)."
+      competitive: "Yes, impostors vs crew."
+      players: unknown
+      private_server: "Local."
+    timing:
+      real_time: false
+      speed_control: unknown
+    licence:
+      library: MIT
+      game_needs_owning: "No (own environment)."
+    tos_anticheat: "Not applicable. Among Us research papers (not read) note the IP belongs to Innersloth."
+    activity: "10 commits; no date (unknown)."
+    scores_or_tasks: "Win rates and deception measures are in the associated papers (not read; search snippet mentions Deception ELO, not verified)."
+    sources:
+      - https://github.com/cyzus/among-agents
+
+  - name: GameBench
+    game: Nine strategy game environments (games not listed on the README read)
+    urls:
+      - https://github.com/Joshuaclymer/GameBench
+      - https://arxiv.org/abs/2406.06613 (search snippet only; not fetched)
+    connection:
+      api_type: "Python benchmark with agents/ and llm-reasoners dependency (README)."
+      observation: unknown
+      action: unknown
+    multiplayer:
+      can_join_humans: unknown
+      co_op: unknown
+      competitive: "Strategic games (snippet)."
+      players: unknown
+      private_server: "Local."
+    timing:
+      real_time: false
+      speed_control: unknown
+    licence:
+      library: "MIT (code); CC-BY data (README)."
+      game_needs_owning: "No."
+    tos_anticheat: "Not applicable."
+    activity: "485 commits; no date (unknown)."
+    scores_or_tasks: "rating.py and generate_all_results.py exist (README); scoring method not explained."
+    sources:
+      - https://github.com/Joshuaclymer/GameBench
+
+  - name: BALROG
+    game: Long-horizon RL games (benchmark games not named on README read)
+    urls:
+      - https://github.com/balrog-ai/BALROG
+    connection:
+      api_type: "Python benchmark harness for LLM and VLM agents (README)."
+      observation: "Language and vision-language inputs; text and image history settings (README)."
+      action: unknown
+    multiplayer:
+      can_join_humans: unknown
+      co_op: unknown
+      competitive: unknown
+      players: 1
+      private_server: "Local."
+    timing:
+      real_time: false
+      speed_control: unknown
+    licence:
+      library: MIT
+      game_needs_owning: "No (for the games it wraps, unknown)."
+    tos_anticheat: "Not applicable."
+    activity: "46 commits; no date (unknown)."
+    scores_or_tasks: "Leaderboard at balrogai.com (README); paper arXiv:2411.13543 linked (not read)."
+    sources:
+      - https://github.com/balrog-ai/BALROG
+
+  - name: TextArena
+    game: 100+ text games (board, card, negotiation, social deduction)
+    urls:
+      - https://github.com/LeonGuertler/TextArena
+    connection:
+      api_type: "Python Gym-style framework; agent is a callable (README)."
+      observation: "String observation (README)."
+      action: "String action (README)."
+    multiplayer:
+      can_join_humans: unknown
+      co_op: "Mixed: competitive and cooperative text games (README)."
+      competitive: "Yes (README)."
+      players: "1, 2 or multi-player per game (README)."
+      private_server: "Local."
+    timing:
+      real_time: false
+      speed_control: "Turn-based."
+    licence:
+      library: MIT
+      game_needs_owning: "No."
+    tos_anticheat: "Not applicable."
+    activity: "Newest dated item 14/08/2026 (multilingual announcement); last versioned release v0.6.9 dated 01/07/2025 (README)."
+    scores_or_tasks: "Leaderboard at textarena.ai/leaderboard; ranking method not stated on README."
+    sources:
+      - https://github.com/LeonGuertler/TextArena
+
+  - name: VideoGameBench
+    game: Game Boy, MS-DOS and browser games (Doom II, Pokemon Crystal, Civilization 1 and others)
+    urls:
+      - https://github.com/alexzhang13/VideoGameBench
+    connection:
+      api_type: "Emulators: PyBoy (Game Boy), JS-DOS (MS-DOS), Playwright (browser) (README)."
+      observation: "Screenshots of frames sent to a VLM at each step (README)."
+      action: "Keyboard and mouse input via a simple click interface; button presses logged (README)."
+    multiplayer:
+      can_join_humans: unknown
+      co_op: unknown
+      competitive: unknown
+      players: 1
+      private_server: "Local."
+    timing:
+      real_time: true
+      speed_control: "Full mode is real time; lite mode pauses while the model thinks (README)."
+    licence:
+      library: MIT
+      game_needs_owning: "Yes, you must legally own the games (README)."
+    tos_anticheat: "README says games must be owned; no other rules stated."
+    activity: "No dated release on page (unknown). arXiv 2505.18134 cited (not read)."
+    scores_or_tasks: "7 released test games, 3 private; checkpoint-based end states; default cap 15000 steps (README)."
+    sources:
+      - https://github.com/alexzhang13/VideoGameBench
+
+  - name: stable-retro
+    game: Classic console and arcade games (ROMs supplied by user)
+    urls:
+      - https://github.com/Farama-Foundation/stable-retro
+    connection:
+      api_type: "Gymnasium environments built on emulator cores; integrations hold memory addresses, reward logic and save states (README)."
+      observation: "Not stated on README (RAM and pixel options unknown)."
+      action: "Not stated on README."
+    multiplayer:
+      can_join_humans: unknown
+      co_op: unknown
+      competitive: "Some competitive titles listed (fighting and sports); multiplayer interface not stated (README)."
+      players: unknown
+      private_server: "Local."
+    timing:
+      real_time: true
+      speed_control: unknown
+    licence:
+      library: MIT (LICENSES.md covers each emulator core)
+      game_needs_owning: "Yes, you must obtain ROMs yourself (README)."
+    tos_anticheat: "ROMs not included; obtaining them is the user's responsibility (README)."
+    activity: "No release date on page (unknown)."
+    scores_or_tasks: "Reward logic per game integration (README)."
+    sources:
+      - https://github.com/Farama-Foundation/stable-retro
+
+  - name: OpenSpiel
+    game: Board, card and matrix games (over 20 in the 2019 paper; current count not on README)
+    urls:
+      - https://github.com/google-deepmind/open_spiel
+      - https://arxiv.org/abs/1908.09453 (search snippet only)
+    connection:
+      api_type: "C++ core with Python bindings (README)."
+      observation: "Not described on README; see API overview doc."
+      action: "Not described on README; see API overview doc."
+    multiplayer:
+      can_join_humans: unknown
+      co_op: "Yes, cooperative and general-sum games supported (README)."
+      competitive: "Yes, zero-sum games (README)."
+      players: "n-player (README)."
+      private_server: "Local."
+    timing:
+      real_time: false
+      speed_control: "Turn-based and simultaneous-move games (README)."
+    licence:
+      library: Apache-2.0
+      game_needs_owning: "No."
+    tos_anticheat: "Not applicable."
+    activity: "5,619 commits; no date (unknown)."
+    scores_or_tasks: "Ranking and search algorithms, e.g. CFR and alpha-rank (search snippet; README links docs)."
+    sources:
+      - https://github.com/google-deepmind/open_spiel
+
+  - name: Google Research Football
+    game: Football (soccer), physics-based
+    urls:
+      - https://github.com/google-research/football
+    connection:
+      api_type: "Gym-style RL environment; observations and actions documented in gfootball/doc (README links)."
+      observation: "Not captured on README (pixels, SMM and float options linked, not read)."
+      action: "Full action set via --action_set=full; passes, shot, dribble, sprint, switch (README)."
+    multiplayer:
+      can_join_humans: "Yes: human-controlled players use the same interface as agents; gamepad and external bots are player types (README)."
+      co_op: "Yes, control of several players on one side (README multi-agent docs linked; left_players and right_players flags)."
+      competitive: "Yes, both sides can be controlled (README)."
+      players: "Up to 11 per side in the full game (scenario name 11_vs_11 implies this; not stated explicitly)."
+      private_server: "Local."
+    timing:
+      real_time: unknown
+      speed_control: unknown
+    licence:
+      library: unknown (LICENSE file linked; text not captured)
+      game_needs_owning: "No (own environment, based on open-source Gameplay Football)."
+    tos_anticheat: "Not applicable."
+    activity: "Repository archived by the owner on Aug 19, 2026 and read-only (README)."
+    scores_or_tasks: "Scenario scores and goals (README; scoring not read)."
+    sources:
+      - https://github.com/google-research/football
+
+  - name: Pokemon Showdown
+    game: Pokemon (singles, doubles, triples, Gen 1 to 9)
+    urls:
+      - https://github.com/smogon/pokemon-showdown
+      - https://github.com/zarel/Pokemon-Showdown (same project; search result)
+    connection:
+      api_type: "WebSocket client for the server; the simulator has a Node.js API and a CLI driven over stdin/stdout (search snippets; mintlify page not read)."
+      observation: "Battle protocol messages from the server (not read in detail)."
+      action: "Battle commands sent to the server (not read in detail)."
+    multiplayer:
+      can_join_humans: "Yes, bots are clients on the public server (search snippet from Smogon forum and the Bot FAQ link)."
+      co_op: "Doubles and triples (2 or 3 per side) include partner play (README; mechanics not read)."
+      competitive: "Yes, battles against other players."
+      players: 2
+      private_server: "Yes, self-host the server (README describes a server for hosting your own community)."
+    timing:
+      real_time: unknown
+      speed_control: unknown
+    licence:
+      library: MIT (server)
+      game_needs_owning: "No, free to play."
+    tos_anticheat: "Official bot policy not found on the README. README links a Bot FAQ by Kaiepi (not read). A Smogon forum post says bot registration is mandatory (unverified)."
+    activity: "29,157 commits; no date (unknown)."
+    scores_or_tasks: "Ladder ratings on the public server (README mentions website; not read)."
+    sources:
+      - https://github.com/smogon/pokemon-showdown
+      - https://github.com/zarel/Pokemon-Showdown (search result)
+
+  - name: poke-env
+    game: Pokemon Showdown (through a Python client)
+    urls:
+      - https://github.com/hsahovic/poke-env
+    connection:
+      api_type: "Python library: subclass Player, override choose_move (README)."
+      observation: "Battle object from the server (not read in detail)."
+      action: "choose_move return value (README)."
+    multiplayer:
+      can_join_humans: unknown
+      co_op: unknown
+      competitive: "Two-player battles (README example RandomPlayer vs RandomPlayer)."
+      players: 2
+      private_server: "Yes, local Showdown server possible (poke-env docs search result)."
+    timing:
+      real_time: false
+      speed_control: unknown
+    licence:
+      library: MIT
+      game_needs_owning: "No."
+    tos_anticheat: "Inherits Showdown bot rules (not read)."
+    activity: "No release date on page (unknown)."
+    scores_or_tasks: "Win rate in battles (not read)."
+    sources:
+      - https://github.com/hsahovic/poke-env
+
+  - name: Pommerman
+    game: Bomberman clone (FFA, 2v2 Team, 2v2 Team Radio)
+    urls:
+      - https://github.com/MultiAgentLearning/playground
+    connection:
+      api_type: "Python environment (README); observation and action format not described on README."
+      observation: unknown
+      action: unknown
+    multiplayer:
+      can_join_humans: unknown
+      co_op: "Yes, Team and Team Radio modes are 2v2 teams (README)."
+      competitive: "Yes, FFA and team modes (README)."
+      players: "4 (FFA and Team as 2v2)."
+      private_server: "Local."
+    timing:
+      real_time: false
+      speed_control: unknown
+    licence:
+      library: "README link; type not stated in capture."
+      game_needs_owning: "No."
+    tos_anticheat: "Not applicable."
+    activity: "304 commits; no date (unknown)."
+    scores_or_tasks: "NIPS 18 competition environment (README)."
+    sources:
+      - https://github.com/MultiAgentLearning/playground
+
+  - name: Jericho
+    game: Interactive fiction (Z-machine games such as Zork)
+    urls:
+      - https://github.com/microsoft/jericho
+    connection:
+      api_type: "Python interface to Frotz Z-machine (README)."
+      observation: "Text (implied by interactive fiction; README does not state format explicitly)."
+      action: "Text commands (implied; not stated)."
+    multiplayer:
+      can_join_humans: unknown
+      co_op: "No, single-player games."
+      competitive: unknown
+      players: 1
+      private_server: "Local."
+    timing:
+      real_time: false
+      speed_control: "Turn-based."
+    licence:
+      library: GPL-2.0
+      game_needs_owning: "Game files are needed; ownership not stated (unknown)."
+    tos_anticheat: unknown
+    activity: "323 commits; no release date (unknown)."
+    scores_or_tasks: "Not stated on README."
+    sources:
+      - https://github.com/microsoft/jericho
+
+  - name: Unity ML-Agents
+    game: Any game or simulation built in Unity
+    urls:
+      - https://github.com/Unity-Technologies/ml-agents
+    connection:
+      api_type: "Python trainer connected to the Unity environment (README; the socket/gRPC detail was not captured)."
+      observation: unknown
+      action: unknown
+    multiplayer:
+      can_join_humans: unknown
+      co_op: unknown
+      competitive: unknown
+      players: unknown
+      private_server: "Local Unity build or editor."
+    timing:
+      real_time: unknown
+      speed_control: "Time-scale control not captured on README (unknown)."
+    licence:
+      library: "Apache 2.0 badge (README); LICENSE.md linked."
+      game_needs_owning: "No (you build your own Unity game)."
+    tos_anticheat: "Not applicable."
+    activity: "No release date on page (unknown)."
+    scores_or_tasks: "Depends on the Unity project."
+    sources:
+      - https://github.com/Unity-Technologies/ml-agents
