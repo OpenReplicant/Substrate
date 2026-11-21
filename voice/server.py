@@ -47,8 +47,47 @@ KEY = os.environ.get("VOICE_KEY", "")
 THREADS = int(os.environ.get("VOICE_THREADS") or 4)
 VOICE = os.environ.get("VOICE_STYLE") or "af_heart"
 TTS_URL = os.environ.get("TTS_URL", "").rstrip("/")
-CSP = ("default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; "
+AVATAR_DIR = Path(os.environ.get("AVATAR_DIR") or "/avatar")
+AVATAR_FILE = (os.environ.get("AVATAR_FILE") or "").strip()
+AVATAR_TYPES = {".gltf": "model/gltf+json", ".glb": "model/gltf-binary", ".vrm": "model/gltf-binary", ".bin": "application/octet-stream",
+                ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp", ".ktx2": "image/ktx2"}
+CSP = ("default-src 'self'; script-src 'self' 'sha256-IMPORTMAP'; style-src 'self'; img-src 'self' data: blob:; connect-src 'self' blob:; "
        "media-src 'self' blob:; frame-ancestors 'none'; object-src 'none'; base-uri 'none'")
+
+def importmap_hash() -> str:
+    """The page's one inline script, the import map, is allowed by its hash; everything else stays 'self'."""
+    import base64, hashlib
+    m = re.search(r"<script type=\"importmap\">(.*?)</script>", (STATIC / "index.html").read_text(encoding="utf-8"), re.S)
+    return base64.b64encode(hashlib.sha256(m.group(1).encode()).digest()).decode() if m else ""
+
+
+CSP = CSP.replace("sha256-IMPORTMAP", "sha256-" + importmap_hash())
+
+
+def avatar_url() -> str:
+    """AVATAR_FILE is a repo path such as .state/avatar/x/scene.gltf; the folder is mounted at /avatar. '' when unset or missing."""
+    if not AVATAR_FILE:
+        return ""
+    rel = AVATAR_FILE.split(".state/avatar/", 1)[1] if ".state/avatar/" in AVATAR_FILE else Path(AVATAR_FILE).name
+    return "/avatar/" + rel if avatar_file("/avatar/" + rel) else ""
+
+
+def avatar_file(path: str) -> Path | None:
+    """A file under AVATAR_DIR only: resolved, so no .. or symlink gets out; and only the types a model needs."""
+    from urllib.parse import unquote
+    root = AVATAR_DIR.resolve()
+    f = (root / unquote(path.removeprefix("/avatar/"))).resolve()
+    return f if root in f.parents and f.is_file() and f.suffix.lower() in AVATAR_TYPES else None
+
+
+def avatar_response(path: str) -> Response:
+    f = avatar_file(path)
+    if not f:
+        return Response(404, "Not Found", Headers({"Content-Type": "text/plain"}), b"not found")
+    return Response(200, "OK", Headers({"Content-Type": AVATAR_TYPES[f.suffix.lower()], "Cache-Control": "no-store",
+                                        "X-Content-Type-Options": "nosniff"}), f.read_bytes())
+
+
 SENTENCE = re.compile(r"(.+?[.!?…])\s+", re.S)     # a sentence ends at its mark and the space after it (not "3.13")
 
 
@@ -322,6 +361,11 @@ async def companion_replies(record: Record):
 
 
 def static(path: str) -> Response | None:
+    if path.startswith("/avatar/"):
+        return avatar_response(path)
+    if path == "/config.json":
+        return Response(200, "OK", Headers({"Content-Type": "application/json", "Cache-Control": "no-store"}),
+                        json.dumps({"avatar": avatar_url()}).encode())
     rel = "index.html" if path in ("/", "/index.html") else path.removeprefix("/static/") if path.startswith("/static/") else None
     f = (STATIC / rel).resolve() if rel else None
     if not f or not f.is_file() or STATIC.resolve() not in f.parents:

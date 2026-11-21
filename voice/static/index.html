@@ -5,11 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Companion</title>
 <link rel="stylesheet" href="/static/voice.css">
-<script src="/static/app.js" defer></script>
+<script type="importmap">{"imports":{"three":"/static/vendor/three/build/three.module.min.js","three/examples/jsm/":"/static/vendor/three/examples/jsm/"}}</script>
+<script type="module" src="/static/app.js"></script>
 </head>
 <body>
 <main>
   <canvas id="face" width="480" height="480" aria-label="The companion's face"></canvas>
+  <div id="stage" hidden></div>
+  <p id="credit" hidden></p>
   <p id="state">Press Start and allow the microphone.</p>
   <button id="start" type="button">Start</button>
   <ol id="log" aria-live="polite"></ol>

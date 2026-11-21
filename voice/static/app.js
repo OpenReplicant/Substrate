@@ -1,7 +1,6 @@
 // The companion's voice and face (plan step 5): the microphone to the voice head over a WebSocket, its spoken
 // replies back as PCM, played in order; the face's mouth follows the loudness of what is playing, its eyes blink
 // and it looks attentive while you speak. Everything shown is set with textContent.
-"use strict";
 const $ = id => document.getElementById(id);
 let ctx, ws, analyser, playhead = 0, sources = [], state = "idle", nextAudioRate = null;
 
@@ -65,6 +64,15 @@ $("start").onclick = () => start().catch(err => { $("state").textContent = `Coul
 const cv = $("face"), g = cv.getContext("2d");
 let mouth = 0, blink = 0, nextBlink = performance.now() + 2500, look = 0;
 const data = new Uint8Array(256);
+let avatar = null;
+// AVATAR_FILE, when set and present: a 3D avatar replaces the canvas face; any failure keeps the face as it was
+fetch("/config.json").then(r => r.json()).then(async c => {
+  if (!c.avatar) return;
+  const {loadAvatar} = await import("/static/avatar.js");     // loaded only when there is an avatar
+  avatar = await loadAvatar(c.avatar, $("stage"), $("credit"));
+  window.avatar = avatar;
+  cv.hidden = true;
+}).catch(err => { console.warn("avatar not loaded:", err); $("stage").hidden = true; $("credit").hidden = true; avatar = null; });
 const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 
 function frame(t) {
@@ -75,6 +83,7 @@ function frame(t) {
     for (const v of data) sum += ((v - 128) / 128) ** 2;
     level = Math.min(1, Math.sqrt(sum / data.length) * 5);
   }
+  if (avatar) { avatar.update(t, level, state); requestAnimationFrame(frame); return; }
   mouth += (level - mouth) * 0.35;
   if (t > nextBlink) { blink = 1; nextBlink = t + 2500 + Math.random() * 3500; }
   blink = Math.max(0, blink - 0.12);
