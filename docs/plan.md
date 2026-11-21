@@ -43,6 +43,14 @@ Self-levers beyond budget and model choice, and the other layers in `docs/framew
 need them, each tested against pass-through. The UI is no longer frozen: add what these steps need, and
 nothing they don't.
 
+## Next, in order (2026-11-21)
+
+1. **Offline agents on the local model:** an agent loop picked with the `research` skill (open, permissive, OpenAI API and MCP), Gemma's tool calls checked on llama.cpp, the kernel's model-using modules on `local/gemma`. Done when, with the network off, a task given in the UI is done with a cited recall and a remembered result, every call in the gateway's log.
+2. **The live map and the avatar page** (S-158; the kernel's D-115): interactive mapping, the map redrawn as claims apply, edits and new terms from the page.
+3. **Blocks, assemblies and executors** (S-157), with its first check.
+4. **The business distribution** in the kernel: distributions (M5-T9), interactive mapping as its first job, logs mined beside it.
+5. **Process KPIs** as observed claims; then one real actuator beyond Compose, behind a gate.
+
 ## Deferred
 
 Morphogen R&D (statistics, the judge's own gateway and meter, the queue, GitHub Actions, the evidence log), the
