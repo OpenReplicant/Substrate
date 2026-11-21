@@ -10,7 +10,7 @@ a lead, not evidence: every fact that decides the choice comes from a registry's
 
 ## 1. The role and the need, first
 
-Find the role on Substrate's map in the store (`search` for Substrate, `read` it; the map skill if the part of
+Find the role on Substrate's map in the store (the kernel's tools, `mcp__kernel__*`: `search` for Substrate, `read` it; the map skill if the part of
 it you need is not mapped yet). Write the need before looking at candidates, so candidates are tested against
 it rather than the need bent to fit a favourite: the interfaces the role requires (`requires-interface`) and, as
 a goal on Substrate (`has-goal`) with a metric and target, whatever is measured. The house rules are always part

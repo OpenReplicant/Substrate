@@ -10,7 +10,10 @@ has decided to skip it. Tell the owner, in a line, what each step did. Use the c
 `.env` (`CONTAINER_ENGINE`, podman by default).
 
 The stack on the fresh tree (S-137) is Postgres (`deploy/postgres`), the model gateway (Bifrost) and Ollama,
-plus the `substrate-tools` container. The store's schema, its API and UI arrive with `docs/plan.md` step 3b.
+plus the `substrate-tools` container, and the Knowledge Kernel (S-153, S-154): the store, in its own database
+`kernel` in the same Postgres, from an image built out of `repos/kernel` (`scripts/build.sh kernel`; cloned there
+when missing). `scripts/up.sh` makes the database, installs the kernel's schema (`scripts/kernel.sh init`) and
+exports the old `store` schema into it (`scripts/kernel.sh export`; safe to run again).
 
 ## 1. Host tools and images
 
@@ -49,6 +52,15 @@ again. Known causes:
   `OLLAMA_URL=http://ollama:11434`.
 
 **Check:** `scripts/check.sh` passes and says only the core runs.
+
+## 4. The agent's door to the kernel
+
+`scripts/kernel.sh login claude-code` makes the agent's own login (kept in `.state/kernel/`, mode 600, never
+printed) and puts the `kernel` MCP server in `.mcp.json` in the `substrate` profile: Substrate's ten tools as
+`mcp__kernel__*`, for the map, catalog and research skills. Restart Claude Code to load it.
+
+**Check:** `scripts/check.sh` shows the kernel's entities and wholes, and the UI at `http://127.0.0.1:8100/` lists
+the same wholes as before. If the kernel service restarts in a loop, `scripts/kernel.sh init` has not run yet.
 
 ## Afterwards
 

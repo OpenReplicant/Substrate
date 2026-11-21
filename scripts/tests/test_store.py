@@ -15,10 +15,20 @@
 - report cited file lines that are no longer at their locator (moved, changed or gone)
 - import v1's people's statements and decisions as readable pages (when v1's database is in the same Postgres)
 
+and, on the Knowledge Kernel that is Substrate's store now (S-153, S-154), in a throwaway kernel the same store is
+exported into (scripts/tests/kernelfx.py): the export applies, and exporting again submits nothing; the agent's tools
+over the kernel's MCP server in the substrate profile (search, read, expand, locate, path, alternatives, create_item,
+say, deprecate; no `violations`) answer as the store's do, with claim handles and belief added, and write as the
+calling agent's claims; the read model's pages and maps are the store's. The first part needs the stack's Postgres
+(pgGraph, pgmq, pg_cron): without it that part is skipped and says so; the kernel part needs only the store's
+migrations 001, 003 and 004, pgvector and pg_trgm.
+
     scripts/test.sh scripts/tests/test_store.py
 """
+import asyncio
 import json
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -28,6 +38,8 @@ import psycopg
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import kernelfx  # noqa: E402
 import store  # noqa: E402
 from store import NONE, SOME, Store, interpreter, paragraphs, parser, person, rule  # noqa: E402
 
@@ -49,16 +61,26 @@ def refused(fn, needle=""):
 
 def main():
     admin = os.environ["ADMIN_URL"]
-    name = f"store_test_{os.getpid()}"
     with psycopg.connect(admin, autocommit=True) as a:
-        a.execute(f"create database {name}")
-    url = admin.rsplit("/", 1)[0] + "/" + name
-    try:
-        with psycopg.connect(url, autocommit=True) as c:
-            run(c, url, admin)
-    finally:
+        have = {r[0] for r in a.execute("select name from pg_available_extensions where name in ('graph', 'pgmq', 'pg_cron')")}
+    if have == {"graph", "pgmq", "pg_cron"}:
+        name = f"store_test_{os.getpid()}"
         with psycopg.connect(admin, autocommit=True) as a:
-            a.execute(f"drop database {name} with (force)")
+            a.execute(f"create database {name}")
+        url = admin.rsplit("/", 1)[0] + "/" + name
+        try:
+            with psycopg.connect(url, autocommit=True) as c:
+                run(c, url, admin)
+        finally:
+            with psycopg.connect(admin, autocommit=True) as a:
+                a.execute(f"drop database {name} with (force)")
+    else:
+        print(f"skip the store schema's checks: this Postgres lacks {sorted({'graph', 'pgmq', 'pg_cron'} - have)}")
+    try:
+        asyncio.run(kernel_part(admin))
+    except Exception as e:                                  # a missing kernel is a failure, named
+        checks.append(False)
+        print("FAIL the kernel part:", type(e).__name__, e)
     print(f"{sum(checks)}/{len(checks)} checks passed")
     sys.exit(0 if all(checks) else 1)
 
@@ -204,6 +226,148 @@ def run(c, url, admin):
     components(c, s, me)
     mcp(url, hammer, s)
     v1(admin, c, s)
+
+
+# ---- the Knowledge Kernel as the store (S-154) -----------------------------------------------------------------------
+def kernel_fixture(c):
+    """A store with what the agent's tools are asked about: a hammer with an alias, a preferred and a deprecated
+    statement; a bicycle taken apart into a part with a role, an interface, and a candidate."""
+    for f in ("001_store", "003_components", "004_map"):
+        with c.transaction():
+            c.execute((store.SQL / f"{f}.sql").read_text())
+    s = Store(c, actor="test")
+    me = person("tester")
+    ids = {}
+    with s.edit("the kernel test's things"):
+        tool = s.item("tool", key="tool")
+        hammer = s.item("hammer", key="hammer", description="a tool for nails", aliases=["mallet"])
+        s.say(hammer, s.id("instance-of"), tool, by=me)
+        old = s.say(hammer, s.id("described-at-url"), "https://old.example/hammer", by=me)
+        s.say(hammer, s.id("described-at-url"), "https://example.org/hammer", by=me, rank="preferred")
+        s.say(hammer, s.id("described-at-url"), "https://example.org/forged-hammer", by=me, rank="preferred")
+        s.rank(old, "deprecated", "moved")
+        bike = s.item("bicycle")
+        drive = s.item("drivetrain role")
+        s.say(drive, s.id("instance-of"), s.id("role"), by=me)
+        fit = s.item("1/2 x 3/32 inch chain fitting")
+        s.say(fit, s.id("instance-of"), s.id("interface"), by=me)
+        s.say(drive, s.id("requires-interface"), fit, by=me)
+        chain, belt, other = s.item("derailleur chain"), s.item("belt drive"), s.item("single-speed chain")
+        for x in (chain, other):
+            s.say(x, s.id("provides-interface"), fit, by=me)
+        s.say(bike, s.id("has-part"), chain, by=me, qualifiers=[(s.id("object-has-role"), drive)])
+    ids.update(tool=tool, hammer=hammer, bike=bike, drive=drive, fit=fit, chain=chain, belt=belt, other=other)
+    return ids
+
+
+async def kernel_part(admin):
+    from mcp import ClientSession
+    from mcp.client.stdio import StdioServerParameters, stdio_client
+    why = kernelfx.available()
+    if why:
+        raise RuntimeError(why)
+    sname = f"store_kfx_{os.getpid()}"
+    with psycopg.connect(admin, autocommit=True) as a:
+        a.execute(f"create database {sname}")
+    surl = admin.rsplit("/", 1)[0] + "/" + sname
+    k = None
+    try:
+        with psycopg.connect(surl, autocommit=True) as c:
+            ids = kernel_fixture(c)
+        k = kernelfx.Kernel(admin)
+        out = k.export(surl)
+        check("kernel: the store's items and statements are exported and applied", out["new"] > 0 and out["not_applied"] == 0, out)
+        check("kernel: exporting again submits nothing", k.export(surl)["new"] == 0)
+        agent = k.agent("substrate-test")
+        env = {x: os.environ[x] for x in ("PATH", "PYTHONPATH", "HOME") if x in os.environ}
+        env.update(DATABASE_URL=agent, KK_PROFILE="substrate", KK_SUBSTRATE_WAIT="30")
+        params = StdioServerParameters(command=sys.executable, args=["-m", "kernel_mcp"], env=env)
+        async with stdio_client(params) as (r, w), ClientSession(r, w) as session:
+            await session.initialize()
+            await kernel_tools(session, ids, k)
+    finally:
+        if k:
+            k.close()
+        with psycopg.connect(admin, autocommit=True) as a:
+            a.execute(f'drop database if exists "{sname}" with (force)')
+
+
+async def kernel_tools(session, ids, k):
+    async def call(name, **args):
+        res = await session.call_tool(name, args)
+        return (res.content[0].text if res.content else ""), res.is_error
+
+    hammer, tool, bike, drive, fit, chain, belt, other = (ids[x] for x in ("hammer", "tool", "bike", "drive", "fit", "chain", "belt", "other"))
+    listed = {t.name: t for t in (await session.list_tools()).tools}
+    check("kernel MCP: Substrate's ten tools, `violations` among them", set(listed) == {
+        "search", "read", "expand", "locate", "path", "alternatives", "violations", "create_item", "say", "deprecate"}, sorted(listed))
+    check("kernel MCP: path takes `from` and `to`, as the store's does", set(listed["path"].input_schema["properties"]) == {"from", "to"})
+    text, err = await call("violations")
+    check("kernel MCP: `violations` answers", not err, text)
+
+    text, err = await call("search", query="mallet")
+    check("search finds by an alias, the id first", not err and text.splitlines()[0].split()[0] == hammer, text)
+    text, err = await call("search", query="nails")
+    check("search finds by the words of the description", hammer in text, text)
+    text, err = await call("search", query=hammer)
+    check("search takes an id", text.splitlines()[0].split()[0] == hammer, text)
+
+    page, err = await call("read", id=hammer)
+    check("read gives the page: label, id, description, alias, the usable statements",
+          page.startswith(f"# hammer ({hammer})") and "a tool for nails" in page and "mallet" in page
+          and "example.org/forged-hammer" in page and "old.example" not in page, page)
+    check("read says how many lower-ranked statements are not shown", "lower rank are not shown" in page, page)
+    check("read adds the claims it rests on, with handle and belief", re.search(r"#[0-9a-f]{8}", page) and "belief" in page, page)
+    full, _ = await call("read", id=hammer, all_ranks=True)
+    check("read with all ranks shows the deprecated one", "old.example" in full and "(deprecated)" in full, full)
+    text, err = await call("read", id="Q999999999")
+    check("read of an unknown id says there is none", "no entity" in text, text)
+
+    text, err = await call("expand", id=tool)
+    check("expand goes out and in", not err and hammer in text, text)
+    text, err = await call("path", **{"from": bike, "to": fit})
+    check("path runs from the whole through its part to the interface",
+          not err and [text.find(x) for x in (bike, chain, fit)] == sorted(text.find(x) for x in (bike, chain, fit)) and chain in text, text)
+    text, err = await call("path", **{"from": fit, "to": bike})
+    check("path goes only in the statements' direction", "no path" in text.lower() or "none" in text.lower(), text)
+
+    text, err = await call("alternatives", role=drive)
+    check("alternatives: what provides every interface the role requires, and which fills it now",
+          chain in text and other in text and belt not in text and re.search(rf"{chain}.*(fills|in {bike})", text), text)
+    text, err = await call("locate", target=hammer)
+    located = json.loads(text)
+    check("locate gives each statement's reference, with its claim, handle, belief and who stated it",
+          not err and len(located) >= 4 and all({"claim", "handle", "belief", "says", "rank", "by", "name"} <= set(e) for e in located)
+          and any(e["says"].startswith("hammer instance of tool") and e["by"] == "person" and e["name"] == "tester" for e in located), text)
+
+    # writing: the calling agent's claims
+    ev = {"source": "https://example.org/hammer", "locator": "p2", "quote": "Each head is forged."}
+    new, err = await call("create_item", label="claw hammer", instance_of="tool", evidence=ev)
+    check("create_item makes an item and answers with its id", not err and re.match(r"Q\d+", new), new)
+    qid = new.split()[0]
+    page, _ = await call("read", id=qid)
+    check("the new item reads as a page, an instance of tool", page.startswith(f"# claw hammer ({qid})") and "instance of" in page.lower(), page)
+    text, err = await call("create_item", label="hammer")
+    check("create_item points to similar items", "similar, already here" in text, text)
+    said, err = await call("say", subject=qid, property="described-at-url", value="https://example.org/claw", evidence=ev, note="from the page")
+    check("say writes a claim and answers with its id", not err and re.search(r"[0-9a-f]{8}-[0-9a-f]{4}-", said), said)
+    claim = re.search(r"[0-9a-f]{8}-[0-9a-f-]{27}", said).group(0)
+    with psycopg.connect(k.admin, autocommit=True) as a:
+        row = a.execute("select attributed_to, status, evidence_type from api.claims where id = %s", (claim,)).fetchone()
+        refs = a.execute("select source_uri, quote from api.claim_references where claim_id = %s", (claim,)).fetchall()
+    check("the claim is the agent's, at normal rank, with its quote as the reference",
+          row and row[0] == "urn:kk:agent:substrate-test" and row[1] == "normal" and refs and refs[0][1] == "Each head is forged.", (row, refs))
+    text, err = await call("say", subject=qid, property="measurement", value={"amount": "heavy"})
+    check("say with a value that does not fit is an error", err, text)
+    text, err = await call("deprecate", statement=claim, reason="test")
+    check("deprecate: the agent's own claim", not err and "deprecated" in text, text)
+    page, _ = await call("read", id=qid)
+    check("and the page no longer shows it", "example.org/claw" not in page, page)
+    with psycopg.connect(k.admin, autocommit=True) as a:
+        theirs = a.execute("select id from api.claims where subject like %s and predicate like '%%P973' and status = 'preferred' limit 1",
+                           ("%:" + hammer,)).fetchone()[0]
+    text, err = await call("deprecate", statement=theirs, reason="mine now")
+    check("deprecate: not someone else's", err and "someone else" in text, text)
 
 
 def components(c, s, me):
