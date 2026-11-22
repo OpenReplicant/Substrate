@@ -73,6 +73,8 @@ def init(env: dict[str, str]) -> None:
         companion_login(env)
     if env.get("JUDGE_DB_PASSWORD"):
         judge_login(env)
+    if env.get("WORKER_DB_PASSWORD"):
+        worker_login(env)
     print(f"  the store's graph: built, {graph['nodes']} nodes and {graph['edges']} edges")
 
 
@@ -88,6 +90,21 @@ def companion_login(env: dict[str, str]) -> None:
         c.execute("grant env_agent to companion")
         from environment import Env
         from environment.companion import setup
+        setup(Env(c))
+
+
+def worker_login(env: dict[str, str]) -> None:
+    """The worker's container's login (S-163): a member of env_agent like the companion's; its actuators and queue
+    (environment.worker)."""
+    from psycopg import sql
+    with connect(env, DB) as c:
+        c.autocommit = True
+        if not c.execute("select 1 from pg_roles where rolname = 'worker'").fetchone():
+            c.execute("create role worker login")
+        c.execute(sql.SQL("alter role worker password {}").format(sql.Literal(env["WORKER_DB_PASSWORD"])))
+        c.execute("grant env_agent to worker")
+        from environment import Env
+        from environment.worker import setup
         setup(Env(c))
 
 

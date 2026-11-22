@@ -1,0 +1,14 @@
+name: word_count
+version: 0.1.0
+description: Counts the words in a text.
+interface:
+  inputs:
+    type: object
+    properties: {text: {type: string}}
+    required: [text]
+  outputs:
+    type: object
+    properties: {words: {type: integer}}
+    required: [words]
+effects: {changes_world: false, idempotent: true, timeout_s: 5}
+invoke: {kind: python, target: "word_count:run"}

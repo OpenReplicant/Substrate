@@ -67,6 +67,18 @@ compose() {
   fi
 }
 
+# The published image for a part (S-167): ghcr.io/openreplicant/substrate-NAME at SUBSTRATE_IMAGE_TAG (default main); the
+# kernel's own is ghcr.io/openreplicant/kernel at KERNEL_IMAGE_TAG. scripts/build.sh tags a local build with the same name,
+# so compose, tools.sh, kernel.sh and test.sh find one image whether it was pulled or built. The voice head is built here
+# and never published (S-167), so it keeps its local name.
+image_ref() {   # NAME: db, tools, companion, worker, kernel, voice
+  case "$1" in
+    kernel) _t=$(env_value KERNEL_IMAGE_TAG); echo "ghcr.io/openreplicant/kernel:${_t:-main}" ;;
+    voice) echo "localhost/substrate-voice:local" ;;
+    *) _t=$(env_value SUBSTRATE_IMAGE_TAG); echo "ghcr.io/openreplicant/substrate-$1:${_t:-main}" ;;
+  esac
+}
+
 say() { printf '\n== %s\n' "$*"; }
 
 # The runtime's verbs: rt_up, rt_down, rt_status, rt_logs SERVICE. compose is the one runtime (S-41);

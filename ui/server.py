@@ -21,6 +21,10 @@ In the stack it is the compose service `ui` (deploy/compose.yaml), published on 
 
   GET  /api/companion            the companion's conversation (the owner's messages, its replies, its tasks and
                                 proposals, in order), the proposals waiting, the latest meter, its budget and model
+  GET  /api/worker               the worker's log (what the owner asked, its results with calls and cited claim ids, its
+                                 hand-offs waiting for the owner)
+  POST /api/worker/say          {"text"}: a task for the worker (env.publish worker.owner.message)
+  POST /api/worker/decide       {"action", "approve", "reason"}: the owner decides a hand-off to the companion
   POST /api/companion/say       {"text"}: the owner says something (env.publish companion.owner.message)
   POST /api/companion/decide    {"action", "approve", "reason"}: the owner decides a proposal (env.decide)
   POST /api/companion/improve   {"why"}: the owner asks for a new version of the voice reply component (S-151)
@@ -117,6 +121,8 @@ def api(store: Store, path: str, q: dict, kernel: Store | None = None) -> tuple[
     parts = path.strip("/").split("/")[1:]            # after "api"
     if parts == ["companion"]:
         return 200, companion(store)
+    if parts == ["worker"]:
+        return 200, worker(store)
     if kernel is not None:
         return from_kernel(kernel, parts, q)
     return from_store(store, parts, q)
@@ -235,7 +241,49 @@ def companion(store: Store, limit: int = 200) -> dict:
                            for i, n, v, st, au, ra, o, k in comps]}
 
 
+# The worker's page (plan step 1, S-163): what the owner asked, what it did (with its model calls, the calls a compiled
+# skill saved and the claims it cited), and its hand-offs to the companion that wait for the owner
+WORKER_LOG = """
+select * from (
+  select 'said' as kind, s.at, s.source as who, s.body as body, null::bigint as action, null as status
+    from env.signal s where s.key in ('worker.owner.message', 'worker.task')
+  union all
+  select 'done', s.at, s.source, s.body, null, case when (s.body->>'ok')::boolean then 'applied' else 'failed' end
+    from env.signal s where s.key = 'worker.task.done'
+  union all
+  select 'proposal', a.at, a.caller, a.input, a.id, a.status from env.action a where a.actuator = 'worker.ask_companion'
+) w order by at desc limit %s
+"""
+
+
+def worker(store: Store, limit: int = 100) -> dict:
+    rows = store.query(WORKER_LOG, (limit,))
+    log = [{"kind": k, "at": at.isoformat(), "who": who, "action": a, "status": st,
+            "text": (b or {}).get("text"), "task": (b or {}).get("task"), "model_calls": (b or {}).get("model_calls"),
+            "skipped_calls": (b or {}).get("skipped_calls"), "cited": (b or {}).get("cited") or []}
+           for k, at, who, b, a, st in reversed(rows)]
+    waiting = store.query("select id, input, caller, at from env.action where actuator = 'worker.ask_companion' "
+                          "and status = 'proposed' order by id")
+    return {"owner": OWNER, "log": log,
+            "waiting": [{"action": i, "input": inp, "by": c, "at": at.isoformat()} for i, inp, c, at in waiting]}
+
+
 def post(writer: Store, path: str, body: dict) -> tuple[int, object]:
+    if path == "/api/worker/say":
+        text = body.get("text")
+        if not isinstance(text, str) or not text.strip() or len(text) > 20000:
+            return 400, {"error": "say needs text (at most 20000 characters)"}
+        sid = writer.query("select env.publish('worker.owner.message', %s::jsonb, %s)",
+                           (json.dumps({"text": text.strip()}), OWNER))[0][0]
+        return 200, {"signal": sid}
+    if path == "/api/worker/decide":
+        action, approve, reason = body.get("action"), body.get("approve"), body.get("reason")
+        if not isinstance(action, int) or not isinstance(approve, bool) or not (reason is None or isinstance(reason, str)):
+            return 400, {"error": "decide needs action (a number) and approve (true or false), and may give a reason"}
+        if not writer.query("select 1 from env.action where id = %s and actuator = 'worker.ask_companion'", (action,)):
+            return 404, {"error": f"no worker hand-off {action}"}
+        status = writer.query("select env.decide(%s, %s, %s, %s)", (action, approve, OWNER, reason or None))[0][0]
+        return 200, {"action": action, "status": status}
     if path == "/api/companion/say":
         text = body.get("text")
         if not isinstance(text, str) or not text.strip() or len(text) > 20000:

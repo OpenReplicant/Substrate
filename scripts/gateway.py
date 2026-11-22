@@ -32,7 +32,7 @@ OUT = ROOT / ".state/gateway/config.json"
 NAMES = ("POSTGRES_PASSWORD", "DB_PORT", "OPENROUTER_API_KEY", "OLLAMA_URL", "GATEWAY_OPENROUTER_MODELS",
          "GATEWAY_REQUESTS_PER_HOUR", "GATEWAY_DB_PASSWORD", "GATEWAY_METER_PASSWORD", "GATEWAY_KEY_SECRET",
          "GATEWAY_PORT", "COMPANION_MODELS", "COMPANION_DB_PASSWORD",
-         "LLM_MODEL", "JUDGE_DB_PASSWORD", "KERNEL_URL", "KK_AUTHENTICATOR_PASSWORD")
+         "LLM_MODEL", "JUDGE_DB_PASSWORD", "WORKER_DB_PASSWORD", "KERNEL_URL", "KK_AUTHENTICATOR_PASSWORD")
 
 
 def settings() -> dict[str, str]:
@@ -52,13 +52,16 @@ def caller_key(secret: str, caller: str) -> str:
 # owner's own Claude login (subscription mode: the gateway forwards the login's token to Anthropic and keeps the
 # call under the caller's key), held to Anthropic's models in COMPANION_MODELS.
 # The voice head (plan step 5) talks with the local model (llama.cpp, provider `local`) only: what the owner says
-# aloud stays on this machine (P3) unless the model hands a request to the companion.
+# aloud stays on this machine (P3) unless the model hands a request to the companion. The worker (plan step 1, S-163)
+# is an offline agent on the same local model: its loop, its tool calls and its recall never leave the machine.
 CALLERS = {"store:embed": ("ollama",), "companion:session": ("anthropic",), "companion:task": ("anthropic",),
-           "voice:head": ("local",), "companion:author": ("local",), "judge:voice": ("local",)}
+           "voice:head": ("local",), "companion:author": ("local",), "judge:voice": ("local",),
+           "worker:loop": ("local",)}
 LOCAL = ("ollama", "local")
 FIXED_KEYS = {"store:embed": "STORE_EMBED_KEY", "companion:session": "COMPANION_SESSION_KEY",
               "companion:task": "COMPANION_TASK_KEY", "voice:head": "VOICE_KEY",
-              "companion:author": "COMPANION_AUTHOR_KEY", "judge:voice": "JUDGE_KEY"}   # keys read from .env by the gateway and the caller
+              "companion:author": "COMPANION_AUTHOR_KEY", "judge:voice": "JUDGE_KEY",
+              "worker:loop": "WORKER_KEY"}   # keys read from .env by the gateway and the caller
 
 
 def callers() -> list[str]:

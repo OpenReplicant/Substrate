@@ -41,7 +41,7 @@ start() {
   echo "  $NAME started (sees $ROOT$(for p in $list; do printf ', %s' "$p"; done))"
 }
 
-image() { if [ "$ENGINE" = podman ]; then echo localhost/substrate-tools:local; else echo substrate-tools:local; fi; }
+image() { image_ref tools; }
 
 case "${1:-status}" in
   start) shift; start "$@" ;;

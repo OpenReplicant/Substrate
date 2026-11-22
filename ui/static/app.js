@@ -259,9 +259,73 @@ $("text").addEventListener("keydown", ev => {
   if (ev.key === "Enter" && !ev.shiftKey) { ev.preventDefault(); $("say").requestSubmit(); }
 });
 
+// ---------- the worker (plan step 1, S-163): a task for the offline agent on the local model, and what it did ----------
+
+let workTimer = null, lastWork = "";
+
+function wline(c) {
+  if (c.kind === "said") return el("li", {class: "said"}, el("span", {class: "who", text: `you · ${when(c.at)}`}), el("div", {class: "text", text: c.text || ""}));
+  if (c.kind === "proposal") return el("li", {class: "proposal"}, el("span", {class: "who", text: `hand-off to the companion · ${when(c.at)}`}), el("div", {class: "text", text: `${c.text} — ${c.status}`}));
+  const calls = `${c.model_calls} model call${c.model_calls === 1 ? "" : "s"}` + (c.skipped_calls ? `, ${c.skipped_calls} skipped` : "");
+  const ids = c.cited.length ? `cited ${c.cited.join(" ")}` : "no claims cited";
+  return el("li", {class: c.status === "failed" ? "failed" : "reply"},
+    el("span", {class: "who", text: `worker · ${when(c.at)} · ${calls} · ${ids}${c.status === "failed" ? " · failed" : ""}`}),
+    el("div", {class: "text", text: c.text || ""}));
+}
+
+async function refreshWork() {
+  let d;
+  try { d = await get("/api/worker"); } catch (err) { $("wstatus").textContent = `Could not load: ${err.message}`; return; }
+  const done = d.log.filter(c => c.kind === "done"), asked = d.log.filter(c => c.kind === "said").length;
+  $("wstatus").textContent = `${asked} asked, ${done.length} done, ${done.reduce((n, c) => n + (c.model_calls || 0), 0)} model calls (local model, through the gateway)`;
+  $("wwaiting").replaceChildren(...d.waiting.map(w => {
+    const decide = approve => async () => {
+      try { await post("/api/worker/decide", {action: w.action, approve}); refreshWork(); }
+      catch (err) { $("wstatus").textContent = err.message; }
+    };
+    const yes = el("button", {type: "button", text: "Approve"}), no = el("button", {type: "button", text: "Refuse"});
+    yes.onclick = decide(true); no.onclick = decide(false);
+    return el("div", {class: "proposal"}, el("span", {text: `The worker asks to hand this to the companion (it leaves this machine): ${w.input.text}`}), yes, no);
+  }));
+  const key = JSON.stringify([d.log.length, d.log.at(-1), d.waiting.map(w => w.action)]);
+  if (key === lastWork) return;
+  lastWork = key;
+  const box = $("wlog"), atEnd = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
+  box.replaceChildren(...d.log.map(wline));
+  if (!d.log.length) box.append(el("li", {class: "empty", text: "Nothing asked yet."}));
+  if (atEnd) box.scrollTop = box.scrollHeight;
+}
+
+function work() {
+  current = null;
+  for (const id of ["map", "toolbar", "page", "side", "talk"]) $(id).hidden = true;
+  $("work").hidden = false; $("list").hidden = true;
+  $("crumb").textContent = "Worker";
+  lastWork = "";
+  refreshWork();
+  clearInterval(workTimer);
+  workTimer = setInterval(refreshWork, 2000);
+  $("wtext").focus();
+}
+
+$("wsay").addEventListener("submit", async ev => {
+  ev.preventDefault();
+  const text = $("wtext").value.trim();
+  if (!text) return;
+  $("wtext").disabled = true;
+  try { await post("/api/worker/say", {text}); $("wtext").value = ""; await refreshWork(); }
+  catch (err) { $("wstatus").textContent = err.message; }
+  finally { $("wtext").disabled = false; $("wtext").focus(); }
+});
+$("wtext").addEventListener("keydown", ev => {
+  if (ev.key === "Enter" && !ev.shiftKey) { ev.preventDefault(); $("wsay").requestSubmit(); }
+});
+
 // ---------- routes ----------
 
 async function route() {
+  clearInterval(workTimer); $("work").hidden = true;
+  if (location.hash === "#/worker") return work();
   if (location.hash === "#/companion") return talk();
   clearInterval(talkTimer);
   $("talk").hidden = true; $("list").hidden = false;
