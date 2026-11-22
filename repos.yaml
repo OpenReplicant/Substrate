@@ -9,9 +9,8 @@ morphogen:
   branch: main
   checked: b57fbbbae477534066b3aa231bd6472bf461acbc   # 2026-11-16 (#81 unnamed metrics kept; #82 a short-scored run refused; #83 the intake)
 # The Knowledge Kernel, Substrate's store (S-153, S-154): its image is built from this clone (scripts/build.sh kernel) and
-# the tests of the store on the kernel run in it. Until the kernel's pull requests 117 and 118 (the Substrate read model
-# and the substrate profile of its MCP server) are merged, the branch that holds them; then main.
+# the tests of the store on the kernel run in it; its published image (ghcr.io/openreplicant/kernel:main) is pulled (S-167).
 kernel:
   url: https://github.com/OpenReplicant/kernel
   branch: main
-  checked: 94b578d21222e4faea26a459376e3d4508344cac   # 2026-11-21 main with #117 and #118 (D-103 the exporter, D-104 the read model, D-105 the profile)
+  checked: 041146054f7b7a155a76dda3bc843ad1405b3739   # 2026-11-22 main after #132 (D-120 bundles); the image's revision; test_kernel, test_ui, test_worker pass
