@@ -237,6 +237,7 @@ services:
       - ../environment:/app/environment:ro
       - ../store:/app/store:ro
       - ../voice:/app/voice:ro
+      - ../.state/avatar:/avatar:ro
       - ../judge/cases:/cases:ro
     depends_on:
       db: {condition: service_healthy}
@@ -316,6 +317,7 @@ services:
       VOICE_SILENCE_S: ${VOICE_SILENCE_S:-0.6}
       LLM_NAME: local/${LLM_ALIAS:-gemma}
       TTS_URL: ${TTS_URL:-}
+      AVATAR_FILE: ${AVATAR_FILE:-}
       STORE_URL: postgresql://postgres:${POSTGRES_PASSWORD:?set in .env}@db:5432/substrate
     volumes:
       - voice-models:/models

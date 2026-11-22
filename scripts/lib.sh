@@ -55,6 +55,7 @@ SECRETS=${SECRETS:-env}
 
 compose() {
   secrets_export || return 1
+  mkdir -p "$ROOT/.state/avatar"   # the voice head's avatar folder is a bind mount; it must exist, empty or not (S-160)
   # a GPU for Ollama, when this machine has one and .env says so (S-84): deploy/compose.<OLLAMA_GPU>.yaml as well
   _gpu=$(env_value OLLAMA_GPU)
   if [ -z "$_gpu" ]; then
