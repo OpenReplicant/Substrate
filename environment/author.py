@@ -4,7 +4,7 @@ cases are in the judge's container only).
 
     python3 -m environment.author voice_reply [WHY]     # in the companion's container; or the `improve` actuator
 
-The first author writes the voice head's reply component with the local model (AUTHOR_MODEL, local/gemma by
+The first author writes the voice head's reply component with the local model (AUTHOR_MODEL, local/slow by
 default, thinking off unless AUTHOR_REASONING says otherwise), so what the owner said aloud stays on this machine (P3).
 """
 from __future__ import annotations
@@ -22,7 +22,7 @@ from environment.db import database_url
 
 ENV = "companion"
 GATEWAY = os.environ.get("GATEWAY_URL", "http://gateway:8080")
-MODEL = os.environ.get("AUTHOR_MODEL") or "local/gemma"
+MODEL = os.environ.get("AUTHOR_MODEL") or "local/slow"
 KEY = os.environ.get("COMPANION_AUTHOR_KEY", "")
 
 BRIEF = """You improve one component of a voice assistant: the instructions and settings its local model uses to

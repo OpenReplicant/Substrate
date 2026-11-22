@@ -235,7 +235,7 @@ services:
       PYTHONDONTWRITEBYTECODE: "1"
       STORE_URL: postgresql://judge:${JUDGE_DB_PASSWORD:?set in .env}@db:5432/substrate
       JUDGE_KEY: ${JUDGE_KEY:?set in .env}
-      JUDGE_MODEL: local/${LLM_ALIAS:-gemma}
+      JUDGE_MODEL: local/${LLM_ALIAS:-slow}
     volumes:
       - ../environment:/app/environment:ro
       - ../voice:/app/voice:ro
@@ -244,20 +244,22 @@ services:
     depends_on:
       db: {condition: service_healthy}
 
-  # The local model (plan step 5): llama.cpp's server on the GPU (as deploy/compose.nvidia.yaml gives it to Ollama:
-  # device nodes and the driver's libraries, no CDI, no root), serving LLM_MODEL from LLM_MODELS_DIR read-only.
-  # Reached only through the gateway (provider local). Started with the profile `llm` (COMPOSE_PROFILES in .env).
+  # The local slow model (plan step 5, S-169): llama.cpp's server, serving LLM_MODEL from LLM_MODELS_DIR read-only, by
+  # default on the CPU and in RAM (LLM_ARGS -ngl 0) so the GPU stays free for the models that answer at once (llm-fast,
+  # tts). The GPU's device nodes and driver libraries are still given (as deploy/compose.nvidia.yaml gives them to
+  # Ollama: no CDI, no root) for a machine that wants layers there. Reached only through the gateway (provider local).
+  # Started with the profile `llm` (COMPOSE_PROFILES in .env).
   llm:
     profiles: [llm]
-    image: ${LLM_IMAGE:-ghcr.io/ggml-org/llama.cpp:server-cuda12-b12098}
+    image: ${LLM_IMAGE:-ghcr.io/ggml-org/llama.cpp:server-cuda12-b12627}
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
     restart: unless-stopped
     entrypoint: ["sh", "-c", "exec /app/llama-server -m \"/models/$$LLM_MODEL\" --host 0.0.0.0 --port 8080 --alias \"$$LLM_ALIAS\" --jinja $$LLM_ARGS"]
     environment:
       LLM_MODEL: ${LLM_MODEL:-}
-      LLM_ALIAS: ${LLM_ALIAS:-gemma}
-      LLM_ARGS: ${LLM_ARGS:--ngl 999 --cpu-moe -c 16384 -ctk q4_0 -ctv q4_0 -fa auto}
+      LLM_ALIAS: ${LLM_ALIAS:-slow}
+      LLM_ARGS: ${LLM_ARGS:--ngl 0 --no-op-offload -t 6 -c 16384 -b 512 -ub 128 -ctk q4_0 -ctv q4_0 -fa on}
     devices:
       - /dev/nvidia0
       - /dev/nvidiactl
@@ -272,6 +274,36 @@ services:
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://127.0.0.1:8080/health"]
       interval: 10s
+      retries: 60
+
+  # The local fast model (S-169): a small model wholly on the GPU for what must answer at once (the voice head's replies,
+  # quick tool calls); the slow model takes the bigger jobs on the CPU. LLM_FAST_MODEL from LLM_FAST_MODELS_DIR,
+  # read-only; at the gateway as fast/LLM_FAST_ALIAS. Profile `llm`; empty LLM_FAST_MODEL: it is not started.
+  llm-fast:
+    profiles: [llm]
+    image: ${LLM_IMAGE:-ghcr.io/ggml-org/llama.cpp:server-cuda12-b12627}
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+    entrypoint: ["sh", "-c", "[ -n \"$$LLM_MODEL\" ] || { echo 'LLM_FAST_MODEL is empty: no fast model'; exec sleep infinity; }; exec /app/llama-server -m \"/models/$$LLM_MODEL\" --host 0.0.0.0 --port 8080 --alias \"$$LLM_ALIAS\" --jinja $$LLM_ARGS"]
+    environment:
+      LLM_MODEL: ${LLM_FAST_MODEL:-}
+      LLM_ALIAS: ${LLM_FAST_ALIAS:-fast}
+      LLM_ARGS: ${LLM_FAST_ARGS:--ngl 999 -t 2 -c 32768 -fa on -ctk q8_0 -ctv q8_0}
+    devices:
+      - /dev/nvidia0
+      - /dev/nvidiactl
+      - /dev/nvidia-uvm
+      - /dev/nvidia-uvm-tools
+    volumes:
+      - ${LLM_FAST_MODELS_DIR:-/nonexistent}:/models:ro
+      - ${NVIDIA_LIB_DIR:-/usr/lib/x86_64-linux-gnu}/libcuda.so.1:/usr/lib/x86_64-linux-gnu/libcuda.so.1:ro
+      - ${NVIDIA_LIB_DIR:-/usr/lib/x86_64-linux-gnu}/libcuda.so.1:/usr/lib/x86_64-linux-gnu/libcuda.so:ro
+      - ${NVIDIA_LIB_DIR:-/usr/lib/x86_64-linux-gnu}/libnvidia-ml.so.1:/usr/lib/x86_64-linux-gnu/libnvidia-ml.so.1:ro
+      - ${NVIDIA_LIB_DIR:-/usr/lib/x86_64-linux-gnu}/libnvidia-ptxjitcompiler.so.1:/usr/lib/x86_64-linux-gnu/libnvidia-ptxjitcompiler.so.1:ro
+    healthcheck:
+      test: ["CMD-SHELL", "[ -z \"$$LLM_MODEL\" ] || curl -sf http://127.0.0.1:8080/health"]
+      interval: 5s
       retries: 60
 
   # Text-to-speech on the GPU (S-150): Kokoro-FastAPI (Apache-2.0; espeak-ng inside, S-146), the owner's local
@@ -318,7 +350,7 @@ services:
       VOICE_STYLE: ${VOICE_STYLE:-af_heart}
       VOICE_THREADS: ${VOICE_THREADS:-4}
       VOICE_SILENCE_S: ${VOICE_SILENCE_S:-0.6}
-      LLM_NAME: local/${LLM_ALIAS:-gemma}
+      LLM_NAME: ${VOICE_MODEL:-local/${LLM_ALIAS:-slow}}
       TTS_URL: ${TTS_URL:-}
       AVATAR_FILE: ${AVATAR_FILE:-}
       STORE_URL: postgresql://postgres:${POSTGRES_PASSWORD:?set in .env}@db:5432/substrate
@@ -356,7 +388,7 @@ services:
       PYTHONPATH: /app
       GATEWAY_URL: http://gateway:8080
       WORKER_KEY: ${WORKER_KEY:?set in .env}
-      WORKER_MODEL: ${WORKER_MODEL:-local/${LLM_ALIAS:-gemma}}
+      WORKER_MODEL: ${WORKER_MODEL:-local/${LLM_ALIAS:-slow}}
       WORKER_MAX_STEPS: ${WORKER_MAX_STEPS:-8}
       WORKER_CONTEXT_TOKENS: ${WORKER_CONTEXT_TOKENS:-11000}
       WORKER_REASONING: ${WORKER_REASONING:-}

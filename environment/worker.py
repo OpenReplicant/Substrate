@@ -18,7 +18,7 @@ Actuators:
 The loop (`run_task`) is the seam for MetaSoar's M-17, the model is called only at impasses: before EVERY model call it
 asks `gate(state)`; a string answers the task without the model (a compiled skill), None lets the model be called.
 The loop counts the model calls and the skipped calls itself. Settings (environment): GATEWAY_URL, WORKER_KEY (the
-caller `worker:loop`, local models only), WORKER_MODEL (local/gemma), WORKER_WORKSPACE (/workspace),
+caller `worker:loop`, local models only), WORKER_MODEL (local/slow), WORKER_WORKSPACE (/workspace),
 WORKER_MAX_STEPS (8), WORKER_CONTEXT_TOKENS (11000 of the model's 16k), WORKER_MAX_TOKENS (1024),
 WORKER_REASONING (empty), WORKER_MCP_COMMAND (kernel-mcp), WORKER_LOGIN_FILE (/login, from scripts/kernel.sh login worker).
 """
@@ -206,7 +206,7 @@ Model = Callable[[list, list], Awaitable[dict]]     # (messages, tool specs) -> 
 
 def openai_model(gateway: str | None = None, key: str | None = None, model: str | None = None) -> Model:
     from openai import AsyncOpenAI
-    key, name = key or setting("WORKER_KEY"), model or setting("WORKER_MODEL", "local/gemma")
+    key, name = key or setting("WORKER_KEY"), model or setting("WORKER_MODEL", "local/slow")
     base = (gateway or setting("GATEWAY_URL", "http://gateway:8080")).rstrip("/") + "/v1"
     clients: dict = {}       # one client per event loop: each task is its own asyncio.run, and a client's connections
                              # belong to the loop that opened them ("Event loop is closed" on the next task otherwise)

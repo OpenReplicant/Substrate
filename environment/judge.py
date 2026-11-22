@@ -35,7 +35,7 @@ from voice import reply
 
 GATEWAY = os.environ.get("GATEWAY_URL", "http://gateway:8080")
 KEY = os.environ.get("JUDGE_KEY", "")
-MODEL = os.environ.get("JUDGE_MODEL") or "local/gemma"
+MODEL = os.environ.get("JUDGE_MODEL") or "local/slow"
 CASES = Path(os.environ.get("JUDGE_CASES") or "/cases")
 NAME = "judge 0.1 (environment/judge.py)"
 

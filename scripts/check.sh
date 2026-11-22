@@ -58,7 +58,12 @@ with connect(settings(), DB) as c:
 else bad "the environment: $(printf '%s\n' "$out" | tail -1) (bin/in-tools python3 scripts/db.py init)"; fi
 # Probe with a provider this machine has: Bifrost answers 400 for one it has none of, before it checks the key
 probe=openrouter/x:free; [ -z "$(env_value OPENROUTER_API_KEY)" ] && [ -n "$(env_value OLLAMA_URL)" ] && probe=ollama/x
-code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "http://127.0.0.1:$(env_value GATEWAY_PORT)/v1/chat/completions" -H 'Content-Type: application/json' -d "{\"model\":\"$probe\",\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}]}")
+# 000 is no answer yet: a gateway just recreated may restart once or twice before it reaches its database (podman 4.9's
+# network DNS drops lookups while many containers start at once, S-169), so wait up to a minute for one
+for _ in $(seq 1 30); do
+  code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "http://127.0.0.1:$(env_value GATEWAY_PORT)/v1/chat/completions" -H 'Content-Type: application/json' -d "{\"model\":\"$probe\",\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}]}")
+  [ "$code" = 000 ] || break; sleep 2
+done
 [ "$code" = "401" ] && ok "gateway     http://127.0.0.1:$(env_value GATEWAY_PORT)/ (Bifrost; a call without a key is refused)" || bad "the model gateway returned $code to a call without a key (scripts/logs.sh gateway)"
 # The companion (plan step 4, S-136): its session in tmux, and whether the owner's Claude login is in its home yet
 if out=$(compose exec -T companion sh -c 'tmux has-session -t companion 2>/dev/null && echo session; test -s "$HOME/.claude/.credentials.json" && echo login; true' 2>/dev/null); then
@@ -73,7 +78,12 @@ case ",$(env_value COMPOSE_PROFILES)," in *,llm,*)
   case "$running" in *-llm-*) ;; *) bad "service llm is not running (scripts/logs.sh llm)" ;; esac
   if [ "$("$ENGINE" inspect -f '{{.State.Health.Status}}' substrate-llm-1 2>/dev/null)" = healthy ]; then
     ok "llm         $(env_value LLM_MODEL) on llama.cpp, at the gateway as local/$(env_value LLM_ALIAS)"
-  else note "llm         not healthy yet (a large model takes minutes to load; scripts/logs.sh llm)"; fi ;;
+  else note "llm         not healthy yet (a large model takes minutes to load; scripts/logs.sh llm)"; fi
+  if [ -n "$(env_value LLM_FAST_MODEL)" ]; then
+    if [ "$("$ENGINE" inspect -f '{{.State.Health.Status}}' substrate-llm-fast-1 2>/dev/null)" = healthy ]; then
+      ok "llm-fast    $(env_value LLM_FAST_MODEL) on llama.cpp, at the gateway as fast/$(env_value LLM_FAST_ALIAS)"
+    else note "llm-fast    not healthy yet (scripts/logs.sh llm-fast)"; fi
+  fi ;;
 esac
 case ",$(env_value COMPOSE_PROFILES)," in *,voice,*)
   vp=$(env_value VOICE_PORT); vp=${vp:-8110}
