@@ -8,9 +8,12 @@ This is the **fresh tree** (S-137). v1 is tagged `v1-final` and its plans are in
 plans to work from. v1's databases are kept in the same Postgres volume (`workbench`, `gateway`) and dumped in
 `.state/backups/`; what people stated there comes back as data imported into the new store.
 
+See `docs/repos.md` for what each repository (Kernel, Substrate, MetaSoar, Morphogen) owns.
+
 | Part | Where | Role |
 | --- | --- | --- |
 | The store | moving to the Knowledge Kernel (S-153, S-154: the UI, skills and tests read it from the kernel's database `kernel`, the agent's tools are the kernel's MCP `substrate` profile; `scripts/kernel.sh`); until the last item of plan step 3d, `store/` (schema in `store/sql/`, agent tools in `store/mcp.py`) on Postgres (`deploy/postgres`: pgvector, pgmq, pg_cron, pgGraph), database `substrate` | Wikibase's data model with OpenWiki's pinned evidence (S-135, S-138): entities, statements with ranks, references, spans, revisions, a page per entity; the agent's tools over MCP, and maps, roles, interfaces and catalogs (S-139; the `map` and `catalog` skills) |
+| envkit | `envkit/` (declarations in `envkit/declarations/`; tests: `python3 -m pytest envkit`) | The fast in-process scheduler (lockstep or realtime) for live play, one module contract with `environment/` (S-161); moved from MetaSoar |
 | The real-time environment | `environment/` (schema `env` in `store/sql/005_environment.sql`, the channel in `environment/channel.py`) on pgmq in the same Postgres | signals logged whole and fanned out as topics, a queue per actuator behind its gate (`free`, `propose`, `deny`), the channel into Claude Code, archived only on `ack` (S-143) |
 | The model gateway | container `gateway` (Bifrost), `scripts/gateway.py` | every model call goes through it with its caller's key and is recorded there, not by the caller (S-77) |
 | Local models | container `ollama`; container `llm` (llama.cpp, profile `llm`) | Ollama for the store's embeddings; the local chat model (Gemma 4 26B-A4B from `LLM_MODELS_DIR`) on llama.cpp, at the gateway as `local/gemma` (S-149) |

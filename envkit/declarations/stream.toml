@@ -1,0 +1,38 @@
+# A live stream with a game in it: an audience (here a scripted stand-in) and a nested environment. The agent
+# attached to it sees the game's readings and the chat, and writes the game's commands and replies to chat.
+[environment]
+name = "stream"
+doc = "A game played in front of an audience: the game is a nested environment, the chat a world of its own."
+
+[params]
+game_env = "arc3"
+game = "LS20"
+seed = 0
+max_steps = 500
+
+[[module]]
+name = "play"
+env = "{game_env}"
+params = { game = "{game}", seed = "{seed}", max_steps = "{max_steps}" }
+
+[[module]]
+name = "chat"
+driver = "chat"
+lines = ["hi!", "what is that thing in the corner?", "try the other door", "nice", "gg"]
+every = 80
+
+[expose]
+frame = "play/game.frame"
+levels_completed = "play/game.levels_completed"
+state = "play/game.state"
+attempt = "play/game.attempt"
+reward = "play/game.reward"
+actions = "play/game.actions"
+event = "play/game.event"
+tick = "play/game.tick"
+cmd = "play/game.cmd"
+chat = "chat.line"
+say = "chat.reply"
+
+[profiles]
+judged = ["frame", "levels_completed", "state", "attempt", "reward", "actions", "event", "tick", "chat"]
