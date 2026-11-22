@@ -1,6 +1,6 @@
 #!/bin/sh
 # The Knowledge Kernel beside the store (S-153, S-154): its schema, the one-off export of the `store` schema into it,
-# an agent's login, and the MCP server Claude Code starts. The kernel runs in its own image (scripts/build.sh kernel)
+# an agent's login, and the MCP server Claude Code starts. The kernel runs in its own image (published, or scripts/build.sh kernel)
 # in the stack's Postgres, database `kernel` (scripts/db.py init makes it); nothing is installed on the host.
 #
 #   scripts/kernel.sh init               # install the kernel's schema and default modules (safe to run again)
@@ -15,7 +15,7 @@ set -eu
 # --no-deps: these need db up, not restarted. Without it, Podman's compose recreated db on every run, which restarted
 # Postgres and left the gateway unable to resolve `db` (first deploy, 2026-11-21, S-155). scripts/up.sh starts db first.
 
-image() { if [ "$ENGINE" = podman ]; then echo localhost/substrate-kernel:local; else echo substrate-kernel:local; fi; }
+image() { image_ref kernel; }
 
 case "${1:-}" in
   init)

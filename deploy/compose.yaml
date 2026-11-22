@@ -1,6 +1,10 @@
 # Substrate's stack on the fresh tree (S-137): Postgres, the model gateway, local models, the UI (S-140), and the
 # companion (plan step 4): its environment's sensors and appliers, and its Claude Code session.
 # SPARQL (deploy/ontop) and Caddy in front (deploy/caddy) come later (docs/plan.md 3b).
+# Images (S-167): each service names its published image (ghcr.io/openreplicant/substrate-NAME:SUBSTRATE_IMAGE_TAG, the
+# kernel's at KERNEL_IMAGE_TAG, both default main) and keeps its build: as the fallback. scripts/up.sh pulls first and builds
+# what did not pull (SUBSTRATE_BUILD=1 builds all). The voice head is built here and not published.
+#
 # Started by scripts/up.sh:
 #
 #   $CONTAINER_ENGINE compose -f deploy/compose.yaml --env-file .env up -d
@@ -22,8 +26,8 @@ services:
   # Database: substrate (the store, S-135; made by scripts/db.py init). v1's databases (workbench, and the
   # gateway's) stay in the same volume.
   db:
-    build: ./postgres
-    image: localhost/substrate-db:local
+    image: ghcr.io/openreplicant/substrate-db:${SUBSTRATE_IMAGE_TAG:-main}
+    build: {context: ./postgres, dockerfile: Dockerfile}
     command: ["postgres", "-c", "shared_preload_libraries=pg_cron,graph", "-c", "cron.database_name=substrate"]
     environment:
       POSTGRES_DB: substrate
@@ -89,8 +93,8 @@ services:
       interval: 10s
       retries: 30
 
-  # The Knowledge Kernel (S-153, S-154), the store: its own database `kernel` in the db above, from the image built out
-  # of repos/kernel (scripts/build.sh kernel). kernel-init installs its schema and default modules (scripts/kernel.sh
+  # The Knowledge Kernel (S-153, S-154), the store: its own database `kernel` in the db above, from the published kernel image
+  # (or one built out of repos/kernel: scripts/build.sh kernel). kernel-init installs its schema and default modules (scripts/kernel.sh
   # init, once the database exists); kernel runs the validator that applies the change sets agents and the exporter
   # submit, as the kernel's one login, which switches to each part's own role (never a superuser). kernel-export is the
   # one-off exporter of the old `store` schema (scripts/kernel.sh export). The agents' MCP server is the stdio one,
@@ -98,7 +102,7 @@ services:
   # 2026-11-21 (S-155).
   kernel-init:
     profiles: [kernel-admin]
-    image: localhost/substrate-kernel:local
+    image: ghcr.io/openreplicant/kernel:${KERNEL_IMAGE_TAG:-main}
     command: ["kk", "init"]
     read_only: true
     cap_drop: [ALL]
@@ -112,7 +116,7 @@ services:
 
   kernel:
     <<: *locked
-    image: localhost/substrate-kernel:local
+    image: ghcr.io/openreplicant/kernel:${KERNEL_IMAGE_TAG:-main}
     command: ["kk", "serve", "--only", "validator"]
     tmpfs: [/tmp]
     environment:
@@ -123,7 +127,7 @@ services:
 
   kernel-export:
     profiles: [kernel-admin]
-    image: localhost/substrate-kernel:local
+    image: ghcr.io/openreplicant/kernel:${KERNEL_IMAGE_TAG:-main}
     command: ["python3", "-m", "encoder_substrate"]
     read_only: true
     cap_drop: [ALL]
@@ -140,7 +144,8 @@ services:
   # maps from the kernel's read model (S-154), the companion's page from the substrate database.
   ui:
     <<: *locked
-    image: localhost/substrate-tools:local
+    image: ghcr.io/openreplicant/substrate-tools:${SUBSTRATE_IMAGE_TAG:-main}
+    build: {context: ./tools, dockerfile: Containerfile}    # the fallback; environment and judge use the same image
     command: ["python3", "-m", "ui.server"]
     working_dir: /app
     user: "65534:65534"
@@ -174,7 +179,7 @@ services:
   # what it counts and what applies an approved proposal are not the model's to change.
   environment:
     <<: *locked
-    image: localhost/substrate-tools:local
+    image: ghcr.io/openreplicant/substrate-tools:${SUBSTRATE_IMAGE_TAG:-main}
     command: ["python3", "-m", "environment.companion", "sense"]
     working_dir: /app
     user: "65534:65534"
@@ -195,7 +200,8 @@ services:
   # (scripts/companion.sh login) and kept in its own home volume; models only through the gateway's pass-through
   # route under its own keys; the database only as the `companion` login. Nothing on the host is changed.
   companion:
-    image: localhost/substrate-companion:local
+    image: ghcr.io/openreplicant/substrate-companion:${SUBSTRATE_IMAGE_TAG:-main}
+    build: {context: ./companion, dockerfile: Containerfile}
     read_only: true
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
@@ -225,7 +231,7 @@ services:
   judge:
     <<: *locked
     profiles: [voice]
-    image: localhost/substrate-tools:local
+    image: ghcr.io/openreplicant/substrate-tools:${SUBSTRATE_IMAGE_TAG:-main}
     command: ["python3", "-m", "environment.judge"]
     working_dir: /app
     user: "65534:65534"
@@ -303,7 +309,8 @@ services:
   # companion as the owner's message. Its models are fetched once into their own volume. Profile `voice`.
   voice:
     profiles: [voice]
-    image: localhost/substrate-voice:local
+    image: localhost/substrate-voice:local    # built here, never published (S-167)
+    build: {context: ../voice, dockerfile: Containerfile}
     read_only: true
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
@@ -335,7 +342,12 @@ services:
   # files only in its workspace volume. Profile `llm`, with the model it needs.
   worker:
     profiles: [llm]
-    image: localhost/substrate-worker:local
+    image: ghcr.io/openreplicant/substrate-worker:${SUBSTRATE_IMAGE_TAG:-main}
+    build:
+      context: ./worker
+      dockerfile: Containerfile
+      args:
+        KERNEL_IMAGE: ghcr.io/openreplicant/kernel:${KERNEL_IMAGE_TAG:-main}
     command: ["python3", "-m", "environment.worker", "run"]
     working_dir: /app
     read_only: true

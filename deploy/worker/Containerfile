@@ -1,8 +1,8 @@
 # substrate-worker (plan step 1, S-163): the offline agent. The Knowledge Kernel's image (python 3.13.16 on Alpine, pinned by
 # digest in the kernel's Dockerfile; has kernel-mcp, mcp 2.3.0, psycopg) plus the pinned `openai` client. The loop itself
-# is environment/worker.py, mounted read-only by compose. Build the kernel image first (scripts/build.sh kernel):
+# is environment/worker.py, mounted read-only by compose. The base is the published kernel image by default; build one first with scripts/build.sh kernel to use your own:
 #   scripts/build.sh worker
-ARG KERNEL_IMAGE=localhost/substrate-kernel:local
+ARG KERNEL_IMAGE=ghcr.io/openreplicant/kernel:main
 FROM ${KERNEL_IMAGE}
 USER root
 COPY requirements.txt /tmp/requirements.txt
