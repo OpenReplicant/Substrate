@@ -65,6 +65,19 @@ not a framework or a harness per slot.
 - **One agent loop of ours** (the worker's, generalised): models through the gateway, M-17's skill gate at the model
   endpoint, tools from the MCP registry, world-changing calls through the environment's gates. The voice front-end
   stays its fast specialisation (S-170, S-171).
+- **Observability is part of the runtime** (the owner, 2026-11-22): OpenTelemetry through every layer, one trace per
+  task from its queue message through the loop's steps, each model call at the gateway, each MCP tool or block call
+  and each gate decision (the GenAI semantic conventions for model spans). An OTel Collector, picked with the
+  `research` skill, takes OTLP from our processes, the gateway and the supervisor; traces go to a viewer, metrics to
+  Prometheus, which the kernel's `observer-prometheus` already turns into observed claims (S-05, the kernel's D-119),
+  so a component's card carries measured latency and cost. Postgres stays the system of record (decisions, outcomes,
+  claims); telemetry sits beside it.
+- **The kernel's boundary:** the bus (pgmq transport, the `env` tables) stays in Substrate's schema in the same
+  Postgres, because the kernel's modules never write tables and real-time signals are too many to be claims; what is
+  worth knowing crosses as claims through an encoder (`encoder-substrate`), the component and MCP registry lives in
+  the kernel as claims, and `propose`-gated actions are meant to reach the kernel's review lane so a person approves in
+  one place (option A, recommended; a sanctioned runtime layer inside the kernel, option B, only if something outside
+  Substrate needs the bus; the owner to confirm).
 - **Other harnesses are agent instances, not conformed to:** an instance reads tasks from its queue, takes tools from
   the MCP endpoint, calls models through the gateway and publishes `task.done`. Claude Code (the owner's
   subscription) is the first, as the companion already is; OpenCode, Codex and others get one adapter each when
@@ -72,8 +85,9 @@ not a framework or a harness per slot.
 
 ## Next, in order (2026-11-22)
 
-1. **The process supervisor**, picked with the `research` skill (on-demand and hot processes, restarts, health, an
-   API to start and stop, its footprint).
+1. **The process supervisor and the telemetry collector**, picked with the `research` skill (the supervisor:
+   on-demand and hot processes, restarts, health, an API to start and stop, its footprint; the collector: OTLP in,
+   traces to a viewer, metrics to Prometheus, permissive, light).
 2. **The MCP registry and the blocks MCP server:** blocks as MCP tools on demand, gates enforced; registered MCP
    servers listed as components. Done when the worker calls a block and a registered server's tool through it.
 3. **The worker on the registry:** its own file tools and the voice head's quick tools (`voice/tools.py`) replaced
