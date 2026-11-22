@@ -1,0 +1,21 @@
+# A catalog entry (S-176): Backstage's entity format, read into the kernel by encoder-backstage.
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: kernel-catalog
+  title: encoder-backstage
+  description: Reads catalog/*.yaml, these entries, into the kernel as claims citing their lines (scripts/kernel.sh catalog);
+    a one-shot job.
+  annotations:
+    substrate.dev/licence: Apache-2.0
+    substrate.dev/image: ghcr.io/openreplicant/kernel
+    substrate.dev/compose-service: kernel-catalog
+    substrate.dev/decision: S-176, the kernel's D-100
+spec:
+  type: job
+  lifecycle: experimental
+  owner: owner
+  system: substrate
+  dependsOn:
+  - resource:postgres
+  - component:kernel

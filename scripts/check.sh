@@ -105,6 +105,10 @@ say "Wiring"
 if st=$(sec_status 2>&1); then ok "secrets ($SECRETS): $st"; else bad "secrets ($SECRETS): $st"; fi
 "$ROOT/scripts/tools.sh" status >/dev/null 2>&1 && ok "tools container running (bin/ wrappers work)" || bad "tools container not running: scripts/tools.sh start"
 "$ROOT/bin/gitleaks" version >/dev/null 2>&1 && ok "gitleaks in the tools container: $("$ROOT/bin/gitleaks" version 2>/dev/null)" || bad "bin/gitleaks does not run"
+# The catalog (S-176): every part an entry, every consumed API provided, every compose service described
+if out=$("$ROOT/bin/in-tools" python3 "$ROOT/scripts/catalog.py" check --compose "$ROOT/deploy/compose.yaml" 2>&1); then
+  ok "catalog     $(printf '%s\n' "$out" | head -1 | sed 's/^catalog: //'); fits, matches compose"
+else bad "catalog: $(printf '%s\n' "$out" | grep FAIL | head -2 | sed 's/^ *FAIL *//' | tr '\n' ';') (bin/in-tools python3 scripts/catalog.py check --compose deploy/compose.yaml)"; fi
 # where the local model server computes: its last device report (S-84)
 dev=$(rt_logs ollama 2>/dev/null | grep 'msg="inference compute"' | tail -1 | sed -n 's/.*library=\([^ ]*\).*description="\([^"]*\)".*total="\([^"]*\)".*/\1 on \2, \3/p')
 gpu=$(env_value OLLAMA_GPU)

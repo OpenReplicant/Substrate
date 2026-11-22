@@ -1,0 +1,18 @@
+# A catalog entry (S-176): Backstage's entity format, read into the kernel by encoder-backstage.
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: block-word-count
+  title: word_count
+  description: Counts the words of a text (blocks/examples/word_count).
+  annotations:
+    substrate.dev/licence: Apache-2.0
+    substrate.dev/source: blocks/examples/word_count
+    substrate.dev/decision: S-164
+spec:
+  type: block
+  lifecycle: experimental
+  owner: owner
+  system: substrate
+  providesApis:
+  - block-word-count

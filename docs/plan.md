@@ -95,7 +95,9 @@ are views of the same items and claims; what can be said in one format can be ca
 
 1. **The catalog entry content type** (D-101's first): a component's item with its interfaces described WoT-style,
    and a compatibility check between two entries. Done when Substrate's own parts are entries and the check says
-   which talk to which.
+   which talk to which. — done 2026-11-22 (S-176): `catalog/` in Backstage's entity format, read by the kernel's
+   `encoder-backstage`; `scripts/catalog.py check` over files, compose and the kernel. Left for the kernel: the
+   current-version link and the per-type items view (D-101).
 2. **The first decoder and encoder: the map to and from Compose,** with Substrate's own `deploy/compose.yaml` as the
    test (decoded from the map, it should match what runs; the running state encoded back).
 3. **M-17's gate at the model endpoint**, then M-17's first experiment (the handoff, 2026-11-22).

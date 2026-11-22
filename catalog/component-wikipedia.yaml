@@ -1,0 +1,16 @@
+# A catalog entry (S-176): Backstage's entity format, read into the kernel by encoder-backstage.
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: wikipedia
+  title: Wikipedia
+  description: Its REST search and page summaries, for the voice head's lookup tool (S-171).
+  annotations:
+    substrate.dev/licence: CC BY-SA (content)
+spec:
+  type: external-service
+  lifecycle: production
+  owner: owner
+  system: substrate
+  providesApis:
+  - wikipedia-rest

@@ -139,6 +139,27 @@ services:
     depends_on:
       db: {condition: service_healthy}
 
+  # Substrate's catalog into the kernel (S-176): encoder-backstage (the kernel's D-100) reads catalog/*.yaml, one Backstage
+  # entity per file, as claims in Backstage's terms, each citing its file and line; each file is kept as an artifact in
+  # the volume kernel-artifacts. An unchanged file submits nothing; a changed one supersedes what it said
+  # (scripts/kernel.sh catalog). Profile kernel-admin: run, not kept running.
+  kernel-catalog:
+    profiles: [kernel-admin]
+    image: ghcr.io/openreplicant/kernel:${KERNEL_IMAGE_TAG:-main}
+    entrypoint: ["sh", "-c", "exec python3 -m encoder_backstage --project substrate /substrate/catalog/*.yaml"]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: [/tmp]
+    environment:
+      DATABASE_URL: postgresql://kk_authenticator:${KK_AUTHENTICATOR_PASSWORD:?set in .env}@db:5432/kernel
+      KK_ARTIFACTS: /artifacts
+    volumes:
+      - ../catalog:/substrate/catalog:ro
+      - kernel-artifacts:/artifacts
+    depends_on:
+      db: {condition: service_healthy}
+
   # The UI (S-140, S-141: Substrate's UI, no name of its own): the store's pages and maps, read-only, on the standard
   # library (ui/server.py) in the tools image. It sees only ui/ and reaches Postgres as db: the entities, pages and
   # maps from the kernel's read model (S-154), the companion's page from the substrate database.
@@ -432,6 +453,8 @@ services:
       gateway: {condition: service_started}
 
 volumes:
+  kernel-artifacts:
+    name: ${KERNEL_ARTIFACTS_VOLUME:-substrate_kernel-artifacts}   # the kernel's artifact store: catalog files as they were read
   search-cache:
   worker-workspace:
     name: ${WORKER_VOLUME:-substrate_worker-workspace}   # the only place its file tools reach

@@ -1,0 +1,25 @@
+# A catalog entry (S-176): Backstage's entity format, read into the kernel by encoder-backstage.
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: ui
+  title: The UI
+  description: The store's pages and maps, the companion's and worker's pages (127.0.0.1:8100).
+  annotations:
+    substrate.dev/licence: Apache-2.0
+    substrate.dev/image: ghcr.io/openreplicant/substrate-tools
+    substrate.dev/compose-service: ui
+    substrate.dev/decision: S-140, S-141
+spec:
+  type: website
+  lifecycle: experimental
+  owner: owner
+  system: substrate
+  providesApis:
+  - ui-http
+  consumesApis:
+  - worker-tasks
+  - companion-session
+  dependsOn:
+  - resource:postgres
+  - component:kernel

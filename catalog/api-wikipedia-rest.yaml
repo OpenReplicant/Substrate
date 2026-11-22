@@ -1,0 +1,26 @@
+# A catalog entry (S-176): Backstage's entity format, read into the kernel by encoder-backstage.
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: wikipedia-rest
+  title: Wikipedia REST
+spec:
+  type: openapi
+  lifecycle: experimental
+  owner: owner
+  system: substrate
+  definition: |-
+    {
+     "openapi": "3.1.0",
+     "info": {
+      "title": "then /api/rest_v1/page/summary/{title}",
+      "version": "0"
+     },
+     "paths": {
+      "/w/rest.php/v1/search/page": {
+       "get": {
+        "summary": "then /api/rest_v1/page/summary/{title}"
+       }
+      }
+     }
+    }

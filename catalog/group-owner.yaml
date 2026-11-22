@@ -1,0 +1,9 @@
+# A catalog entry (S-176): Backstage's entity format, read into the kernel by encoder-backstage.
+apiVersion: backstage.io/v1alpha1
+kind: Group
+metadata:
+  name: owner
+  description: 'The owner: the person who decides.'
+spec:
+  type: person
+  children: []

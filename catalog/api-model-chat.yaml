@@ -1,0 +1,26 @@
+# A catalog entry (S-176): Backstage's entity format, read into the kernel by encoder-backstage.
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: model-chat
+  title: OpenAI Chat Completions at the gateway
+spec:
+  type: openapi
+  lifecycle: experimental
+  owner: owner
+  system: substrate
+  definition: |-
+    {
+     "openapi": "3.1.0",
+     "info": {
+      "title": "chat completions, tool calls, streaming; key in Authorization: Bearer or x-bf-vk",
+      "version": "0"
+     },
+     "paths": {
+      "/v1/chat/completions": {
+       "post": {
+        "summary": "chat completions, tool calls, streaming; key in Authorization: Bearer or x-bf-vk"
+       }
+      }
+     }
+    }

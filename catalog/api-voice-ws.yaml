@@ -1,0 +1,18 @@
+# A catalog entry (S-176): Backstage's entity format, read into the kernel by encoder-backstage.
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: voice-ws
+  title: The voice head's page and socket
+spec:
+  type: websocket
+  lifecycle: experimental
+  owner: owner
+  system: substrate
+  definition: |-
+    {
+     "page": "http://127.0.0.1:8110/",
+     "socket": "ws://127.0.0.1:8110/",
+     "in": "16 kHz int16 PCM frames; {type: stop}",
+     "out": "state, heard, say, audio (24 kHz PCM), error"
+    }

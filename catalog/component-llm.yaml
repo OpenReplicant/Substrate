@@ -1,0 +1,19 @@
+# A catalog entry (S-176): Backstage's entity format, read into the kernel by encoder-backstage.
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: llm
+  title: 'llama.cpp: the slow model'
+  description: Inkling 2 Mini on the CPU and in RAM, local/slow (S-169).
+  annotations:
+    substrate.dev/licence: MIT (llama.cpp); Apache-2.0 (Inkling 2 Mini)
+    substrate.dev/image: ghcr.io/ggml-org/llama.cpp:server-cuda12-b12627
+    substrate.dev/compose-service: llm
+    substrate.dev/decision: S-169
+spec:
+  type: service
+  lifecycle: experimental
+  owner: owner
+  system: substrate
+  providesApis:
+  - llama-chat-slow

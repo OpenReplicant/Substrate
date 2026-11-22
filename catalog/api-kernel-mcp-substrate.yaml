@@ -1,0 +1,29 @@
+# A catalog entry (S-176): Backstage's entity format, read into the kernel by encoder-backstage.
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: kernel-mcp-substrate
+  title: The kernel's substrate profile
+spec:
+  type: mcp
+  lifecycle: experimental
+  owner: owner
+  system: substrate
+  definition: |-
+    {
+     "protocol": "model-context-protocol",
+     "transport": "stdio",
+     "tools": [
+      "search",
+      "read",
+      "expand",
+      "locate",
+      "path",
+      "alternatives",
+      "violations",
+      "create_item",
+      "say",
+      "deprecate"
+     ],
+     "note": "KK_PROFILE=substrate"
+    }

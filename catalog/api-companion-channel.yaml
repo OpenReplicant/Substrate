@@ -1,0 +1,18 @@
+# A catalog entry (S-176): Backstage's entity format, read into the kernel by encoder-backstage.
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: companion-channel
+  title: The channel into Claude Code
+spec:
+  type: mcp
+  lifecycle: experimental
+  owner: owner
+  system: substrate
+  definition: |-
+    {
+     "protocol": "model-context-protocol",
+     "transport": "stdio",
+     "tools": [],
+     "note": "the claude/channel contract: signals in, archived only on ack (S-143)"
+    }

@@ -1,0 +1,16 @@
+# A catalog entry (S-176): Backstage's entity format, read into the kernel by encoder-backstage.
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: anthropic
+  title: Anthropic API
+  description: Claude, reached only with a caller's own Claude login (the companion's).
+  annotations:
+    substrate.dev/licence: proprietary service
+spec:
+  type: external-service
+  lifecycle: production
+  owner: owner
+  system: substrate
+  providesApis:
+  - anthropic-api
