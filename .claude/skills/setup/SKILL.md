@@ -13,7 +13,10 @@ The stack on the fresh tree (S-137) is Postgres (`deploy/postgres`), the model g
 plus the `substrate-tools` container, and the Knowledge Kernel (S-153, S-154): the store, in its own database
 `kernel` in the same Postgres, from an image built out of `repos/kernel` (`scripts/build.sh kernel`; cloned there
 when missing). `scripts/up.sh` makes the database, installs the kernel's schema (`scripts/kernel.sh init`) and
-exports the old `store` schema into it (`scripts/kernel.sh export`; safe to run again).
+exports the old `store` schema into it (`scripts/kernel.sh export`; safe to run again; it needs no Python of ours,
+it is the kernel's own `encoder_substrate`). `scripts/db.py init` also applies the environment's schema
+(`environment/sql/`, schema `env`); a database that had it applied before S-156 keeps its record (`public.env_migration`
+is seeded from `public.store_migration`), so nothing is applied twice.
 
 ## 1. Host tools and images
 

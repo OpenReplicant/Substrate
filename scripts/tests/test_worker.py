@@ -205,7 +205,7 @@ def database():
         print("skip  the environment parts (no ADMIN_URL)")
         return
     import psycopg
-    import store
+    from environment import db as envdb
     from environment import Env
     name, login = f"worker_test_{os.getpid()}", f"worker_login_{os.getpid()}"
     with psycopg.connect(admin, autocommit=True) as a:
@@ -213,7 +213,7 @@ def database():
     url = admin.rsplit("/", 1)[0] + "/" + name
     try:
         with psycopg.connect(url, autocommit=True) as c:
-            store.migrate(c)
+            envdb.migrate(c)
             c.execute(f"create role {login} login password 'test-only'")
             c.execute(f"grant env_agent to {login}")
             owner = Env(c)

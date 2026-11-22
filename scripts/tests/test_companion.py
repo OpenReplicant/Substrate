@@ -24,7 +24,7 @@ import psycopg
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-import store  # noqa: E402
+from environment import db as envdb  # noqa: E402
 from environment import Env  # noqa: E402
 from environment import companion as comp  # noqa: E402
 
@@ -52,7 +52,7 @@ def main():
     url = admin.rsplit("/", 1)[0] + "/" + name
     try:
         with psycopg.connect(url, autocommit=True) as c:
-            store.migrate(c)
+            envdb.migrate(c)
             c.execute(f"create role {login} login password 'test-only'")
             c.execute(f"grant env_agent to {login}")
             owner = Env(c)

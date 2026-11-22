@@ -12,9 +12,9 @@ See `docs/repos.md` for what each repository (Kernel, Substrate, MetaSoar, Morph
 
 | Part | Where | Role |
 | --- | --- | --- |
-| The store | moving to the Knowledge Kernel (S-153, S-154: the UI, skills and tests read it from the kernel's database `kernel`, the agent's tools are the kernel's MCP `substrate` profile; `scripts/kernel.sh`); until the last item of plan step 3d, `store/` (schema in `store/sql/`, agent tools in `store/mcp.py`) on Postgres (`deploy/postgres`: pgvector, pgmq, pg_cron, pgGraph), database `substrate` | Wikibase's data model with OpenWiki's pinned evidence (S-135, S-138): entities, statements with ranks, references, spans, revisions, a page per entity; the agent's tools over MCP, and maps, roles, interfaces and catalogs (S-139; the `map` and `catalog` skills) |
+| The store | the Knowledge Kernel (S-153, S-154, S-156: the UI and the skills read it from the kernel's database `kernel`, the agent's tools are the kernel's MCP `substrate` profile; `scripts/kernel.sh`); the old `store` package is retired and its schema stays in database `substrate` until the owner drops it (S-156) | Wikibase's data model with OpenWiki's pinned evidence (S-135, S-138): entities, statements with ranks, references, spans, revisions, a page per entity; the agent's tools over MCP, and maps, roles, interfaces and catalogs (S-139; the `map` and `catalog` skills) |
 | envkit | `envkit/` (declarations in `envkit/declarations/`; tests: `python3 -m pytest envkit`) | The fast in-process scheduler (lockstep or realtime) for live play, one module contract with `environment/` (S-161); moved from MetaSoar |
-| The real-time environment | `environment/` (schema `env` in `store/sql/005_environment.sql`, the channel in `environment/channel.py`) on pgmq in the same Postgres | signals logged whole and fanned out as topics, a queue per actuator behind its gate (`free`, `propose`, `deny`), the channel into Claude Code, archived only on `ack` (S-143) |
+| The real-time environment | `environment/` (schema `env` in `environment/sql/`, migrated by `environment/db.py`, the channel in `environment/channel.py`) on pgmq in the same Postgres | signals logged whole and fanned out as topics, a queue per actuator behind its gate (`free`, `propose`, `deny`), the channel into Claude Code, archived only on `ack` (S-143) |
 | The model gateway | container `gateway` (Bifrost), `scripts/gateway.py` | every model call goes through it with its caller's key and is recorded there, not by the caller (S-77) |
 | Local models | container `ollama`; container `llm` (llama.cpp, profile `llm`) | Ollama for the store's embeddings; the local chat model (Gemma 4 26B-A4B from `LLM_MODELS_DIR`) on llama.cpp, at the gateway as `local/gemma` (S-149) |
 | Tools | `bin/`, container `substrate-tools` | the scripts' Python and gitleaks, run in a container as you (S-19) |
@@ -22,7 +22,7 @@ See `docs/repos.md` for what each repository (Kernel, Substrate, MetaSoar, Morph
 | The voice head | `voice/` (compose service `voice`, profile `voice`) on 127.0.0.1:8110 | the companion's voice and face: microphone in over a WebSocket, Silero and Parakeet to text, the local model to answer, Kokoro to speak, a face that moves with it; hands real work to the companion (S-147, S-149) |
 | The worker | `environment/worker.py` (environment `worker`), `deploy/worker/` (compose service `worker`, profile `llm`, the kernel's image plus `openai`), the UI's `#/worker` | an offline agent on the local model (`local/gemma` through the gateway as caller `worker:loop`): our own loop on `mcp` + `openai` (S-162); the kernel's `memory` profile over stdio and a few workspace tools; `gate(state)` before every model call is M-17's seam (S-163) |
 | Blocks | `blocks/` (`block.yaml` blocks, JSON plans, `blocks/run.py` the default executor, `blocks/executor.yaml`; tests: `scripts/tests/test_blocks.py`) | what the agent compiles from what it solved: catalog entries with an interface and effects, assembled as P-Plan plans, run without the model; `skill_gate` plugs into the worker's `gate` (S-157, S-164) |
-| Components and the judge | `env.component` and `env.verdict` (`store/sql/007_components.sql`), `environment/author.py`, `environment/judge.py` (compose service `judge`), `judge/cases` (the judge's only) | every version of a component with its card; an author proposes from the record, the judge tests it against the active one on cases the author cannot read, the owner activates (S-151) |
+| Components and the judge | `env.component` and `env.verdict` (`environment/sql/007_components.sql`), `environment/author.py`, `environment/judge.py` (compose service `judge`), `judge/cases` (the judge's only) | every version of a component with its card; an author proposes from the record, the judge tests it against the active one on cases the author cannot read, the owner activates (S-151) |
 | The UI | `ui/` (`ui/server.py`, `ui/static`), compose service `ui` on 127.0.0.1:8100 | the store's pages and maps as diagrams (S-140), read-only; v1's Workbench rebuilt, with no name of its own (S-141) |
 | Images | `.github/workflows/images.yml`, `image_ref` in `scripts/lib.sh` | `ghcr.io/openreplicant/substrate-{db,tools,companion,worker}` and the kernel's image are pulled (tags `SUBSTRATE_IMAGE_TAG`, `KERNEL_IMAGE_TAG`); compose keeps `build:` as the fallback; voice is built locally, never published (S-167) |
 | Glue | `scripts/`, `deploy/` | brings the parts up and connects them |
@@ -69,10 +69,10 @@ scripts/test.sh [FILE...]  # the test suites, in the tools container
 scripts/build.sh [db|tools|companion|voice|kernel|worker]   # none: pull published images, build what did not pull; SUBSTRATE_BUILD=1 builds all
 scripts/logs.sh SERVICE    # db, gateway, ollama, ui, environment, companion, llm, voice
 scripts/tools.sh start|stop|status
-scripts/kernel.sh init|export|login NAME|mcp NAME   # the Knowledge Kernel: schema, one-off export of `store`, an agent's login and its MCP server
+scripts/kernel.sh init|export|login NAME|mcp NAME   # the Knowledge Kernel: schema, one-off export of the old `store` schema, an agent's login and its MCP server
 scripts/down.sh [--volumes]   # stop (deleting data asks first)
 python3 scripts/gateway.py render|keys   # the gateway's config from .env and its callers
-bin/in-tools python3 scripts/db.py init|import-v1   # the store's schema; v1's people's statements and decisions
+bin/in-tools python3 scripts/db.py init   # the databases and the environment's schema (environment/sql/)
 bin/in-tools python3 scripts/env.py waiting|decide|publish|actuators|gate|queues   # the environment, as a person
 scripts/companion.sh login|attach|restart|status   # the companion's session (log in once)
 ```

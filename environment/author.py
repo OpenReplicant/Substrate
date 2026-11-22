@@ -18,7 +18,7 @@ import urllib.request
 import psycopg
 from psycopg.types.json import Jsonb
 
-from store.mcp import database_url
+from environment.db import database_url
 
 ENV = "companion"
 GATEWAY = os.environ.get("GATEWAY_URL", "http://gateway:8080")

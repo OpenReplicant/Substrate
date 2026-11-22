@@ -36,7 +36,7 @@ import time
 import psycopg
 
 from environment import Env
-from store.mcp import database_url
+from environment.db import database_url
 
 ENV = "companion"
 SESSION_QUEUE = "companion_session"

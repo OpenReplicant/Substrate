@@ -29,7 +29,7 @@ Everything is in containers under Podman compose, published on 127.0.0.1 only.
 
 | Part | Where | What it does |
 | --- | --- | --- |
-| The store | `store/`, Postgres (`deploy/postgres`) | Wikibase's data model with pinned evidence: things, statements, and the exact span of the source each statement rests on. A changed source flags what cites it, with no model call. Maps of parts, roles and interfaces, and catalogs of candidates with measurements and trade-off notes |
+| The store | the Knowledge Kernel (`scripts/kernel.sh`), Postgres (`deploy/postgres`) | Wikibase's data model with pinned evidence: things, statements, and the exact span of the source each statement rests on. A changed source flags what cites it, with no model call. Maps of parts, roles and interfaces, and catalogs of candidates with measurements and trade-off notes |
 | The environment | `environment/`, schema `env` | Signals logged whole and fanned out as pgmq topics; one queue per actuator behind a gate (`free`, `propose`, `deny`); proposals wait for a person; every action recorded |
 | The channel | `environment/channel.py` | Pushes an environment's signals into a live Claude Code session; a signal not acknowledged comes back |
 | The gateway | `gateway` (Bifrost), `scripts/gateway.py` | Every model call goes through it under its caller's key and is logged there, not by the caller. Keys decide which providers a caller may reach (voice stays local) |

@@ -30,7 +30,7 @@ import psycopg
 from psycopg.types.json import Jsonb
 
 from environment import Env
-from store.mcp import database_url
+from environment.db import database_url
 from voice import reply
 
 GATEWAY = os.environ.get("GATEWAY_URL", "http://gateway:8080")

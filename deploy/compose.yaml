@@ -158,13 +158,11 @@ services:
       PGDATABASE: substrate
       PGPASSWORD: ${POSTGRES_PASSWORD:?set in .env}
       OWNER_NAME: ${OWNER_NAME:-owner}
-      STORE_BACKEND: ${STORE_BACKEND:-kernel}
       KERNEL_URL: ${KERNEL_URL:-}
       KK_AUTHENTICATOR_PASSWORD: ${KK_AUTHENTICATOR_PASSWORD:?set in .env}   # empty KERNEL_URL: the kernel's login, as ui/server.py kernel_url()
     volumes:
       - ../ui:/app/ui:ro
       - ../environment:/app/environment:ro      # the companion's page: what the owner says is published through it
-      - ../store:/app/store:ro
     ports:
       - "127.0.0.1:${UI_PORT:-8100}:8100"
     healthcheck:
@@ -192,7 +190,6 @@ services:
       COMPANION_DAILY_TOKENS: ${COMPANION_DAILY_TOKENS:-2000000}
     volumes:
       - ../environment:/app/environment:ro
-      - ../store:/app/store:ro
     depends_on:
       db: {condition: service_healthy}
 
@@ -217,7 +214,6 @@ services:
     volumes:
       - companion-home:/home/companion
       - ../environment:/app/environment:ro
-      - ../store:/app/store:ro
       - ../deploy/companion:/app/deploy/companion:ro
       - ../voice:/app/voice:ro                  # the reply component's code, for its author (environment/author.py)
     depends_on:
@@ -242,7 +238,6 @@ services:
       JUDGE_MODEL: local/${LLM_ALIAS:-gemma}
     volumes:
       - ../environment:/app/environment:ro
-      - ../store:/app/store:ro
       - ../voice:/app/voice:ro
       - ../.state/avatar:/avatar:ro
       - ../judge/cases:/cases:ro
@@ -372,7 +367,6 @@ services:
       - worker-workspace:/workspace
       - ../.state/kernel/worker.env:/login:ro       # scripts/kernel.sh login worker
       - ../environment:/app/environment:ro
-      - ../store:/app/store:ro
       - ../blocks:/app/blocks:ro
     depends_on:
       db: {condition: service_healthy}
