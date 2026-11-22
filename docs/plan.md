@@ -43,58 +43,65 @@ Self-levers beyond budget and model choice, and the other layers in `docs/framew
 need them, each tested against pass-through. The UI is no longer frozen: add what these steps need, and
 nothing they don't.
 
-## The runtime, components and agents (S-173, 2026-11-22)
+## Describe, check, decode: components and runtimes (S-174, 2026-11-22)
 
-The owner's direction, after comparing harnesses (S-172) and RuleGo: our own light runtime on what is already here,
-not a framework or a harness per slot.
+Supersedes S-173's runtime engine. The owner's direction: Substrate does not build a runtime or sit in the links
+between components. It **describes** a system in the Knowledge Kernel, **checks** that its parts can talk, puts a
+**translator** between two that cannot, and **decodes** the description into the native formats of existing runtimes
+and **encodes** what they report back; "otherwise we would be just encoding and decoding, like file formats, for
+existing runtimes". That is the kernel's own architecture: decoders turn models into running things, encoders read
+them back, automations stay in their runners' native formats (the kernel's D-41; chain runners parked, D-36).
 
-- **Postgres is the backbone:** pgmq for queues, the `env` schema for gates and the record, the kernel for the
-  catalog of components and MCP servers. No other broker or registry.
-- **MCP is every component's interface, both ways** (RuleGo's good idea): a block is an MCP tool (one blocks MCP
-  server exposes each block by its declared interface, world-changing ones behind their `blocks.<name>` gate), and a
-  registered MCP server's tools are components in the catalog, gated and composable like blocks. An aggregating MCP
-  endpoint gives each agent the tools it may use (Bifrost's MCP side is the first candidate to check).
-- **Light by default:** a block runs on demand, a short-lived process per call (measured: about 19 ms for a Python
-  block with JSON in and out, 8 MB idle), with a `hot` toggle that keeps it running as a supervised process when a
-  measured plan needs it. Go where the hot paths already are (the gateway, the supervisor); ours moves to Go only
-  when a measurement says so.
-- **Processes, not only containers:** a process supervisor in one small container runs the hot blocks and agent
-  processes; Compose keeps the services. Nomad is out by default (Business Source License); process-compose
-  (Apache-2.0, Go) is the lead candidate, to be picked with the `research` skill against s6, supervisord and
-  systemd units.
-- **One agent loop of ours** (the worker's, generalised): models through the gateway, M-17's skill gate at the model
-  endpoint, tools from the MCP registry, world-changing calls through the environment's gates. The voice front-end
-  stays its fast specialisation (S-170, S-171).
-- **Observability is part of the runtime** (the owner, 2026-11-22): OpenTelemetry through every layer, one trace per
-  task from its queue message through the loop's steps, each model call at the gateway, each MCP tool or block call
-  and each gate decision (the GenAI semantic conventions for model spans). An OTel Collector, picked with the
-  `research` skill, takes OTLP from our processes, the gateway and the supervisor; traces go to a viewer, metrics to
-  Prometheus, which the kernel's `observer-prometheus` already turns into observed claims (S-05, the kernel's D-119),
-  so a component's card carries measured latency and cost. Postgres stays the system of record (decisions, outcomes,
-  claims); telemetry sits beside it.
-- **The kernel's boundary:** the bus (pgmq transport, the `env` tables) stays in Substrate's schema in the same
-  Postgres, because the kernel's modules never write tables and real-time signals are too many to be claims; what is
-  worth knowing crosses as claims through an encoder (`encoder-substrate`), the component and MCP registry lives in
-  the kernel as claims, and `propose`-gated actions are meant to reach the kernel's review lane so a person approves in
-  one place (option A, recommended; a sanctioned runtime layer inside the kernel, option B, only if something outside
-  Substrate needs the bus; the owner to confirm).
-- **Other harnesses are agent instances, not conformed to:** an instance reads tasks from its queue, takes tools from
-  the MCP endpoint, calls models through the gateway and publishes `task.done`. Claude Code (the owner's
-  subscription) is the first, as the companion already is; OpenCode, Codex and others get one adapter each when
-  wanted (`scripts/trials/harness/candidates.json` holds the surveyed list).
+**The kernel as a symbolic latent space** (the owner): one universal symbolic representation that systems are
+interpreted into (encoders) and out of (decoders). A map, a BPMN process, a compose file and a running deployment
+are views of the same items and claims; what can be said in one format can be carried to another through it.
+
+- **Components describe their interfaces; Substrate does not mediate them.** An interface is described in the shape
+  of a W3C WoT Thing Description: the affordance (an action, property or event) with its data schema, and the forms
+  that reach it (protocol, address, content type): MCP over stdio or HTTP, an OpenAI-compatible API, a pgmq queue
+  (AsyncAPI describes one), plain HTTP, anything else. Components talk to each other directly, as they already do.
+- **Compatibility is checked, and translators are components.** Two parts fit when one provides the interface the
+  other requires (the map vocabulary's *provides interface* and *requires interface*). Where none fits directly, a
+  translator from the catalog goes between them (an MCP bridge, a proxy, an adapter block), found like any other
+  part.
+- **The catalog entry is D-101's first content type.** Each component (block, MCP server, service, model, agent
+  instance) is an item in the kernel: a typed document of fields and prose, with claims derived from it for checking,
+  drift and alternatives (the kernel's D-101, proposed 2026-11-08, waits on exactly this proof).
+- **Runtimes are pluggable, Compose first.** A decoder writes the map out in one runtime's format; an encoder reads
+  its state back. Compose (with Podman) is the first, since Substrate runs on it; process-compose is the lead
+  candidate for plain processes. `docs/compatibility/` lists the runtimes, orchestrators, cloud services and
+  standards a decoder could target, with formats, APIs and licences: what to tell a business that already runs
+  Kubernetes, Camunda or Step Functions. A licence decides only whether a part can be a default (rule 7).
+- **Light by default.** Our blocks are components that implement some protocol, as clients or servers; they run on
+  demand (measured: about 19 ms a call for a Python block with JSON in and out, 8 MB idle, S-173) or kept hot by the
+  runtime when a measured plan needs it.
+- **What stays ours, kept small:** the description and the compatibility check; the decoders and encoders; gates at
+  the chokepoints that exist (the model gateway, an MCP proxy where one is chosen, our own agents' actuators), not on
+  every link; the voice front-end's loop (S-170, S-171); M-17's gate at the model endpoint (a proxy or a Bifrost
+  plugin).
+- **The kernel's boundary is the kernel's own decisions:** queues belong to a distribution in its own database
+  (D-94 c, decided), so the `env` schema stays Substrate's; signals and telemetry are observations, not claims ("a
+  measurement is not content anyone wrote", D-101); what is worth knowing crosses as claims and items through an
+  encoder (`encoder-substrate`); `propose`-gated actions are meant to reach the kernel's review lane, so a person
+  approves in one place.
+- **Observability:** OpenTelemetry where the parts already speak it (the gateway, the runtimes, our processes), an
+  OTel Collector picked with the `research` skill, traces to a viewer and metrics to Prometheus, which the kernel's
+  `observer-prometheus` turns into observed claims; a component's card carries measured latency and cost.
+- **Agents:** our agent loop (the worker's) and the voice front-end are components; Claude Code (the owner's
+  subscription) and other harnesses are agent instances, each a component with its own interfaces
+  (`scripts/trials/harness/candidates.json` holds the surveyed list).
 
 ## Next, in order (2026-11-22)
 
-1. **The process supervisor and the telemetry collector**, picked with the `research` skill (the supervisor:
-   on-demand and hot processes, restarts, health, an API to start and stop, its footprint; the collector: OTLP in,
-   traces to a viewer, metrics to Prometheus, permissive, light).
-2. **The MCP registry and the blocks MCP server:** blocks as MCP tools on demand, gates enforced; registered MCP
-   servers listed as components. Done when the worker calls a block and a registered server's tool through it.
-3. **The worker on the registry:** its own file tools and the voice head's quick tools (`voice/tools.py`) replaced
-   by MCP servers; one loop for the worker, the fast layer reusing it.
-4. **M-17's gate at the model endpoint**, then M-17's first experiment (the handoff, 2026-11-22).
-5. **The agent-instance contract**, Claude Code first.
-6. Then, as before: the live map and avatar page (S-158), the business distribution, process KPIs and one real
+1. **The catalog entry content type** (D-101's first): a component's item with its interfaces described WoT-style,
+   and a compatibility check between two entries. Done when Substrate's own parts are entries and the check says
+   which talk to which.
+2. **The first decoder and encoder: the map to and from Compose,** with Substrate's own `deploy/compose.yaml` as the
+   test (decoded from the map, it should match what runs; the running state encoded back).
+3. **M-17's gate at the model endpoint**, then M-17's first experiment (the handoff, 2026-11-22).
+4. **The telemetry collector and a process runtime** (process-compose first), picked with the `research` skill, as
+   the second decoder target.
+5. Then, as before: the live map and avatar page (S-158), the business distribution, process KPIs and one real
    actuator beyond Compose behind a gate.
 
 Done from the 2026-11-21 list: offline agents on the local model (S-162, S-163, now Inkling, S-169), blocks and the
@@ -113,4 +120,6 @@ publication and reproductions, the hosted mapper and hosted judging, the slot mo
 - Rotating the Postgres password; putting the Gemma model at the gateway.
 - The licence and whether the repository goes public.
 - Whether a Business-Source-licensed part (Nomad) may ever be a default; recommended no (S-173).
+- How blocks' plans and the kernel refer to P-Plan, whose licence is CC BY-NC-SA 2.0 (non-commercial; S-174).
+- Confirming the kernel's D-101 (the content framing) once the catalog entry has proved it or not.
 - Whether LFM3 (LFM Open License v1.0) may be the recommended fast model (S-169).
