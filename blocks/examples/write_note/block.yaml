@@ -1,0 +1,14 @@
+name: write_note
+version: 0.1.0
+description: Writes a note into the worker's workspace (WORKER_WORKSPACE, default /workspace) as notes/<name>.txt.
+interface:
+  inputs:
+    type: object
+    properties: {name: {type: string}, text: {type: string}}
+    required: [name, text]
+  outputs:
+    type: object
+    properties: {path: {type: string}}
+    required: [path]
+effects: {changes_world: true, idempotent: true, timeout_s: 5}
+invoke: {kind: python, target: "write_note:run"}

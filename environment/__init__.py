@@ -33,6 +33,10 @@ class Env:
     def act(self, actuator: str, input_, by: str) -> tuple[int, str]:
         return tuple(self.c.execute("select * from env.act(%s, %s, %s)", (actuator, Jsonb(input_), by)).fetchone())
 
+    def status(self, action: int) -> str | None:
+        r = self.c.execute("select status from env.action where id = %s", (action,)).fetchone()
+        return r[0] if r else None
+
     def decide(self, action: int, approve: bool, person: str, reason: str | None = None) -> str:
         return self.c.execute("select env.decide(%s, %s, %s, %s)", (action, approve, person, reason)).fetchone()[0]
 
