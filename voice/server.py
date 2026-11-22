@@ -20,6 +20,7 @@ frame of audio, {"type": "stop"} to drop queued audio, {"type": "error", "text"}
 from __future__ import annotations
 
 import asyncio
+import datetime as dt
 import json
 import mimetypes
 import os
@@ -36,7 +37,7 @@ from websockets.asyncio.server import serve
 from websockets.datastructures import Headers
 from websockets.http11 import Response
 
-from voice import reply, route
+from voice import reply, route, tools
 
 ROOT = Path(__file__).resolve().parent
 STATIC = ROOT / "static"
@@ -48,6 +49,8 @@ KEY = os.environ.get("VOICE_KEY", "")
 # decides talk or work first; off: LLM's reply component decides with its HANDOFF line (to the companion), as before
 ROUTER = (os.environ.get("VOICE_ROUTER") or "tools").strip()
 NOTED = "Noted."
+NOTES_ROOT = os.environ.get("VOICE_NOTES_ROOT") or "/workspace"     # the worker's workspace: notes/<name>.txt (S-171)
+SEARCH_URL = os.environ.get("SEARCH_URL", "")                         # the local SearXNG (compose service search)
 EMBED_MODEL = os.environ.get("EMBED_MODEL") or "ollama/qwen3-embedding:0.6b"
 ON_IT = "On it. I'll tell you when it's done."
 WORKER_SAYS = ("Say this result to the owner out loud in one to three short spoken sentences: plain words, no lists, "
@@ -232,6 +235,18 @@ class Record:
             self.c = None
             return 0
 
+    def due_reminders(self) -> list[tuple[int, str]]:
+        """Reminders whose time has come and that have not been said (voice.reminder.said names them)."""
+        try:
+            return self.conn().execute(
+                "select r.id, r.body->>'text' from env.signal r where r.key = 'voice.reminder' "
+                "and (r.body->>'due')::timestamptz <= now() and not exists (select 1 from env.signal s "
+                "where s.key = 'voice.reminder.said' and (s.body->>'reminder')::bigint = r.id) order by r.id").fetchall()
+        except psycopg.Error as e:
+            log(f"record: {e}")
+            self.c = None
+            return []
+
     def last_reply(self) -> int:
         try:
             return self.conn().execute("select coalesce(max(id), 0) from env.action where actuator = 'companion.reply'").fetchone()[0]
@@ -360,39 +375,127 @@ class Session:
         await self.state("listening")
 
     async def tools_turn(self, text: str, heard, stt_ms: int, t0: float):
-        """One turn decided by the tool the voice model calls (S-170): talk is spoken; delegate goes to the worker with
-        "on it"; save_note goes to the worker as the example plan's "save a note called ..." (no model call there)."""
-        body = json.dumps(route.tools_body(LLM, self.history[-20:], text)).encode()
-        req = urllib.request.Request(f"{GATEWAY}/v1/chat/completions", body, {"Content-Type": "application/json", "x-bf-vk": KEY,
-                                                                              "x-wb-call": f"voice-{time.time_ns()}"})
-        try:
-            msg = (await asyncio.to_thread(lambda: json.load(urllib.request.urlopen(req, timeout=60))))["choices"][0]["message"]
-            tool, arg = route.tools_decision(msg)
-        except Exception as e:                                       # noqa: BLE001 - reported, and the turn ends
-            await self.send({"type": "error", "text": f"the voice model: {e}"})
-            return await self.state("listening")
-        decide_ms = round((time.perf_counter() - t0) * 1000)
+        """One turn decided by the tools the voice model calls (S-170, S-171). Each step streams: a talk call's text is
+        spoken sentence by sentence as it arrives; a quick tool runs here and its result goes back for the next step (at
+        most route.QUICK_STEPS, then only talk and delegate are offered); delegate sends the task to the worker."""
+        now = dt.datetime.now().astimezone()
+        steps: list[dict] = []
         said: list = []
-        self.history.append({"role": "user", "content": text})
-        if tool == "talk":
-            for sentence in sentences(arg) or [arg]:
-                await self.say(sentence, said)
-        elif tool == "delegate":
+        used: list[dict] = []
+        first_ms = None
+        tool, arg = "", ""
+        for n in range(route.QUICK_STEPS + 1):
+            body = route.tools_body(LLM, self.history[-20:], text, f"{now:%A %-d %B %Y, %H:%M} ({now.tzname()})", steps,
+                                    final=n == route.QUICK_STEPS, stream=True)
+            try:
+                tool, arg, call_id, spoke = await self.stream_step(body, said)
+            except Exception as e:                                   # noqa: BLE001 - reported, and the turn ends
+                await self.send({"type": "error", "text": f"the voice model: {e}"})
+                break
+            if spoke and first_ms is None:
+                first_ms = round((time.perf_counter() - t0) * 1000)
+            if tool in route.ENDS or not tool:
+                break
+            result = await asyncio.to_thread(self.quick, tool, arg, now)
+            used.append({"tool": tool, "args": arg, "result": result[:300]})
+            steps += [{"role": "assistant", "content": None, "tool_calls": [{"id": call_id, "type": "function",
+                                                                             "function": {"name": tool, "arguments": arg}}]},
+                      {"role": "tool", "tool_call_id": call_id, "content": result}]
+        if tool == "delegate":
             self.rec.publish("worker.owner.message", {"text": arg, "said": text, "reply_to": "voice"}, "owner (voice)")
             await self.say(ON_IT, said)
-        elif tool == "save_note":
-            self.rec.publish("worker.owner.message", {"text": f"save a note called {route.note_name(arg)}: {arg}",
-                                                      "said": text, "reply_to": "voice:quiet"}, "owner (voice)")
-            await self.say(NOTED, said)
-        else:
+        elif not said:
             await self.say("Sorry, could you say that again?", said)
+        if first_ms is None:
+            first_ms = round((time.perf_counter() - t0) * 1000)
         spoken = " ".join(said)
-        self.history.append({"role": "assistant", "content": spoken + ({"delegate": " (handed to the worker)",
-                                                                       "save_note": " (saved as a note)"}.get(tool, ""))})
+        self.history.append({"role": "user", "content": text})
+        # only what was said: tool results written into the history were copied into later replies, "(calculate: ...)"
+        self.history.append({"role": "assistant", "content": spoken})
         self.rec.publish("companion.voice.said", {"text": spoken, "by": LLM, "heard": heard, "route": tool or None, "routed_by": "tools",
-                                                  "tool_text": arg if tool != "talk" else None, "stt_ms": stt_ms, "decide_ms": decide_ms,
-                                                  "turn_ms": round((time.perf_counter() - t0) * 1000)}, "voice head")
+                                                  "quick_tools": used, "task": arg if tool == "delegate" else None, "stt_ms": stt_ms,
+                                                  "first_audio_ms": first_ms, "turn_ms": round((time.perf_counter() - t0) * 1000)},
+                         "voice head")
         await self.state("listening")
+
+    async def stream_step(self, body: dict, said: list) -> tuple[str, str, str, bool]:
+        """One streamed step: (tool, its text or JSON arguments, the call's id, whether anything was spoken). A talk
+        call's text (or plain words with no call) is spoken as each sentence completes."""
+        req = urllib.request.Request(f"{GATEWAY}/v1/chat/completions", json.dumps(body).encode(),
+                                     {"Content-Type": "application/json", "x-bf-vk": KEY, "x-wb-call": f"voice-{time.time_ns()}"})
+        q: asyncio.Queue = asyncio.Queue()
+        loop = asyncio.get_running_loop()
+
+        def pump():
+            try:
+                with urllib.request.urlopen(req, timeout=60) as r:
+                    for ev in route.stream_events(r):
+                        loop.call_soon_threadsafe(q.put_nowait, ev)
+            except Exception as e:                                   # noqa: BLE001 - raised in the turn
+                loop.call_soon_threadsafe(q.put_nowait, ("error", e))
+            loop.call_soon_threadsafe(q.put_nowait, None)
+        loop.run_in_executor(None, pump)
+        name, call_id, args, content, buf, spoke = None, "", "", "", "", False
+        talk = route.TalkText()
+        while (ev := await q.get()) is not None:
+            if ev[0] == "error":
+                raise ev[1]
+            new = ""
+            if ev[0] == "content" and name is None:
+                content += ev[1]
+                new = ev[1]
+            elif ev[0] == "tool" and ev[1] == 0:
+                name = name or ev[3]
+                call_id = call_id or ev[2] or f"call-{time.time_ns()}"
+                args += ev[4]
+                if name == "talk":
+                    new = talk.feed(ev[4])
+            if new:
+                buf += new
+                while m := SENTENCE.match(buf):
+                    sentence, buf = route.speakable(m.group(1)), buf[m.end():]
+                    if sentence:
+                        await self.say(sentence, said)
+                        spoke = True
+        if name in (None, "talk") and route.speakable(buf):
+            await self.say(route.speakable(buf), said)
+            spoke = True
+        if name is None:
+            return ("talk", content.strip(), "", spoke) if content.strip() else ("", "", "", spoke)
+        tool, arg = route.tools_decision({"tool_calls": [{"function": {"name": name, "arguments": args}}]})
+        return tool, arg, call_id, spoke
+
+    def quick(self, tool: str, arg: str, now: dt.datetime) -> str:
+        """A quick tool, run here (voice/tools.py); its result goes back to the model."""
+        a = json.loads(arg or "{}")
+        try:
+            if tool == "save_note":
+                return tools.save_note(NOTES_ROOT, a.get("text", ""))
+            if tool == "read_notes":
+                return tools.read_notes(NOTES_ROOT, a.get("topic", ""))
+            if tool == "remind":
+                result, r = tools.remind(a.get("text", ""), a.get("when", ""), now)
+                if r:
+                    self.rec.publish("voice.reminder", r, "owner (voice)")
+                return result
+            if tool == "calculate":
+                return tools.calculate(a.get("expression", ""))
+            if tool == "lookup":
+                return tools.lookup(a.get("topic", ""))
+            if tool == "search":
+                return tools.search(a.get("query", ""), SEARCH_URL)
+        except OSError as e:
+            return f"error: {e}"
+        return f"error: no tool {tool}"
+
+    async def speak_reminder(self, text: str):
+        while self.hearing or (self.turn and not self.turn.done()):
+            await asyncio.sleep(0.3)
+        line = f"A reminder: {text}"
+        await self.send({"type": "say", "text": line, "by": "reminder"})
+        pcm = await asyncio.to_thread(self.m.speak, line)
+        await self.send({"type": "audio", "rate": 24000}, pcm)
+        self.history.append({"role": "assistant", "content": line})
 
     async def hand_to_worker(self, text: str, heard, stt_ms: int, why: dict, t0: float):
         """Work: say so at once, and put the request on the worker's queue; its answer is read out when it comes."""
@@ -411,6 +514,8 @@ class Session:
         """The worker's answer, condensed by the voice model into a few spoken sentences and read out in a quiet moment."""
         while self.hearing or (self.turn and not self.turn.done()):
             await asyncio.sleep(0.3)
+        if not (text or "").strip():
+            text, ok = "The task finished with no answer.", False
         card = {"params": {"system": WORKER_SAYS, "temperature": 0.3, "max_tokens": 200, "reasoning_effort": "none",
                            "history_turns": 0}}
         try:
@@ -523,6 +628,18 @@ async def worker_replies(record: Record):
                 asyncio.create_task(s.speak_worker(text or "", ok))
 
 
+async def reminders(record: Record):
+    """Say each reminder when it falls due, to whoever is listening; one with no page open waits for one."""
+    while True:
+        await asyncio.sleep(10)
+        if not SESSIONS:
+            continue
+        for rid, text in await asyncio.to_thread(record.due_reminders):
+            for s in list(SESSIONS):
+                asyncio.create_task(s.speak_reminder(text or ""))
+            record.publish("voice.reminder.said", {"reminder": rid, "text": text}, "voice head")
+
+
 async def companion_replies(record: Record):
     last = await asyncio.to_thread(record.last_reply)
     while True:
@@ -579,6 +696,7 @@ async def main():
 
     asyncio.create_task(companion_replies(record))
     asyncio.create_task(worker_replies(record))
+    asyncio.create_task(reminders(record))
     asyncio.create_task(keep_router(record))
     asyncio.create_task(warm())
     host, port = os.environ.get("VOICE_HOST", "127.0.0.1"), int(os.environ.get("VOICE_PORT") or 8110)

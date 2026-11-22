@@ -297,7 +297,10 @@ async def run_task(task: str, model: Model, tools: Tools, gate: Gate | None = No
             return finish(f"the model call failed: {type(x).__name__}: {str(x)[:300]}", False)
         calls = m.get("tool_calls") or []
         if not calls:
-            return finish((m.get("content") or "").strip(), True)
+            text = (m.get("content") or "").strip()
+            if not text:                                             # e.g. the model spent its tokens thinking (S-171)
+                return finish("the model gave no answer (it may have used its tokens thinking; WORKER_MAX_TOKENS)", False)
+            return finish(text, True)
         msgs.append({"role": "assistant", "content": m.get("content"), "tool_calls": [
             {"id": c["id"], "type": "function", "function": {"name": c["name"], "arguments": c["arguments"]}} for c in calls]})
         for c in calls:
@@ -411,6 +414,14 @@ def run() -> None:
     import psycopg
     model = openai_model()
     gate, gate_env = None, None
+    # notes/ is shared with the voice head (S-171), which runs in the worker's group: group-writable, setgid
+    ws = setting("WORKER_WORKSPACE", "/workspace")
+    for d in (ws, os.path.join(ws, "notes")):
+        try:
+            os.makedirs(d, exist_ok=True)
+            os.chmod(d, 0o2775)
+        except OSError as x:
+            log(f"workspace {d}: {x}")
     cmd = shlex.split(setting("WORKER_MCP_COMMAND", "kernel-mcp"))
     factory = lambda: McpTools(cmd, kernel_env())                    # noqa: E731
     e = None

@@ -1,0 +1,19 @@
+# SearXNG for the voice head's `search` tool (S-171): the defaults, plus the JSON API, no limiter (only the voice head
+# reaches it, on the compose network; no port on the host) and no image proxy. The secret comes from SEARXNG_SECRET.
+use_default_settings: true
+general:
+  instance_name: "substrate search"
+server:
+  secret_key: "overridden-by-SEARXNG_SECRET"
+  limiter: false
+  public_instance: false
+  image_proxy: false
+search:
+  safe_search: 0
+  autocomplete: ""
+  formats:
+    - html
+    - json
+outgoing:
+  # engines get 5 s (the default 3 s lost them to slow DNS lookups on podman 4.9's network, S-171)
+  request_timeout: 5.0

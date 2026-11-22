@@ -13,7 +13,9 @@ Standard library only; the embedder is passed in (the voice head's goes through 
 """
 from __future__ import annotations
 
+import json
 import math
+import re
 from typing import Callable
 
 ROUTES = ("talk", "work")
@@ -70,43 +72,69 @@ class Router:
         return route, {"near": [{"similarity": s, "text": t, "route": r} for s, t, r in near]}
 
 
-# ---- the fast model decides, by the tool it calls (S-170, the owner's idea): it is trained to call tools, so every turn
-# it must call one of these instead of choosing between plain words and a HANDOFF line. Measured on the trial's 12
-# held-out utterances: 12/12 and 11/12 right, median 0.35 s, with thinking off, tool_choice required, a stop at
-# </think> (with thinking off it sometimes writes plain words and then loops on that marker) and plain words taken as
-# talk. Without save_note it said "Saved note: ..." for a note it had not saved.
-TOOLS_SYSTEM = """You are the owner's companion, speaking with them out loud. Every turn, call exactly one tool.
-talk: say your answer yourself, in one to three short spoken sentences (no lists, markdown or emoji). Use it for
-greetings, small talk, feelings, quick facts, jokes, translations and simple advice.
-delegate: hand the request to the assistant that has tools, when it needs the owner's computer, files or notes,
-changing anything, the web or news, or a long written plan. Pass the request, complete.
-save_note: save a short note or reminder the owner asks you to keep; then it is done.
-Never say you did something (saved, checked, looked up) unless a tool did it, and never tell the owner you cannot
-do something or have no tool for it: if you cannot answer it yourself, delegate it. Do not repeat the question back.
-What you hear is a speech-to-text transcript and may have small mistakes; if it makes no sense, ask once."""
-TOOLS = [
-    {"type": "function", "function": {"name": "talk", "description": "Say this to the owner out loud",
-     "parameters": {"type": "object", "properties": {"text": {"type": "string", "description": "what to say, spoken words only"}},
-                    "required": ["text"]}}},
-    {"type": "function", "function": {"name": "delegate", "description": "Hand a task that needs tools to the assistant with tools",
-     "parameters": {"type": "object", "properties": {"task": {"type": "string", "description": "the request, complete and self-contained"}},
-                    "required": ["task"]}}},
-    {"type": "function", "function": {"name": "save_note", "description": "Save a short note or reminder for the owner",
-     "parameters": {"type": "object", "properties": {"text": {"type": "string"}}, "required": ["text"]}}},
+# ---- the fast model decides, by the tool it calls (S-170, the owner's idea; S-171 adds quick tools): it is trained to
+# call tools, so every step it must call one. talk ends the turn (spoken as it streams); delegate ends it too (the
+# worker takes multi-step work); the quick tools (voice/tools.py) run in the voice head and their result comes back for
+# the next step, at most QUICK_STEPS of them a turn, then only talk or delegate are offered. Measured on the trial's 12
+# held-out utterances with talk, delegate and save_note: 12/12 twice, median 0.35 s, with thinking off,
+# tool_choice required, a stop at </think> (with thinking off it sometimes writes plain words, then loops on that
+# marker) and plain words taken as talk. Without save_note it said "Saved note: ..." for a note it had not saved.
+QUICK_STEPS = 3
+TOOLS_SYSTEM = """You are the owner's companion, speaking with them out loud. It is {now}. Every step, call exactly one tool.
+talk: say your answer, in one to three short spoken sentences (no lists, markdown, emoji or links). This ends your turn.
+Quick tools, which you use yourself and then talk about the result:
+- save_note: keep a short note, only when the owner asks you to keep, note, write down or save something.
+- read_notes: read the owner's notes (what they asked you to remember), optionally about a topic.
+- remind: set a reminder; give the time as YYYY-MM-DDTHH:MM in their local time, or as "in N minutes".
+- calculate: work out arithmetic exactly.
+- lookup: a fact from Wikipedia about a person, place, thing or idea.
+- search: search the web for current things (news, prices, opening hours, weather, recent events).
+delegate: hand the request to the assistant with more tools when it takes several steps, changes things, or needs a long
+written plan or document. Anything about the computer (disk space, files and folders other than notes, programs,
+settings, what is running) is always delegate: it is the computer you run on, so do not ask which one. Ends your turn.
+Answer small talk, feelings, jokes, translations and simple advice yourself with talk. Never say you did something
+unless a tool did it, and never say you cannot do something or have no tool for it: use a quick tool, or delegate.
+Do not repeat the question back. What you hear is a speech-to-text transcript and may have small mistakes; if it
+makes no sense, ask once."""
+
+
+def _fn(name: str, description: str, props: dict, required: list[str]) -> dict:
+    return {"type": "function", "function": {"name": name, "description": description,
+                                             "parameters": {"type": "object", "properties": props, "required": required}}}
+
+
+_S = {"type": "string"}
+TALK = _fn("talk", "Say this to the owner out loud; ends the turn", {"text": {"type": "string", "description": "spoken words only"}}, ["text"])
+DELEGATE = _fn("delegate", "Hand multi-step work to the assistant with more tools; ends the turn",
+               {"task": {"type": "string", "description": "the request, complete and self-contained"}}, ["task"])
+QUICK = [
+    _fn("save_note", "Save a short note for the owner", {"text": _S}, ["text"]),
+    _fn("read_notes", "Read the owner's notes, optionally only those about a topic", {"topic": _S}, []),
+    _fn("remind", "Set a reminder", {"text": _S, "when": {"type": "string", "description": "YYYY-MM-DDTHH:MM local time, or 'in N minutes'"}}, ["text", "when"]),
+    _fn("calculate", "Work out an arithmetic expression", {"expression": _S}, ["expression"]),
+    _fn("lookup", "Look up a fact on Wikipedia", {"topic": _S}, ["topic"]),
+    _fn("search", "Search the web", {"query": _S}, ["query"]),
 ]
+TOOLS = [TALK, DELEGATE] + QUICK
+QUICK_NAMES = {t["function"]["name"] for t in QUICK}
+ENDS = {"talk", "delegate"}
 
 
-def tools_body(model: str, history: list[dict], utterance: str) -> dict:
-    """The request the voice head sends (OpenAI chat completions, through the gateway)."""
-    return {"model": model, "messages": [{"role": "system", "content": TOOLS_SYSTEM}] + history + [{"role": "user", "content": utterance}],
-            "tools": TOOLS, "tool_choice": "required", "temperature": 0.2, "max_tokens": 300, "reasoning_effort": "none",
-            "stop": ["</think>"]}
+def tools_body(model: str, history: list[dict], utterance: str | None, now: str = "", steps: list[dict] | None = None,
+               final: bool = False, stream: bool = False) -> dict:
+    """The request for one step: the history, the utterance, the steps so far this turn (assistant tool calls and
+    their results); final offers only talk and delegate."""
+    msgs = [{"role": "system", "content": TOOLS_SYSTEM.format(now=now or "unknown")}] + history
+    if utterance is not None:
+        msgs.append({"role": "user", "content": utterance})
+    return {"model": model, "messages": msgs + (steps or []), "tools": [TALK, DELEGATE] if final else TOOLS,
+            "tool_choice": "required", "temperature": 0.2, "max_tokens": 300, "reasoning_effort": "none",
+            "stop": ["</think>"], "stream": stream}
 
 
 def tools_decision(message: dict) -> tuple[str, str]:
-    """(tool, its text) from the model's reply: talk, delegate or save_note. Plain words with no tool call are talk;
-    an unknown tool, bad arguments or nothing at all are ("", "")."""
-    import json
+    """(tool, its main text) from a whole reply: talk or delegate, or a quick tool with its arguments as JSON. Plain words
+    with no tool call are talk; an unknown tool, bad arguments or nothing at all are ("", "")."""
     calls = message.get("tool_calls") or []
     if not calls:
         text = (message.get("content") or "").strip()
@@ -117,12 +145,88 @@ def tools_decision(message: dict) -> tuple[str, str]:
     except ValueError:
         return "", ""
     name = f.get("name")
-    text = args.get("task" if name == "delegate" else "text") if isinstance(args, dict) else None
-    return (name, text.strip()) if name in ("talk", "delegate", "save_note") and isinstance(text, str) and text.strip() else ("", "")
+    if not isinstance(args, dict) or name not in ENDS | QUICK_NAMES:
+        return "", ""
+    if name in QUICK_NAMES:
+        return name, json.dumps(args)
+    text = args.get("task" if name == "delegate" else "text")
+    return (name, text.strip()) if isinstance(text, str) and text.strip() else ("", "")
+
+
+class TalkText:
+    """The value of "text" in a talk call's arguments, read as the arguments stream in: feed() returns what is new.
+    JSON string escapes are decoded; a \\u escape split across chunks waits for its four digits."""
+
+    def __init__(self):
+        self.buf, self.pos, self.inside, self.done = "", 0, False, False
+
+    def feed(self, chunk: str) -> str:
+        self.buf += chunk
+        out = []
+        if not self.inside and not self.done:
+            m = re.search(r'"text"\s*:\s*"', self.buf)
+            if not m:
+                return ""
+            self.inside, self.pos = True, m.end()
+        while self.inside and self.pos < len(self.buf):
+            c = self.buf[self.pos]
+            if c == '"':
+                self.inside, self.done = False, True
+                self.pos += 1
+                break
+            if c == "\\":
+                if self.pos + 1 >= len(self.buf):
+                    break
+                e = self.buf[self.pos + 1]
+                if e == "u":
+                    if self.pos + 6 > len(self.buf):
+                        break
+                    try:
+                        out.append(chr(int(self.buf[self.pos + 2:self.pos + 6], 16)))
+                    except ValueError:
+                        pass
+                    self.pos += 6
+                    continue
+                out.append({"n": "\n", "t": "\t", "r": "", "b": "", "f": ""}.get(e, e))
+                self.pos += 2
+                continue
+            out.append(c)
+            self.pos += 1
+        return "".join(out)
+
+
+def stream_events(lines):
+    """OpenAI chat-completion stream lines -> ("content", text) and ("tool", index, id, name, arguments-delta) events."""
+    for line in lines:
+        line = line.decode("utf-8", "replace").strip() if isinstance(line, bytes) else line.strip()
+        if not line.startswith("data:"):
+            continue
+        data = line[5:].strip()
+        if data == "[DONE]":
+            return
+        try:
+            delta = json.loads(data)["choices"][0].get("delta") or {}
+        except (ValueError, KeyError, IndexError):
+            continue
+        if delta.get("content"):
+            yield ("content", delta["content"])
+        for tc in delta.get("tool_calls") or []:
+            f = tc.get("function") or {}
+            yield ("tool", tc.get("index", 0), tc.get("id"), f.get("name"), f.get("arguments") or "")
+
+
+_EMOJI = re.compile("[\U0001F300-\U0001FAFF\u2600-\u27BF\uFE0F\u200B-\u200D\u2060]")
+
+
+def speakable(text: str) -> str:
+    """Text fit for speech: markdown emphasis, headings, code marks, list marks and emoji removed (the model sometimes
+    writes them in a talk call anyway)."""
+    t = _EMOJI.sub("", text or "")
+    t = re.sub(r"(?m)^\s*(?:[-*•]|\d+[.)])\s+", "", t)
+    t = re.sub(r"[*_`#]+", "", t)
+    return re.sub(r"\s+", " ", t).strip()
 
 
 def note_name(text: str) -> str:
-    """A file name for a note: its first few words, lower case, hyphenated (the example plan's [\\w-]+)."""
-    import re
-    words = re.findall(r"[a-z0-9]+", text.lower())[:5]
-    return "-".join(words) or "note"
+    from voice import tools
+    return tools.note_name(text)

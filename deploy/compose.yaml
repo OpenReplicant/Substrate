@@ -352,6 +352,9 @@ services:
       VOICE_SILENCE_S: ${VOICE_SILENCE_S:-0.6}
       LLM_NAME: ${VOICE_MODEL:-local/${LLM_ALIAS:-slow}}
       VOICE_ROUTER: ${VOICE_ROUTER:-tools}
+      SEARCH_URL: http://search:8080
+      VOICE_NOTES_ROOT: /workspace
+      TZ: ${TZ:-UTC}
       EMBED_MODEL: ${STORE_EMBED_MODEL:-ollama/qwen3-embedding:0.6b}
       TTS_URL: ${TTS_URL:-}
       AVATAR_FILE: ${AVATAR_FILE:-}
@@ -360,11 +363,33 @@ services:
       - voice-models:/models
       - ../voice:/app/voice:ro
       - ../.state/avatar:/avatar:ro            # AVATAR_FILE lives here, never committed (S-160)
+      - worker-workspace:/workspace            # its quick tools read and write notes/ there, beside the worker (S-171)
+    group_add: ["65534"]                       # the worker's group: notes/ is group-writable (the worker sets it up)
     ports:
       - "127.0.0.1:${VOICE_PORT:-8110}:8110"
     depends_on:
       db: {condition: service_healthy}
       gateway: {condition: service_started}
+
+  # Web search for the voice head's `search` tool (S-171): SearXNG (AGPL-3.0, the owner's choice: fetched at setup, run
+  # unmodified in its own container and reached over HTTP, as S-146 treats a GPL part), image pinned (2026.11.8, the newest
+  # at least two weeks old on 2026-11-22). It forwards queries to public search engines. No host port: only the compose
+  # network reaches it. Settings in deploy/searxng/settings.yml (the JSON API on, no limiter). Profile `voice`.
+  search:
+    profiles: [voice]
+    image: ${SEARCH_IMAGE:-docker.io/searxng/searxng:2026.11.8-74418092d}
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+    environment:
+      SEARXNG_SECRET: ${SEARXNG_SECRET:?set in .env}
+      FORCE_OWNERSHIP: "false"
+    # podman 4.9's network DNS does not answer an AAAA query for a name with no IPv6 address, so every lookup of such an
+    # engine stalled 5 s and SearXNG's 3 s engine timeout lost them all (S-171); a 1 s resolver wait caps the stall
+    dns_opt: ["timeout:1", "attempts:1"]
+    volumes:
+      - ./searxng/settings.yml:/etc/searxng/settings.yml:ro
+      - search-cache:/var/cache/searxng
 
   # The worker (plan step 1, S-163): an offline agent on the local model. Its loop is ours (environment/worker.py, S-162):
   # the model only through the gateway as worker:loop (local models only), the kernel's `memory` profile over stdio
@@ -407,6 +432,7 @@ services:
       gateway: {condition: service_started}
 
 volumes:
+  search-cache:
   worker-workspace:
     name: ${WORKER_VOLUME:-substrate_worker-workspace}   # the only place its file tools reach
   voice-models:

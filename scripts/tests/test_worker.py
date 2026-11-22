@@ -172,6 +172,7 @@ def main():
     check("the kernel login's host becomes db, the profile is memory", e["KK_DATABASE_URL"] == "postgresql://kkr_worker:pw@db:5432/kernel"
           and e["KK_PROFILE"] == "memory", e)
 
+    empty_answer_check()
     chat_endpoint()
     database()
     print(f"{sum(checks)}/{len(checks)} checks passed")
@@ -276,6 +277,11 @@ def database():
         with psycopg.connect(admin, autocommit=True) as a:
             a.execute(f"drop database {name} with (force)")
             a.execute(f"drop role if exists {login}")
+
+
+def empty_answer_check():
+    out = run(w.run_task("hi", scripted({"content": "", "tool_calls": []}), w.Tools(tempfile.mkdtemp())))
+    check("an empty final answer is a failure with its reason, not ok and silent", not out["ok"] and "no answer" in out["text"], out)
 
 
 def refused(fn):
