@@ -146,7 +146,9 @@ services:
   kernel-catalog:
     profiles: [kernel-admin]
     image: ghcr.io/openreplicant/kernel:${KERNEL_IMAGE_TAG:-main}
-    entrypoint: ["sh", "-c", "exec python3 -m encoder_backstage --project substrate /substrate/catalog/*.yaml"]
+    # --root /: files are recorded as substrate/catalog/<file> whatever the image's working directory (a different root
+    # re-keys every file: the kernel's D-125 lesson)
+    entrypoint: ["sh", "-c", "exec python3 -m encoder_backstage --project substrate --root / /substrate/catalog/*.yaml"]
     read_only: true
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]

@@ -18,4 +18,4 @@ spec:
   consumesApis:
   - model-chat
   dependsOn:
-  - resource:postgres
+  - resource:db

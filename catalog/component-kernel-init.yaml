@@ -17,4 +17,4 @@ spec:
   owner: owner
   system: substrate
   dependsOn:
-  - resource:postgres
+  - resource:db

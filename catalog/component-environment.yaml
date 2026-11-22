@@ -18,4 +18,4 @@ spec:
   providesApis:
   - companion-session
   dependsOn:
-  - resource:postgres
+  - resource:db

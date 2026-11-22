@@ -2,7 +2,7 @@
 apiVersion: backstage.io/v1alpha1
 kind: Resource
 metadata:
-  name: postgres
+  name: db
   title: Postgres 17 (pgvector, pg_cron, pgmq, pgGraph)
   description: 'The one database: the env schema, the kernel''s database, the gateway''s log.'
   annotations:

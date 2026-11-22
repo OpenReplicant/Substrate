@@ -27,4 +27,4 @@ spec:
   - llama-chat-fast
   - anthropic-api
   dependsOn:
-  - resource:postgres
+  - resource:db

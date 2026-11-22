@@ -99,7 +99,9 @@ are views of the same items and claims; what can be said in one format can be ca
    `encoder-backstage`; `scripts/catalog.py check` over files, compose and the kernel. Left for the kernel: the
    current-version link and the per-type items view (D-101).
 2. **The first decoder and encoder: the map to and from Compose,** with Substrate's own `deploy/compose.yaml` as the
-   test (decoded from the map, it should match what runs; the running state encoded back).
+   test (decoded from the map, it should match what runs; the running state encoded back). — built 2026-11-22 (S-177, the
+   kernel's D-125): `encoder-compose` and `decoder-compose`; Substrate's compose file round-trips through the kernel.
+   Left: the running state encoded back, and a `scripts/kernel.sh compose` job once the kernel image has the modules.
 3. **M-17's gate at the model endpoint**, then M-17's first experiment (the handoff, 2026-11-22).
 4. **The telemetry collector and a process runtime** (process-compose first), picked with the `research` skill, as
    the second decoder target.

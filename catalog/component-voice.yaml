@@ -26,4 +26,4 @@ spec:
   - worker-tasks
   - worker-results
   dependsOn:
-  - resource:postgres
+  - resource:db
