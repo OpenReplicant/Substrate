@@ -11,6 +11,9 @@ set -eu
 say "The model gateway's config (scripts/gateway.py: providers from .env, a key per caller)"
 python3 "$ROOT/scripts/gateway.py" render
 
+# the worker's kernel login (S-163) is mounted into its container: an empty file stands in until the kernel has its schema
+mkdir -p "$ROOT/.state/kernel"; [ -e "$ROOT/.state/kernel/worker.env" ] || (umask 077; : > "$ROOT/.state/kernel/worker.env")
+
 say "Services ($RUNTIME)"
 rt_up
 "$ROOT/scripts/tools.sh" start
@@ -23,6 +26,8 @@ say "Databases"
 say "The Knowledge Kernel (S-154)"
 "$ROOT/scripts/kernel.sh" init       # its schema and default modules in the `kernel` database (the kernel service then applies change sets)
 "$ROOT/scripts/kernel.sh" export     # the store's items as change sets; an unchanged item submits nothing
+
+[ -s "$ROOT/.state/kernel/worker.env" ] || "$ROOT/scripts/kernel.sh" login worker --no-mcp-json   # the worker's own login (memory profile)
 
 say "Up"
 "$ROOT/scripts/check.sh"

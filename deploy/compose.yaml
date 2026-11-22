@@ -59,6 +59,7 @@ services:
       VOICE_KEY: ${VOICE_KEY:?set in .env}
       COMPANION_AUTHOR_KEY: ${COMPANION_AUTHOR_KEY:?set in .env}
       JUDGE_KEY: ${JUDGE_KEY:?set in .env}
+      WORKER_KEY: ${WORKER_KEY:?set in .env}
     volumes:
       - ../.state/gateway/config.json:/app/data/config.json:ro   # over the tmpfs: its stores are in Postgres
     ports:
@@ -328,7 +329,44 @@ services:
       db: {condition: service_healthy}
       gateway: {condition: service_started}
 
+  # The worker (plan step 1, S-163): an offline agent on the local model. Its loop is ours (environment/worker.py, S-162):
+  # the model only through the gateway as worker:loop (local models only), the kernel's `memory` profile over stdio
+  # (kernel-mcp, in the kernel's image this one is built on) under its own kernel login (scripts/kernel.sh login worker),
+  # files only in its workspace volume. Profile `llm`, with the model it needs.
+  worker:
+    profiles: [llm]
+    image: localhost/substrate-worker:local
+    command: ["python3", "-m", "environment.worker", "run"]
+    working_dir: /app
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+    tmpfs: [/tmp]
+    environment:
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONPATH: /app
+      GATEWAY_URL: http://gateway:8080
+      WORKER_KEY: ${WORKER_KEY:?set in .env}
+      WORKER_MODEL: ${WORKER_MODEL:-local/${LLM_ALIAS:-gemma}}
+      WORKER_MAX_STEPS: ${WORKER_MAX_STEPS:-8}
+      WORKER_CONTEXT_TOKENS: ${WORKER_CONTEXT_TOKENS:-11000}
+      WORKER_REASONING: ${WORKER_REASONING:-}
+      WORKER_WORKSPACE: /workspace
+      WORKER_LOGIN_FILE: /login
+      STORE_URL: postgresql://worker:${WORKER_DB_PASSWORD:?set in .env}@db:5432/substrate
+    volumes:
+      - worker-workspace:/workspace
+      - ../.state/kernel/worker.env:/login:ro       # scripts/kernel.sh login worker
+      - ../environment:/app/environment:ro
+      - ../store:/app/store:ro
+    depends_on:
+      db: {condition: service_healthy}
+      gateway: {condition: service_started}
+
 volumes:
+  worker-workspace:
+    name: ${WORKER_VOLUME:-substrate_worker-workspace}   # the only place its file tools reach
   voice-models:
     name: ${VOICE_VOLUME:-substrate_voice-models}   # Parakeet, Silero and Kokoro (about 230 MB), fetched once
   companion-home:

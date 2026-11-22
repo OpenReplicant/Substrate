@@ -15,6 +15,7 @@
   <a href="#/" class="home">Substrate</a>
   <input id="q" type="search" placeholder="Search the store" autocomplete="off" aria-label="Search the store">
   <a href="#/companion" class="nav">Companion</a>
+  <a href="#/worker" class="nav">Worker</a>
   <span id="crumb"></span>
 </header>
 <main>
@@ -28,6 +29,15 @@
     </div>
     <div id="map" hidden></div>
     <article id="page" hidden></article>
+    <div id="work" hidden>
+      <div id="wstatus"></div>
+      <div id="wwaiting"></div>
+      <ol id="wlog" aria-live="polite"></ol>
+      <form id="wsay">
+        <textarea id="wtext" rows="2" placeholder="Give the offline worker a task (Enter sends, Shift+Enter for a new line)" aria-label="Task"></textarea>
+        <button type="submit">Send</button>
+      </form>
+    </div>
     <div id="talk" hidden>
       <div id="status"></div>
       <div id="waiting"></div>

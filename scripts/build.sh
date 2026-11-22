@@ -3,7 +3,7 @@
 # keeps unchanged steps.
 #
 #   scripts/build.sh                    # db (Postgres with its extensions), tools, companion, kernel
-#   scripts/build.sh db|tools|companion|voice|kernel
+#   scripts/build.sh db|tools|companion|voice|kernel|worker
 set -eu
 . "$(dirname "$0")/lib.sh"
 
@@ -36,13 +36,20 @@ build_voice() {
     && echo "  substrate-voice:local (speech in and out: sherpa-onnx, kokoro-onnx)"
 }
 
+# The worker (S-163) is the kernel's image (kernel-mcp, mcp 2.3.0, psycopg) plus the pinned `openai` client; build the kernel first.
+build_worker() {
+  "$ENGINE" build -q -t substrate-worker:local -t localhost/substrate-worker:local -f "$ROOT/deploy/worker/Containerfile" "$ROOT/deploy/worker" >/dev/null \
+    && echo "  substrate-worker:local (the offline agent: kernel image plus openai)"
+}
+
 say "Images ($ENGINE)"
 case "${1:-all}" in
   db) build_db ;;
   tools) build_tools ;;
   companion) build_companion ;;
   voice) build_voice ;;
+  worker) build_worker ;;
   kernel) build_kernel ;;
-  all) build_db; build_tools; build_companion; build_voice; build_kernel ;;
-  *) echo "usage: scripts/build.sh [db|tools|companion|voice|kernel]" >&2; exit 1 ;;
+  all) build_db; build_tools; build_companion; build_voice; build_kernel; build_worker ;;
+  *) echo "usage: scripts/build.sh [db|tools|companion|voice|kernel|worker]" >&2; exit 1 ;;
 esac

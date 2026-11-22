@@ -20,6 +20,7 @@ See `docs/repos.md` for what each repository (Kernel, Substrate, MetaSoar, Morph
 | Tools | `bin/`, container `substrate-tools` | the scripts' Python and gitleaks, run in a container as you (S-19) |
 | The companion | `deploy/companion` (compose service `companion`), `environment/companion.py` (service `environment`), the UI's `#/companion` | the first environment: Claude Code on Haiku through the gateway's pass-through route on the owner's login, fed by the channel; it replies, starts background tasks and proposes budget and model changes (S-136, S-144) |
 | The voice head | `voice/` (compose service `voice`, profile `voice`) on 127.0.0.1:8110 | the companion's voice and face: microphone in over a WebSocket, Silero and Parakeet to text, the local model to answer, Kokoro to speak, a face that moves with it; hands real work to the companion (S-147, S-149) |
+| The worker | `environment/worker.py` (environment `worker`), `deploy/worker/` (compose service `worker`, profile `llm`, the kernel's image plus `openai`), the UI's `#/worker` | an offline agent on the local model (`local/gemma` through the gateway as caller `worker:loop`): our own loop on `mcp` + `openai` (S-162); the kernel's `memory` profile over stdio and a few workspace tools; `gate(state)` before every model call is M-17's seam (S-163) |
 | Components and the judge | `env.component` and `env.verdict` (`store/sql/007_components.sql`), `environment/author.py`, `environment/judge.py` (compose service `judge`), `judge/cases` (the judge's only) | every version of a component with its card; an author proposes from the record, the judge tests it against the active one on cases the author cannot read, the owner activates (S-151) |
 | The UI | `ui/` (`ui/server.py`, `ui/static`), compose service `ui` on 127.0.0.1:8100 | the store's pages and maps as diagrams (S-140), read-only; v1's Workbench rebuilt, with no name of its own (S-141) |
 | Glue | `scripts/`, `deploy/` | brings the parts up and connects them |
@@ -63,7 +64,7 @@ scripts/bootstrap.sh       # once per machine: host tools, images, the tools con
 scripts/up.sh              # the stack (db, gateway, ollama, ui), the tools container, the databases; then check.sh
 scripts/check.sh           # is everything up and wired
 scripts/test.sh [FILE...]  # the test suites, in the tools container
-scripts/build.sh [db|tools|companion|voice|kernel]
+scripts/build.sh [db|tools|companion|voice|kernel|worker]
 scripts/logs.sh SERVICE    # db, gateway, ollama, ui, environment, companion, llm, voice
 scripts/tools.sh start|stop|status
 scripts/kernel.sh init|export|login NAME|mcp NAME   # the Knowledge Kernel: schema, one-off export of `store`, an agent's login and its MCP server
