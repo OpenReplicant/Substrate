@@ -1,0 +1,2543 @@
+{
+ "what": "Candidates for Substrate's agent slots (worker; the fast layer's tool use; companion, author, judge), S-172. One entry per candidate, in the catalog skill's shape (catalog ids, described-at-url, licence, provides-interface with evidence), for import into the Knowledge Kernel as items when a session has its tools.",
+ "requires_interface": [
+  "openai-compatible-endpoint (or the Responses or Anthropic Messages API, which the gateway also serves)",
+  "mcp-client-stdio",
+  "headless-run",
+  "command-permission-rules",
+  "container-image or a pinned install",
+  "no telemetry on by default"
+ ],
+ "sources": [
+  "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22",
+  "GitHub REST API (licence, releases), 2026-11-22",
+  "each candidate's docs, 2026-11-22 (subagent reports, summarised in the entries)"
+ ],
+ "entries": [
+  {
+   "label": "DeepSeek Harness",
+   "catalog_ids": {
+    "github": "deepseek-ai/deepseek-harness",
+    "best_of": "deepseek-harness"
+   },
+   "described_at_url": "https://github.com/deepseek-ai/deepseek-harness",
+   "description": "DeepSeek's official open-source agent **harness** (`dsh`), built so that everything is a plugin: the model adapter, tool registry, session log, sandbox and approval policy, and the agent loop itself are Cordis plugins you replace from configuration, and one plugin tree boots as a Web UI, a headless ",
+   "best_of": {
+    "category_title": "Coding agent products (IDEs, CLIs, full suites)",
+    "tier": "slightly complex",
+    "autonomy": "bounded",
+    "recovery": "resumable",
+    "license_signal": "open-source",
+    "stars": 285511,
+    "tags": [
+     "browser",
+     "sandbox",
+     "typescript"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "opencode",
+   "catalog_ids": {
+    "github": "anomalyco/opencode",
+    "best_of": "opencode"
+   },
+   "described_at_url": "https://github.com/anomalyco/opencode",
+   "description": "Open-source terminal coding agent (formerly `sst/opencode`; transferred to anomalyco). The **harness** is a multi-provider tool-call loop (Claude, OpenAI, Gemini, local) with strong plugin and MCP support; the TUI is the shell. 100% OSS, very actively shipped.",
+   "best_of": {
+    "category_title": "Coding agent products (IDEs, CLIs, full suites)",
+    "tier": "slightly complex",
+    "autonomy": "headless",
+    "recovery": "resumable",
+    "license_signal": "open-source",
+    "stars": 228579,
+    "tags": [
+     "mcp",
+     "provider-agnostic",
+     "cli",
+     "tui",
+     "typescript"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "licence": {
+    "spdx": "MIT",
+    "source": "GitHub API"
+   },
+   "pin_candidate": {
+    "version": "v2.2.6",
+    "released": "2026-11-06",
+    "rule": "newest release at least two weeks old on 2026-11-22"
+   },
+   "provides_interface": [
+    {
+     "interface": "openai-compatible-endpoint",
+     "evidence": "providers.<id> with package openai-compatible, settings.baseURL, headers map",
+     "source": "docs read 2026-11-22 by a subagent; the trial checks what it can"
+    },
+    {
+     "interface": "mcp-client-stdio",
+     "evidence": "mcp.servers.<name> type local, command array, environment",
+     "source": "docs read 2026-11-22 by a subagent; the trial checks what it can"
+    },
+    {
+     "interface": "headless-run",
+     "evidence": "opencode run --format json (NDJSON)",
+     "source": "docs read 2026-11-22 by a subagent; the trial checks what it can"
+    },
+    {
+     "interface": "command-permission-rules",
+     "evidence": "permissions: ordered {action, resource, effect: allow|deny|ask}; deny wins",
+     "source": "docs read 2026-11-22 by a subagent; the trial checks what it can"
+    },
+    {
+     "interface": "container-image",
+     "evidence": "ghcr.io/anomalyco/opencode:<version>",
+     "source": "docs read 2026-11-22 by a subagent; the trial checks what it can"
+    }
+   ],
+   "telemetry_default": "none documented; update checks default notify (\"update\": \"disable\")",
+   "status": "shortlist"
+  },
+  {
+   "label": "Codex",
+   "catalog_ids": {
+    "github": "openai/codex",
+    "best_of": "codex"
+   },
+   "described_at_url": "https://github.com/openai/codex",
+   "description": "OpenAI's terminal coding agent. The **harness** is the sandboxed tool-call loop with multi-provider support; the CLI is the shell. Reference implementation for \"official CLI that ships code.\"",
+   "best_of": {
+    "category_title": "Coding agent products (IDEs, CLIs, full suites)",
+    "tier": "slightly complex",
+    "autonomy": "bounded",
+    "recovery": "resumable",
+    "license_signal": "open-source",
+    "stars": 136141,
+    "tags": [
+     "sandbox",
+     "provider-agnostic",
+     "cli"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "licence": {
+    "spdx": "Apache-2.0",
+    "source": "GitHub API"
+   },
+   "pin_candidate": {
+    "version": null,
+    "released": null,
+    "rule": "newest release at least two weeks old on 2026-11-22"
+   },
+   "provides_interface": [
+    {
+     "interface": "openai-responses-endpoint",
+     "evidence": "model_providers.<id> base_url, env_key, http_headers; wire_api responses only",
+     "source": "docs read 2026-11-22 by a subagent; the trial checks what it can"
+    },
+    {
+     "interface": "mcp-client-stdio",
+     "evidence": "[mcp_servers.<id>] command, args, env",
+     "source": "docs read 2026-11-22 by a subagent; the trial checks what it can"
+    },
+    {
+     "interface": "headless-run",
+     "evidence": "codex exec --json (JSON Lines)",
+     "source": "docs read 2026-11-22 by a subagent; the trial checks what it can"
+    },
+    {
+     "interface": "command-permission-rules",
+     "evidence": "sandbox_mode read-only|workspace-write; approval_policy never; execpolicy .rules",
+     "source": "docs read 2026-11-22 by a subagent; the trial checks what it can"
+    }
+   ],
+   "telemetry_default": "analytics (statsig metrics) on by default; [analytics] enabled=false, otel.metrics_exporter=none, [feedback] enabled=false",
+   "status": "shortlist"
+  },
+  {
+   "label": "pi",
+   "catalog_ids": {
+    "github": "earendil-works/pi",
+    "best_of": "pi"
+   },
+   "described_at_url": "https://github.com/earendil-works/pi",
+   "description": "The upstream AI agent toolkit behind this list's oh-my-pi fork: a unified multi-provider LLM API, agent loop, and TUI shell providing the **harness** that oh-my-pi's Rust rewrite builds on.",
+   "best_of": {
+    "category_title": "Coding agent products (IDEs, CLIs, full suites)",
+    "tier": "slightly complex",
+    "autonomy": "bounded",
+    "recovery": "resumable",
+    "license_signal": "unknown",
+    "stars": 123324,
+    "tags": [
+     "provider-agnostic",
+     "tui",
+     "rust"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "licence": {
+    "spdx": "MIT",
+    "source": "GitHub API"
+   },
+   "pin_candidate": {
+    "version": "v1.5.0",
+    "released": "2026-11-02",
+    "rule": "newest release at least two weeks old on 2026-11-22"
+   },
+   "provides_interface": [
+    {
+     "interface": "openai-compatible-endpoint",
+     "evidence": "models.json providers.<name> baseUrl, api openai-completions, headers",
+     "source": "docs read 2026-11-22 by a subagent; the trial checks what it can"
+    },
+    {
+     "interface": "headless-run",
+     "evidence": "pi --mode json",
+     "source": "docs read 2026-11-22 by a subagent; the trial checks what it can"
+    }
+   ],
+   "telemetry_default": "PI_TELEMETRY (default not stated), PI_OFFLINE",
+   "status": "ruled-out",
+   "reason": "no permission system (tools run with the process's rights); MCP support unclear"
+  },
+  {
+   "label": "Gemini CLI",
+   "catalog_ids": {
+    "github": "google-gemini/gemini-cli",
+    "best_of": "gemini-cli"
+   },
+   "described_at_url": "https://github.com/google-gemini/gemini-cli",
+   "description": "Google's first-party terminal agent for Gemini. The **harness** is the plugin/MCP tool-call loop; the terminal is the shell—Google's parallel to Claude Code / Codex, not just an API.",
+   "best_of": {
+    "category_title": "Coding agent products (IDEs, CLIs, full suites)",
+    "tier": "slightly complex",
+    "autonomy": "bounded",
+    "recovery": "resumable",
+    "license_signal": "open-source",
+    "stars": 108999,
+    "tags": [
+     "mcp",
+     "cli",
+     "typescript"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "OpenHands",
+   "catalog_ids": {
+    "github": "OpenHands/OpenHands",
+    "best_of": "openhands"
+   },
+   "described_at_url": "https://github.com/OpenHands/OpenHands",
+   "description": "Dockerized software-engineering agent. The **harness** is the bash/editor/browser toolset with micro-agents and event-stream session bridging; Docker is the sandbox. Main OSS choice for teams self-hosting autonomous repo work.",
+   "best_of": {
+    "category_title": "Coding agent products (IDEs, CLIs, full suites)",
+    "tier": "complex",
+    "autonomy": "headless",
+    "recovery": "resumable",
+    "license_signal": "restricted ((multi-license))",
+    "stars": 94075,
+    "tags": [
+     "memory",
+     "browser",
+     "sandbox",
+     "python"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "licence": {
+    "spdx": "MIT",
+    "source": "GitHub API"
+   },
+   "pin_candidate": {
+    "version": "v1.37.0",
+    "released": "2026-11-06",
+    "rule": "newest release at least two weeks old on 2026-11-22"
+   },
+   "provides_interface": [
+    {
+     "interface": "mcp-client-stdio",
+     "evidence": "SDK mcp_config",
+     "source": "docs read 2026-11-22 by a subagent; the trial checks what it can"
+    }
+   ],
+   "telemetry_default": "not found",
+   "status": "ruled-out",
+   "reason": "its headless CLI is no longer maintained (the product is the web Agent Canvas); the SDK is a library (S-162's question)"
+  },
+  {
+   "label": "Cline",
+   "catalog_ids": {
+    "github": "cline/cline",
+    "best_of": "cline"
+   },
+   "described_at_url": "https://github.com/cline/cline",
+   "description": "VS Code extension whose **harness** is a plan-then-act loop with per-step human approval and cost transparency; the VS Code integration is the UI shell. Open-source counterweight to Cursor.",
+   "best_of": {
+    "category_title": "Coding agent products (IDEs, CLIs, full suites)",
+    "tier": "slightly complex",
+    "autonomy": "step-gated",
+    "recovery": "resumable",
+    "license_signal": "open-source",
+    "stars": 71824,
+    "tags": [
+     "ide",
+     "typescript"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "licence": {
+    "spdx": "Apache-2.0",
+    "source": "GitHub API"
+   },
+   "pin_candidate": {
+    "version": "v4.1.26",
+    "released": "2026-10-26",
+    "rule": "newest release at least two weeks old on 2026-11-22"
+   },
+   "provides_interface": [
+    {
+     "interface": "headless-run",
+     "evidence": "cline --json (NDJSON)",
+     "source": "docs read 2026-11-22 by a subagent; the trial checks what it can"
+    },
+    {
+     "interface": "mcp-client-stdio",
+     "evidence": "cline mcp add <name> -- <cmd>",
+     "source": "docs read 2026-11-22 by a subagent; the trial checks what it can"
+    }
+   ],
+   "telemetry_default": "not documented",
+   "status": "ruled-out",
+   "reason": "auto-approve (yolo) by default and no allow/deny list for shell commands; provider headers not documented"
+  },
+  {
+   "label": "Open Interpreter",
+   "catalog_ids": {
+    "github": "openinterpreter/openinterpreter",
+    "best_of": "openinterpreter"
+   },
+   "described_at_url": "https://github.com/openinterpreter/openinterpreter",
+   "description": "Lightweight terminal coding agent oriented to open models (DeepSeek, Kimi, Qwen). The **harness** is a code-execution loop — the model writes code, the harness executes it with confirmation gates; the CLI is the shell. The original \"let the LLM run code on my machine\" project, reborn for open weight",
+   "best_of": {
+    "category_title": "Coding agent products (IDEs, CLIs, full suites)",
+    "tier": "mostly simple",
+    "autonomy": "bounded",
+    "recovery": "resumable",
+    "license_signal": "open-source",
+    "stars": 68943,
+    "tags": [
+     "cli",
+     "python"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "goose",
+   "catalog_ids": {
+    "github": "aaif-goose/goose",
+    "best_of": "goose"
+   },
+   "described_at_url": "https://github.com/aaif-goose/goose",
+   "description": "Block-originated Rust agent, now stewarded by the Linux Foundation's Agentic AI Foundation (`aaif-goose/goose`). The **harness** is the MCP/ACP extension model with recipes and provider choice; there's no fixed UI slot—you bolt it into whatever shell you use.",
+   "best_of": {
+    "category_title": "Coding agent products (IDEs, CLIs, full suites)",
+    "tier": "slightly complex",
+    "autonomy": "headless",
+    "recovery": "resumable",
+    "license_signal": "open-source",
+    "stars": 56874,
+    "tags": [
+     "mcp",
+     "rust"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "licence": {
+    "spdx": "Apache-2.0",
+    "source": "GitHub API"
+   },
+   "pin_candidate": {
+    "version": "v1.57.0",
+    "released": "2026-10-28",
+    "rule": "newest release at least two weeks old on 2026-11-22"
+   },
+   "provides_interface": [
+    {
+     "interface": "openai-compatible-endpoint",
+     "evidence": "OPENAI_HOST, OPENAI_BASE_PATH, OPENAI_CUSTOM_HEADERS",
+     "source": "docs read 2026-11-22 by a subagent; the trial checks what it can"
+    },
+    {
+     "interface": "mcp-client-stdio",
+     "evidence": "extensions: type stdio, cmd, args, envs; --with-extension",
+     "source": "docs read 2026-11-22 by a subagent; the trial checks what it can"
+    },
+    {
+     "interface": "headless-run",
+     "evidence": "goose run -t ... --output-format json",
+     "source": "docs read 2026-11-22 by a subagent; the trial checks what it can"
+    }
+   ],
+   "telemetry_default": "GOOSE_TELEMETRY_ENABLED default false",
+   "status": "shortlist",
+   "note": "permission modes (GOOSE_MODE) loosely documented; per-command rules not found"
+  },
+  {
+   "label": "Codewhale",
+   "catalog_ids": {
+    "github": "codewhale-hq/Codewhale",
+    "best_of": "codewhale"
+   },
+   "described_at_url": "https://github.com/codewhale-hq/Codewhale",
+   "description": "Open-source Rust terminal coding agent for any model (40+ providers, local models included). The **harness** pairs a goal-driven work loop with permission modes (Ask, Auto-Review by a reviewer model, Full Access) and an optional workspace-write sandbox, and `/receipts` lists every file it changed, c",
+   "best_of": {
+    "category_title": "Coding agent products (IDEs, CLIs, full suites)",
+    "tier": "slightly complex",
+    "autonomy": "bounded",
+    "recovery": "resumable",
+    "license_signal": "open-source",
+    "stars": 41197,
+    "tags": [
+     "mcp",
+     "sandbox",
+     "cli",
+     "tui",
+     "rust"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "oh-my-pi",
+   "catalog_ids": {
+    "github": "can1357/oh-my-pi",
+    "best_of": "oh-my-pi"
+   },
+   "described_at_url": "https://github.com/can1357/oh-my-pi",
+   "description": "Terminal coding agent (fork of Pi) that wires the IDE into the **harness**: hash-anchored edits, a 32-tool loop tuned per-model, LSP rename/references/diagnostics on every write, a real DAP debugger (lldb/dlv/debugpy), long-lived Python + Bun execution kernels that call back into the agent's tools, ",
+   "best_of": {
+    "category_title": "Coding agent products (IDEs, CLIs, full suites)",
+    "tier": "slightly complex",
+    "autonomy": "bounded",
+    "recovery": "resumable",
+    "license_signal": "open-source",
+    "stars": 39657,
+    "tags": [
+     "browser",
+     "provider-agnostic",
+     "cli",
+     "ide",
+     "rust",
+     "python"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "qwen-code",
+   "catalog_ids": {
+    "github": "QwenLM/qwen-code",
+    "best_of": "qwen-code"
+   },
+   "described_at_url": "https://github.com/QwenLM/qwen-code",
+   "description": "Alibaba's official terminal coding agent, forked from Gemini CLI's agent loop and retuned for Qwen models. The **harness** is the same sandboxed tool-call loop as its upstream; the terminal is the shell.",
+   "best_of": {
+    "category_title": "Coding agent products (IDEs, CLIs, full suites)",
+    "tier": "slightly complex",
+    "autonomy": "bounded",
+    "recovery": "resumable",
+    "license_signal": "unknown",
+    "stars": 30870,
+    "tags": [
+     "sandbox",
+     "cli",
+     "typescript"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "licence": {
+    "spdx": "Apache-2.0",
+    "source": "GitHub API"
+   },
+   "pin_candidate": {
+    "version": null,
+    "released": null,
+    "rule": "newest release at least two weeks old on 2026-11-22"
+   },
+   "provides_interface": [
+    {
+     "interface": "openai-compatible-endpoint",
+     "evidence": "modelProviders ... baseUrl, envKey, generationConfig.customHeaders",
+     "source": "docs read 2026-11-22 by a subagent; the trial checks what it can"
+    },
+    {
+     "interface": "mcp-client-stdio",
+     "evidence": "mcpServers: command, args, env, trust",
+     "source": "docs read 2026-11-22 by a subagent; the trial checks what it can"
+    },
+    {
+     "interface": "headless-run",
+     "evidence": "qwen -p ... -o json|stream-json",
+     "source": "docs read 2026-11-22 by a subagent; the trial checks what it can"
+    },
+    {
+     "interface": "command-permission-rules",
+     "evidence": "permissions.allow|ask|deny; tools.approvalMode; --sandbox docker|podman",
+     "source": "docs read 2026-11-22 by a subagent; the trial checks what it can"
+    }
+   ],
+   "telemetry_default": "usage statistics ON by default (privacy.usageStatisticsEnabled / QWEN_USAGE_STATISTICS_ENABLED=false)",
+   "status": "shortlist",
+   "note": "telemetry on by default counts against it (house rule)"
+  },
+  {
+   "label": "crush",
+   "catalog_ids": {
+    "github": "charmbracelet/crush",
+    "best_of": "crush"
+   },
+   "described_at_url": "https://github.com/charmbracelet/crush",
+   "description": "Charm's terminal coding agent (Charm's fork of the original OpenCode). The **harness** is the tool-calling loop with session persistence; the Bubble Tea TUI is the shell.",
+   "best_of": {
+    "category_title": "Coding agent products (IDEs, CLIs, full suites)",
+    "tier": "slightly complex",
+    "autonomy": "bounded",
+    "recovery": "resumable",
+    "license_signal": "restricted (FSL-1.1-MIT)",
+    "stars": 29165,
+    "tags": [
+     "memory",
+     "cli",
+     "tui"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "licence": {
+    "spdx": "FSL-1.1-MIT",
+    "source": "LICENSE.md, GitHub API says NOASSERTION"
+   },
+   "pin_candidate": {
+    "version": "v0.100.0",
+    "released": "2026-11-05",
+    "rule": "newest release at least two weeks old on 2026-11-22"
+   },
+   "provides_interface": [],
+   "telemetry_default": "not checked",
+   "status": "ruled-out",
+   "reason": "FSL-1.1-MIT: source-available, MIT only after two years (rule 7)"
+  },
+  {
+   "label": "vibe-kanban",
+   "catalog_ids": {
+    "github": "BloopAI/vibe-kanban",
+    "best_of": "vibe-kanban"
+   },
+   "described_at_url": "https://github.com/BloopAI/vibe-kanban",
+   "description": "Kanban-style fleet manager for running Claude Code, Codex, or any coding agent across many tasks at once. The **harness** contribution is the task-queue/review layer on top of whichever agent executes; not an agent loop itself.",
+   "best_of": {
+    "category_title": "Coding agent products (IDEs, CLIs, full suites)",
+    "tier": "slightly complex",
+    "autonomy": "n/a",
+    "recovery": "n/a",
+    "license_signal": "unknown",
+    "stars": 28784,
+    "tags": [],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "Symphony",
+   "catalog_ids": {
+    "github": "openai/symphony",
+    "best_of": "symphony"
+   },
+   "described_at_url": "https://github.com/openai/symphony",
+   "description": "OpenAI's harness for fanning a task out into many isolated, autonomous coding-agent implementation runs and surfacing the ones that pass, so a team manages outcomes instead of supervising each session.",
+   "best_of": {
+    "category_title": "Coding agent products (IDEs, CLIs, full suites)",
+    "tier": "complex",
+    "autonomy": "headless",
+    "recovery": "resumable",
+    "license_signal": "unknown",
+    "stars": 28127,
+    "tags": [
+     "sandbox"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "Kilo Code",
+   "catalog_ids": {
+    "github": "Kilo-Org/kilocode",
+    "best_of": "kilocode"
+   },
+   "described_at_url": "https://github.com/Kilo-Org/kilocode",
+   "description": "VS Code extension and CLI in the Cline/Roo-Code lineage — a natural pick now that Roo-Code is archived upstream. The **harness** is an approval-gated autonomous-mode loop with a provider/tool marketplace; the IDE is the shell.",
+   "best_of": {
+    "category_title": "Coding agent products (IDEs, CLIs, full suites)",
+    "tier": "slightly complex",
+    "autonomy": "step-gated",
+    "recovery": "resumable",
+    "license_signal": "unknown",
+    "stars": 28087,
+    "tags": [
+     "mcp",
+     "cli",
+     "ide",
+     "typescript"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "Grok Build",
+   "catalog_ids": {
+    "github": "xai-org/grok-build",
+    "best_of": "grok-build"
+   },
+   "described_at_url": "https://github.com/xai-org/grok-build",
+   "description": "SpaceXAI's terminal coding agent. The **harness** is a Rust agent runtime that edits files, runs shell commands, searches the web, and keeps workspace checkpoints; it runs in a full-screen TUI, headless for scripts and CI, or inside editors over the Agent Client Protocol. The public repo is synced f",
+   "best_of": {
+    "category_title": "Coding agent products (IDEs, CLIs, full suites)",
+    "tier": "slightly complex",
+    "autonomy": "bounded",
+    "recovery": "resumable",
+    "license_signal": "open-source",
+    "stars": 27826,
+    "tags": [
+     "browser",
+     "cli",
+     "tui",
+     "rust"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "Roo Code",
+   "catalog_ids": {
+    "github": "RooCodeInc/Roo-Code",
+    "best_of": "roo-code"
+   },
+   "described_at_url": "https://github.com/RooCodeInc/Roo-Code",
+   "description": "VS Code/Cursor extension in the Cline lineage. The **harness** is the approval-gated agent with custom modes and a strong MCP story; the IDE is the UI. Popular community fork when you want that workflow without the upstream extension.",
+   "best_of": {
+    "category_title": "Coding agent products (IDEs, CLIs, full suites)",
+    "tier": "slightly complex",
+    "autonomy": "step-gated",
+    "recovery": "resumable",
+    "license_signal": "open-source",
+    "stars": 24238,
+    "tags": [
+     "mcp",
+     "workflow",
+     "ide",
+     "typescript"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "Prime Agent",
+   "catalog_ids": {
+    "github": "PrimeIntellect-ai/prime-agent",
+    "best_of": "prime-agent"
+   },
+   "described_at_url": "https://github.com/PrimeIntellect-ai/prime-agent",
+   "description": "Prime Intellect's self-improving coding and research agent. The **harness** is a recursive language model loop (context as a variable, sub-agents as function calls inside a persistent IPython REPL) plus a Continual Harness that lets the agent create, read, update, and delete its own prompts, skills,",
+   "best_of": {
+    "category_title": "Coding agent products (IDEs, CLIs, full suites)",
+    "tier": "slightly complex",
+    "autonomy": "headless",
+    "recovery": "resumable",
+    "license_signal": "open-source",
+    "stars": 22882,
+    "tags": [
+     "memory",
+     "multi-agent",
+     "cli",
+     "typescript"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "jcode",
+   "catalog_ids": {
+    "github": "1jehuang/jcode",
+    "best_of": "jcode"
+   },
+   "described_at_url": "https://github.com/1jehuang/jcode",
+   "description": "Rust terminal coding agent pitched as the most RAM-efficient **harness** in its class; MCP support, multi-provider (Claude/OpenAI).",
+   "best_of": {
+    "category_title": "Coding agent products (IDEs, CLIs, full suites)",
+    "tier": "slightly complex",
+    "autonomy": "n/a",
+    "recovery": "n/a",
+    "license_signal": "unknown",
+    "stars": 21987,
+    "tags": [
+     "mcp",
+     "memory",
+     "provider-agnostic",
+     "cli",
+     "rust"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "eigent",
+   "catalog_ids": {
+    "github": "eigent-ai/eigent",
+    "best_of": "eigent"
+   },
+   "described_at_url": "https://github.com/eigent-ai/eigent",
+   "description": "Open-source desktop **harness** positioned as a local, free alternative to Claude Cowork and Codex: multi-agent workspace orchestration in a self-hosted app rather than a hosted product.",
+   "best_of": {
+    "category_title": "Coding agent products (IDEs, CLIs, full suites)",
+    "tier": "complex",
+    "autonomy": "n/a",
+    "recovery": "n/a",
+    "license_signal": "unknown",
+    "stars": 15867,
+    "tags": [
+     "multi-agent",
+     "local"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "cc-haha",
+   "catalog_ids": {
+    "github": "NanmiCoder/cc-haha",
+    "best_of": "cc-haha"
+   },
+   "described_at_url": "https://github.com/NanmiCoder/cc-haha",
+   "description": "Local-first desktop workspace **harness** for Claude Code and other agents: multi-agent sessions, Git worktrees, code diffs, a skill marketplace, and chat-app access (WeChat, Telegram, WhatsApp).",
+   "best_of": {
+    "category_title": "Coding agent products (IDEs, CLIs, full suites)",
+    "tier": "complex",
+    "autonomy": "n/a",
+    "recovery": "n/a",
+    "license_signal": "unknown",
+    "stars": 15524,
+    "tags": [
+     "memory",
+     "multi-agent",
+     "typescript"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "Empryo",
+   "catalog_ids": {
+    "github": "proxysoul/Empryo",
+    "best_of": "empryo"
+   },
+   "described_at_url": "https://github.com/proxysoul/Empryo",
+   "description": "Coding agent for the desktop, the terminal, and CI. The **harness** builds a repo map before each task (tree-sitter symbols, import graph, git co-change), edits by symbol through AST and LSP, then runs typecheck, lint, and tests in the same turn. This repo holds the public SoulForge v2 core under BU",
+   "best_of": {
+    "category_title": "Coding agent products (IDEs, CLIs, full suites)",
+    "tier": "slightly complex",
+    "autonomy": "bounded",
+    "recovery": "resumable",
+    "license_signal": "restricted (BUSL-1.1)",
+    "stars": 1632,
+    "tags": [
+     "workflow",
+     "cli",
+     "typescript"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "Tianshu Harness",
+   "catalog_ids": {
+    "github": "huiliyi37/Tianshu-harness",
+    "best_of": "tianshu-harness"
+   },
+   "described_at_url": "https://github.com/huiliyi37/Tianshu-harness",
+   "description": "TypeScript coding-agent runtime shared by a terminal TUI, a desktop app, and a VS Code extension. The **harness** keeps each task's goal, scope, and success criteria in a task contract outside the chat history, blocks a claim of done until tests, a diff, or a verification command back it, and takes ",
+   "best_of": {
+    "category_title": "Coding agent products (IDEs, CLIs, full suites)",
+    "tier": "slightly complex",
+    "autonomy": "bounded",
+    "recovery": "resumable",
+    "license_signal": "open-source",
+    "stars": 1365,
+    "tags": [
+     "cli",
+     "ide",
+     "tui",
+     "typescript"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "AgentBox",
+   "catalog_ids": {
+    "github": "madarco/agentbox",
+    "best_of": "agentbox"
+   },
+   "described_at_url": "https://github.com/madarco/agentbox",
+   "description": "Runs multiple coding agents in parallel, each in its own sandboxed VM, locally or in the cloud, from one command. The **harness** contribution is the VM-per-agent isolation and fleet fan-out layer; whichever agent runs inside owns the loop.",
+   "best_of": {
+    "category_title": "Coding agent products (IDEs, CLIs, full suites)",
+    "tier": "slightly complex",
+    "autonomy": "n/a",
+    "recovery": "n/a",
+    "license_signal": "open-source",
+    "stars": 586,
+    "tags": [
+     "sandbox",
+     "typescript"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "claw-code-agent",
+   "catalog_ids": {
+    "github": "HarnessLab/claw-code-agent",
+    "best_of": "claw-code-agent"
+   },
+   "described_at_url": "https://github.com/HarnessLab/claw-code-agent",
+   "description": "Python reimplementation of the Claude Code agent architecture with zero external dependencies; interactive chat, streaming, plugin runtime, nested agent delegation, cost tracking, MCP transport—portable harness without the Rust/TS toolchain.",
+   "best_of": {
+    "category_title": "Coding agent products (IDEs, CLIs, full suites)",
+    "tier": "slightly complex",
+    "autonomy": "checkpoint-gated",
+    "recovery": "none",
+    "license_signal": "unknown",
+    "stars": 548,
+    "tags": [
+     "mcp",
+     "rust",
+     "python",
+     "typescript"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "Proliferate",
+   "catalog_ids": {
+    "github": "proliferate-ai/proliferate",
+    "best_of": "proliferate"
+   },
+   "described_at_url": "https://github.com/proliferate-ai/proliferate",
+   "description": "Open-source AI IDE for Claude Code, Codex, OpenCode, and more. The **harness** contribution is the workspace/session orchestration layer: run multiple coding agents in parallel, locally or in the cloud, with isolated workspaces, reusable workflows, and shared team context.",
+   "best_of": {
+    "category_title": "Coding agent products (IDEs, CLIs, full suites)",
+    "tier": "complex",
+    "autonomy": "bounded",
+    "recovery": "resumable",
+    "license_signal": "open-source",
+    "stars": 520,
+    "tags": [
+     "multi-agent",
+     "sandbox",
+     "ide",
+     "typescript"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "rpi",
+   "catalog_ids": {
+    "github": "bigfish1913/pi-rust",
+    "best_of": "pi-rust"
+   },
+   "described_at_url": "https://github.com/bigfish1913/pi-rust",
+   "description": "Rust coding-agent runtime that began as a reimplementation of Pi and now develops on its own. The embeddable **harness** owns a provider-agnostic streaming agent loop, tool execution, JSONL sessions that resume after a crash from the last committed frame, and a native plugin ABI; the terminal TUI is",
+   "best_of": {
+    "category_title": "Coding agent products (IDEs, CLIs, full suites)",
+    "tier": "slightly complex",
+    "autonomy": "bounded",
+    "recovery": "durable",
+    "license_signal": "open-source",
+    "stars": 296,
+    "tags": [
+     "memory",
+     "provider-agnostic",
+     "cli",
+     "tui",
+     "rust"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "Orbi",
+   "catalog_ids": {
+    "github": "orbi-build/orbi",
+    "best_of": "orbi"
+   },
+   "described_at_url": "https://github.com/orbi-build/orbi",
+   "description": "Self-hosted runner that takes a GitHub issue labeled `ai-ready` to a reviewed, merged pull request and a tagged release: each run gets its own branch and worktree, Pi writes the change, a separate review session checks it against the issue's acceptance criteria, and only the reviewed head merges. Th",
+   "best_of": {
+    "category_title": "Coding agent products (IDEs, CLIs, full suites)",
+    "tier": "slightly complex",
+    "autonomy": "n/a",
+    "recovery": "n/a",
+    "license_signal": "open-source",
+    "stars": 260,
+    "tags": [
+     "python"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "YYLO",
+   "catalog_ids": {
+    "github": "yylo-dev/yylo",
+    "best_of": "yylo"
+   },
+   "described_at_url": "https://github.com/yylo-dev/yylo",
+   "description": "Command-line orchestrator for coding agents (drives Pi and Codex subagents): every task gets a dedicated branch/worktree and a typed lifecycle — read-only preflight, risk-scaled merge-queue review, release-readiness gates — with receipt-backed changes. The **harness** contribution is the git-native ",
+   "best_of": {
+    "category_title": "Coding agent products (IDEs, CLIs, full suites)",
+    "tier": "slightly complex",
+    "autonomy": "n/a",
+    "recovery": "n/a",
+    "license_signal": "open-source",
+    "stars": 69,
+    "tags": [
+     "multi-agent",
+     "typescript"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "OpenClaw",
+   "catalog_ids": {
+    "github": "openclaw/openclaw",
+    "best_of": "openclaw"
+   },
+   "described_at_url": "https://github.com/openclaw/openclaw",
+   "description": "Self-hosted, always-on personal agent (formerly Clawdbot/Moltbot): a gateway + event-loop runtime that treats messages, heartbeats, crons, and webhooks as one input queue, persists state to local files, and lives in your chat apps (WhatsApp, Telegram, Slack, Discord). 13,700+ community skills; the f",
+   "best_of": {
+    "category_title": "Personal agent runtimes",
+    "tier": "complex",
+    "autonomy": "headless",
+    "recovery": "resumable",
+    "license_signal": "open-source",
+    "stars": 395048,
+    "tags": [
+     "typescript",
+     "multi-agent"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "Hermes",
+   "catalog_ids": {
+    "github": "NousResearch/hermes-agent",
+    "best_of": "hermes-agent"
+   },
+   "described_at_url": "https://github.com/NousResearch/hermes-agent",
+   "description": "Nous Research's self-improving agent: a learning loop turns experience into reusable skills, builds a persistent user model across sessions, and checkpoints state to disk with rollback; lean enough for a $5 VPS, driven from chat, and model-agnostic (Nous Portal, OpenRouter, OpenAI, or any endpoint).",
+   "best_of": {
+    "category_title": "Personal agent runtimes",
+    "tier": "slightly complex",
+    "autonomy": "headless",
+    "recovery": "resumable",
+    "license_signal": "open-source",
+    "stars": 265399,
+    "tags": [
+     "memory",
+     "python",
+     "provider-agnostic"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "AnythingLLM",
+   "catalog_ids": {
+    "github": "Mintplex-Labs/anything-llm",
+    "best_of": "anything-llm"
+   },
+   "described_at_url": "https://github.com/Mintplex-Labs/anything-llm",
+   "description": "Self-hosted \"AI second brain\" **harness**: chat with your documents, run built-in agent skills (web search, code execution, browsing), and manage multi-user workspaces with a bundled vector DB, so there is no separate RAG stack to wire up.",
+   "best_of": {
+    "category_title": "Personal agent runtimes",
+    "tier": "complex",
+    "autonomy": "headless",
+    "recovery": "resumable",
+    "license_signal": "open-source",
+    "stars": 68517,
+    "tags": [
+     "rag",
+     "typescript"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "nanobot",
+   "catalog_ids": {
+    "github": "HKUDS/nanobot",
+    "best_of": "nanobot"
+   },
+   "described_at_url": "https://github.com/HKUDS/nanobot",
+   "description": "Ultra-lightweight, self-hosted personal agent framework: the **harness** is a Python daemon wiring tools, memory, and MCP into chat/webhook front ends (Telegram, Discord, web); minimal footprint alternative to heavier personal-runtime stacks.",
+   "best_of": {
+    "category_title": "Personal agent runtimes",
+    "tier": "mostly simple",
+    "autonomy": "n/a",
+    "recovery": "n/a",
+    "license_signal": "unknown",
+    "stars": 50272,
+    "tags": [
+     "mcp",
+     "memory",
+     "local",
+     "python"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "CowAgent",
+   "catalog_ids": {
+    "github": "zhayujie/CowAgent",
+    "best_of": "cowagent"
+   },
+   "described_at_url": "https://github.com/zhayujie/CowAgent",
+   "description": "Self-hosted **harness** (formerly chatgpt-on-wechat) that plans tasks, runs tools/skills, and self-evolves via memory; multi-model, multi-channel (WeChat, Telegram, etc.), one-line install.",
+   "best_of": {
+    "category_title": "Personal agent runtimes",
+    "tier": "slightly complex",
+    "autonomy": "n/a",
+    "recovery": "n/a",
+    "license_signal": "unknown",
+    "stars": 48044,
+    "tags": [
+     "memory",
+     "python"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "Khoj",
+   "catalog_ids": {
+    "github": "khoj-ai/khoj",
+    "best_of": "khoj"
+   },
+   "described_at_url": "https://github.com/khoj-ai/khoj",
+   "description": "Self-hostable \"AI second brain\": answers over your docs and the web, custom agents, scheduled automations, and multi-client reach (web, Obsidian, Emacs, WhatsApp). A personal-agent harness with retrieval at the core.",
+   "best_of": {
+    "category_title": "Personal agent runtimes",
+    "tier": "complex",
+    "autonomy": "headless",
+    "recovery": "resumable",
+    "license_signal": "open-source",
+    "stars": 38207,
+    "tags": [
+     "python"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "Agent Zero",
+   "catalog_ids": {
+    "github": "agent0ai/agent-zero",
+    "best_of": "agent-zero"
+   },
+   "described_at_url": "https://github.com/agent0ai/agent-zero",
+   "description": "Organic, prompt-defined personal agent framework: hierarchical sub-agents, persistent memory, browser and code tools, and self-modifying behavior; runs in Docker with a web UI.",
+   "best_of": {
+    "category_title": "Personal agent runtimes",
+    "tier": "slightly complex",
+    "autonomy": "bounded",
+    "recovery": "resumable",
+    "license_signal": "unknown",
+    "stars": 19951,
+    "tags": [
+     "memory",
+     "multi-agent",
+     "browser",
+     "sandbox",
+     "python"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "Eliza",
+   "catalog_ids": {
+    "github": "elizaOS/eliza",
+    "best_of": "eliza"
+   },
+   "described_at_url": "https://github.com/elizaOS/eliza",
+   "description": "Open \"agentic operating system\" (elizaOS): persistent multi-agent runtime with character files, a plugin ecosystem, and social/platform integrations — the harness behind a large share of autonomous social agents.",
+   "best_of": {
+    "category_title": "Personal agent runtimes",
+    "tier": "complex",
+    "autonomy": "headless",
+    "recovery": "resumable",
+    "license_signal": "open-source",
+    "stars": 19912,
+    "tags": [
+     "memory",
+     "multi-agent",
+     "typescript"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "OpenJarvis",
+   "catalog_ids": {
+    "github": "open-jarvis/OpenJarvis",
+    "best_of": "openjarvis"
+   },
+   "described_at_url": "https://github.com/open-jarvis/OpenJarvis",
+   "description": "Stanford Hazy Research's local-first personal AI **harness**: on-device model inference (Ollama built in), agent execution, memory, and learning as shared primitives, with on-demand, scheduled, and continuous agents and evaluations that count energy, latency, and dollars alongside accuracy; a cloud ",
+   "best_of": {
+    "category_title": "Personal agent runtimes",
+    "tier": "slightly complex",
+    "autonomy": "headless",
+    "recovery": "none",
+    "license_signal": "open-source",
+    "stars": 18000,
+    "tags": [
+     "memory",
+     "local",
+     "python"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "OpenHarness (HKUDS)",
+   "catalog_ids": {
+    "github": "HKUDS/OpenHarness",
+    "best_of": "openharness"
+   },
+   "described_at_url": "https://github.com/HKUDS/OpenHarness",
+   "description": "Open agent harness with a built-in personal agent (\"Ohmo\") that runs across Feishu, Slack, Telegram, and Discord; core tool-use, skills, memory, multi-agent coordination with auto-compaction for multi-day sessions.",
+   "best_of": {
+    "category_title": "Personal agent runtimes",
+    "tier": "complex",
+    "autonomy": "bounded",
+    "recovery": "resumable",
+    "license_signal": "open-source",
+    "stars": 16235,
+    "tags": [
+     "memory",
+     "multi-agent"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "QM",
+   "catalog_ids": {
+    "github": "yc-software/qm",
+    "best_of": "qm"
+   },
+   "described_at_url": "https://github.com/yc-software/qm",
+   "description": "Y Combinator's multiplayer agent **harness** for work, open-sourced from months of internal use: every person and room gets scoped memory, files, credentials, permissions, crons, web apps, and a durable sandbox; sessions, memory, and the work queue live in Postgres, sandboxes are a resource the agen",
+   "best_of": {
+    "category_title": "Personal agent runtimes",
+    "tier": "complex",
+    "autonomy": "headless",
+    "recovery": "durable",
+    "license_signal": "open-source",
+    "stars": 15761,
+    "tags": [
+     "memory",
+     "sandbox",
+     "typescript"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "Ouroboros (razzant)",
+   "catalog_ids": {
+    "github": "razzant/ouroboros",
+    "best_of": "ouroboros-2"
+   },
+   "described_at_url": "https://github.com/razzant/ouroboros",
+   "description": "Self-modifying personal agent that keeps its identity, durable memory, and history across tasks and restarts. The **harness** owns the agent loop, tool execution, and specialist-subagent coordination, and it changes its own code only through review gates, with restart checks and rollback kept in git",
+   "best_of": {
+    "category_title": "Personal agent runtimes",
+    "tier": "slightly complex",
+    "autonomy": "headless",
+    "recovery": "resumable",
+    "license_signal": "open-source",
+    "stars": 1699,
+    "tags": [
+     "memory",
+     "multi-agent",
+     "browser",
+     "cli",
+     "python"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "AIlice",
+   "catalog_ids": {
+    "github": "myshell-ai/AIlice",
+    "best_of": "ailice"
+   },
+   "described_at_url": "https://github.com/myshell-ai/AIlice",
+   "description": "Fully autonomous general-purpose agent; one binary, Docker-ready, for when you want \"set goal and walk away\" without a framework.",
+   "best_of": {
+    "category_title": "Personal agent runtimes",
+    "tier": "slightly complex",
+    "autonomy": "bounded",
+    "recovery": "none",
+    "license_signal": "open-source",
+    "stars": 1421,
+    "tags": [
+     "sandbox",
+     "python"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "Talon",
+   "catalog_ids": {
+    "github": "thefalconry/talon",
+    "best_of": "talon"
+   },
+   "described_at_url": "https://github.com/thefalconry/talon",
+   "description": "Multi-platform personal agent living in Telegram, Discord, Teams, and the terminal. The **harness** is a pluggable-backend loop (Claude, Kilo, OpenCode, Codex, OpenAI Agents) with full MCP tool access and persistent background agents (Goals, Heartbeat, Dream); the chat apps are shells.",
+   "best_of": {
+    "category_title": "Personal agent runtimes",
+    "tier": "slightly complex",
+    "autonomy": "headless",
+    "recovery": "resumable",
+    "license_signal": "open-source",
+    "stars": 72,
+    "tags": [
+     "mcp",
+     "memory",
+     "cli",
+     "typescript"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "n8n",
+   "catalog_ids": {
+    "github": "n8n-io/n8n",
+    "best_of": "n8n"
+   },
+   "described_at_url": "https://github.com/n8n-io/n8n",
+   "description": "Fair-code workflow engine with 400+ nodes and native AI nodes; the self-hosted Zapier that actually does agents and LangChain.",
+   "best_of": {
+    "category_title": "Frameworks",
+    "tier": "complex",
+    "autonomy": "headless",
+    "recovery": "durable",
+    "license_signal": "restricted (Fair-code)",
+    "stars": 211824,
+    "tags": [
+     "workflow",
+     "local",
+     "typescript"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "AutoGPT",
+   "catalog_ids": {
+    "github": "Significant-Gravitas/AutoGPT",
+    "best_of": "autogpt"
+   },
+   "described_at_url": "https://github.com/Significant-Gravitas/AutoGPT",
+   "description": "The original autonomous loop: goal in, agent iterates with tools and memory; Forge is the dev framework, Benchmark the eval harness.",
+   "best_of": {
+    "category_title": "Frameworks",
+    "tier": "complex",
+    "autonomy": "headless",
+    "recovery": "resumable",
+    "license_signal": "restricted (Polyform-SU)",
+    "stars": 188134,
+    "tags": [
+     "memory",
+     "evals",
+     "python"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "Dify",
+   "catalog_ids": {
+    "github": "langgenius/dify",
+    "best_of": "dify"
+   },
+   "described_at_url": "https://github.com/langgenius/dify",
+   "description": "One-stop LLM app platform: visual workflows, RAG pipeline, 50+ tools, model management; \"ship from prototype to prod\" in a single UI.",
+   "best_of": {
+    "category_title": "Frameworks",
+    "tier": "complex",
+    "autonomy": "headless",
+    "recovery": "retry",
+    "license_signal": "restricted (Fair-code)",
+    "stars": 161686,
+    "tags": [
+     "low-code",
+     "rag",
+     "python"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "langflow",
+   "catalog_ids": {
+    "github": "langflow-ai/langflow",
+    "best_of": "langflow"
+   },
+   "described_at_url": "https://github.com/langflow-ai/langflow",
+   "description": "Low-code UI to build and deploy LangChain/LangGraph flows; visual DAG editor and one-click run.",
+   "best_of": {
+    "category_title": "Frameworks",
+    "tier": "complex",
+    "autonomy": "headless",
+    "recovery": "retry",
+    "license_signal": "open-source",
+    "stars": 156848,
+    "tags": [
+     "low-code",
+     "python"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "langchain",
+   "catalog_ids": {
+    "github": "langchain-ai/langchain",
+    "best_of": "langchain"
+   },
+   "described_at_url": "https://github.com/langchain-ai/langchain",
+   "description": "Chains, tools, retrievers, and agents; the usual entry point for \"add tools to an LLM\" in Python/JS.",
+   "best_of": {
+    "category_title": "Frameworks",
+    "tier": "complex",
+    "autonomy": "bounded",
+    "recovery": "retry",
+    "license_signal": "open-source",
+    "stars": 149987,
+    "tags": [
+     "python"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "browser-use",
+   "catalog_ids": {
+    "github": "browser-use/browser-use",
+    "best_of": "browser-use"
+   },
+   "described_at_url": "https://github.com/browser-use/browser-use",
+   "description": "Python web-agent **harness**: natural-language goals become browser actions, driven directly over the Chrome DevTools Protocol (it dropped Playwright in August 2025). The biggest community in the browser-agent category.",
+   "best_of": {
+    "category_title": "Frameworks",
+    "tier": "slightly complex",
+    "autonomy": "bounded",
+    "recovery": "retry",
+    "license_signal": "open-source",
+    "stars": 121761,
+    "tags": [
+     "browser",
+     "python"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "Flowise",
+   "catalog_ids": {
+    "github": "FlowiseAI/Flowise",
+    "best_of": "flowise"
+   },
+   "described_at_url": "https://github.com/FlowiseAI/Flowise",
+   "description": "Drag-and-drop LangChain UI; deploy flows without code. The low-code sibling to Langflow, with a different component and hosting story.",
+   "best_of": {
+    "category_title": "Frameworks",
+    "tier": "complex",
+    "autonomy": "headless",
+    "recovery": "retry",
+    "license_signal": "restricted (Apache+CLA)",
+    "stars": 55583,
+    "tags": [
+     "low-code",
+     "typescript"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "llama-index",
+   "catalog_ids": {
+    "github": "run-llama/llama_index",
+    "best_of": "llama_index"
+   },
+   "described_at_url": "https://github.com/run-llama/llama_index",
+   "description": "Data-centric: indexing, RAG, and query engines; agent abstractions sit on top of your data pipelines.",
+   "best_of": {
+    "category_title": "Frameworks",
+    "tier": "complex",
+    "autonomy": "bounded",
+    "recovery": "retry",
+    "license_signal": "open-source",
+    "stars": 52982,
+    "tags": [
+     "rag",
+     "python"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "langgraph",
+   "catalog_ids": {
+    "github": "langchain-ai/langgraph",
+    "best_of": "langgraph"
+   },
+   "described_at_url": "https://github.com/langchain-ai/langgraph",
+   "description": "State-machine graphs over LLM steps; checkpointing, human-in-the-loop, and durable execution so workflows survive restarts.",
+   "best_of": {
+    "category_title": "Frameworks",
+    "tier": "slightly complex",
+    "autonomy": "headless",
+    "recovery": "durable",
+    "license_signal": "open-source",
+    "stars": 45269,
+    "tags": [
+     "workflow",
+     "python"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "agno",
+   "catalog_ids": {
+    "github": "agno-agi/agno",
+    "best_of": "agno"
+   },
+   "described_at_url": "https://github.com/agno-agi/agno",
+   "description": "Python agents with memory, knowledge bases, tools, and structured outputs; continues the PhiData-era product line under the Agno name—production apps, evals, and pipelines.",
+   "best_of": {
+    "category_title": "Frameworks",
+    "tier": "complex",
+    "autonomy": "bounded",
+    "recovery": "resumable",
+    "license_signal": "open-source",
+    "stars": 43260,
+    "tags": [
+     "memory",
+     "evals",
+     "python"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "mastra",
+   "catalog_ids": {
+    "github": "mastra-ai/mastra",
+    "best_of": "mastra"
+   },
+   "described_at_url": "https://github.com/mastra-ai/mastra",
+   "description": "TypeScript-first; agents, tools, and workflows with a single runtime and minimal boilerplate.",
+   "best_of": {
+    "category_title": "Frameworks",
+    "tier": "slightly complex",
+    "autonomy": "bounded",
+    "recovery": "durable",
+    "license_signal": "restricted (Elastic-2.0)",
+    "stars": 29740,
+    "tags": [
+     "typed",
+     "typescript"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "semantic-kernel",
+   "catalog_ids": {
+    "github": "microsoft/semantic-kernel",
+    "best_of": "semantic-kernel"
+   },
+   "described_at_url": "https://github.com/microsoft/semantic-kernel",
+   "description": "Microsoft's plugin and planner layer for LLMs; C#, Python, Java; strong on enterprise auth and orchestration.",
+   "best_of": {
+    "category_title": "Frameworks",
+    "tier": "complex",
+    "autonomy": "bounded",
+    "recovery": "retry",
+    "license_signal": "open-source",
+    "stars": 28790,
+    "tags": [
+     "python"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "Haystack",
+   "catalog_ids": {
+    "github": "deepset-ai/haystack",
+    "best_of": "haystack"
+   },
+   "described_at_url": "https://github.com/deepset-ai/haystack",
+   "description": "Open-source orchestration framework for context-engineered LLM apps: modular pipelines and agent workflows with explicit control over retrieval, routing, memory, and generation—closer to LangChain's territory than a coding-agent harness.",
+   "best_of": {
+    "category_title": "Frameworks",
+    "tier": "complex",
+    "autonomy": "n/a",
+    "recovery": "n/a",
+    "license_signal": "open-source",
+    "stars": 27077,
+    "tags": [
+     "memory",
+     "rag",
+     "python"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "Stagehand",
+   "catalog_ids": {
+    "github": "browserbase/stagehand",
+    "best_of": "stagehand"
+   },
+   "described_at_url": "https://github.com/browserbase/stagehand",
+   "description": "Browserbase's SDK for browser agents: natural-language actions (act, extract, observe) and deterministic Playwright code mix in one script, so agent flexibility and repeatable automation live in the same **harness**.",
+   "best_of": {
+    "category_title": "Frameworks",
+    "tier": "slightly complex",
+    "autonomy": "bounded",
+    "recovery": "none",
+    "license_signal": "open-source",
+    "stars": 26115,
+    "tags": [
+     "browser",
+     "typescript"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "letta",
+   "catalog_ids": {
+    "github": "letta-ai/letta",
+    "best_of": "letta"
+   },
+   "described_at_url": "https://github.com/letta-ai/letta",
+   "description": "Python agent runtime with tool use and control flow; lean API; stateful agents with long-horizon memory.",
+   "best_of": {
+    "category_title": "Frameworks",
+    "tier": "mostly simple",
+    "autonomy": "headless",
+    "recovery": "durable",
+    "license_signal": "open-source",
+    "stars": 25513,
+    "tags": [
+     "memory",
+     "python"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "Google ADK",
+   "catalog_ids": {
+    "github": "google/adk-python",
+    "best_of": "adk-python"
+   },
+   "described_at_url": "https://github.com/google/adk-python",
+   "description": "Google's official Agent Development Kit: code-first Python toolkit for building, evaluating, and deploying agents. Optimized for Gemini but model-agnostic; deploys to Cloud Run / Vertex AI; ships a dev UI with eval and a code-execution sandbox.",
+   "best_of": {
+    "category_title": "Frameworks",
+    "tier": "complex",
+    "autonomy": "headless",
+    "recovery": "resumable",
+    "license_signal": "open-source",
+    "stars": 22313,
+    "tags": [
+     "evals",
+     "sandbox",
+     "python"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "rasa",
+   "catalog_ids": {
+    "github": "RasaHQ/rasa",
+    "best_of": "rasa"
+   },
+   "described_at_url": "https://github.com/RasaHQ/rasa",
+   "description": "Conversational AI stack (NLU, dialogue, actions); long-standing OSS choice for chat and voice bots.",
+   "best_of": {
+    "category_title": "Frameworks",
+    "tier": "complex",
+    "autonomy": "headless",
+    "recovery": "resumable",
+    "license_signal": "open-source",
+    "stars": 21400,
+    "tags": [
+     "voice",
+     "python"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "botpress",
+   "catalog_ids": {
+    "github": "botpress/botpress",
+    "best_of": "botpress"
+   },
+   "described_at_url": "https://github.com/botpress/botpress",
+   "description": "Visual bot builder and runtime; multi-channel, open-source alternative to commercial bot platforms.",
+   "best_of": {
+    "category_title": "Frameworks",
+    "tier": "complex",
+    "autonomy": "headless",
+    "recovery": "resumable",
+    "license_signal": "open-source",
+    "stars": 15003,
+    "tags": [
+     "low-code",
+     "typescript"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "R2R",
+   "catalog_ids": {
+    "github": "SciPhi-AI/R2R",
+    "best_of": "r2r"
+   },
+   "described_at_url": "https://github.com/SciPhi-AI/R2R",
+   "description": "RAG-first: hybrid search, knowledge graphs, multimodal; the framework for \"production RAG\" when you care more about retrieval than chat UI.",
+   "best_of": {
+    "category_title": "Frameworks",
+    "tier": "complex",
+    "autonomy": "headless",
+    "recovery": "retry",
+    "license_signal": "open-source",
+    "stars": 8105,
+    "tags": [
+     "vision",
+     "rag",
+     "workflow",
+     "python"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "agent-squad",
+   "catalog_ids": {
+    "github": "2FastLabs/agent-squad",
+    "best_of": "agent-squad"
+   },
+   "described_at_url": "https://github.com/2FastLabs/agent-squad",
+   "description": "AWS-originated orchestrator (now under 2FastLabs): intent classification, streaming, SupervisorAgent; \"agent-as-tools\" so one agent delegates to a squad.",
+   "best_of": {
+    "category_title": "Frameworks",
+    "tier": "slightly complex",
+    "autonomy": "bounded",
+    "recovery": "resumable",
+    "license_signal": "open-source",
+    "stars": 7804,
+    "tags": [
+     "multi-agent"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "AgentVerse",
+   "catalog_ids": {
+    "github": "OpenBMB/AgentVerse",
+    "best_of": "agentverse"
+   },
+   "described_at_url": "https://github.com/OpenBMB/AgentVerse",
+   "description": "Task-solving and simulation envs for multi-LLM agents; deploy many agents in custom environments without building infra from scratch.",
+   "best_of": {
+    "category_title": "Frameworks",
+    "tier": "complex",
+    "autonomy": "headless",
+    "recovery": "none",
+    "license_signal": "open-source",
+    "stars": 5164,
+    "tags": [
+     "multi-agent",
+     "python"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "youtu-agent",
+   "catalog_ids": {
+    "github": "TencentCloudADP/youtu-agent",
+    "best_of": "youtu-agent"
+   },
+   "described_at_url": "https://github.com/TencentCloudADP/youtu-agent",
+   "description": "Tencent Cloud's agent framework: a minimal tool-calling **harness** designed to perform well with open-source models, positioned as a lighter alternative to heavier orchestration frameworks.",
+   "best_of": {
+    "category_title": "Frameworks",
+    "tier": "mostly simple",
+    "autonomy": "bounded",
+    "recovery": "retry",
+    "license_signal": "unknown",
+    "stars": 4637,
+    "tags": [],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "Bee Agent Framework",
+   "catalog_ids": {
+    "github": "i-am-bee/beeai-framework",
+    "best_of": "beeai-framework"
+   },
+   "described_at_url": "https://github.com/i-am-bee/beeai-framework",
+   "description": "Python + TypeScript, LF AI–backed; MCP/ACP, workflows, Requirement Agent; the one that pushes \"production multi-agent\" without LangChain.",
+   "best_of": {
+    "category_title": "Frameworks",
+    "tier": "complex",
+    "autonomy": "bounded",
+    "recovery": "resumable",
+    "license_signal": "open-source",
+    "stars": 3458,
+    "tags": [
+     "mcp",
+     "multi-agent",
+     "python",
+     "typescript"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "AgentStack",
+   "catalog_ids": {
+    "github": "agentstack-ai/AgentStack",
+    "best_of": "agentstack"
+   },
+   "described_at_url": "https://github.com/agentstack-ai/AgentStack",
+   "description": "Scaffolds full agent projects; plugs in CrewAI, LangGraph, OpenAI Swarm, LlamaStack and wires AgentOps observability from day one.",
+   "best_of": {
+    "category_title": "Frameworks",
+    "tier": "slightly complex",
+    "autonomy": "n/a",
+    "recovery": "n/a",
+    "license_signal": "open-source",
+    "stars": 2198,
+    "tags": [],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "AgentSilex",
+   "catalog_ids": {
+    "github": "howl-anderson/agentsilex",
+    "best_of": "agentsilex"
+   },
+   "described_at_url": "https://github.com/howl-anderson/agentsilex",
+   "description": "~300 lines of readable agent code on top of LiteLLM; the \"I want to see the whole loop\" option for learning or minimal production.",
+   "best_of": {
+    "category_title": "Frameworks",
+    "tier": "super simple",
+    "autonomy": "bounded",
+    "recovery": "none",
+    "license_signal": "open-source",
+    "stars": 460,
+    "tags": [
+     "python"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "SuperAgentX",
+   "catalog_ids": {
+    "github": "superagentxai/superagentx",
+    "best_of": "superagentx"
+   },
+   "described_at_url": "https://github.com/superagentxai/superagentx",
+   "description": "Lightweight multi-agent orchestrator with an AGI-angle; minimal surface, docs-first, for teams that want orchestration without the kitchen sink.",
+   "best_of": {
+    "category_title": "Frameworks",
+    "tier": "mostly simple",
+    "autonomy": "bounded",
+    "recovery": "none",
+    "license_signal": "open-source",
+    "stars": 211,
+    "tags": [
+     "multi-agent",
+     "python"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "MetaGPT",
+   "catalog_ids": {
+    "github": "FoundationAgents/MetaGPT",
+    "best_of": "metagpt"
+   },
+   "described_at_url": "https://github.com/FoundationAgents/MetaGPT",
+   "description": "The \"AI software company\" multi-agent framework: role-played PM, architect, and engineer agents turn a one-line requirement into specs, designs, and code along an SOP assembly line. The landmark of the genre; development pace has slowed in 2026.",
+   "best_of": {
+    "category_title": "Multi-agent and orchestration",
+    "tier": "complex",
+    "autonomy": "headless",
+    "recovery": "resumable",
+    "license_signal": "open-source",
+    "stars": 71407,
+    "tags": [
+     "multi-agent",
+     "python"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "crewAI",
+   "catalog_ids": {
+    "github": "crewAIInc/crewAI",
+    "best_of": "crewai"
+   },
+   "described_at_url": "https://github.com/crewAIInc/crewAI",
+   "description": "Role-based agents (roles, goals, backstories) in Crews; Flows add event-driven and hierarchical control for production.",
+   "best_of": {
+    "category_title": "Multi-agent and orchestration",
+    "tier": "complex",
+    "autonomy": "bounded",
+    "recovery": "resumable",
+    "license_signal": "open-source",
+    "stars": 61173,
+    "tags": [
+     "python"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "OpenManus",
+   "catalog_ids": {
+    "github": "FoundationAgents/OpenManus",
+    "best_of": "openmanus"
+   },
+   "described_at_url": "https://github.com/FoundationAgents/OpenManus",
+   "description": "Open, invite-free general agent from the MetaGPT team: planning plus tool use over a multi-agent loop, aimed at reproducing Manus-style autonomous task completion on your own keys.",
+   "best_of": {
+    "category_title": "Multi-agent and orchestration",
+    "tier": "complex",
+    "autonomy": "bounded",
+    "recovery": "none",
+    "license_signal": "open-source",
+    "stars": 59007,
+    "tags": [
+     "multi-agent",
+     "python"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "ChatDev",
+   "catalog_ids": {
+    "github": "OpenBMB/ChatDev",
+    "best_of": "chatdev"
+   },
+   "described_at_url": "https://github.com/OpenBMB/ChatDev",
+   "description": "Multi-agent software-company simulation (CEO, CTO, programmer, tester) built on chat chains with communicative dehallucination; ChatDev 2.0 continues the line. MetaGPT's conversational sibling.",
+   "best_of": {
+    "category_title": "Multi-agent and orchestration",
+    "tier": "slightly complex",
+    "autonomy": "headless",
+    "recovery": "none",
+    "license_signal": "open-source",
+    "stars": 34845,
+    "tags": [
+     "python"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "openai-agents-python",
+   "catalog_ids": {
+    "github": "openai/openai-agents-python",
+    "best_of": "openai-agents-python"
+   },
+   "described_at_url": "https://github.com/openai/openai-agents-python",
+   "description": "Handoffs, guardrails, and multi-LLM routing; minimal surface so you own the loop.",
+   "best_of": {
+    "category_title": "Multi-agent and orchestration",
+    "tier": "mostly simple",
+    "autonomy": "bounded",
+    "recovery": "resumable",
+    "license_signal": "open-source",
+    "stars": 30815,
+    "tags": [
+     "python"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "Microsoft Agent Framework",
+   "catalog_ids": {
+    "github": "microsoft/agent-framework",
+    "best_of": "agent-framework"
+   },
+   "described_at_url": "https://github.com/microsoft/agent-framework",
+   "description": "Microsoft's convergence of AutoGen and Semantic Kernel: build, orchestrate, and deploy agents and multi-agent workflows in Python and .NET, with graph-based workflows and checkpointing — the designated successor harness for both lines.",
+   "best_of": {
+    "category_title": "Multi-agent and orchestration",
+    "tier": "slightly complex",
+    "autonomy": "bounded",
+    "recovery": "resumable",
+    "license_signal": "open-source",
+    "stars": 14693,
+    "tags": [
+     "multi-agent",
+     "workflow",
+     "python"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "omnigent",
+   "catalog_ids": {
+    "github": "omnigent-ai/omnigent",
+    "best_of": "omnigent"
+   },
+   "described_at_url": "https://github.com/omnigent-ai/omnigent",
+   "description": "Open-source meta-**harness**: orchestrates Claude Code, Codex, Cursor, Pi, and custom agents behind one policy/sandboxing layer so teams swap harnesses without rewriting workflows.",
+   "best_of": {
+    "category_title": "Multi-agent and orchestration",
+    "tier": "complex",
+    "autonomy": "n/a",
+    "recovery": "n/a",
+    "license_signal": "unknown",
+    "stars": 11492,
+    "tags": [
+     "sandbox",
+     "ide",
+     "python"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "hive",
+   "catalog_ids": {
+    "github": "aden-hive/hive",
+    "best_of": "hive"
+   },
+   "described_at_url": "https://github.com/aden-hive/hive",
+   "description": "Self-hosted multi-agent **harness** aimed at production workloads: human-in-the-loop checkpoints and a self-improving agent loop, distinct from single-session coding-agent shells.",
+   "best_of": {
+    "category_title": "Multi-agent and orchestration",
+    "tier": "complex",
+    "autonomy": "bounded",
+    "recovery": "resumable",
+    "license_signal": "unknown",
+    "stars": 11167,
+    "tags": [
+     "multi-agent",
+     "python"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "Orkas",
+   "catalog_ids": {
+    "github": "Orkas-AI/Orkas",
+    "best_of": "orkas"
+   },
+   "described_at_url": "https://github.com/Orkas-AI/Orkas",
+   "description": "Local-first desktop AI team. The **harness** is a Commander agent that turns one chat goal into a plan and runs specialist agents in parallel or in sequence, with tool approvals, session checkpoints, tool-round budgets and idle watchdogs for stalled runs, durable per-agent memory, and support for bu",
+   "best_of": {
+    "category_title": "Multi-agent and orchestration",
+    "tier": "complex",
+    "autonomy": "bounded",
+    "recovery": "resumable",
+    "license_signal": "open-source",
+    "stars": 9540,
+    "tags": [
+     "memory",
+     "multi-agent",
+     "typescript"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "PraisonAI",
+   "catalog_ids": {
+    "github": "MervinPraison/PraisonAI",
+    "best_of": "praisonai"
+   },
+   "described_at_url": "https://github.com/MervinPraison/PraisonAI",
+   "description": "Autonomous multi-agent teams with a single entry point; emphasis on minimal config.",
+   "best_of": {
+    "category_title": "Multi-agent and orchestration",
+    "tier": "mostly simple",
+    "autonomy": "bounded",
+    "recovery": "none",
+    "license_signal": "open-source",
+    "stars": 9380,
+    "tags": [
+     "multi-agent",
+     "python"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "Open Multi-Agent",
+   "catalog_ids": {
+    "github": "open-multi-agent/open-multi-agent",
+    "best_of": "open-multi-agent"
+   },
+   "described_at_url": "https://github.com/open-multi-agent/open-multi-agent",
+   "description": "Self-hosted TypeScript multi-agent runtime. The **harness** is a coordinator that plans a task DAG from one goal at runtime and a deterministic scheduler that runs specialized agents, with durable approvals that pause before a plan, task, or tool call, PostgreSQL-backed checkpoints for restart recov",
+   "best_of": {
+    "category_title": "Multi-agent and orchestration",
+    "tier": "slightly complex",
+    "autonomy": "checkpoint-gated",
+    "recovery": "durable",
+    "license_signal": "open-source",
+    "stars": 7071,
+    "tags": [
+     "multi-agent",
+     "low-code",
+     "workflow",
+     "typescript"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "Raven",
+   "catalog_ids": {
+    "github": "EverMind-AI/Raven",
+    "best_of": "raven"
+   },
+   "described_at_url": "https://github.com/EverMind-AI/Raven",
+   "description": "EverMind's host agent, with its loop split into memory, planning, capability, and action modules. The **harness** plans complex tasks as DAGs and orchestrates built-in research, coding, design, and on-call agents plus third-party agents (Claude Code, Codex, OpenClaw, Hermes Agent) over ACP, CLI, or ",
+   "best_of": {
+    "category_title": "Multi-agent and orchestration",
+    "tier": "complex",
+    "autonomy": "headless",
+    "recovery": "none",
+    "license_signal": "open-source",
+    "stars": 6291,
+    "tags": [
+     "mcp",
+     "memory",
+     "multi-agent",
+     "cli",
+     "python"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "AG2",
+   "catalog_ids": {
+    "github": "ag2ai/ag2",
+    "best_of": "ag2"
+   },
+   "described_at_url": "https://github.com/ag2ai/ag2",
+   "description": "AG2 (formerly AutoGen): the community-governed continuation of the original AutoGen project after Microsoft's fork diverged—conversable multi-agent groups, code execution, and human-in-the-loop under an open-source AgentOS banner. Graduated off the radar this cycle.",
+   "best_of": {
+    "category_title": "Multi-agent and orchestration",
+    "tier": "complex",
+    "autonomy": "n/a",
+    "recovery": "n/a",
+    "license_signal": "unknown",
+    "stars": 5081,
+    "tags": [
+     "multi-agent",
+     "python"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "HarnessRouter",
+   "catalog_ids": {
+    "github": "HarnessRouter/harnessrouter",
+    "best_of": "harnessrouter"
+   },
+   "described_at_url": "https://github.com/HarnessRouter/harnessrouter",
+   "description": "Self-hostable Community Edition of a unified interface for complete agent harnesses. The **harness** contribution is the layer around them: each task runs a full harness (Codex, Claude Code, Hermes, Pi, DeepSeek Harness, and others) in its own on-demand sandbox, the harness is a request parameter be",
+   "best_of": {
+    "category_title": "Multi-agent and orchestration",
+    "tier": "complex",
+    "autonomy": "n/a",
+    "recovery": "n/a",
+    "license_signal": "open-source",
+    "stars": 4407,
+    "tags": [
+     "memory",
+     "sandbox",
+     "python"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "Agent Teams AI",
+   "catalog_ids": {
+    "github": "777genius/agent-teams-ai",
+    "best_of": "agent-teams-ai"
+   },
+   "described_at_url": "https://github.com/777genius/agent-teams-ai",
+   "description": "Desktop app that runs a team of coding agents (Claude Code, Codex, OpenCode, Cursor, Copilot, and others) on a kanban board: agents take tasks, message each other, and review each other's work before it is accepted. The **harness** contribution is the team-coordination layer over existing agent CLIs",
+   "best_of": {
+    "category_title": "Multi-agent and orchestration",
+    "tier": "complex",
+    "autonomy": "n/a",
+    "recovery": "n/a",
+    "license_signal": "open-source",
+    "stars": 2529,
+    "tags": [
+     "multi-agent",
+     "ide",
+     "typescript"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "CUGA",
+   "catalog_ids": {
+    "github": "cuga-project/cuga-agent",
+    "best_of": "cuga-agent"
+   },
+   "described_at_url": "https://github.com/cuga-project/cuga-agent",
+   "description": "Open-source enterprise agent **harness**: a code-act loop in which the model writes Python that calls MCP, OpenAPI, and LangChain tools as functions inside a restricted sandbox, with results kept as variables, pre-execution verification, reflection, and tool shortlisting; CugaSupervisor coordinates ",
+   "best_of": {
+    "category_title": "Multi-agent and orchestration",
+    "tier": "mostly simple",
+    "autonomy": "bounded",
+    "recovery": "resumable",
+    "license_signal": "open-source",
+    "stars": 1194,
+    "tags": [
+     "mcp",
+     "multi-agent",
+     "sandbox",
+     "python"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "Desplega Agent Swarm",
+   "catalog_ids": {
+    "github": "desplega-ai/agent-swarm",
+    "best_of": "agent-swarm"
+   },
+   "described_at_url": "https://github.com/desplega-ai/agent-swarm",
+   "description": "Self-hosted multi-agent orchestration service: a lead agent delegates queued tasks to Claude Code, Codex, and other workers in isolated containers. The **harness** contribution is the lead-to-worker hierarchy, the task queue, shared memory, and review gates, with MCP tools and Slack and GitHub integ",
+   "best_of": {
+    "category_title": "Multi-agent and orchestration",
+    "tier": "complex",
+    "autonomy": "n/a",
+    "recovery": "n/a",
+    "license_signal": "open-source",
+    "stars": 1101,
+    "tags": [
+     "mcp",
+     "memory",
+     "multi-agent",
+     "sandbox",
+     "typescript"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "fractal",
+   "catalog_ids": {
+    "github": "plasma-ai/fractal",
+    "best_of": "fractal"
+   },
+   "described_at_url": "https://github.com/plasma-ai/fractal",
+   "description": "Hierarchical coding-agent **harness**: each autonomous loop works in its own git worktree and can delegate separable subtasks to child loops, so the execution tree grows recursively, with five coding-agent CLIs wired into per-node loops, shared SQLite run state, operator controls, and depth, cost, a",
+   "best_of": {
+    "category_title": "Multi-agent and orchestration",
+    "tier": "slightly complex",
+    "autonomy": "n/a",
+    "recovery": "n/a",
+    "license_signal": "open-source",
+    "stars": 797,
+    "tags": [
+     "python"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "Claudexor",
+   "catalog_ids": {
+    "github": "razzant/claudexor",
+    "best_of": "claudexor"
+   },
+   "described_at_url": "https://github.com/razzant/claudexor",
+   "description": "Local-first control plane that routes one coding thread across Claude Code, Codex, Cursor, and OpenCode. The **harness** contribution is the layer around those agents: quota-aware rotation across isolated subscription profiles, bounded context handoffs between agents and accounts, best-of-N races, c",
+   "best_of": {
+    "category_title": "Multi-agent and orchestration",
+    "tier": "slightly complex",
+    "autonomy": "n/a",
+    "recovery": "n/a",
+    "license_signal": "open-source",
+    "stars": 526,
+    "tags": [
+     "multi-agent",
+     "sandbox",
+     "ide",
+     "typescript"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "AgentRL",
+   "catalog_ids": {
+    "github": "THUDM/AgentRL",
+    "best_of": "agentrl"
+   },
+   "described_at_url": "https://github.com/THUDM/AgentRL",
+   "description": "Multitask, multiturn RL for LLM agents; Ray-based scaling, rollout/actor workers—for teams that want to train agents, not just run them.",
+   "best_of": {
+    "category_title": "Multi-agent and orchestration",
+    "tier": "complex",
+    "autonomy": "headless",
+    "recovery": "resumable",
+    "license_signal": "open-source",
+    "stars": 367,
+    "tags": [
+     "training",
+     "python"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "GraphCode",
+   "catalog_ids": {
+    "github": "scgopi/GraphCode",
+    "best_of": "graphcode"
+   },
+   "described_at_url": "https://github.com/scgopi/GraphCode",
+   "description": "macOS canvas that runs Claude Code, Codex CLI, Copilot CLI, and OpenCode sessions as nodes on a graph. The **harness** is the graph itself: each loop is typed by what ends it (a turn, a shell predicate or declared goal, a cadence, or a sub-graph), hand-off and spawn edges fire when a loop resolves, ",
+   "best_of": {
+    "category_title": "Multi-agent and orchestration",
+    "tier": "slightly complex",
+    "autonomy": "n/a",
+    "recovery": "n/a",
+    "license_signal": "restricted (FSL-1.1-MIT)",
+    "stars": 159,
+    "tags": [
+     "memory",
+     "workflow",
+     "cli"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "Agent Barn",
+   "catalog_ids": {
+    "github": "aai-labs/agent-barn",
+    "best_of": "agent-barn"
+   },
+   "described_at_url": "https://github.com/aai-labs/agent-barn",
+   "description": "Control plane for teams of agents on your own Kubernetes cluster, deployed with Helm. The **harness** contribution is the layer around runtimes such as Hermes and OpenClaw: chat front ends (Slack, Teams, Telegram, Discord, email), tool wiring to Jira, GitHub, and Confluence, a model key per agent, a",
+   "best_of": {
+    "category_title": "Multi-agent and orchestration",
+    "tier": "complex",
+    "autonomy": "n/a",
+    "recovery": "n/a",
+    "license_signal": "open-source",
+    "stars": 112,
+    "tags": [
+     "python"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "status": "listed (not checked)"
+  },
+  {
+   "label": "RuleGo",
+   "catalog_ids": {
+    "github": "rulego/rulego"
+   },
+   "described_at_url": "https://github.com/rulego/rulego",
+   "description": "Lightweight embedded component orchestration (rule engine) for Go; rule chains as JSON DAGs.",
+   "best_of": null,
+   "licence": {
+    "spdx": "Apache-2.0",
+    "source": "GitHub API"
+   },
+   "pin_candidate": {
+    "version": "v1.0.0",
+    "released": "2026-10-19",
+    "rule": "newest release at least two weeks old on 2026-11-22"
+   },
+   "provides_interface": [
+    {
+     "interface": "dag-orchestration",
+     "evidence": "rule chains as JSON DAGs; embedded in a Go program",
+     "source": "README"
+    }
+   ],
+   "telemetry_default": "none (library)",
+   "status": "shortlist",
+   "note": "rulego-server is a modified Apache-2.0 with extra conditions (its LICENSE): out; the core and components are libraries, so this means a small Go service of ours"
+  },
+  {
+   "label": "RuleGo AI components",
+   "catalog_ids": {
+    "github": "rulego/rulego-components-ai"
+   },
+   "described_at_url": "https://github.com/rulego/rulego-components-ai",
+   "description": "Declarative AI agent framework on RuleGo: ReAct agent node, MCP client and server, OpenAI-compatible, 10 AOP aspects incl. pre-LLM and pre-tool-call.",
+   "best_of": null,
+   "licence": {
+    "spdx": "Apache-2.0",
+    "source": "GitHub API"
+   },
+   "pin_candidate": {
+    "version": "v1.0.0 (tag, no release object)",
+    "released": null,
+    "rule": "newest release at least two weeks old on 2026-11-22"
+   },
+   "provides_interface": [
+    {
+     "interface": "openai-compatible-endpoint",
+     "evidence": "\"OpenAI Compatible\"; per-session model switching",
+     "source": "README"
+    },
+    {
+     "interface": "mcp-client-stdio",
+     "evidence": "\"MCP Bidirectional Protocol — Acts as both MCP client ... and MCP server\"",
+     "source": "README"
+    },
+    {
+     "interface": "model-call-hook",
+     "evidence": "AOP aspects pre-LLM, post-LLM, pre-tool-call, post-tool-call",
+     "source": "README"
+    },
+    {
+     "interface": "built-in-tools",
+     "evidence": "bash, read, write, edit",
+     "source": "README"
+    }
+   ],
+   "telemetry_default": "none (library)",
+   "status": "shortlist",
+   "note": "7 stars; tagged v1.0.0, tag date to be read; last commits 2026-11-06 to 11-11"
+  },
+  {
+   "label": "aider",
+   "catalog_ids": {
+    "github": "aider-ai/aider",
+    "best_of": "aider"
+   },
+   "described_at_url": "https://github.com/Aider-AI/aider",
+   "description": "Git-aware CLI pair programmer; edits in-repo, supports multiple models and MCP so agents see version control and tools.",
+   "best_of": {
+    "category_title": "Plugins, MCPs, CLI tools",
+    "tier": "slightly complex",
+    "autonomy": "checkpoint-gated",
+    "recovery": "resumable",
+    "license_signal": "open-source",
+    "stars": 50220,
+    "tags": [
+     "mcp",
+     "cli",
+     "python"
+    ],
+    "source": "best-of-Agent-Harnesses (RyanAlberts, CC-BY-SA-4.0), harnesses.json read 2026-11-22"
+   },
+   "licence": {
+    "spdx": "Apache-2.0",
+    "source": "GitHub API"
+   },
+   "pin_candidate": {
+    "version": "v0.86.0",
+    "released": "2025-08-09"
+   },
+   "status": "ruled-out",
+   "reason": "last release 2025-08-09; no MCP client documented"
+  },
+  {
+   "label": "mini-swe-agent",
+   "catalog_ids": {
+    "github": "swe-agent/mini-swe-agent"
+   },
+   "described_at_url": "https://github.com/swe-agent/mini-swe-agent",
+   "description": "",
+   "best_of": null,
+   "licence": {
+    "spdx": "MIT",
+    "source": "GitHub API"
+   },
+   "pin_candidate": {
+    "version": "v2.4.6",
+    "released": "2026-07-23"
+   },
+   "status": "ruled-out",
+   "reason": "no MCP; bash only, no tool calling (a prompt-size reference)"
+  },
+  {
+   "label": "claude-code",
+   "catalog_ids": {
+    "github": "anthropics/claude-code"
+   },
+   "described_at_url": "https://github.com/anthropics/claude-code",
+   "description": "",
+   "best_of": null,
+   "licence": {
+    "spdx": "none (proprietary)",
+    "source": "GitHub API"
+   },
+   "pin_candidate": {
+    "version": null,
+    "released": null
+   },
+   "status": "in-use-not-default",
+   "reason": "no open licence: stays the companion on the owner's login (S-136), as an agent instance, not a default part"
+  }
+ ]
+}

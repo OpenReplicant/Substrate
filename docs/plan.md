@@ -43,13 +43,48 @@ Self-levers beyond budget and model choice, and the other layers in `docs/framew
 need them, each tested against pass-through. The UI is no longer frozen: add what these steps need, and
 nothing they don't.
 
-## Next, in order (2026-11-21)
+## The runtime, components and agents (S-173, 2026-11-22)
 
-1. **Offline agents on the local model:** an agent loop picked with the `research` skill (open, permissive, OpenAI API and MCP), Gemma's tool calls checked on llama.cpp, the kernel's model-using modules on `local/gemma`. Done when, with the network off, a task given in the UI is done with a cited recall and a remembered result, every call in the gateway's log.
-2. **The live map and the avatar page** (S-158; the kernel's D-115): interactive mapping, the map redrawn as claims apply, edits and new terms from the page.
-3. **Blocks, assemblies and executors** (S-157), with its first check.
-4. **The business distribution** in the kernel: distributions (M5-T9), interactive mapping as its first job, logs mined beside it.
-5. **Process KPIs** as observed claims; then one real actuator beyond Compose, behind a gate.
+The owner's direction, after comparing harnesses (S-172) and RuleGo: our own light runtime on what is already here,
+not a framework or a harness per slot.
+
+- **Postgres is the backbone:** pgmq for queues, the `env` schema for gates and the record, the kernel for the
+  catalog of components and MCP servers. No other broker or registry.
+- **MCP is every component's interface, both ways** (RuleGo's good idea): a block is an MCP tool (one blocks MCP
+  server exposes each block by its declared interface, world-changing ones behind their `blocks.<name>` gate), and a
+  registered MCP server's tools are components in the catalog, gated and composable like blocks. An aggregating MCP
+  endpoint gives each agent the tools it may use (Bifrost's MCP side is the first candidate to check).
+- **Light by default:** a block runs on demand, a short-lived process per call (measured: about 19 ms for a Python
+  block with JSON in and out, 8 MB idle), with a `hot` toggle that keeps it running as a supervised process when a
+  measured plan needs it. Go where the hot paths already are (the gateway, the supervisor); ours moves to Go only
+  when a measurement says so.
+- **Processes, not only containers:** a process supervisor in one small container runs the hot blocks and agent
+  processes; Compose keeps the services. Nomad is out by default (Business Source License); process-compose
+  (Apache-2.0, Go) is the lead candidate, to be picked with the `research` skill against s6, supervisord and
+  systemd units.
+- **One agent loop of ours** (the worker's, generalised): models through the gateway, M-17's skill gate at the model
+  endpoint, tools from the MCP registry, world-changing calls through the environment's gates. The voice front-end
+  stays its fast specialisation (S-170, S-171).
+- **Other harnesses are agent instances, not conformed to:** an instance reads tasks from its queue, takes tools from
+  the MCP endpoint, calls models through the gateway and publishes `task.done`. Claude Code (the owner's
+  subscription) is the first, as the companion already is; OpenCode, Codex and others get one adapter each when
+  wanted (`scripts/trials/harness/candidates.json` holds the surveyed list).
+
+## Next, in order (2026-11-22)
+
+1. **The process supervisor**, picked with the `research` skill (on-demand and hot processes, restarts, health, an
+   API to start and stop, its footprint).
+2. **The MCP registry and the blocks MCP server:** blocks as MCP tools on demand, gates enforced; registered MCP
+   servers listed as components. Done when the worker calls a block and a registered server's tool through it.
+3. **The worker on the registry:** its own file tools and the voice head's quick tools (`voice/tools.py`) replaced
+   by MCP servers; one loop for the worker, the fast layer reusing it.
+4. **M-17's gate at the model endpoint**, then M-17's first experiment (the handoff, 2026-11-22).
+5. **The agent-instance contract**, Claude Code first.
+6. Then, as before: the live map and avatar page (S-158), the business distribution, process KPIs and one real
+   actuator beyond Compose behind a gate.
+
+Done from the 2026-11-21 list: offline agents on the local model (S-162, S-163, now Inkling, S-169), blocks and the
+default executor (S-164).
 
 ## Deferred
 
@@ -63,3 +98,5 @@ publication and reproductions, the hosted mapper and hosted judging, the slot mo
 - Which game comes first (step 9), and which embodied environment after that (step 10).
 - Rotating the Postgres password; putting the Gemma model at the gateway.
 - The licence and whether the repository goes public.
+- Whether a Business-Source-licensed part (Nomad) may ever be a default; recommended no (S-173).
+- Whether LFM3 (LFM Open License v1.0) may be the recommended fast model (S-169).
