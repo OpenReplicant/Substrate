@@ -324,6 +324,19 @@ def setup(e, login: str = LOGIN) -> None:
     print(f"  worker: actuators {', '.join(ACTUATORS)}; queue {QUEUE}; login {login} may read them")
 
 
+def skills() -> Gate | None:
+    """The skill ladder's first rung (S-164, M-17): plans in WORKER_BLOCKS whose trigger matches a task answer it
+    without the model. Empty or missing: no gate, every task goes to the model."""
+    root = setting("WORKER_BLOCKS", "")
+    if not root or not os.path.isdir(root):
+        return None
+    from blocks import load_catalog
+    from blocks.run import skill_gate
+    catalog = load_catalog(root)
+    log(f"skills: {len(catalog.plans)} plans from {root}")
+    return skill_gate(catalog)
+
+
 def handle(e, m: dict, model: Model, gate: Gate | None = None, mcp_factory=None) -> dict:
     """One queue message to its outcome: run the task, publish worker.task.done, reply. Returns the outcome."""
     body = m.get("body")
@@ -370,6 +383,7 @@ def apply_companion(e) -> None:
 def run() -> None:
     import psycopg
     model = openai_model()
+    gate = skills()
     cmd = shlex.split(setting("WORKER_MCP_COMMAND", "kernel-mcp"))
     factory = lambda: McpTools(cmd, kernel_env())                    # noqa: E731
     e = None
@@ -379,7 +393,7 @@ def run() -> None:
             apply_companion(e)
             for m in e.read(QUEUE, 1800, 1):
                 log(f"task {m['msg_id']}: started")
-                out = handle(e, m, model, None, factory)
+                out = handle(e, m, model, gate, factory)
                 e.ack(QUEUE, [m["msg_id"]])
                 log(f"task {m['msg_id']}: {'done' if out['ok'] else 'failed'}, {out['model_calls']} model calls, {out['skipped_calls']} skipped")
         except psycopg.OperationalError as x:
