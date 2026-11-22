@@ -12,17 +12,19 @@ A block is a directory with `block.yaml` (or `block.json`) and its code:
 
 Schema subset: type (object, array, string, number, integer, boolean, null), properties, required, items, enum.
 
-A plan (an assembly) is JSON in P-Plan's terms, data and not code:
+A plan (an assembly) is JSON, data and not code; in the kernel it is a PROV-O plan (`prov:Plan`; a run is a
+`prov:Activity` that `prov:hadPlan` it) with the vocabulary profile's own terms for steps, order and variables (S-175,
+the kernel's D-124; P-Plan was dropped for its non-commercial licence):
 
     {"type": "Plan", "name", "version", "description",
-     "variables": {"text": {"type": "string"}},                 p-plan:Variable: the plan's inputs
-     "steps": [{"id": "count", "block": "word_count",           p-plan:Step; the block it runs
+     "variables": {"text": {"type": "string"}},                 the plan's inputs (its variables)
+     "steps": [{"id": "count", "block": "word_count",           a step: the block it runs
                 "inputs": {"text": "$input.text"}}],            "$input.x" a variable, "$step.field" an earlier
                                                                 step's output, {"value": ...} a literal
      "answer": "{count.words} words",                           what the plan says when it is done
      "trigger": {"pattern": "(?i)^count (?P<text>.+)$"}}        optional: a task that matches runs it (the skill gate)
 
-A step precedes another when the second reads its output (p-plan:isPrecededBy); order follows from that.
+A step precedes another when the second reads its output ; order follows from that.
 """
 from __future__ import annotations
 

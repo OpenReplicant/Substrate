@@ -5,7 +5,7 @@ description: Runs a plan step by step in dependency order, in a subprocess per b
 kind: executor
 layer: code
 entry: blocks.run:Executor
-plan_format: p-plan (JSON, blocks/__init__.py)
+plan_format: plan JSON (blocks/__init__.py), a PROV-O plan in the kernel (S-175)
 runs: [python, command]
 refuses: [http, mcp]
 enforces: [timeout_s, retry-once-if-idempotent, changes_world-through-an-Env-actuator]
