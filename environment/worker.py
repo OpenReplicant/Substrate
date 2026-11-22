@@ -387,7 +387,9 @@ def handle(e, m: dict, model: Model, gate: Gate | None = None, mcp_factory=None)
         except Exception as x:                                       # noqa: BLE001 - e.g. the kernel's MCP server did not start
             out = {"text": f"could not start the tools: {type(x).__name__}: {str(x)[:300]}", "ok": False, "model_calls": 0,
                    "skipped_calls": 0, "steps": 0, "cited": []}
-    e.publish(f"{ENV}.task.done", {**out, "task": text or "", "msg": m["msg_id"]}, SOURCE)
+    # reply_to: who asked, when they want the answer back (the voice head reads out its own, S-170)
+    reply_to = body.get("reply_to") if isinstance(body, dict) and isinstance(body.get("reply_to"), str) else None
+    e.publish(f"{ENV}.task.done", {**out, "task": text or "", "msg": m["msg_id"], **({"reply_to": reply_to} if reply_to else {})}, SOURCE)
     action, _ = e.act(f"{ENV}.reply", {"text": out["text"]}, SOURCE)
     for r in e.read(f"act_{ENV}_reply", 60, 10):
         e.done(r["action"], {"shown": True})

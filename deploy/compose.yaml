@@ -351,6 +351,8 @@ services:
       VOICE_THREADS: ${VOICE_THREADS:-4}
       VOICE_SILENCE_S: ${VOICE_SILENCE_S:-0.6}
       LLM_NAME: ${VOICE_MODEL:-local/${LLM_ALIAS:-slow}}
+      VOICE_ROUTER: ${VOICE_ROUTER:-tools}
+      EMBED_MODEL: ${STORE_EMBED_MODEL:-ollama/qwen3-embedding:0.6b}
       TTS_URL: ${TTS_URL:-}
       AVATAR_FILE: ${AVATAR_FILE:-}
       STORE_URL: postgresql://postgres:${POSTGRES_PASSWORD:?set in .env}@db:5432/substrate

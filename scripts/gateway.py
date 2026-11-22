@@ -55,8 +55,9 @@ def caller_key(secret: str, caller: str) -> str:
 # aloud stays on this machine (P3) unless the model hands a request to the companion. The worker (plan step 1, S-163)
 # is an offline agent on the same local model: its loop, its tool calls and its recall never leave the machine.
 # Two local models (S-169): `local`, the slow one on the CPU, and `fast`, the small one on the GPU; both stay here.
+# The voice head also embeds through Ollama, for its router (S-170).
 CALLERS = {"store:embed": ("ollama",), "companion:session": ("anthropic",), "companion:task": ("anthropic",),
-           "voice:head": ("local", "fast"), "companion:author": ("local",), "judge:voice": ("local",),
+           "voice:head": ("local", "fast", "ollama"), "companion:author": ("local",), "judge:voice": ("local",),
            "worker:loop": ("local", "fast")}
 LOCAL = ("ollama", "local", "fast")
 FIXED_KEYS = {"store:embed": "STORE_EMBED_KEY", "companion:session": "COMPANION_SESSION_KEY",

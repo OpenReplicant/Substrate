@@ -248,6 +248,8 @@ def database():
                 tool_result = [x for x in model.seen[1][0] if x["role"] == "tool"][0]["content"]
                 check("ask_companion is gated: the model is told it waits for the owner", tool_result == "proposed, waiting for the owner", tool_result)
                 done = c.execute("select body from env.signal where key = 'worker.task.done'").fetchone()[0]
+                check("worker.task.done has no reply_to when the message had none", "reply_to" not in c.execute(
+                    "select body from env.signal where key = 'worker.task.done'").fetchone()[0])
                 check("worker.task.done carries text, calls and cited", done["text"] == "I asked; waiting." and done["model_calls"] == 2
                       and done["skipped_calls"] == 0 and done["cited"] == [], done)
                 check("the reply is applied as shown", c.execute("select status from env.action where actuator = 'worker.reply'").fetchone()[0] == "applied")
@@ -259,6 +261,10 @@ def database():
                 check("approved, it reaches the companion as an owner message", c.execute(
                     "select body from env.signal where key = 'companion.owner.message'").fetchone()[0] == {"text": "tax question"})
                 check("it may not decide its own proposal", refused(lambda: me.decide(prop[0], True, "owner")))
+                owner.publish("worker.owner.message", {"text": "hi", "reply_to": "voice"}, "owner (voice)")
+                w.handle(me, me.read(w.QUEUE, 60, 1)[0], scripted(say("hello")))
+                check("reply_to in the message comes back in worker.task.done (the voice head reads out its own)", c.execute(
+                    "select body->>'reply_to' from env.signal where key = 'worker.task.done' order by id desc limit 1").fetchone()[0] == "voice")
                 os.environ["WORKER_BLOCKS"] = str(ROOT / "blocks/examples")
                 gate = w.skills(me)
                 out = run(w.run_task("save a note called t1: one two three", says_nothing(), w.Tools(ws), gate=gate))

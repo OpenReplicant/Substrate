@@ -36,7 +36,7 @@ from websockets.asyncio.server import serve
 from websockets.datastructures import Headers
 from websockets.http11 import Response
 
-from voice import reply
+from voice import reply, route
 
 ROOT = Path(__file__).resolve().parent
 STATIC = ROOT / "static"
@@ -44,6 +44,14 @@ MODELS = Path(os.environ.get("VOICE_MODELS") or "/models")
 GATEWAY = os.environ.get("GATEWAY_URL", "http://gateway:8080")
 LLM = os.environ.get("LLM_NAME") or "local/slow"
 KEY = os.environ.get("VOICE_KEY", "")
+# the router (S-170): tools (the default): LLM calls talk, delegate or save_note each turn; embed: an embedding vote
+# decides talk or work first; off: LLM's reply component decides with its HANDOFF line (to the companion), as before
+ROUTER = (os.environ.get("VOICE_ROUTER") or "tools").strip()
+NOTED = "Noted."
+EMBED_MODEL = os.environ.get("EMBED_MODEL") or "ollama/qwen3-embedding:0.6b"
+ON_IT = "On it. I'll tell you when it's done."
+WORKER_SAYS = ("Say this result to the owner out loud in one to three short spoken sentences: plain words, no lists, "
+               "markdown, file paths read character by character, or code. Keep what matters; drop the rest.")
 THREADS = int(os.environ.get("VOICE_THREADS") or 4)
 VOICE = os.environ.get("VOICE_STYLE") or "af_heart"
 TTS_URL = os.environ.get("TTS_URL", "").rstrip("/")
@@ -193,6 +201,37 @@ class Record:
             self._card_at = now
         return self._card
 
+    def route_examples(self) -> tuple[int, list[tuple[str, str]]]:
+        """The owner's corrections (voice.route.example signals) after the seed: (the last one's id, the examples)."""
+        try:
+            rows = self.conn().execute("select id, body->>'text', body->>'route' from env.signal where key = 'voice.route.example' "
+                                       "order by id").fetchall()
+            return (rows[-1][0] if rows else 0), [(t, r) for _, t, r in rows if t and r in route.ROUTES]
+        except psycopg.Error as e:
+            log(f"record: {e}")
+            self.c = None
+            return -1, []
+
+    def worker_done_after(self, last: int) -> list[tuple[int, str, bool]]:
+        """The worker's finished tasks that the voice head asked for: reply_to voice, or voice:quiet when it failed
+        (a saved note is confirmed at once with "Noted"; only a failure is read out)."""
+        try:
+            return self.conn().execute("select id, body->>'text', coalesce((body->>'ok')::boolean, false) from env.signal "
+                                       "where key = 'worker.task.done' and id > %s and (body->>'reply_to' = 'voice' or "
+                                       "(body->>'reply_to' = 'voice:quiet' and not coalesce((body->>'ok')::boolean, false))) "
+                                       "order by id", (last,)).fetchall()
+        except psycopg.Error as e:
+            log(f"record: {e}")
+            self.c = None
+            return []
+
+    def last_worker_done(self) -> int:
+        try:
+            return self.conn().execute("select coalesce(max(id), 0) from env.signal where key = 'worker.task.done'").fetchone()[0]
+        except psycopg.Error:
+            self.c = None
+            return 0
+
     def last_reply(self) -> int:
         try:
             return self.conn().execute("select coalesce(max(id), 0) from env.action where actuator = 'companion.reply'").fetchone()[0]
@@ -249,6 +288,11 @@ class Session:
             return await self.state("listening")
         await self.send({"type": "heard", "text": text})
         heard = self.rec.publish("companion.voice.heard", {"text": text, "audio_s": round(len(seg) / 16000, 2), "stt_ms": stt_ms}, "owner (voice)")
+        if ROUTER == "tools":
+            return await self.tools_turn(text, heard, stt_ms, t0)
+        decided, why = await asyncio.to_thread(ROUTE.decide, text)
+        if decided == "work":
+            return await self.hand_to_worker(text, heard, stt_ms, why, t0)
         comp_id, card = await asyncio.to_thread(self.rec.reply_component)
         prior = list(self.history)
         self.history.append({"role": "user", "content": text})
@@ -300,8 +344,12 @@ class Session:
                                                       "interrupted": True, "stt_ms": stt_ms, "first_audio_ms": first_ms}, "voice head")
             raise
         spoken = " ".join(said)
+        dropped = None
+        if decided == "talk" and handoff is not None:                # the router said talk: the model's hand-over is not sent
+            dropped, handoff = (handoff.strip() or None), None
         self.history.append({"role": "assistant", "content": spoken + (f"\nHANDOFF: {handoff.strip()}" if handoff else "")})
         self.rec.publish("companion.voice.said", {"text": spoken, "by": LLM, "heard": heard, "component": comp_id,
+                                                  "route": decided, "routed_by": why, "handoff_dropped": dropped,
                                                   "handoff": (handoff or "").strip() or None, "stt_ms": stt_ms,
                                                   "first_audio_ms": first_ms, "turn_ms": round((time.perf_counter() - t0) * 1000)},
                          "voice head")
@@ -310,6 +358,76 @@ class Session:
                              "owner (voice, relayed by the voice head)")
             await self.send({"type": "say", "text": f"handed to the companion: {handoff.strip()}", "by": "voice head"})
         await self.state("listening")
+
+    async def tools_turn(self, text: str, heard, stt_ms: int, t0: float):
+        """One turn decided by the tool the voice model calls (S-170): talk is spoken; delegate goes to the worker with
+        "on it"; save_note goes to the worker as the example plan's "save a note called ..." (no model call there)."""
+        body = json.dumps(route.tools_body(LLM, self.history[-20:], text)).encode()
+        req = urllib.request.Request(f"{GATEWAY}/v1/chat/completions", body, {"Content-Type": "application/json", "x-bf-vk": KEY,
+                                                                              "x-wb-call": f"voice-{time.time_ns()}"})
+        try:
+            msg = (await asyncio.to_thread(lambda: json.load(urllib.request.urlopen(req, timeout=60))))["choices"][0]["message"]
+            tool, arg = route.tools_decision(msg)
+        except Exception as e:                                       # noqa: BLE001 - reported, and the turn ends
+            await self.send({"type": "error", "text": f"the voice model: {e}"})
+            return await self.state("listening")
+        decide_ms = round((time.perf_counter() - t0) * 1000)
+        said: list = []
+        self.history.append({"role": "user", "content": text})
+        if tool == "talk":
+            for sentence in sentences(arg) or [arg]:
+                await self.say(sentence, said)
+        elif tool == "delegate":
+            self.rec.publish("worker.owner.message", {"text": arg, "said": text, "reply_to": "voice"}, "owner (voice)")
+            await self.say(ON_IT, said)
+        elif tool == "save_note":
+            self.rec.publish("worker.owner.message", {"text": f"save a note called {route.note_name(arg)}: {arg}",
+                                                      "said": text, "reply_to": "voice:quiet"}, "owner (voice)")
+            await self.say(NOTED, said)
+        else:
+            await self.say("Sorry, could you say that again?", said)
+        spoken = " ".join(said)
+        self.history.append({"role": "assistant", "content": spoken + ({"delegate": " (handed to the worker)",
+                                                                       "save_note": " (saved as a note)"}.get(tool, ""))})
+        self.rec.publish("companion.voice.said", {"text": spoken, "by": LLM, "heard": heard, "route": tool or None, "routed_by": "tools",
+                                                  "tool_text": arg if tool != "talk" else None, "stt_ms": stt_ms, "decide_ms": decide_ms,
+                                                  "turn_ms": round((time.perf_counter() - t0) * 1000)}, "voice head")
+        await self.state("listening")
+
+    async def hand_to_worker(self, text: str, heard, stt_ms: int, why: dict, t0: float):
+        """Work: say so at once, and put the request on the worker's queue; its answer is read out when it comes."""
+        said: list = []
+        self.rec.publish("worker.owner.message", {"text": text, "reply_to": "voice"}, "owner (voice)")
+        await self.say(ON_IT, said)
+        first_ms = round((time.perf_counter() - t0) * 1000)
+        self.history.append({"role": "user", "content": text})
+        self.history.append({"role": "assistant", "content": ON_IT + " (handed to the worker)"})
+        self.rec.publish("companion.voice.said", {"text": ON_IT, "by": "voice head", "heard": heard, "route": "work",
+                                                  "routed_by": why, "to": "worker", "stt_ms": stt_ms, "first_audio_ms": first_ms},
+                         "voice head")
+        await self.state("listening")
+
+    async def speak_worker(self, text: str, ok: bool):
+        """The worker's answer, condensed by the voice model into a few spoken sentences and read out in a quiet moment."""
+        while self.hearing or (self.turn and not self.turn.done()):
+            await asyncio.sleep(0.3)
+        card = {"params": {"system": WORKER_SAYS, "temperature": 0.3, "max_tokens": 200, "reasoning_effort": "none",
+                           "history_turns": 0}}
+        try:
+            spoken = "".join(await asyncio.to_thread(lambda: list(reply.stream(card, [], text, GATEWAY, KEY, LLM)))).strip()
+            spoken = reply.split(spoken)[0] or spoken
+        except Exception as e:                                       # noqa: BLE001 - the answer is read as it is
+            log(f"condensing the worker's answer: {e}")
+            spoken = " ".join(sentences(text)[:3])
+        spoken = re.sub(r"[`*_#]+", "", spoken).strip()               # markdown the model kept would be read out
+        if not ok:
+            spoken = "The task did not finish. " + spoken
+        self.history.append({"role": "assistant", "content": f"(the worker's answer) {spoken}"})
+        await self.send({"type": "say", "text": spoken, "by": "worker"})
+        for sentence in sentences(spoken) or [spoken]:
+            pcm = await asyncio.to_thread(self.m.speak, sentence)
+            await self.send({"type": "audio", "rate": 24000}, pcm)
+        self.rec.publish("companion.voice.said", {"text": spoken, "by": "worker", "condensed_from": text[:2000]}, "voice head")
 
     async def say(self, sentence: str, said: list):
         said.append(sentence)
@@ -348,6 +466,61 @@ async def warm():
         except Exception as e:                          # noqa: BLE001 - the model may still be loading
             log(f"warming the local model: {e}; again in 15 s")
             await asyncio.sleep(15)
+
+
+class Route:
+    """The router as the voice head runs it: built once its embeddings answer, rebuilt when the owner adds an example.
+    decide() returns (None, {}) when routing is off or not ready, and the model's own HANDOFF line decides, as before."""
+
+    def __init__(self):
+        self.router, self.seen = None, None
+
+    def embed(self, texts: list[str]) -> list[list[float]]:
+        body = json.dumps({"model": EMBED_MODEL, "input": texts}).encode()
+        req = urllib.request.Request(f"{GATEWAY}/v1/embeddings", body, {"Content-Type": "application/json", "x-bf-vk": KEY})
+        with urllib.request.urlopen(req, timeout=30) as r:
+            return [d["embedding"] for d in sorted(json.load(r)["data"], key=lambda d: d["index"])]
+
+    def refresh(self, record: Record) -> None:
+        last, extra = record.route_examples()
+        if last < 0 or (self.router is not None and last == self.seen):
+            return
+        self.router = route.Router(self.embed, route.SEED + extra)
+        self.seen = last
+        log(f"router: {len(route.SEED)} seed and {len(extra)} owner examples")
+
+    def decide(self, text: str) -> tuple[str | None, dict]:
+        if ROUTER != "embed" or self.router is None:
+            return None, {}
+        try:
+            t = time.perf_counter()
+            r, why = self.router.route(text)
+            return r, {**why, "ms": round((time.perf_counter() - t) * 1000)}
+        except Exception as e:                                       # noqa: BLE001 - the model decides, as before
+            log(f"router: {e}")
+            return None, {"error": str(e)[:200]}
+
+
+ROUTE = Route()
+
+
+async def keep_router(record: Record):
+    while ROUTER == "embed":
+        try:
+            await asyncio.to_thread(ROUTE.refresh, record)
+        except Exception as e:                                       # noqa: BLE001 - e.g. the embedding model not up yet
+            log(f"router not ready: {e}")
+        await asyncio.sleep(30 if ROUTE.router else 5)
+
+
+async def worker_replies(record: Record):
+    last = await asyncio.to_thread(record.last_worker_done)
+    while True:
+        await asyncio.sleep(1)
+        for sid, text, ok in await asyncio.to_thread(record.worker_done_after, last):
+            last = sid
+            for s in list(SESSIONS):
+                asyncio.create_task(s.speak_worker(text or "", ok))
 
 
 async def companion_replies(record: Record):
@@ -405,6 +578,8 @@ async def main():
         return None
 
     asyncio.create_task(companion_replies(record))
+    asyncio.create_task(worker_replies(record))
+    asyncio.create_task(keep_router(record))
     asyncio.create_task(warm())
     host, port = os.environ.get("VOICE_HOST", "127.0.0.1"), int(os.environ.get("VOICE_PORT") or 8110)
     async with serve(handler, host, port, process_request=process, max_size=2**20):
