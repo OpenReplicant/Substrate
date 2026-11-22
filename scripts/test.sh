@@ -14,12 +14,14 @@ url="postgresql://postgres:$(env_value POSTGRES_PASSWORD)@127.0.0.1:$(env_value 
 [ $# -gt 0 ] || set -- "$ROOT"/scripts/tests/test_*.py
 KERNEL_TESTS="scripts/tests/test_kernel.py scripts/tests/test_ui.py scripts/tests/test_worker.py"
 kimage=$(image_ref kernel)
+# the kernel's login role is shared by the cluster: its fixture keeps the stack's password (passed by name, not value)
+KK_AUTHENTICATOR_PASSWORD=$(env_value KK_AUTHENTICATOR_PASSWORD); export KK_AUTHENTICATOR_PASSWORD
 failed=0
 for f in "$@"; do
   rel=${f#"$ROOT"/}
   case " $KERNEL_TESTS " in
     *" $rel "*) run() { "$ENGINE" run --rm --network host --cap-drop ALL --security-opt no-new-privileges --user "$(id -u):$(id -g)" \
-                          -e PYTHONDONTWRITEBYTECODE=1 -e ADMIN_URL="$url" -v "$ROOT:$ROOT:ro" -w "$ROOT" "$kimage" python3 "$rel"; } ;;
+                          -e PYTHONDONTWRITEBYTECODE=1 -e KK_AUTHENTICATOR_PASSWORD -e ADMIN_URL="$url" -v "$ROOT:$ROOT:ro" -w "$ROOT" "$kimage" python3 "$rel"; } ;;
     *) run() { "$ROOT/bin/in-tools" env ADMIN_URL="$url" python3 "$rel"; } ;;
   esac
   if out=$(cd "$ROOT" && run 2>&1); then

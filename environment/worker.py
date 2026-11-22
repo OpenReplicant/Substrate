@@ -186,8 +186,10 @@ def kernel_env(login_file: str | None = None) -> dict[str, str]:
     """The kernel-mcp process's environment: PATH, the worker's kernel login (the file scripts/kernel.sh login writes,
     its host rewritten from the machine's 127.0.0.1:port to the stack's db:5432) and the `memory` profile."""
     path = login_file or setting("WORKER_LOGIN_FILE", "/login")
-    url = ""
-    if os.path.exists(path):
+    # in its container the login comes from .env (WORKER_KERNEL_URL, rule 4): a mounted 0600 file is not readable by the
+    # container's own user under rootless Podman
+    url = "" if login_file else os.environ.get("WORKER_KERNEL_URL", "")
+    if not url and os.path.exists(path):
         for line in open(path):
             if line.startswith("KK_DATABASE_URL="):
                 url = line.split("=", 1)[1].strip()
@@ -205,12 +207,20 @@ Model = Callable[[list, list], Awaitable[dict]]     # (messages, tool specs) -> 
 def openai_model(gateway: str | None = None, key: str | None = None, model: str | None = None) -> Model:
     from openai import AsyncOpenAI
     key, name = key or setting("WORKER_KEY"), model or setting("WORKER_MODEL", "local/gemma")
-    client = AsyncOpenAI(base_url=(gateway or setting("GATEWAY_URL", "http://gateway:8080")).rstrip("/") + "/v1", api_key=key or "none",
-                         default_headers={"x-bf-vk": key}, timeout=600, max_retries=1)
+    base = (gateway or setting("GATEWAY_URL", "http://gateway:8080")).rstrip("/") + "/v1"
+    clients: dict = {}       # one client per event loop: each task is its own asyncio.run, and a client's connections
+                             # belong to the loop that opened them ("Event loop is closed" on the next task otherwise)
+
+    def client():
+        loop = asyncio.get_running_loop()
+        if clients.get("loop") is not loop:
+            clients.update(loop=loop, client=AsyncOpenAI(base_url=base, api_key=key or "none", default_headers={"x-bf-vk": key},
+                                                         timeout=600, max_retries=1))
+        return clients["client"]
     extra = {"reasoning_effort": setting("WORKER_REASONING")} if setting("WORKER_REASONING") else None
 
     async def call(messages: list, specs: list) -> dict:
-        r = await client.chat.completions.create(
+        r = await client().chat.completions.create(
             model=name, messages=messages, tools=specs or None, max_tokens=int(setting("WORKER_MAX_TOKENS", "1024")),
             temperature=0.2, extra_body=extra, extra_headers={"x-wb-call": f"worker-{time.time_ns()}"})
         m = r.choices[0].message
@@ -314,27 +324,42 @@ def connect():
     return Env(psycopg.connect(database_url(), autocommit=True))
 
 
-def setup(e, login: str = LOGIN) -> None:
+def setup(e, login: str = LOGIN, blocks: str = "") -> None:
     for name, (gate, text) in ACTUATORS.items():
         if e.c.execute("select 1 from env.actuator where name = %s", (f"{ENV}.{name}",)).fetchone() is None:
             e.actuator(f"{ENV}.{name}", gate, SOURCE, text)        # a gate someone changed since is kept
+    # the actuator each world-changing block in WORKER_BLOCKS runs through (S-164): free, as the worker's own file tools
+    # are; a gate someone changed since is kept
+    made = []
+    if blocks and os.path.isdir(blocks):
+        from blocks import load_catalog
+        for b in load_catalog(blocks).blocks.values():
+            if b.changes_world:
+                made.append(f"blocks.{b.name}")
+                if e.c.execute("select 1 from env.actuator where name = %s", (made[-1],)).fetchone() is None:
+                    e.actuator(made[-1], "free", SOURCE, b.spec.get("description"))
+                # the executor closes the action (env.done), which needs the actuator's queue
+                q = e.c.execute("select queue from env.actuator where name = %s", (made[-1],)).fetchone()[0]
+                e.c.execute("select env.allow(%s, %s)", (q, login))
     e.subscribe(QUEUE, PATTERNS)
     for q in (QUEUE, f"act_{ENV}_reply", f"act_{ENV}_ask_companion"):
         e.c.execute("select env.allow(%s, %s)", (q, login))
-    print(f"  worker: actuators {', '.join(ACTUATORS)}; queue {QUEUE}; login {login} may read them")
+    print(f"  worker: actuators {', '.join(ACTUATORS)}; queue {QUEUE}; login {login} may read them"
+          + (f"; blocks through {', '.join(made)}" if made else ""))
 
 
-def skills() -> Gate | None:
+def skills(e=None) -> Gate | None:
     """The skill ladder's first rung (S-164, M-17): plans in WORKER_BLOCKS whose trigger matches a task answer it
-    without the model. Empty or missing: no gate, every task goes to the model."""
+    without the model. Empty or missing: no gate, every task goes to the model. e: the environment a world-changing
+    block's step goes through (its actuator blocks.<name>); without one such a step is refused."""
     root = setting("WORKER_BLOCKS", "")
     if not root or not os.path.isdir(root):
         return None
     from blocks import load_catalog
-    from blocks.run import skill_gate
+    from blocks.run import Executor, skill_gate
     catalog = load_catalog(root)
     log(f"skills: {len(catalog.plans)} plans from {root}")
-    return skill_gate(catalog)
+    return skill_gate(catalog, Executor(e, SOURCE))
 
 
 def handle(e, m: dict, model: Model, gate: Gate | None = None, mcp_factory=None) -> dict:
@@ -383,13 +408,15 @@ def apply_companion(e) -> None:
 def run() -> None:
     import psycopg
     model = openai_model()
-    gate = skills()
+    gate, gate_env = None, None
     cmd = shlex.split(setting("WORKER_MCP_COMMAND", "kernel-mcp"))
     factory = lambda: McpTools(cmd, kernel_env())                    # noqa: E731
     e = None
     while True:
         try:
             e = e if e and not e.c.closed else connect()
+            if gate_env is not e:                                    # the gate's executor acts on this connection
+                gate, gate_env = skills(e), e
             apply_companion(e)
             for m in e.read(QUEUE, 1800, 1):
                 log(f"task {m['msg_id']}: started")

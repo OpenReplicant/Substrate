@@ -49,7 +49,9 @@ class Kernel:
             raise RuntimeError(why)
         self.admin_url = admin_url
         self.db = f"kernel_test_{os.getpid()}"
-        self.password = secrets.token_hex(12)
+        # kk_authenticator is one role for the whole cluster and `kk init` sets its password: keep the stack's own
+        # (scripts/test.sh passes it), or a test run locks the live UI and check.sh out of the kernel
+        self.password = os.environ.get("KK_AUTHENTICATOR_PASSWORD") or secrets.token_hex(12)
         self.proc: subprocess.Popen | None = None
         with psycopg.connect(admin_url, autocommit=True) as a:
             a.execute(f'create database "{self.db}"')
