@@ -120,6 +120,6 @@ publication and reproductions, the hosted mapper and hosted judging, the slot mo
 - Rotating the Postgres password; putting the Gemma model at the gateway.
 - The licence and whether the repository goes public.
 - Whether a Business-Source-licensed part (Nomad) may ever be a default; recommended no (S-173).
-- How blocks' plans and the kernel refer to P-Plan, whose licence is CC BY-NC-SA 2.0 (non-commercial; S-174).
+- When to migrate kernel v0's P-Plan IRIs to PROV-O and the profile's terms (S-175; a kernel change).
 - Confirming the kernel's D-101 (the content framing) once the catalog entry has proved it or not.
 - Whether LFM3 (LFM Open License v1.0) may be the recommended fast model (S-169).
