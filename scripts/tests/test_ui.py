@@ -1,8 +1,8 @@
-"""The UI (S-140, S-154), against throwaway databases it drops after (ADMIN_URL from scripts/test.sh): a store with a
-bicycle's map, the same store exported into a throwaway Knowledge Kernel (scripts/tests/kernelfx.py), and the UI
-on each in turn (STORE_BACKEND=store, the old schema, and kernel, the default). It should:
+"""The UI (S-140, S-154, S-156), against throwaway databases it drops after (ADMIN_URL from scripts/test.sh): a store
+in the old schema (scripts/tests/oldschema, the exporter's fixture) with a bicycle's map, exported into a throwaway
+Knowledge Kernel (scripts/tests/kernelfx.py), and the UI on that kernel. It should:
 - serve its vendored files as recorded in ui/static/vendor/VENDOR.md (SHA-256), with their licences beside them
-- answer search, wholes, an entity's page and a map (nodes by kind, edges by kind) the same from either
+- answer search, wholes, an entity's page and a map (nodes by kind, edges by kind) 
 - send its CSP (scripts and styles from itself only) on every response, and its page needs nothing more: no inline
   script, no inline style, nothing loaded from elsewhere
 - serve nothing outside ui/static, and refuse ids that are not entity ids
@@ -29,8 +29,9 @@ sys.path.insert(0, str(ROOT))
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import kernelfx  # noqa: E402
-import store  # noqa: E402
-from store import Store, person  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parent / "oldschema"))
+import legacy  # noqa: E402
+from legacy import Store, person  # noqa: E402
 from ui import server  # noqa: E402
 
 checks = []
@@ -83,9 +84,7 @@ def vendored():
 
 def run(c, url, admin):
     vendored()
-    for f in ("001_store", "003_components", "004_map"):        # the store's part the UI reads: not the graph, nor the env schema
-        with c.transaction():
-            c.execute((store.SQL / f"{f}.sql").read_text())
+    legacy.apply(c)
     s = Store(c, actor="test")
     me = person("tester")
     with s.edit("a bicycle"):
@@ -99,10 +98,8 @@ def run(c, url, admin):
         for x in (chain, other):
             s.say(x, s.id("provides-interface"), fit, by=me)
         s.say(bike, s.id("has-part"), chain, by=me, qualifiers=[(s.id("object-has-role"), drive)])
-    s.render(bike)
     ids = dict(bike=bike, drive=drive, fit=fit, chain=chain, other=other)
 
-    scenario("store", url, None, ids)
     why = kernelfx.available()
     if why:
         check("the kernel backend can be tested here", False, why)
@@ -158,13 +155,6 @@ def scenario(backend, url, kernel, ids):
             check(f"[{backend}] nothing outside ui/static: {path}", get(base, path)[0] == 404)
     finally:
         srv.shutdown()
-    if not kernel:
-        st = server.Store(url)
-        try:
-            st.query("select store.new_entity('item', 'x')")
-            check("[store] its session is read-only", False)
-        except psycopg.Error as err:
-            check("[store] its session is read-only", "read-only" in str(err), err)
 
 
 def kernel_only(k, url, ids):

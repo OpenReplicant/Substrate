@@ -1,4 +1,7 @@
-"""The trial's cases as JSON (nodes with kind, edges with kind) in .state/trials/map-diagram/cases/:
+"""Historical (S-156): reads the old `store` schema, which stays in database `substrate` until the owner drops it; the
+store package it was written against is retired.
+
+The trial's cases as JSON (nodes with kind, edges with kind) in .state/trials/map-diagram/cases/:
 substrate.json is Substrate's own map from the store (store.map_nodes, store.map on Q10, the real data);
 wide.json is a synthetic map ten times its size (a whole, 4 subsystems of 12 parts, a role each, interfaces
 shared between roles, 2 candidates per subsystem), for how the layout copes as maps grow.

@@ -4,7 +4,7 @@
 #   scripts/test.sh                 # all of them
 #   scripts/test.sh FILE...         # some: scripts/tests/test_gateway.py, ...
 #
-# The tests that start a throwaway Knowledge Kernel (KERNEL_TESTS: the store's and the UI's, S-154) run in the kernel's
+# The tests that start a throwaway Knowledge Kernel (KERNEL_TESTS: the kernel's and the UI's, S-154) run in the kernel's
 # image instead (published, or scripts/build.sh kernel), on the host network, with this checkout mounted read-only: `kk`, its modules
 # and the MCP server are there, and the tools container has none of them (the worker's test needs its `mcp`, and `openai` for one check).
 set -eu
@@ -12,7 +12,7 @@ set -eu
 
 url="postgresql://postgres:$(env_value POSTGRES_PASSWORD)@127.0.0.1:$(env_value DB_PORT)/postgres"
 [ $# -gt 0 ] || set -- "$ROOT"/scripts/tests/test_*.py
-KERNEL_TESTS="scripts/tests/test_store.py scripts/tests/test_ui.py scripts/tests/test_worker.py"
+KERNEL_TESTS="scripts/tests/test_kernel.py scripts/tests/test_ui.py scripts/tests/test_worker.py"
 kimage=$(image_ref kernel)
 failed=0
 for f in "$@"; do

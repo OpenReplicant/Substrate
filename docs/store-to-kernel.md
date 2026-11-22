@@ -1,5 +1,7 @@
 # Substrate store vs Knowledge Kernel: what folding would take
 
+_History (S-156): this is the comparison written before the move (2026-11-20). The `store/` package it describes is retired; its paths below are as they were._
+
 Read-only comparison, 2026-11-20. Neither repository was changed. Paths: **S** = this repository,
 **K** = the Knowledge Kernel's repository (main at efbdec2). `K:001` = K/kernel/schema/001_kernel.sql, `S:001` = S/store/sql/001_store.sql.
 "Module" means the kernel rule (K/CLAUDE.md "Rules": modules read `api` views, write only by `submit_change_set`,

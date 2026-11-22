@@ -1,6 +1,6 @@
 #!/bin/sh
 # Bring up the stack on the fresh tree (S-137): Postgres, the model gateway, local models, the UI (S-140), the
-# tools container; then the store's database, the Knowledge Kernel's (S-154) and the gateway's.
+# tools container; then the substrate database (the environment's schema), the Knowledge Kernel's (S-154) and the gateway's.
 #
 #   scripts/up.sh
 set -eu

@@ -6,6 +6,8 @@ It should:
   again once acknowledged
 - pass an actuator call through its gate: free queued at once; propose waiting, announced, until a person other
   than its maker decides, then queued or refused; deny refused; every call recorded, applied ones archived
+- apply its schema once (environment/sql/, environment/db.py), and again without change; a database that had the files
+  recorded in `public.store_migration` (when they were the store's, before S-156) has them carried over, not applied twice
 - as the channel (stdio MCP): declare claude/channel, push a subscribed signal as notifications/claude/channel,
   push it again while unacknowledged, stop once ack is called, and act through the gates
 
@@ -25,7 +27,7 @@ import psycopg
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-import store  # noqa: E402
+from environment import db as envdb  # noqa: E402
 from environment import Env  # noqa: E402
 
 checks = []
@@ -44,15 +46,35 @@ def refused(fn, needle=""):
     return False
 
 
+def carried_over(admin):
+    """Needs no extension: a database whose old record says 005-007 are applied applies nothing."""
+    name = f"env_old_{os.getpid()}"
+    with psycopg.connect(admin, autocommit=True) as a:
+        a.execute(f"create database {name}")
+    try:
+        with psycopg.connect(admin.rsplit("/", 1)[0] + "/" + name, autocommit=True) as c:
+            c.execute("create table public.store_migration (name text primary key, applied_at timestamptz not null default now())")
+            names = [f.name for f in envdb.SQL.glob("*.sql")]
+            c.execute("insert into public.store_migration (name) select unnest(%s::text[]) || '' union select '001_store.sql'", (names,))
+            check("the files an old database recorded are not applied again", envdb.migrate(c) == [], envdb.migrate(c))
+            got = {r[0] for r in c.execute("select name from public.env_migration")}
+            check("and are recorded as the environment's, not the store's other files", got == set(names), got)
+    finally:
+        with psycopg.connect(admin, autocommit=True) as a:
+            a.execute(f"drop database {name} with (force)")
+
+
 def main():
     admin = os.environ["ADMIN_URL"]
+    carried_over(admin)
     name = f"env_test_{os.getpid()}"
     with psycopg.connect(admin, autocommit=True) as a:
         a.execute(f"create database {name}")
     url = admin.rsplit("/", 1)[0] + "/" + name
     try:
         with psycopg.connect(url, autocommit=True) as c:
-            store.migrate(c)
+            check("the schema applies, in order", envdb.migrate(c) == sorted(f.name for f in envdb.SQL.glob("*.sql")))
+            check("and applying it again changes nothing", envdb.migrate(c) == [])
             run(Env(c), url)
     finally:
         with psycopg.connect(admin, autocommit=True) as a:

@@ -310,7 +310,7 @@ def log(*a) -> None:
 def connect():
     import psycopg
     from environment import Env
-    from store.mcp import database_url
+    from environment.db import database_url
     return Env(psycopg.connect(database_url(), autocommit=True))
 
 

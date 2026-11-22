@@ -1,5 +1,5 @@
-"""The real-time environment (plan step 3c): signals, subscribers, actuators and gates on pgmq, in the store's
-database (schema `env`, store/sql/005_environment.sql). This module is the Python side of those functions; the
+"""The real-time environment (plan step 3c): signals, subscribers, actuators and gates on pgmq, in the
+substrate database (schema `env`, environment/sql/005_environment.sql). This module is the Python side of those functions; the
 channel into Claude Code is environment.channel.
 """
 from __future__ import annotations

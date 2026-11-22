@@ -1,12 +1,11 @@
 """The UI's server (plan step 3b; S-140): the store's pages and maps, read-only, on the standard library.
 
     python3 -m ui.server                     # 127.0.0.1:UI_PORT (8100); the database is STORE_URL, libpq's PG* or .env's
-    STORE_BACKEND=store python3 -m ui.server # the old store schema instead of the kernel (S-154)
 
 The entities, search, pages and maps come from the Knowledge Kernel's `substrate` schema (modules/view-substrate in
 the kernel's repository; S-153, S-154), in the database KERNEL_URL names (default: database `kernel` in the same
 Postgres, as the kernel's own login), read as the module's role kkm_view_substrate so the kernel's row-level security
-applies. The companion's conversation (the `env` schema) stays on STORE_URL. Entity ids are the Q numbers Substrate's
+applies. The companion's conversation (the `env` schema) is on STORE_URL. Entity ids are the Q numbers Substrate's
 store gave: urn:kk:substrate:Q10 in the kernel, Q10 here.
 
 In the stack it is the compose service `ui` (deploy/compose.yaml), published on 127.0.0.1:UI_PORT.
@@ -64,17 +63,13 @@ def database_url() -> str:
     if os.environ.get("PGHOST"):                          # in its container: libpq's PGHOST, PGUSER, PGPASSWORD, PGDATABASE
         return ""
     sys.path[:0] = [str(ROOT / "scripts"), str(ROOT)]
-    from store.mcp import database_url as from_env
+    from environment.db import database_url as from_env
     return from_env()
 
 
 NS = "urn:kk:substrate:"            # an item of Substrate's store, as an IRI in the kernel
 WDT = "http://www.wikidata.org/prop/direct/"
 KERNEL_ROLE = os.environ.get("KERNEL_ROLE") or "kkm_view_substrate"
-
-
-def backend() -> str:
-    return (os.environ.get("STORE_BACKEND") or "kernel").strip()
 
 
 def kernel_url() -> str:
@@ -116,16 +111,14 @@ class Store:
                         raise
 
 
-def api(store: Store, path: str, q: dict, kernel: Store | None = None) -> tuple[int, object]:
-    """store: Substrate's database (the `env` schema, and the old `store` schema); kernel: the kernel's read model."""
+def api(store: Store, path: str, q: dict, kernel: Store) -> tuple[int, object]:
+    """store: Substrate's database (the `env` schema); kernel: the kernel's read model."""
     parts = path.strip("/").split("/")[1:]            # after "api"
     if parts == ["companion"]:
         return 200, companion(store)
     if parts == ["worker"]:
         return 200, worker(store)
-    if kernel is not None:
-        return from_kernel(kernel, parts, q)
-    return from_store(store, parts, q)
+    return from_kernel(kernel, parts, q)
 
 
 def to_iri(eid: str) -> str:
@@ -163,37 +156,6 @@ def from_kernel(k: Store, parts: list[str], q: dict) -> tuple[int, object]:
                      "nodes": [{"id": to_id(i), "label": la, "description": d, "kind": kd} for i, la, d, kd in nodes],
                      "edges": [{"source": to_id(s), "target": to_id(t), "kind": kd, "statement": str(st) if st else None,
                                 "flagged": f} for s, t, kd, st, f in edges]}
-    return 404, {"error": "no such route"}
-
-
-def from_store(store: Store, parts: list[str], q: dict) -> tuple[int, object]:
-    if parts == ["search"]:
-        text = (q.get("q") or [""])[0].strip()
-        if not text:
-            return 200, []
-        rows = store.query("select id, label, description from store.search(%s, %s)", (text, 20))
-        return 200, [{"id": i, "label": la, "description": d} for i, la, d in rows]
-    if parts == ["wholes"]:
-        rows = store.query(
-            "select e.id, e.label, e.description, count(*) from store.usable u join store.entity e on e.id = u.subject "
-            "where u.property = store.key('has-part') group by e.id order by count(*) desc, e.label limit 200")
-        return 200, [{"id": i, "label": la, "description": d, "parts": n} for i, la, d, n in rows]
-    if len(parts) == 2 and parts[0] in ("entity", "map") and ENTITY.match(parts[1]):
-        eid = parts[1]
-        row = store.query("select label, description from store.entity where id = %s", (eid,))
-        if not row:
-            return 404, {"error": f"no entity {eid}"}
-        if parts[0] == "entity":
-            md = store.query("select store.render(%s)", (eid,))[0][0]
-            has_map = bool(store.query("select 1 from store.usable where subject = %s and property = store.key('has-part') limit 1", (eid,)))
-            return 200, {"id": eid, "label": row[0][0], "description": row[0][1], "markdown": md, "has_map": has_map}
-        depth = max(1, min(int((q.get("depth") or ["6"])[0]), 12))
-        nodes = store.query("select id, label, description, kind from store.map_nodes(%s, %s)", (eid, depth))
-        edges = store.query("select source, target, kind, statement, flagged from store.map(%s, %s)", (eid, depth))
-        return 200, {"whole": eid, "label": row[0][0],
-                     "nodes": [{"id": i, "label": la, "description": d, "kind": k} for i, la, d, k in nodes],
-                     "edges": [{"source": s, "target": t, "kind": k, "statement": str(st) if st else None, "flagged": f}
-                               for s, t, k, st, f in edges]}
     return 404, {"error": "no such route"}
 
 
@@ -309,7 +271,7 @@ def post(writer: Store, path: str, body: dict) -> tuple[int, object]:
     return 404, {"error": "no such route"}
 
 
-def handler(store: Store, writer: Store | None = None, kernel: Store | None = None):
+def handler(store: Store, writer: Store, kernel: Store):
     class Handler(BaseHTTPRequestHandler):
         server_version = "substrate-ui"
 
@@ -354,7 +316,7 @@ def handler(store: Store, writer: Store | None = None, kernel: Store | None = No
             try:
                 n = int(self.headers.get("Content-Length") or 0)
                 body = json.loads(self.rfile.read(min(n, 100_000)) or b"{}")
-                status, obj = post(writer or store, u.path, body if isinstance(body, dict) else {})
+                status, obj = post(writer, u.path, body if isinstance(body, dict) else {})
             except json.JSONDecodeError:
                 status, obj = 400, {"error": "not JSON"}
             except (psycopg.Error, ValueError) as e:
@@ -369,18 +331,16 @@ def handler(store: Store, writer: Store | None = None, kernel: Store | None = No
     return Handler
 
 
-def serve(host: str, port: int, url: str, kernel: str | None = None) -> ThreadingHTTPServer:
-    """url: Substrate's database; kernel: the kernel's, for the entities, pages and maps (none: the old `store` schema)."""
-    return ThreadingHTTPServer((host, port), handler(Store(url), Store(url, write=True),
-                                                      Store(kernel, role=KERNEL_ROLE) if kernel else None))
+def serve(host: str, port: int, url: str, kernel: str) -> ThreadingHTTPServer:
+    """url: Substrate's database (the `env` schema); kernel: the kernel's, for the entities, pages and maps."""
+    return ThreadingHTTPServer((host, port), handler(Store(url), Store(url, write=True), Store(kernel, role=KERNEL_ROLE)))
 
 
 def main():
     host = os.environ.get("UI_HOST", "127.0.0.1")
     port = int(os.environ.get("UI_PORT") or 8100)
-    kernel = kernel_url() if backend() == "kernel" else None
-    srv = serve(host, port, database_url(), kernel)
-    print(f"the UI on http://{host}:{port}/ ({'kernel' if kernel else 'store'} backend)", flush=True)
+    srv = serve(host, port, database_url(), kernel_url())
+    print(f"the UI on http://{host}:{port}/", flush=True)
     srv.serve_forever()
 
 

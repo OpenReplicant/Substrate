@@ -51,10 +51,10 @@ conversation as the source, and say so in `note`.
 The quote is the source's text at that locator: copy it from the file (print the lines, don't retype them), and
 quote one locator the same way every time you cite it. A different quote at the same locator reads as the source
 having changed: it supersedes the earlier span and flags every statement that cited it. Prefer stable places (a
-schema line, a decision row) to long lines that change often. `scripts/check.sh` counts cited file lines that are
-no longer at their locator (`store.stale_file_spans`, on the old `store` schema until the span-change watcher
-is built on the kernel, a later item of plan step 3d: until then the kernel does not flag a statement whose span
-changed, and `locate` shows no span hash).
+schema line, a decision row) to long lines that change often. The kernel does not
+yet flag a statement whose cited file span changed, and `locate` shows no span hash: that is the span-change watcher,
+a later item of plan step 3d (`scripts/check.sh` no longer counts moved lines, as it did on the old `store` package
+until S-156).
 
 ## 5. Goals
 

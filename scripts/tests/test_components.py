@@ -23,7 +23,7 @@ from psycopg.types.json import Jsonb
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-import store  # noqa: E402
+from environment import db as envdb  # noqa: E402
 from environment import Env  # noqa: E402
 from environment import companion as comp  # noqa: E402
 from environment.judge import outcome  # noqa: E402
@@ -55,7 +55,7 @@ def main():
     host = url.split("@", 1)[1].split("/", 1)[0]
     try:
         with psycopg.connect(url, autocommit=True) as c:
-            store.migrate(c)
+            envdb.migrate(c)
             for login, role in ((author, "env_agent"), (judge, "env_judge")):
                 c.execute(f"create role {login} login password 'test-only'")
                 c.execute(f"grant {role} to {login}")
