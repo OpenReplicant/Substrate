@@ -73,7 +73,7 @@ gate) and **events** (messages it sends). Everything else is a **trait**, not a 
 | environment | an object with the trait **container**: it holds objects, so environments nest |
 | stream, source | an object's events; a source is a component that turns a protocol's data into events |
 | actuator | an object's action; a gate is a policy on it |
-| the blackboard | all objects' properties, on one Postgres server |
+| the blackboard | all objects' properties, in one database |
 | a component's view | a query over the objects its login may see |
 
 Objects talk only by messages (pgmq), never by reaching into each other's state, so permissions and the record hold.
@@ -83,9 +83,10 @@ W3C WoT Thing Description 1.1 is the shape of an object's description.
 
 **Rules:** a source runs only while something subscribes to it; starting a new source or handler is a proposal (what
 is read is the person's call, docs/privacy.md P1, and so is the cost); large or fast data travels by reference.
-**One Postgres server, a database per concern** (S-189): knowledge, the environment's live state and the gateway's
-log are separate databases on the same server. One trade-off to know: Postgres has no transaction or trigger across
-databases, so if a step needs to change an object and record its version atomically, those two share a database.
+**One database, the kernel's** (S-190): the kernel defines the schemas and the ways of doing things, and Substrate
+follows them, so knowledge and the environment's live state are schemas in one database, and one transaction or
+trigger can change an object and record its version. (A third party's private store, such as the gateway's, may
+stay a database of its own on the same server.)
 
 ## Slots: every dependency is a contract
 

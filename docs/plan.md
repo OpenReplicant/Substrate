@@ -81,7 +81,7 @@ are views of the same items and claims; what can be said in one format can be ca
   every link. (The voice front end's loop and M-17's ladder were listed here; they are distribution components now,
   S-186.)
 - **The kernel's boundary is the kernel's own decisions:** queues belong to a distribution in its own database
-  (D-94 c, decided; it stands: one Postgres server, a database per concern, S-189); signals and telemetry are observations, not claims ("a
+  (D-94 c, decided; to be superseded: one database, the kernel's, S-190); signals and telemetry are observations, not claims ("a
   measurement is not content anyone wrote", D-101); what is worth knowing crosses as claims and items through an
   encoder (`encoder-substrate`); `propose`-gated actions are meant to reach the kernel's review lane, so a person
   approves in one place.
@@ -120,9 +120,11 @@ and experience (S-179, S-183).
    envkit goes to MetaSoar's side; components and the judge (S-151) give way to Morphogen; Substrate keeps the
    stack, the skills, the channel, the catalog and the adapters. In batches, each with `scripts/check.sh` and
    `scripts/test.sh` passing.
-4. **Databases** (S-189): one Postgres server, a database per concern, as today (`kernel`, `substrate`, `gateway`); the
-   kernel's D-94 (c) stands. Only if a step needs one transaction (or one trigger) across knowledge and live state do
-   the two share a database; say which step when it happens.
+4. **One database, the kernel's** (S-190): the kernel defines the schemas and the ways of doing things, and Substrate
+   follows them, so the `env` schema (objects' live state, queues, gates, experience) moves into the kernel's
+   database, by a kernel decision superseding D-94 (c). Then the `substrate` database holds only the retired `store`
+   schema until the owner drops it. Bifrost's `gateway` database is a third party's private store and stays apart
+   unless Bifrost can use a schema in the kernel's database (to check).
 5. **The orchestrator's `orchestrate` and `optimize` skills**, hooks enforcing gates in the harness, and an **`rtfm`
    skill** (S-189) for every agent: assume what it knows about a library, tool, API or standard is out of date; find
    the manual for the exact version in use (the project's docs, `llms.txt`, the registry's page, a docs MCP server
