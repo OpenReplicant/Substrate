@@ -185,9 +185,13 @@ services:
       XDG_CONFIG_HOME: /config
     volumes:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./caddy/apps.json:/etc/caddy/apps.json:ro
+    # the desktop, then its framed apps on origins of their own (S-200); the Caddyfile and apps.json name these ports
     ports:
-      - "127.0.0.1:${DESKTOP_PORT:-8080}:8080"
-    depends_on: [kernel]
+      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:8081:8081"
+      - "127.0.0.1:8082:8082"
+    depends_on: [kernel, gateway, ui]
 
   # The local slow model (plan step 5, S-169): llama.cpp's server, serving LLM_MODEL from LLM_MODELS_DIR read-only, by
   # default on the CPU and in RAM (LLM_ARGS -ngl 0) so the GPU stays free for the model that answers at once

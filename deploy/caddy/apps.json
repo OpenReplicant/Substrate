@@ -1,0 +1,4 @@
+[
+  {"id": "gateway", "title": "Model gateway", "url": "http://127.0.0.1:8081/"},
+  {"id": "maps", "title": "Substrate's maps", "url": "http://127.0.0.1:8082/"}
+]

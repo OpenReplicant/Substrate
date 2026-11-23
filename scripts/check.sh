@@ -86,13 +86,23 @@ case "$hdr" in
   *) bad "the UI does not answer at $ui/api/wholes (scripts/logs.sh ui)" ;;
 esac
 # The front door (S-199): Caddy to the kernel's shell, with the kernel's own security headers on it
-desk="http://127.0.0.1:$(env_value DESKTOP_PORT || true)"; [ "$desk" = "http://127.0.0.1:" ] && desk=http://127.0.0.1:8080
+desk=http://127.0.0.1:8080   # fixed: the apps.json origins and frame-ancestors name it (S-200)
 hdr=$(curl -s -D - -o /dev/null "$desk/ui/" 2>/dev/null | tr -d '\r')
 case "$hdr" in
-  *" 200 "*"frame-ancestors"*) ok "desktop     $desk/ui/ (the kernel's shell; sign in: kk person add NAME in the kernel container)" ;;
-  *" 200 "*) bad "the kernel's shell answers without its CSP at $desk/ui/" ;;
+  *" 200 "*"frame-src http://127.0.0.1:8081 http://127.0.0.1:8082;"*"frame-ancestors 'none'"*)
+    ok "desktop     $desk/ (the kernel's shell; frames only the apps in deploy/caddy/apps.json; sign in: scripts/kernel.sh person NAME)" ;;
+  *" 200 "*) bad "the kernel's shell answers at $desk/ui/ without its CSP or the apps' frame-src (deploy/caddy/Caddyfile)" ;;
   *) bad "the kernel's shell does not answer at $desk/ui/ (scripts/logs.sh caddy, scripts/logs.sh kernel)" ;;
 esac
+# Its framed apps (S-200): each on an origin of its own, framable by the desktop only, with no X-Frame-Options left
+for app in 8081:gateway 8082:maps; do
+  hdr=$(curl -s -D - -o /dev/null "http://127.0.0.1:${app%%:*}/" 2>/dev/null | tr -d '\r')
+  case "$hdr" in
+    *[Xx]-[Ff]rame-[Oo]ptions*) bad "app ${app#*:} at :${app%%:*} still sends X-Frame-Options (deploy/caddy/Caddyfile)" ;;
+    *" 200 "*"frame-ancestors http://127.0.0.1:8080 http://localhost:8080"*) ok "app ${app#*:}  http://127.0.0.1:${app%%:*}/ (framable by the desktop only)" ;;
+    *) bad "app ${app#*:} at :${app%%:*} does not answer with frame-ancestors for the desktop (scripts/logs.sh caddy)" ;;
+  esac
+done
 
 say "Wiring"
 if st=$(sec_status 2>&1); then ok "secrets ($SECRETS): $st"; else bad "secrets ($SECRETS): $st"; fi
