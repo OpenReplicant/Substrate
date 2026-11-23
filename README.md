@@ -1,6 +1,6 @@
 # Substrate
 
-> **Map or design software, agents and organisations. Optimise all the things!**
+> **Map, design and orchestrate software, agents and organisations. Optimise all the things!**
 
 **An operating system for AI agents.** Today's agents live in a terminal where everything is a file. Here a working
 system (a business, a codebase, a household, a game) lives in a **kernel** made of Postgres, where everything is an
@@ -159,7 +159,7 @@ message content. The gate's experience keeps your requests word for word, encryp
 ## Not built yet
 
 `docs/plan.md`, "Next, in order": the OpenEnv spike; Morphogen as the optimiser; the repository in its shape
-(distributions in folders); one database; the `orchestrate` and `optimize` skills and gate hooks; the ladder on
+(distributions in folders); the `orchestrate` and `optimize` skills and gate hooks; the ladder on
 OpenEnv and M-17's experiment; the SMB Foundry distribution. Later, in the assistant distribution: a VRM avatar,
 mixed reality on a Quest 3, and the embodied environments after it.
 

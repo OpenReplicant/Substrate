@@ -81,7 +81,7 @@ are views of the same items and claims; what can be said in one format can be ca
   every link. (The voice front end's loop and M-17's ladder were listed here; they are distribution components now,
   S-186.)
 - **The kernel's boundary is the kernel's own decisions:** queues belong to a distribution in its own database
-  (D-94 c, decided; to be superseded by one database, S-185); signals and telemetry are observations, not claims ("a
+  (D-94 c, decided; it stands: one Postgres server, a database per concern, S-189); signals and telemetry are observations, not claims ("a
   measurement is not content anyone wrote", D-101); what is worth knowing crosses as claims and items through an
   encoder (`encoder-substrate`); `propose`-gated actions are meant to reach the kernel's review lane, so a person
   approves in one place.
@@ -120,8 +120,14 @@ and experience (S-179, S-183).
    envkit goes to MetaSoar's side; components and the judge (S-151) give way to Morphogen; Substrate keeps the
    stack, the skills, the channel, the catalog and the adapters. In batches, each with `scripts/check.sh` and
    `scripts/test.sh` passing.
-4. **One database** (S-185): a kernel decision superseding D-94 (c), then the `env` schema in the kernel's database.
-5. **The orchestrator's `orchestrate` and `optimize` skills**, and hooks enforcing gates in the harness.
+4. **Databases** (S-189): one Postgres server, a database per concern, as today (`kernel`, `substrate`, `gateway`); the
+   kernel's D-94 (c) stands. Only if a step needs one transaction (or one trigger) across knowledge and live state do
+   the two share a database; say which step when it happens.
+5. **The orchestrator's `orchestrate` and `optimize` skills**, hooks enforcing gates in the harness, and an **`rtfm`
+   skill** (S-189) for every agent: assume what it knows about a library, tool, API or standard is out of date; find
+   the manual for the exact version in use (the project's docs, `llms.txt`, the registry's page, a docs MCP server
+   where one is trusted); ingest it into the kernel with its source and version, so it is searched and recalled by
+   association and cited; and answer from it, not from memory. Rule 1 ("look it up, then pin it") as a skill.
 6. **Everything else runs on top of the settled shape** (S-187): each distribution (the assistant, the SMB Foundry's
    first cut), MetaSoar's experiments and every test suite run against Substrate through its contracts only. Done
    when `scripts/test.sh` passes, each distribution comes up from its own folder, and MetaSoar's worlds run as OpenEnv
@@ -131,7 +137,9 @@ and experience (S-179, S-183).
    compose file in the kernel, S-176, S-177), **catalogs** of the candidates already researched for each intended
    component (models, the gateway, harnesses, deciders, the environment standards; with their measurements), the
    vocabularies (S-175), **Morphogen cells** for Substrate's own configuration, the default gates and privacy
-   rules, the skills, and a first task: map yourself, check the map against what runs. Loaded by one command into
+   rules, the skills, **agent-facing documentation** (S-189: more than skills: how the system works, its contracts,
+   each tool and each part, written for an agent to read and loaded into the kernel for recall, with the manuals of
+   the parts' exact versions fetched by `rtfm`), and a first task: map yourself, check the map against what runs. Loaded by one command into
    an empty kernel. Done when a fresh machine's instance answers "what are you made of, and what could replace
    each part?" from its own store.
 8. **A second pass over the documentation** (S-187): README, `docs/framework.md`, the skills and each distribution's
