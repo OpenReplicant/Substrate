@@ -19,7 +19,7 @@ and move into `distributions/assistant/` (plan step 3).
 
 | Part | Where | Role |
 | --- | --- | --- |
-| The store | the Knowledge Kernel (S-153, S-154, S-156: the UI and the skills read it from the kernel's database `kernel`, the agent's tools are the kernel's MCP `substrate` profile; `scripts/kernel.sh`); the old `store` package is retired and its schema stays in database `substrate` until the owner drops it (S-156) | Wikibase's data model with OpenWiki's pinned evidence (S-135, S-138): entities, statements with ranks, references, spans, revisions, a page per entity; the agent's tools over MCP, and maps, roles, interfaces and catalogs (S-139; the `map` and `catalog` skills) |
+| The store | the Knowledge Kernel (S-153, S-154, S-156: the UI and the skills read it from the kernel's database `kernel`, the agent's tools are the kernel's MCP `substrate` profile; `scripts/kernel.sh`); the old `store` package is retired and its schema was dropped on 2026-11-23 (S-191; a dump is in `.state/backups/`) | Wikibase's data model with OpenWiki's pinned evidence (S-135, S-138): entities, statements with ranks, references, spans, revisions, a page per entity; the agent's tools over MCP, and maps, roles, interfaces and catalogs (S-139; the `map` and `catalog` skills) |
 | envkit | `envkit/` (declarations in `envkit/declarations/`; tests: `python3 -m pytest envkit`) | The fast in-process scheduler (lockstep or realtime) for live play, one module contract with `environment/` (S-161); moved from MetaSoar |
 | The real-time environment | `environment/` (schema `env` in `environment/sql/`, migrated by `environment/db.py`, the channel in `environment/channel.py`) on pgmq in the same Postgres | signals logged whole and fanned out as topics, a queue per actuator behind its gate (`free`, `propose`, `deny`), the channel into Claude Code, archived only on `ack` (S-143) |
 | The model gateway | container `gateway` (Bifrost), `scripts/gateway.py` | every model call goes through it with its caller's key and is recorded there, not by the caller (S-77) |
@@ -79,7 +79,7 @@ scripts/test.sh [FILE...]  # the test suites, in the tools container
 scripts/build.sh [db|tools|companion|voice|kernel|worker]   # none: pull published images, build what did not pull; SUBSTRATE_BUILD=1 builds all
 scripts/logs.sh SERVICE    # db, gateway, ollama, ui, environment, companion, llm, voice
 scripts/tools.sh start|stop|status
-scripts/kernel.sh init|export|login NAME|mcp NAME   # the Knowledge Kernel: schema, one-off export of the old `store` schema, an agent's login and its MCP server
+scripts/kernel.sh init|export|login NAME|mcp NAME   # the Knowledge Kernel: schema, one-off export of the old `store` schema (now dropped), an agent's login and its MCP server
 scripts/down.sh [--volumes]   # stop (deleting data asks first)
 python3 scripts/gateway.py render|keys   # the gateway's config from .env and its callers
 bin/in-tools python3 scripts/db.py init   # the databases and the environment's schema (environment/sql/)
