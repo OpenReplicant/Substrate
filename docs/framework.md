@@ -111,6 +111,39 @@ orchestrator's session; a separate harness process, with its own login, context 
 work), and **custom** (a service, a script, a non-LLM agent). OpenEnv already treats a harness as an environment
 (RFC 005), so the line between them is thin.
 
+## Modules: how everything runs (S-203)
+
+The owner: "modular execution ... even if that's just launching containers or processes and communicating with them
+over whatever is configured, it doesn't have to be complicated and it should not be monolithic", and "everything is
+culminating around MCP as a common interface, which OpenEnv is doing". It is the block design (S-164, S-173, S-174)
+applied to everything, the kernel's own modules included.
+
+- **A module is a manifest and its code**, nothing else: what it is, the interfaces it provides and requires (MCP
+  tools first; anything else described as a WoT form: protocol, address, content type), how it runs, its own
+  Postgres role and clearance, and the effects of its tools (`changes_world` puts a tool behind a gate). The kernel's
+  module manifest already says most of this (`runtime`, `interfaces`, `mcp.expose`, `agent`, `clearance`).
+- **How it runs is one of three, chosen per module:** on demand (a process per call, JSON or MCP over stdio; about
+  19 ms for a Python block, S-173), a kept process (process-compose, the lead candidate, S-173), or a container (a
+  compose service). Nothing runs inside another module's process: `kk serve`'s fixed list of in-process workers is
+  split into modules that each run on their own.
+- **Running them is decoding, not a runtime of ours** (S-174): the manifests of what a distribution installs are
+  written out as a compose file and a process list, and the runtime's state is read back. A runner is a decoder and
+  an encoder, swappable like any module.
+- **MCP is how they meet.** Each module serves its own tools; an MCP router (picked with the `research` skill) puts
+  the installed modules' tools behind one endpoint for agents and for the desktop (the shell is an MCP client, the
+  kernel's D-44), checks the caller's token and applies the gates there: a `changes_world` tool goes through
+  `propose` and waits in the one review lane. OpenEnv environments join the same way. Modules still reach the
+  kernel's data only by its contract: read the `api` views in their own role, write by change sets.
+
+What this makes of the layers:
+
+| Layer | Holds |
+| --- | --- |
+| **Kernel core** | the schema (claims, change sets, scopes and clearance, agents and runs, the review lane, the applied order); the module contract (manifest, role, install, decode to a runtime); `kk`; the MCP router; the validator on the write path; the shell with Search, Review, Change sets, Graph, Me and Settings |
+| **Kernel modules** | everything else the kernel ships, each run on its own, a default set installed by `kk init` (belief, recall, packs, the gitleaks filter) and families installed by name (evidence, memory, maps, process, ops, papers); the environment (live state, queues, gates) as one of them |
+| **Substrate** | its own modules from its own repository (its read model and tools, the assistant's chat view, the Morphogen encoder), its peripherals (the gateway, local models, the front door, the tools container) and the orchestrator kit (harness, skills, hooks, Morphogen, OpenEnv) |
+| **Distributions** | configuration only: which modules, packs, views, apps, skills, gates and privacy defaults, and demo data, bundled as compose (the kernel's D-118, D-120) |
+
 ## OpenEnv, adopted fully (S-184)
 
 Substrate's environments **are** OpenEnv environments: its classes, server, clients, simulation episodes and
