@@ -6,6 +6,7 @@
     bin/in-tools python3 scripts/gateway.py init   # its database and logins, in the tools container (up.sh runs it)
     bin/in-tools python3 scripts/gateway.py prune  # drop limits from its store that config.json no longer has (up.sh)
     bin/in-tools python3 scripts/gateway.py meter CALL_ID...   # what the meter's login sees of these calls
+    bin/in-tools python3 scripts/gateway.py meter-open|meter-close RUN_ID   # Morphogen's meter: a judged run's key and tag, then its counts (S-193)
 
 Providers are the ones this machine has: OpenRouter when OPENROUTER_API_KEY is set (free models only, unless
 GATEWAY_OPENROUTER_MODELS says otherwise), Ollama when OLLAMA_URL is set. Every call is logged by the gateway in its
@@ -31,8 +32,8 @@ OUT = ROOT / ".state/gateway/config.json"
 
 NAMES = ("POSTGRES_PASSWORD", "DB_PORT", "OPENROUTER_API_KEY", "OLLAMA_URL", "GATEWAY_OPENROUTER_MODELS",
          "GATEWAY_REQUESTS_PER_HOUR", "GATEWAY_DB_PASSWORD", "GATEWAY_METER_PASSWORD", "GATEWAY_KEY_SECRET",
-         "GATEWAY_PORT", "COMPANION_MODELS", "COMPANION_DB_PASSWORD",
-         "LLM_MODEL", "LLM_FAST_MODEL", "JUDGE_DB_PASSWORD", "WORKER_DB_PASSWORD", "WORKER_BLOCKS", "KERNEL_URL", "KK_AUTHENTICATOR_PASSWORD")
+         "GATEWAY_PORT", "ANTHROPIC_MODELS", "COMPANION_MODELS",
+         "LLM_MODEL", "LLM_FAST_MODEL", "KERNEL_URL", "KK_AUTHENTICATOR_PASSWORD")
 
 
 def settings() -> dict[str, str]:
@@ -48,22 +49,13 @@ def caller_key(secret: str, caller: str) -> str:
 
 
 # Every caller, and the only providers each may use (S-83): the store's embeddings stay local. A caller is added
-# here when a step needs one. The companion (S-136, plan step 4): its session and its background tasks, each on the
-# owner's own Claude login (subscription mode: the gateway forwards the login's token to Anthropic and keeps the
-# call under the caller's key), held to Anthropic's models in COMPANION_MODELS.
-# The voice head (plan step 5) talks with the local model (llama.cpp, provider `local`) only: what the owner says
-# aloud stays on this machine (P3) unless the model hands a request to the companion. The worker (plan step 1, S-163)
-# is an offline agent on the same local model: its loop, its tool calls and its recall never leave the machine.
-# Two local models (S-169): `local`, the slow one on the CPU, and `fast`, the small one on the GPU; both stay here.
-# The voice head also embeds through Ollama, for its router (S-170).
-CALLERS = {"store:embed": ("ollama",), "companion:session": ("anthropic",), "companion:task": ("anthropic",),
-           "voice:head": ("local", "fast", "ollama"), "companion:author": ("local",), "judge:voice": ("local",),
-           "worker:loop": ("local", "fast")}
+# here when a step needs one. Two local models (S-169): `local`, the slow one on the CPU, and `fast`, the small one on
+# the GPU; both stay here. Morphogen's judged runs (S-193) reach the local models only, counted by its meter. The old
+# assistant's callers (the companion, the voice head, the worker, the components judge) were retired in S-194; the
+# Anthropic provider stays for a caller on a Claude login, held to ANTHROPIC_MODELS, though none has one now.
+CALLERS = {"store:embed": ("ollama",), "morphogen:judge": ("local", "fast")}
 LOCAL = ("ollama", "local", "fast")
-FIXED_KEYS = {"store:embed": "STORE_EMBED_KEY", "companion:session": "COMPANION_SESSION_KEY",
-              "companion:task": "COMPANION_TASK_KEY", "voice:head": "VOICE_KEY",
-              "companion:author": "COMPANION_AUTHOR_KEY", "judge:voice": "JUDGE_KEY",
-              "worker:loop": "WORKER_KEY"}   # keys read from .env by the gateway and the caller
+FIXED_KEYS = {"store:embed": "STORE_EMBED_KEY"}   # keys read from .env by the gateway and the caller
 
 
 def callers() -> list[str]:
@@ -98,9 +90,9 @@ def render(env: dict[str, str]) -> dict:
                                "allow_private_network": True},
             "custom_provider_config": {"base_provider_type": "openai",
                                        "allowed_requests": {"chat_completion": True, "chat_completion_stream": True}}}
-    # Anthropic with no key of its own: only calls carrying a Claude login (the companion's) can use it
+    # Anthropic with no key of its own: only calls carrying a Claude login can use it
     providers["anthropic"] = {"keys": []}
-    allowed = {"local": ["*"], "fast": ["*"], "anthropic": [m.strip() for m in (env.get("COMPANION_MODELS") or "regex:claude-haiku.*").split(",") if m.strip()],
+    allowed = {"local": ["*"], "fast": ["*"], "anthropic": [m.strip() for m in (env.get("ANTHROPIC_MODELS") or env.get("COMPANION_MODELS") or "regex:claude-haiku.*").split(",") if m.strip()],
                "openrouter": [m.strip() for m in (env.get("GATEWAY_OPENROUTER_MODELS") or "regex:.*:free").split(",") if m.strip()],
                "ollama": ["regex:.*"]}
     secret = env.get("GATEWAY_KEY_SECRET") or ""
@@ -195,9 +187,47 @@ def meter(env: dict[str, str], ids: list[str]) -> dict:
                      for r in rows}, "writable": writable}
 
 
+JUDGE_CALLER = "morphogen:judge"
+
+
+def meter_open(env: dict[str, str], run_id: str) -> dict:
+    """Morphogen's meter contract (plan step 2, S-193): what one judged run calls the gateway with: the judge's key
+    (derived, local models only) and a tag it sends as x-wb-call, '<tag>-<n>', so its calls can be told apart."""
+    return {"env": {"GATEWAY_KEY": caller_key(env["GATEWAY_KEY_SECRET"], JUDGE_CALLER), "GATEWAY_CALL_TAG": run_id}}
+
+
+def meter_close(env: dict[str, str], run_id: str, settle: float = 1.0, quiet: int = 3) -> dict:
+    """That run's counts from the gateway's own record, read by the meter's login once the count stops moving: the
+    gateway writes its log in batches after the replies (a run's last calls arrived up to seconds late, seen
+    2026-11-23), so it waits two seconds, then until `quiet` reads in a row agree. In the tools container (psycopg)."""
+    import time
+    import psycopg
+    url = f"postgresql://gateway_meter:{env['GATEWAY_METER_PASSWORD']}@127.0.0.1:{env.get('DB_PORT') or 5432}/gateway"
+    q = """select count(*), count(*) filter (where status <> 'success'), coalesce(sum(prompt_tokens), 0),
+                  coalesce(sum(completion_tokens), 0), coalesce(sum(latency), 0)
+             from logs where virtual_key_name = %s and metadata::jsonb->>'x-wb-call' like %s"""
+    time.sleep(2)
+    last, same, deadline = None, 0, time.monotonic() + 30
+    with psycopg.connect(url, connect_timeout=5, autocommit=True) as c:
+        while time.monotonic() < deadline:
+            row = c.execute(q, (JUDGE_CALLER, run_id.replace("%", "") + "-%")).fetchone()
+            same = same + 1 if row == last else 1
+            last = row
+            if same >= quiet:
+                break
+            time.sleep(settle)
+    calls, errors, prompt, completion, latency = last
+    return {"calls": calls, "errors": errors, "prompt_tokens": int(prompt), "completion_tokens": int(completion),
+            "tokens": int(prompt) + int(completion), "latency_ms": float(latency)}
+
+
 def main() -> None:
     cmd = sys.argv[1] if len(sys.argv) > 1 else ""
-    if cmd == "meter":
+    if cmd == "meter-open":
+        print(json.dumps(meter_open(settings(), sys.argv[2])))
+    elif cmd == "meter-close":
+        print(json.dumps(meter_close(settings(), sys.argv[2])))
+    elif cmd == "meter":
         print(json.dumps(meter(settings(), sys.argv[2:])))
     elif cmd == "init":
         init(settings())

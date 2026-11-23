@@ -6,13 +6,13 @@
 #
 # The tests that start a throwaway Knowledge Kernel (KERNEL_TESTS: the kernel's and the UI's, S-154) run in the kernel's
 # image instead (published, or scripts/build.sh kernel), on the host network, with this checkout mounted read-only: `kk`, its modules
-# and the MCP server are there, and the tools container has none of them (the worker's test needs its `mcp`, and `openai` for one check).
+# and the MCP server are there, and the tools container has none of them.
 set -eu
 . "$(dirname "$0")/lib.sh"
 
 url="postgresql://postgres:$(env_value POSTGRES_PASSWORD)@127.0.0.1:$(env_value DB_PORT)/postgres"
 [ $# -gt 0 ] || set -- "$ROOT"/scripts/tests/test_*.py
-KERNEL_TESTS="scripts/tests/test_kernel.py scripts/tests/test_ui.py scripts/tests/test_worker.py"
+KERNEL_TESTS="scripts/tests/test_kernel.py scripts/tests/test_ui.py"
 kimage=$(image_ref kernel)
 # the kernel's login role is shared by the cluster: its fixture keeps the stack's password (passed by name, not value)
 KK_AUTHENTICATOR_PASSWORD=$(env_value KK_AUTHENTICATOR_PASSWORD); export KK_AUTHENTICATOR_PASSWORD

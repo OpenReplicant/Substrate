@@ -13,26 +13,19 @@ The layers (S-185, `docs/framework.md`, `docs/repos.md`): **the Kernel** (Postgr
 (the orchestrator kit, the adapters, the reference stack), **Morphogen** (the optimiser, a Claude Code plugin),
 **distributions** (folders in `distributions/` here for now), **MetaSoar** (the research). Every dependency is a
 contract, never another project's code. Environments are OpenEnv environments (S-184). Name parts by their role and
-models by their alias (`fast`, `slow`, `cloud`), never by model. **The table below is what is in the tree today:**
-the companion, voice head, worker, blocks and the ladder's experience store are the assistant distribution's parts
-and move into `distributions/assistant/` (plan step 3).
+models by their alias (`fast`, `slow`, `cloud`), never by model. **The table below is what is in the tree today.**
+The old assistant (the companion, the voice head, the worker, blocks, the components judge, the ladder's code) was
+removed on 2026-11-23 (S-194): the assistant starts again from scratch, not ported; git keeps the old parts.
 
 | Part | Where | Role |
 | --- | --- | --- |
 | The store | the Knowledge Kernel (S-153, S-154, S-156: the UI and the skills read it from the kernel's database `kernel`, the agent's tools are the kernel's MCP `substrate` profile; `scripts/kernel.sh`); the old `store` package is retired and its schema was dropped on 2026-11-23 (S-191; a dump is in `.state/backups/`) | Wikibase's data model with OpenWiki's pinned evidence (S-135, S-138): entities, statements with ranks, references, spans, revisions, a page per entity; the agent's tools over MCP, and maps, roles, interfaces and catalogs (S-139; the `map` and `catalog` skills) |
-| envkit | `envkit/` (declarations in `envkit/declarations/`; tests: `python3 -m pytest envkit`) | The fast in-process scheduler (lockstep or realtime) for live play, one module contract with `environment/` (S-161); moved from MetaSoar |
 | The real-time environment | `environment/` (schema `env` in `environment/sql/`, migrated by `environment/db.py`, the channel in `environment/channel.py`) on pgmq in the same Postgres | signals logged whole and fanned out as topics, a queue per actuator behind its gate (`free`, `propose`, `deny`), the channel into Claude Code, archived only on `ack` (S-143) |
 | The model gateway | container `gateway` (Bifrost), `scripts/gateway.py` | every model call goes through it with its caller's key and is recorded there, not by the caller (S-77) |
 | Local models | container `ollama`; containers `llm` and `llm-fast` (llama.cpp, profile `llm`) | Ollama for the store's embeddings; two chat models (S-169): the slow capable one, Inkling 2 Mini on the CPU, at the gateway as `local/slow`; the fast one, LFM3 1.7B on the GPU, as `fast/fast` (the alias names the role, not the model; Gemma is retired) |
 | Tools | `bin/`, container `substrate-tools` | the scripts' Python and gitleaks, run in a container as you (S-19) |
-| The gate (being built) | experience: `env.experience` (`environment/sql/008_experience.sql`, `environment/experience.py`, key `EXPERIENCE_KEY`; S-183); the decider's trial `scripts/trials/decider/`; the proxy next (`docs/plan.md` step 3) | System 1, in a proxy in front of the gateway: at every model call it recalls a response distilled from the assistant's experience (episodes of scenario, response, outcome): a skill, or a rung (`fast`, `slow`, `cloud`); TabICL over embeddings with outcome-labelled episodes from Postgres, the fast model's probabilities as cold start; impasses typed, outcomes attached later by episode id (S-178 to S-182) |
-| The companion (to retire) | `deploy/companion` (compose service `companion`), `environment/companion.py` (service `environment`), the UI's `#/companion` | Claude Code on Haiku through the gateway's pass-through route on the owner's login, fed by the channel (S-136, S-144); becomes the assistant's `cloud` rung behind `propose`, then retires as a separate agent (S-181) |
-| The voice head | `voice/` (compose service `voice`, profile `voice`) on 127.0.0.1:8110 | the companion's voice and face: microphone in over a WebSocket, Silero and Parakeet to text, the fast model deciding each turn by the tool it calls (talk, quick tools such as notes, reminders, lookup and SearXNG search, or delegate), Kokoro to speak, a face that moves with it; delegated work goes to the worker on the slow model, not the companion (S-147, S-170, S-171) |
-| The worker (becoming the assistant) | `environment/worker.py` (environment `worker`), `deploy/worker/` (compose service `worker`, profile `llm`, the kernel's image plus `openai`), the UI's `#/worker` | the assistant's one loop (S-181); today an agent on the self-hosted slow model (`local/slow` through the gateway as caller `worker:loop`; S-165, S-169): our own loop on `mcp` + `openai` (S-162); the kernel's `memory` profile over stdio and a few workspace tools; `gate(state)` before every model call is M-17's seam (S-163) |
-| Blocks | `blocks/` (`block.yaml` blocks, JSON plans, `blocks/run.py` the default executor, `blocks/executor.yaml`; tests: `scripts/tests/test_blocks.py`) | what the agent compiles from what it solved: catalog entries with an interface and effects, assembled as P-Plan plans, run without the model; `skill_gate` plugs into the worker's `gate` (S-157, S-164) |
-| Components and the judge | `env.component` and `env.verdict` (`environment/sql/007_components.sql`), `environment/author.py`, `environment/judge.py` (compose service `judge`), `judge/cases` (the judge's only) | every version of a component with its card; an author proposes from the record, the judge tests it against the active one on cases the author cannot read, the owner activates (S-151) |
 | The UI | `ui/` (`ui/server.py`, `ui/static`), compose service `ui` on 127.0.0.1:8100 | the store's pages and maps as diagrams (S-140), read-only; v1's Workbench rebuilt, with no name of its own (S-141) |
-| Images | `.github/workflows/images.yml`, `image_ref` in `scripts/lib.sh` | `ghcr.io/openreplicant/substrate-{db,tools,companion,worker}` and the kernel's image are pulled (tags `SUBSTRATE_IMAGE_TAG`, `KERNEL_IMAGE_TAG`); compose keeps `build:` as the fallback; voice is built locally, never published (S-167) |
+| Images | `.github/workflows/images.yml`, `image_ref` in `scripts/lib.sh` | `ghcr.io/openreplicant/substrate-{db,tools}` and the kernel's image are pulled (tags `SUBSTRATE_IMAGE_TAG`, `KERNEL_IMAGE_TAG`); compose keeps `build:` as the fallback (S-167) |
 | Glue | `scripts/`, `deploy/` | brings the parts up and connects them |
 
 `deploy/caddy` (in front of the UI) and `deploy/ontop` (SPARQL) are kept and not started yet.
@@ -49,8 +42,9 @@ and move into `distributions/assistant/` (plan step 3).
    lists every setting, empty; `deploy/secrets.txt` says how each secret is made.
 5. **One tested path.** Compose with Podman. Scripts call only the runtime's four verbs (`rt_up`, `rt_down`,
    `rt_status`, `rt_logs`) and keep engine-specific code in `scripts/lib.sh`.
-6. **Nothing installed on the host** beyond git, python3 (standard library), the engine and its compose, and
-   Claude Code. A tool goes into a container (`deploy/tools/Containerfile`, or the companion's).
+6. **Nothing installed on the host** beyond git, python3 (standard library), the engine and its compose, Claude Code,
+   and uv, which Claude Code plugins such as Morphogen's run their MCP servers with (S-196). A tool goes into a
+   container (`deploy/tools/Containerfile`).
 7. **Licences:** permissive or LGPL for what the repository contains or links into Substrate's code. A GPL part may
    be a default when it is fetched at setup (never in the repository), runs unmodified in its own container and is
    reached over a process boundary (S-146). Models and tools the user downloads themselves (never bundled or
@@ -76,13 +70,12 @@ scripts/bootstrap.sh       # once per machine: host tools, images (pulled from g
 scripts/up.sh              # the stack (db, gateway, ollama, ui), the tools container, the databases; then check.sh
 scripts/check.sh           # is everything up and wired
 scripts/test.sh [FILE...]  # the test suites, in the tools container
-scripts/build.sh [db|tools|companion|voice|kernel|worker]   # none: pull published images, build what did not pull; SUBSTRATE_BUILD=1 builds all
-scripts/logs.sh SERVICE    # db, gateway, ollama, ui, environment, companion, llm, voice
+scripts/build.sh [db|tools|kernel]   # none: pull published images, build what did not pull; SUBSTRATE_BUILD=1 builds all
+scripts/logs.sh SERVICE    # db, gateway, ollama, kernel, ui, llm, llm-fast
 scripts/tools.sh start|stop|status
-scripts/kernel.sh init|export|login NAME|mcp NAME   # the Knowledge Kernel: schema, one-off export of the old `store` schema (now dropped), an agent's login and its MCP server
+scripts/kernel.sh init|catalog|login NAME|mcp NAME   # the Knowledge Kernel: its schema, the catalog into it, an agent's login and its MCP server
 scripts/down.sh [--volumes]   # stop (deleting data asks first)
 python3 scripts/gateway.py render|keys   # the gateway's config from .env and its callers
 bin/in-tools python3 scripts/db.py init   # the databases and the environment's schema (environment/sql/)
 bin/in-tools python3 scripts/env.py waiting|decide|publish|actuators|gate|queues   # the environment, as a person
-scripts/companion.sh login|attach|restart|status   # the companion's session (log in once)
 ```

@@ -90,20 +90,20 @@ def keys(e, q):
 def run(e: Env, url: str):
     c = e.c
     # Streams in: fan-out by pattern
-    e.subscribe("all_companion", ["companion.#"])
-    e.subscribe("messages", ["companion.*.message"])
+    e.subscribe("all_home", ["home.#"])
+    e.subscribe("messages", ["home.*.message"])
     e.subscribe("elsewhere", ["other.#"])
-    sid = e.publish("companion.owner.message", {"text": "hello"}, "owner")
-    e.publish("companion.clock.tick", {"t": 1}, "clock")
+    sid = e.publish("home.owner.message", {"text": "hello"}, "owner")
+    e.publish("home.clock.tick", {"t": 1}, "clock")
     check("a signal reaches every queue bound to a matching pattern",
-          keys(e, "all_companion") == ["companion.owner.message", "companion.clock.tick"]
-          and keys(e, "messages") == ["companion.owner.message"], (keys(e, "all_companion"), keys(e, "messages")))
+          keys(e, "all_home") == ["home.owner.message", "home.clock.tick"]
+          and keys(e, "messages") == ["home.owner.message"], (keys(e, "all_home"), keys(e, "messages")))
     check("and no other", keys(e, "elsewhere") == [])
     row = c.execute("select key, body, source, reached from env.signal where id = %s", (sid,)).fetchone()
-    check("it is logged whole, with how many queues it reached", row == ("companion.owner.message", {"text": "hello"}, "owner", 2), row)
+    check("it is logged whole, with how many queues it reached", row == ("home.owner.message", {"text": "hello"}, "owner", 2), row)
     check("a logged signal cannot be changed", refused(lambda: c.execute("update env.signal set body = '{}' where id = %s", (sid,)), "kept whole"))
     check("or deleted", refused(lambda: c.execute("delete from env.signal where id = %s", (sid,)), "kept whole"))
-    check("a malformed routing key is refused", refused(lambda: e.publish("Companion", {}, "x"), "signal_key_check"))
+    check("a malformed routing key is refused", refused(lambda: e.publish("Home", {}, "x"), "signal_key_check"))
 
     # Visibility: unacknowledged comes back, acknowledged does not
     e.subscribe("vt", ["vt.#"])
@@ -120,29 +120,29 @@ def run(e: Env, url: str):
     check("and not delivered again", e.read("vt", 1) == [])
 
     # Acting, through gates
-    e.subscribe("review", ["companion.review.*"])
-    q_reply = e.actuator("companion.reply", "free", "test")
-    e.actuator("companion.budget", "propose", "test")
-    e.actuator("companion.shell", "deny", "test")
-    a1, st1 = e.act("companion.reply", {"text": "hi"}, "claude-code")
+    e.subscribe("review", ["home.review.*"])
+    q_reply = e.actuator("home.reply", "free", "test")
+    e.actuator("home.budget", "propose", "test")
+    e.actuator("home.shell", "deny", "test")
+    a1, st1 = e.act("home.reply", {"text": "hi"}, "claude-code")
     msgs = e.read(q_reply, 0)
     check("free: queued at once on the actuator's queue", st1 == "queued" and [m["action"] for m in msgs] == [a1], (st1, msgs))
-    a2, st2 = e.act("companion.budget", {"cap_usd": 5}, "claude-code")
-    q_budget = c.execute("select queue from env.actuator where name = 'companion.budget'").fetchone()[0]
+    a2, st2 = e.act("home.budget", {"cap_usd": 5}, "claude-code")
+    q_budget = c.execute("select queue from env.actuator where name = 'home.budget'").fetchone()[0]
     check("propose: waits, nothing queued", st2 == "proposed" and e.read(q_budget, 0) == [] and [w["id"] for w in e.waiting()] == [a2])
     rv = e.read("review", 0)
-    check("and is announced on <env>.review.proposed", [(m["key"], m["body"]["action"]) for m in rv] == [("companion.review.proposed", a2)], rv)
+    check("and is announced on <env>.review.proposed", [(m["key"], m["body"]["action"]) for m in rv] == [("home.review.proposed", a2)], rv)
     check("its maker cannot decide it", refused(lambda: e.decide(a2, True, "claude-code"), "other than the one"))
     check("a person approves it: queued", e.decide(a2, True, "owner", "fine") == "queued"
           and [m["action"] for m in e.read(q_budget, 0)] == [a2])
-    check("and the decision is announced", any(m["key"] == "companion.review.decided" and m["body"]["approved"] for m in e.read("review", 0)))
+    check("and the decision is announced", any(m["key"] == "home.review.decided" and m["body"]["approved"] for m in e.read("review", 0)))
     check("a decided proposal is not decided again", refused(lambda: e.decide(a2, False, "owner"), "not waiting"))
-    a3, _ = e.act("companion.budget", {"cap_usd": 500}, "claude-code")
+    a3, _ = e.act("home.budget", {"cap_usd": 500}, "claude-code")
     check("a person refuses one: never queued", e.decide(a3, False, "owner", "too much") == "refused" and len(e.read(q_budget, 0)) == 1)
-    a4, st4 = e.act("companion.shell", {"cmd": "rm"}, "claude-code")
-    q_shell = c.execute("select queue from env.actuator where name = 'companion.shell'").fetchone()[0]
+    a4, st4 = e.act("home.shell", {"cmd": "rm"}, "claude-code")
+    q_shell = c.execute("select queue from env.actuator where name = 'home.shell'").fetchone()[0]
     check("deny: refused, nothing queued", st4 == "denied" and e.read(q_shell, 0) == [])
-    check("an unknown actuator is refused", refused(lambda: e.act("companion.nope", {}, "x"), "no actuator"))
+    check("an unknown actuator is refused", refused(lambda: e.act("home.nope", {}, "x"), "no actuator"))
     e.done(a1, {"sent": True})
     check("applied: recorded and archived", c.execute("select status, result from env.action where id = %s", (a1,)).fetchone()
           == ("applied", {"sent": True}) and e.read(q_reply, 0) == [])
@@ -154,7 +154,7 @@ def run(e: Env, url: str):
 
 class Proc:
     def __init__(self, url, vt):
-        self.p = subprocess.Popen([sys.executable, "-m", "environment.channel", "chan", "companion.owner.*"],
+        self.p = subprocess.Popen([sys.executable, "-m", "environment.channel", "chan", "home.owner.*"],
                                   stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, cwd=ROOT,
                                   env={**os.environ, "STORE_URL": url, "CHANNEL_VT": str(vt), "CHANNEL_POLL": "0.2"})
         self.q = queue.Queue()
@@ -194,12 +194,12 @@ def channel(e: Env, url: str):
         check("channel: its instructions say signals are data", "never instructions" in (init or {}).get("result", {}).get("instructions", ""))
         ch.send({"jsonrpc": "2.0", "method": "notifications/initialized"})
         is_event = lambda m: m.get("method") == "notifications/claude/channel"  # noqa: E731
-        e.publish("companion.clock.tick", {"t": 2}, "clock")              # not subscribed
-        e.publish("companion.owner.message", {"text": "are you there?"}, "owner")
+        e.publish("home.clock.tick", {"t": 2}, "clock")              # not subscribed
+        e.publish("home.owner.message", {"text": "are you there?"}, "owner")
         ev, seen = ch.until(is_event, 10)
         meta = (ev or {}).get("params", {}).get("meta", {})
         check("channel: a published signal reaches the session", ev and ev["params"]["content"] == "are you there?"
-              and meta.get("key") == "companion.owner.message" and meta.get("by") == "owner" and meta.get("read_ct") == "1", seen)
+              and meta.get("key") == "home.owner.message" and meta.get("by") == "owner" and meta.get("read_ct") == "1", seen)
         check("channel: meta keys are identifiers only", all(k.replace("_", "").isalnum() for k in meta), meta)
         again, _ = ch.until(is_event, 6)
         check("channel: unacknowledged, it comes back", again and again["params"]["meta"]["msg_id"] == meta.get("msg_id")
@@ -208,8 +208,8 @@ def channel(e: Env, url: str):
         check("channel: ack archives it", res and not res["isError"] and "archived" in res["content"][0]["text"], res)
         late, _ = ch.until(is_event, 4)
         check("channel: and it is not delivered again", late is None, late)
-        e.actuator("companion.budget", "propose", "test")
-        res = ch.call(3, "act", {"actuator": "companion.budget", "input": {"cap_usd": 1}})
+        e.actuator("home.budget", "propose", "test")
+        res = ch.call(3, "act", {"actuator": "home.budget", "input": {"cap_usd": 1}})
         check("channel: act goes through the gate", res and "proposed" in res["content"][0]["text"], res)
         by = e.c.execute("select caller from env.action order by id desc limit 1").fetchone()[0]
         check("channel: the action names who called it", by == "claude-code test (channel chan)", by)

@@ -55,7 +55,6 @@ SECRETS=${SECRETS:-env}
 
 compose() {
   secrets_export || return 1
-  mkdir -p "$ROOT/.state/avatar"   # the voice head's avatar folder is a bind mount; it must exist, empty or not (S-160)
   # a GPU for Ollama, when this machine has one and .env says so (S-84): deploy/compose.<OLLAMA_GPU>.yaml as well
   _gpu=$(env_value OLLAMA_GPU)
   if [ -z "$_gpu" ]; then
@@ -69,12 +68,10 @@ compose() {
 
 # The published image for a part (S-167): ghcr.io/openreplicant/substrate-NAME at SUBSTRATE_IMAGE_TAG (default main); the
 # kernel's own is ghcr.io/openreplicant/kernel at KERNEL_IMAGE_TAG. scripts/build.sh tags a local build with the same name,
-# so compose, tools.sh, kernel.sh and test.sh find one image whether it was pulled or built. The voice head is built here
-# and never published (S-167), so it keeps its local name.
-image_ref() {   # NAME: db, tools, companion, worker, kernel, voice
+# so compose, tools.sh, kernel.sh and test.sh find one image whether it was pulled or built.
+image_ref() {   # NAME: db, tools, kernel
   case "$1" in
     kernel) _t=$(env_value KERNEL_IMAGE_TAG); echo "ghcr.io/openreplicant/kernel:${_t:-main}" ;;
-    voice) echo "localhost/substrate-voice:local" ;;
     *) _t=$(env_value SUBSTRATE_IMAGE_TAG); echo "ghcr.io/openreplicant/substrate-$1:${_t:-main}" ;;
   esac
 }

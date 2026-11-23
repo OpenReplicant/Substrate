@@ -10,5 +10,6 @@ entity files, Morphogen's cell file, an OpenAI- or Anthropic-compatible model en
 | **Morphogen** (OpenReplicant/Morphogen) | The optimiser: cells, optimizers behind a judge they cannot edit, the still-works gate, the system guard, the evidence log; shipped as a Claude Code plugin with an MCP server. Its own repository on purpose: the judge's independence from what the optimizer edits is the point. Changes by pull request there | cell files; reads Backstage entities when present |
 | **MetaSoar** (OpenReplicant/MetaSoar) | The research: cognitive architecture (impasse-driven compilation, M-17; System 1 from experience), its experiments on OpenEnv, atlas and the Soar 9.6.5 baseline | OpenEnv; the assistant distribution's ladder for M-17 |
 
-Until MetaSoar's worlds are OpenEnv environments (S-184), its `atlas/cartographer.py` and `atlas/mover.py` import
-Substrate's `envkit`, and `envkit/run.py` imports `atlas`, so the two must be on one path.
+envkit, the in-process scheduler MetaSoar's worlds ran on, was retired from Substrate in S-196: environments are
+OpenEnv environments (S-184), and MetaSoar's worlds move onto OpenEnv (its unmerged `claude/envkit` branch keeps the
+old work; git keeps Substrate's copy).

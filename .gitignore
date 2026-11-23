@@ -10,3 +10,6 @@ __pycache__/
 # this machine's Claude Code settings
 .mcp.json
 .claude/settings.local.json
+
+# Morphogen: the operator's settings (held-out answers, gateway, meter), never committed (S-193)
+morphogen.local.yaml

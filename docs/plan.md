@@ -111,13 +111,13 @@ and experience (S-179, S-183).
    (6) a skill's answer reaches Claude Code in a form its loop accepts; (7) a rubric's score attaches afterwards to
    every model call of its episode. Also: whether MCP's `input_required` (revision 2026-07-28) is final, for gates.
    Done when each point has a result line in `.state/trials/openenv/` and a row in `DECISIONS.md`.
-2. **Morphogen as the optimiser** (S-185): update `~/Projects/Morphogen` from GitHub (it is rebuild 5 here; main is
+2. **Done 2026-11-23 (S-193), but for verdicts on `main` once PR #22 is merged: plugin pinned, the catalog as its map, the `voice-route` cell judged end to end with model calls metered at the gateway.** Morphogen as the optimiser (S-185): update `~/Projects/Morphogen` from GitHub (it is rebuild 5 here; main is
    rebuild 7); install its plugin in the orchestrator's harness; one map skill (Substrate's writes the Backstage
    entities, Morphogen adds cells from them); one cell on Substrate's own configuration judged end to end. Changes
    to Morphogen go by pull request there (the `upstream` skill).
-3. **The repository in its shape** (S-185, S-186): `distributions/assistant/` takes the companion, the voice head
+3. **Changed 2026-11-23 (S-194): the assistant is not ported; it starts again from scratch, so this step keeps only Substrate's own parts in shape and retires the old assistant's once the owner agrees.** The repository in its shape (S-185, S-186): `distributions/assistant/` takes the companion, the voice head
    and avatar, the worker, blocks and the skill gate, the ladder (proxy, deciders, experience, the decider trial);
-   envkit goes to MetaSoar's side; components and the judge (S-151) give way to Morphogen; Substrate keeps the
+   envkit is retired (S-196: OpenEnv replaces it); components and the judge (S-151) give way to Morphogen; Substrate keeps the
    stack, the skills, the channel, the catalog and the adapters. In batches, each with `scripts/check.sh` and
    `scripts/test.sh` passing.
 4. **One database, the kernel's** (S-190): the kernel defines the schemas and the ways of doing things, and Substrate
