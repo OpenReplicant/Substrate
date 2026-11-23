@@ -22,7 +22,9 @@ The owner decides what each stream may do. These rules are the **default flow po
 owner may loosen a rule for a named stream or label; each loosening is a decision in the review lane, saying who,
 when and why, and the rule's check then tests the policy as set rather than the default.
 
-**The gate's decision log (S-178, S-181).** The gate logs every routed call with its outcome, the rows its decider
-learns from. Keeping the request word for word lets features be recomputed when the embedder changes, but P6 forbids
-it for a personal stream by default. Until the owner turns transcripts on for this log only (recommended, with P7's
-retention set), it keeps the embedding, the route, the impasse type and the outcome, not the words.
+**The assistant's experience (S-178, S-182).** The gate keeps one episode per model call (the scenario, the
+response, the outcome), the rows System 1 is distilled from. P6 is loosened for this store only, by the owner's
+decision (S-182): episodes keep the owner's words verbatim, with the text encrypted at rest, deletion of one episode,
+a time range or all of it (P9; the embeddings and every derived row with it, since embeddings can be partly turned
+back into text), and a retention period the owner sets (P7). The checks to build with it: a test that the stored text
+is not readable without the key, and one that deleting leaves no embedding or derived row behind.

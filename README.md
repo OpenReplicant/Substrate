@@ -153,7 +153,7 @@ loosened for a named stream, and each loosening is a recorded decision. Loosened
 the companion reach Anthropic (S-136). What you say aloud stays on this machine: the voice head, the assistant,
 the author and the judge use only your own models, and the assistant hands work to the cloud only when you approve
 it. Two quick tools you chose send questions out: Wikipedia lookups and SearXNG search (S-171). The gateway keeps no
-message content. Still yours to decide: whether the gate's log may keep your requests word for word (P6, S-181).
+message content. The gate's experience keeps your requests word for word, encrypted, deletable and kept only as long as you set (S-182).
 
 ## Not built yet
 
