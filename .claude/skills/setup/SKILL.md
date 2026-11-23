@@ -42,8 +42,8 @@ default, or docker) and, if 5432, 8090 or 11434 is taken, other ports. Never ech
 ## 3. The stack
 
 Run `scripts/up.sh`. It renders the gateway's config, starts the stack and the tools container, makes the
-`substrate` database and the gateway's, and runs `scripts/check.sh`. If a service does not come up, read its
-logs (`scripts/logs.sh db|gateway|ollama`), find the cause, fix it in this repository, and run `scripts/up.sh`
+`kernel` database (the kernel's schemas and the environment's `env`, S-202) and the gateway's, and runs `scripts/check.sh`. If a service does not come up, read its
+logs (`scripts/logs.sh db|gateway|ollama|kernel|ui|caddy`), find the cause, fix it in this repository, and run `scripts/up.sh`
 again. Known causes:
 
 - **A refused Postgres password**: the volume (`substrate_db-data`) outlived the `.env` that made it. Keep the

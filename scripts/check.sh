@@ -24,8 +24,8 @@ from db import connect, DB; from gateway import settings
 with connect(settings(), DB) as c:
     have = {r[0] for r in c.execute("select name from pg_available_extensions where name in (%s, %s, %s, %s)", ("vector", "pg_cron", "pgmq", "graph"))}
     print(", ".join(sorted(have)))' >/tmp/substrate-check.$$ 2>&1; then
-  ok "postgres    127.0.0.1:$(env_value DB_PORT)/substrate (extensions available: $(cat /tmp/substrate-check.$$))"
-else bad "the substrate database does not answer: $(tail -1 /tmp/substrate-check.$$) (scripts/up.sh)"; fi
+  ok "postgres    127.0.0.1:$(env_value DB_PORT)/kernel, one database (extensions available: $(cat /tmp/substrate-check.$$))"
+else bad "the kernel database does not answer: $(tail -1 /tmp/substrate-check.$$) (scripts/up.sh)"; fi
 rm -f /tmp/substrate-check.$$
 if out=$("$ROOT/bin/in-tools" python3 -c '
 import sys; sys.path[:0] = ["scripts", "."]

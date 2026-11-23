@@ -28,7 +28,7 @@ services:
   db:
     image: ghcr.io/openreplicant/substrate-db:${SUBSTRATE_IMAGE_TAG:-main}
     build: {context: ./postgres, dockerfile: Dockerfile}
-    command: ["postgres", "-c", "shared_preload_libraries=pg_cron,graph", "-c", "cron.database_name=substrate"]
+    command: ["postgres", "-c", "shared_preload_libraries=pg_cron,graph", "-c", "cron.database_name=kernel"]   # one database (S-202)
     environment:
       POSTGRES_DB: substrate
       POSTGRES_USER: postgres

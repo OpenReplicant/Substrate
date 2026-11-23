@@ -109,7 +109,7 @@ people): one instance per client, a desktop the consultant and the client sign i
 the client's system mapped with evidence, and one automation whose writes wait for a person's approval. These steps
 come before the list below; where they overlap, they name its step.
 
-1. **One database, the kernel's** (step 4 below): the `env` schema into the kernel's database, `substrate` dropped.
+1. **Done 2026-11-23 (S-202).** **One database, the kernel's** (step 4 below): the `env` schema into the kernel's database, `substrate` dropped.
 2. **The desktop as an environment, and the assistant's first use** (S-200's next idea): the person's messages and
    actions in the desktop are signals; the assistant (Claude Code behind the channel, S-143) answers through
    actuators: a message, a notification, a window it opens to show something (`free`), a question that waits for the
@@ -153,7 +153,7 @@ and experience (S-179, S-183).
    to Morphogen go by pull request there (the `upstream` skill).
 3. **Done 2026-11-23 (S-194 to S-197): the old assistant's code removed, not ported; envkit retired; the pins moved to what runs; no reader of the dropped `store` schema left.** Left for later steps: Substrate's own map in the kernel (Q10, from v1's import) still names removed parts (`store/`, `voice/`), which step 7's snapshot map replaces. The repository in its shape (S-185, S-186): Substrate keeps the stack, the skills, the channel, the catalog
    and the adapters; components and the judge (S-151) gave way to Morphogen.
-4. **One database, the kernel's** (S-190): the kernel defines the schemas and the ways of doing things, and Substrate
+4. **Done 2026-11-23 (S-202): `env` in the kernel's database, `substrate` dropped (backed up); Bifrost's `gateway` database stays apart.** **One database, the kernel's** (S-190): the kernel defines the schemas and the ways of doing things, and Substrate
    follows them, so the `env` schema (objects' live state, queues, gates, experience) moves into the kernel's
    database, by the kernel's D-126 superseding D-94 (c) (drafted on the kernel's branch `claude/one-database`). Then
    the `substrate` database is empty and is dropped (its retired `store` schema went on 2026-11-23, S-191). Bifrost's `gateway` database is a third party's private store and stays apart

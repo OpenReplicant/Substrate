@@ -20,7 +20,7 @@ removed on 2026-11-23 (S-194): the assistant starts again from scratch, not port
 | Part | Where | Role |
 | --- | --- | --- |
 | The store | the Knowledge Kernel (S-153, S-154, S-156: the UI and the skills read it from the kernel's database `kernel`, the agent's tools are the kernel's MCP `substrate` profile; `scripts/kernel.sh`); the old `store` package is retired and its schema was dropped on 2026-11-23 (S-191; a dump is in `.state/backups/`) | Wikibase's data model with OpenWiki's pinned evidence (S-135, S-138): entities, statements with ranks, references, spans, revisions, a page per entity; the agent's tools over MCP, and maps, roles, interfaces and catalogs (S-139; the `map` and `catalog` skills) |
-| The real-time environment | `environment/` (schema `env` in `environment/sql/`, migrated by `environment/db.py`, the channel in `environment/channel.py`) on pgmq in the same Postgres | signals logged whole and fanned out as topics, a queue per actuator behind its gate (`free`, `propose`, `deny`), the channel into Claude Code, archived only on `ack` (S-143) |
+| The real-time environment | `environment/` (schema `env` in `environment/sql/`, migrated by `environment/db.py`, the channel in `environment/channel.py`) on pgmq, in the kernel's database `kernel` (S-202, the kernel's D-126: one database) | signals logged whole and fanned out as topics, a queue per actuator behind its gate (`free`, `propose`, `deny`), the channel into Claude Code, archived only on `ack` (S-143) |
 | The model gateway | container `gateway` (Bifrost), `scripts/gateway.py` | every model call goes through it with its caller's key and is recorded there, not by the caller (S-77) |
 | Local models | container `ollama`; containers `llm` and `llm-fast` (llama.cpp, profile `llm`) | Ollama for the store's embeddings; two chat models (S-169): the slow capable one, Inkling 2 Mini on the CPU, at the gateway as `local/slow`; the fast one, LFM3 1.7B on the GPU, as `fast/fast` (the alias names the role, not the model; Gemma is retired) |
 | Tools | `bin/`, container `substrate-tools` | the scripts' Python and gitleaks, run in a container as you (S-19) |
@@ -77,6 +77,6 @@ scripts/tools.sh start|stop|status
 scripts/kernel.sh init|catalog|login NAME|mcp NAME|person NAME   # the Knowledge Kernel: its schema, the catalog into it, an agent's login, its MCP server, a person's sign-in
 scripts/down.sh [--volumes]   # stop (deleting data asks first)
 python3 scripts/gateway.py render|keys   # the gateway's config from .env and its callers
-bin/in-tools python3 scripts/db.py init   # the databases and the environment's schema (environment/sql/)
+bin/in-tools python3 scripts/db.py init   # the kernel's database and the environment's schema in it (environment/sql/)
 bin/in-tools python3 scripts/env.py waiting|decide|publish|actuators|gate|queues   # the environment, as a person
 ```

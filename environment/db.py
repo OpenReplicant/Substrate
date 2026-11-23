@@ -3,10 +3,9 @@
     from environment.db import database_url, migrate
     migrate(conn)          # apply the files in environment/sql/ not yet applied; returns their names
 
-The address is STORE_URL (the name the compose services already set; ENV_URL is read first if it is set), else the
-`substrate` database from .env. The schema files keep the names 005, 006 and 007 they had when they lived beside the
-store's: a database that applied them then has them recorded in `public.store_migration`, and `migrate` carries
-those records into `public.env_migration` the first time it runs, so nothing is applied twice.
+The address is ENV_URL, else STORE_URL, else the kernel's database (`kernel`) from .env: the schema lives beside the
+kernel's (S-202, the kernel's D-126). The files keep the numbers they had beside the old store's; what is applied is
+recorded in `public.env_migration`.
 """
 from __future__ import annotations
 
@@ -30,10 +29,6 @@ def database_url() -> str:
 def migrate(conn) -> list[str]:
     """Apply the schema files not yet applied, each in its own transaction; returns their names."""
     conn.execute("create table if not exists public.env_migration (name text primary key, applied_at timestamptz not null default now())")
-    names = [f.name for f in sorted(SQL.glob("*.sql"))]
-    if conn.execute("select to_regclass('public.store_migration')").fetchone()[0]:      # applied while they were the store's
-        conn.execute("insert into public.env_migration (name, applied_at) select name, applied_at from public.store_migration "
-                     "where name = any(%s) on conflict do nothing", (names,))
     done = {r[0] for r in conn.execute("select name from public.env_migration")}
     applied = []
     for f in sorted(SQL.glob("*.sql")):
