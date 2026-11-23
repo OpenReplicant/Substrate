@@ -87,6 +87,16 @@ def check(ents: dict, compose: Path | None) -> list[str]:
         for s, who in sorted(named.items()):
             if s not in services:
                 problems.append(f"{who} names compose service {s}, which {compose.name} does not have")
+    # the catalog's root Location (catalog-info.yaml, S-193) names every entity file, so Morphogen and Backstage see all
+    files = {e["_file"] for e in ents.values()} - {"catalog-info.yaml"}
+    roots = [e for (k, _), e in ents.items() if k == "location" and e["_file"] == "catalog-info.yaml"]
+    listed = {t.removeprefix("./") for e in roots for t in (e.get("spec") or {}).get("targets") or []}
+    if not roots:
+        problems.append("catalog-info.yaml: no Location naming the entity files")
+    for f in sorted(files - listed) if roots else []:
+        problems.append(f"{f} is not a target of catalog-info.yaml's Location")
+    for f in sorted(listed - files):
+        problems.append(f"catalog-info.yaml names {f}, which has no entity")
     return problems
 
 

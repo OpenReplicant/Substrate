@@ -16,6 +16,7 @@ from __future__ import annotations
 import json
 import math
 import re
+from pathlib import Path
 from typing import Callable
 
 ROUTES = ("talk", "work")
@@ -80,22 +81,9 @@ class Router:
 # tool_choice required, a stop at </think> (with thinking off it sometimes writes plain words, then loops on that
 # marker) and plain words taken as talk. Without save_note it said "Saved note: ..." for a note it had not saved.
 QUICK_STEPS = 3
-TOOLS_SYSTEM = """You are the owner's companion, speaking with them out loud. It is {now}. Every step, call exactly one tool.
-talk: say your answer, in one to three short spoken sentences (no lists, markdown, emoji or links). This ends your turn.
-Quick tools, which you use yourself and then talk about the result:
-- save_note: keep a short note, only when the owner asks you to keep, note, write down or save something.
-- read_notes: read the owner's notes (what they asked you to remember), optionally about a topic.
-- remind: set a reminder; give the time as YYYY-MM-DDTHH:MM in their local time, or as "in N minutes".
-- calculate: work out arithmetic exactly.
-- lookup: a fact from Wikipedia about a person, place, thing or idea.
-- search: search the web for current things (news, prices, opening hours, weather, recent events).
-delegate: hand the request to the assistant with more tools when it takes several steps, changes things, or needs a long
-written plan or document. Anything about the computer (disk space, files and folders other than notes, programs,
-settings, what is running) is always delegate: it is the computer you run on, so do not ask which one. Ends your turn.
-Answer small talk, feelings, jokes, translations and simple advice yourself with talk. Never say you did something
-unless a tool did it, and never say you cannot do something or have no tool for it: use a quick tool, or delegate.
-Do not repeat the question back. What you hear is a speech-to-text transcript and may have small mistakes; if it
-makes no sense, ask once."""
+# the fast model's system prompt, a file of its own so Morphogen can judge a change to it alone (cell voice-route,
+# S-193); {now} is filled per turn
+TOOLS_SYSTEM = (Path(__file__).parent / "tools_system.txt").read_text().rstrip("\n")
 
 
 def _fn(name: str, description: str, props: dict, required: list[str]) -> dict:

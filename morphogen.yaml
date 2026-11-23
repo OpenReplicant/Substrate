@@ -1,0 +1,19 @@
+# Morphogen's map of Substrate (plan step 2, S-193): the cells come from the catalog's Backstage entities (catalog/,
+# written by the map skill); this file adds what the catalog does not hold, below its grain. Morphogen is the judge:
+# a candidate may change only what its cell's `change` names; everything else here, the catalog, the workloads, the
+# scorers and the tests are the base's. Held-out answers, the gateway and its meter are the operator's, in the
+# uncommitted morphogen.local.yaml.
+backstage: catalog/catalog-info.yaml
+sandbox: podman
+sandbox_image: docker.io/library/python:3.13.17-slim-bookworm
+cells:
+  voice-route:
+    in: component:voice
+    description: >-
+      The voice head's router: the fast model's system prompt, which picks the first tool for what the owner said:
+      talk (or a quick fact on the way to talking) or work (delegate, notes, reminders, web search).
+    change: voice/tools_system.txt
+    run: python3 voice/bench/run.py
+    score: python3 voice/bench/score.py
+    better: accuracy higher
+    tests: python3 scripts/tests/test_voice_route.py

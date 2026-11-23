@@ -6,6 +6,7 @@
     bin/in-tools python3 scripts/gateway.py init   # its database and logins, in the tools container (up.sh runs it)
     bin/in-tools python3 scripts/gateway.py prune  # drop limits from its store that config.json no longer has (up.sh)
     bin/in-tools python3 scripts/gateway.py meter CALL_ID...   # what the meter's login sees of these calls
+    bin/in-tools python3 scripts/gateway.py meter-open|meter-close RUN_ID   # Morphogen's meter: a judged run's key and tag, then its counts (S-193)
 
 Providers are the ones this machine has: OpenRouter when OPENROUTER_API_KEY is set (free models only, unless
 GATEWAY_OPENROUTER_MODELS says otherwise), Ollama when OLLAMA_URL is set. Every call is logged by the gateway in its
@@ -58,7 +59,7 @@ def caller_key(secret: str, caller: str) -> str:
 # The voice head also embeds through Ollama, for its router (S-170).
 CALLERS = {"store:embed": ("ollama",), "companion:session": ("anthropic",), "companion:task": ("anthropic",),
            "voice:head": ("local", "fast", "ollama"), "companion:author": ("local",), "judge:voice": ("local",),
-           "worker:loop": ("local", "fast")}
+           "worker:loop": ("local", "fast"), "morphogen:judge": ("local", "fast")}
 LOCAL = ("ollama", "local", "fast")
 FIXED_KEYS = {"store:embed": "STORE_EMBED_KEY", "companion:session": "COMPANION_SESSION_KEY",
               "companion:task": "COMPANION_TASK_KEY", "voice:head": "VOICE_KEY",
@@ -195,9 +196,45 @@ def meter(env: dict[str, str], ids: list[str]) -> dict:
                      for r in rows}, "writable": writable}
 
 
+JUDGE_CALLER = "morphogen:judge"
+
+
+def meter_open(env: dict[str, str], run_id: str) -> dict:
+    """Morphogen's meter contract (plan step 2, S-193): what one judged run calls the gateway with: the judge's key
+    (derived, local models only) and a tag it sends as x-wb-call, '<tag>-<n>', so its calls can be told apart."""
+    return {"env": {"GATEWAY_KEY": caller_key(env["GATEWAY_KEY_SECRET"], JUDGE_CALLER), "GATEWAY_CALL_TAG": run_id}}
+
+
+def meter_close(env: dict[str, str], run_id: str, settle: float = 1.5) -> dict:
+    """That run's counts from the gateway's own record, read by the meter's login once the count stops moving (the
+    gateway writes its log after the reply). In the tools container: it needs psycopg."""
+    import time
+    import psycopg
+    url = f"postgresql://gateway_meter:{env['GATEWAY_METER_PASSWORD']}@127.0.0.1:{env.get('DB_PORT') or 5432}/gateway"
+    q = """select count(*), count(*) filter (where status <> 'success'), coalesce(sum(prompt_tokens), 0),
+                  coalesce(sum(completion_tokens), 0), coalesce(sum(latency), 0)
+             from logs where virtual_key_name = %s and metadata::jsonb->>'x-wb-call' like %s"""
+    last, deadline = None, time.monotonic() + 20
+    with psycopg.connect(url, connect_timeout=5, autocommit=True) as c:
+        while True:
+            row = c.execute(q, (JUDGE_CALLER, run_id.replace("%", "") + "-%")).fetchone()
+            # settled: the same count twice, once there is one (a run with no calls waits out its first seconds)
+            if (row == last and (row[0] or time.monotonic() > deadline - 14)) or time.monotonic() > deadline:
+                break
+            last = row
+            time.sleep(settle)
+    calls, errors, prompt, completion, latency = row
+    return {"calls": calls, "errors": errors, "prompt_tokens": int(prompt), "completion_tokens": int(completion),
+            "tokens": int(prompt) + int(completion), "latency_ms": float(latency)}
+
+
 def main() -> None:
     cmd = sys.argv[1] if len(sys.argv) > 1 else ""
-    if cmd == "meter":
+    if cmd == "meter-open":
+        print(json.dumps(meter_open(settings(), sys.argv[2])))
+    elif cmd == "meter-close":
+        print(json.dumps(meter_close(settings(), sys.argv[2])))
+    elif cmd == "meter":
         print(json.dumps(meter(settings(), sys.argv[2:])))
     elif cmd == "init":
         init(settings())

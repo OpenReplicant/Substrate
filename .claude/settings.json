@@ -1,1 +1,14 @@
-{}
+{
+  "extraKnownMarketplaces": {
+    "morphogen": {
+      "source": {
+        "source": "github",
+        "repo": "OpenReplicant/Morphogen",
+        "ref": "9769a0b5781d3f576ede95a90e1f7599caf05c24"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "morphogen@morphogen": true
+  }
+}
