@@ -4,13 +4,14 @@ The one current plan (S-124, 2026-11-17). It replaces the plans in `docs/archive
 the experiment-first direction, the handoff, the task briefs); those are kept as history and are not to be worked
 from. Every default and its reason is still in `DECISIONS.md`.
 
-## What Substrate is now
+## What Substrate is now (S-185, 2026-11-23)
 
-An agent framework. You put an environment on a system you need, run it, and watch and change it in the UI,
-Substrate's web page over the store (`ui/`, S-140, S-141; rebuilt on the fresh tree, S-137). Its shape is `docs/framework.md` (S-125): the environment is data in
-Postgres, pass-through to Claude Code is the default, components distilled from the record carry cards, a judge
-tests them on cases their author never saw, and environments nest. Morphogen stays a part you can use as it is;
-no more work goes into it for now.
+**An operating system for AI agents:** a top-level orchestrator (an ordinary LLM harness, Claude Code first, given
+skills, MCP servers and hooks) that maps, orchestrates and optimises a working system, on a kernel made of Postgres
+where everything is an object. Its shape, layers, slots and contracts are `docs/framework.md`. Environments are
+OpenEnv environments (S-184); the optimiser is Morphogen's Claude Code plugin; what is built with it lives in
+`distributions/` (S-185, S-186). The steps table below is the history of how the current parts came to be; what
+comes next is "Next, in order".
 
 ## The fresh start (S-137)
 
@@ -77,73 +78,56 @@ are views of the same items and claims; what can be said in one format can be ca
   runtime when a measured plan needs it.
 - **What stays ours, kept small:** the description and the compatibility check; the decoders and encoders; gates at
   the chokepoints that exist (the model gateway, an MCP proxy where one is chosen, our own agents' actuators), not on
-  every link; the voice front-end's loop (S-170, S-171); M-17's gate at the model endpoint (a proxy or a Bifrost
-  plugin).
+  every link. (The voice front end's loop and M-17's ladder were listed here; they are distribution components now,
+  S-186.)
 - **The kernel's boundary is the kernel's own decisions:** queues belong to a distribution in its own database
-  (D-94 c, decided), so the `env` schema stays Substrate's; signals and telemetry are observations, not claims ("a
+  (D-94 c, decided; to be superseded by one database, S-185); signals and telemetry are observations, not claims ("a
   measurement is not content anyone wrote", D-101); what is worth knowing crosses as claims and items through an
   encoder (`encoder-substrate`); `propose`-gated actions are meant to reach the kernel's review lane, so a person
   approves in one place.
 - **Observability:** OpenTelemetry where the parts already speak it (the gateway, the runtimes, our processes), an
   OTel Collector picked with the `research` skill, traces to a viewer and metrics to Prometheus, which the kernel's
   `observer-prometheus` turns into observed claims; a component's card carries measured latency and cost.
-- **Agents:** **one assistant** (S-181): the voice front end, and behind it one agent loop (the worker's) whose
-  model calls the gate routes by rung: a compiled skill (no model), `fast`, `slow`, `cloud` (Claude on the owner's
-  login, always behind `propose`). The companion as a separate agent retires once the cloud rung works. Claude Code
-  and other harnesses are agent instances, each a component with its own interfaces
-  (`scripts/trials/harness/candidates.json` holds the surveyed list).
+- **Agents:** the orchestrator is an ordinary harness (S-185); sub-agents are harness sub-agents, OpenEnv
+  environments or MCP components (`docs/framework.md`, "Slots"). The one assistant of S-181 (the voice front end
+  and one loop over model rungs) is the assistant distribution's design (S-186). `scripts/trials/harness/candidates.json`
+  holds the surveyed harnesses.
 
-## The gate (S-178 to S-181, 2026-11-22)
+## The ladder (S-178 to S-183, placed by S-186)
 
-M-17's gate sits in a proxy in front of the gateway, so every caller passes it whatever harness it runs. It is
-System 1: it answers from responses distilled from the assistant's **experience** (S-182: one episode per model
-call, the scenario, the response and its outcome, in `env.experience`). At every model call it asks a System One
-question (a state and typed questions in, a calibrated probability per option out): which distilled response, a
-skill or a model rung, fits this scenario. Above a threshold it answers or routes;
-below it, it abstains to the model, and the impasse's type (`none`, `tie`, `low`) is logged.
+The multi-response ladder (System 1 at the model endpoint: compiled skills, then the fast, slow and cloud models,
+chosen by a decider that learns from outcome-labelled experience) is a **distribution component**, built on OpenEnv
+(S-186), not part of Substrate. Its design stands in S-178 to S-183; its code moves to `distributions/assistant/`.
 
-- **The decider learns online** (S-179): TabICL over the request's embedding, with the outcome-labelled rows from
-  Postgres as its context (nothing imported, nothing to keep in sync), and the fast model's own next-token
-  probabilities as the cold start for a route with too few rows. Trial on a self-written set: pending a blind run.
-- **Labels are outcomes, not the decider's choice,** and feedback is long-horizon: a correction or a result that
-  arrives later attaches to the episode's id. Thompson sampling decides how often a skill is still checked by the
-  model (S-180).
-- **As in Soar** (S-180): skills propose by their conditions, the decider selects (Soar-RL's role), the model call
-  is the substate, and **the skill compiler is chunking**: a solved trace becomes a skill whose conditions are what
-  the answer depended on. Choosing lives in the gate; compiling is M-17's experiment.
-- **Measured prequentially:** each row predicted before its label is seen, in arrival order.
-- **The owner dogfoods it** as their own assistant with real tools (S-182): files, search, the kernel, Substrate
-  itself, and an MCP that finds MCP servers in a trusted registry and installs one only on the owner's approval
-  (pinned, licence checked, in its own container, entered in the catalog). Real use is the test set and the source
-  of recurring tasks.
+## Next, in order (2026-11-23)
 
-## Next, in order (2026-11-22)
+Done from the 2026-11-22 list: the catalog entry (S-176), compose into the kernel and back (S-177), the decider trial
+and experience (S-179, S-183).
 
-1. **The catalog entry content type** (D-101's first): a component's item with its interfaces described WoT-style,
-   and a compatibility check between two entries. Done when Substrate's own parts are entries and the check says
-   which talk to which. — done 2026-11-22 (S-176): `catalog/` in Backstage's entity format, read by the kernel's
-   `encoder-backstage`; `scripts/catalog.py check` over files, compose and the kernel. Left for the kernel: the
-   current-version link and the per-type items view (D-101).
-2. **The first decoder and encoder: the map to and from Compose,** with Substrate's own `deploy/compose.yaml` as the
-   test (decoded from the map, it should match what runs; the running state encoded back). — built 2026-11-22 (S-177, the
-   kernel's D-125): `encoder-compose` and `decoder-compose`; Substrate's compose file round-trips through the kernel.
-   Left: the running state encoded back, and a `scripts/kernel.sh compose` job once the kernel image has the modules.
-3. **The gate, then one assistant, then M-17's first experiment** ("The gate" above; S-178 to S-181), in order:
-   (a) experience, `env.experience` (S-182: per episode the scenario, the response with what it depended on, the
-   impasse type, outcomes attached later by the episode's id; the text encrypted at rest, deletion and retention); — built 2026-11-22 (S-183); (b) the proxy, OpenAI format first, passing through and logging;
-   (c) the deciders behind a threshold, with Thompson sampling; (d) the voice front end and the assistant through
-   it; (e) the `cloud` rung and the Anthropic format, retiring the companion as a separate agent; (f) the frozen blind
-   run (the owner's own requests and a set another model writes unseen); (g) M-17's experiment under
-   `experiments/m17/`, with the skill compiler. Done when the owner uses the assistant daily, every model call
-   passes the gate and is logged, and the share of calls the gate answers or sends to a smaller rung is measured
-   prequentially.
-4. **The telemetry collector and a process runtime** (process-compose first), picked with the `research` skill, as
-   the second decoder target.
-5. Then, as before: the live map and avatar page (S-158), the business distribution, process KPIs and one real
-   actuator beyond Compose behind a gate.
+1. **The OpenEnv spike** (S-184): `openenv` 0.12.0 in the tools image (or a trial container), one Postgres-backed
+   environment, and the seven points: (1) many agents' sessions share one live environment; (2) events reach a
+   subscriber in production mode; (3) `reset` clones a template database fast enough; (4) Claude Code runs through
+   the harness adapter; (5) against our model proxy via `ANTHROPIC_BASE_URL`, with an episode id in a header;
+   (6) a skill's answer reaches Claude Code in a form its loop accepts; (7) a rubric's score attaches afterwards to
+   every model call of its episode. Also: whether MCP's `input_required` (revision 2026-07-28) is final, for gates.
+   Done when each point has a result line in `.state/trials/openenv/` and a row in `DECISIONS.md`.
+2. **Morphogen as the optimiser** (S-185): update `~/Projects/Morphogen` from GitHub (it is rebuild 5 here; main is
+   rebuild 7); install its plugin in the orchestrator's harness; one map skill (Substrate's writes the Backstage
+   entities, Morphogen adds cells from them); one cell on Substrate's own configuration judged end to end. Changes
+   to Morphogen go by pull request there (the `upstream` skill).
+3. **The repository in its shape** (S-185, S-186): `distributions/assistant/` takes the companion, the voice head
+   and avatar, the worker, blocks and the skill gate, the ladder (proxy, deciders, experience, the decider trial);
+   envkit goes to MetaSoar's side; components and the judge (S-151) give way to Morphogen; Substrate keeps the
+   stack, the skills, the channel, the catalog and the adapters. In batches, each with `scripts/check.sh` and
+   `scripts/test.sh` passing.
+4. **One database** (S-185): a kernel decision superseding D-94 (c), then the `env` schema in the kernel's database.
+5. **The orchestrator's `orchestrate` and `optimize` skills**, and hooks enforcing gates in the harness.
+6. **The ladder on OpenEnv and M-17's experiment** (S-186, MetaSoar): a task-family environment, the proxy in the
+   Anthropic format, rubric scores as outcomes, the frozen blind run (S-179).
+7. **The SMB Foundry distribution** (the business angle, `docs/research/Object environments prior art.md`): a
+   five-day fixed-price "map and one gated automation" pilot; outreach once Substrate's shape is solid.
 
-Done from the 2026-11-21 list: offline agents on the local model (S-162, S-163, now Inkling, S-169), blocks and the
-default executor (S-164).
+The telemetry collector and a process runtime (the old step 4) wait until a step needs them.
 
 ## Deferred
 
@@ -162,3 +146,4 @@ publication and reproductions, the hosted mapper and hosted judging, the slot mo
 - Confirming the kernel's D-101 (the content framing) once the catalog entry has proved it or not.
 - Whether LFM3 (LFM Open License v1.0) may be the recommended fast model (S-169).
 - Which trusted registry the MCP installer reads from (S-182 c; the official MCP Registry recommended, to be checked).
+- The SMB Foundry's offer and price, and when outreach starts (after step 3 or so).

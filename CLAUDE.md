@@ -1,17 +1,21 @@
 # Substrate
 
-An agent framework: you put an environment on a system you need, run it, and watch and change it. Its shape is
-`docs/framework.md`; what is built next is `docs/plan.md`, the one plan; every default and its reason is in
-`DECISIONS.md` (append-only). Read the plan first.
+An operating system for AI agents (S-185): a top-level orchestrator (an ordinary LLM harness given skills, MCP
+servers and hooks) that maps, orchestrates and optimises a working system, on a kernel made of Postgres where
+everything is an object. Its shape is `docs/framework.md`; what is built next is `docs/plan.md` ("Next, in order"),
+the one plan; every default and its reason is in `DECISIONS.md` (append-only). Read the plan first.
 
 This is the **fresh tree** (S-137). v1 is tagged `v1-final` and its plans are in `docs/archive/`: history, not
 plans to work from. v1's databases are kept in the same Postgres volume (`workbench`, `gateway`) and dumped in
 `.state/backups/`; what people stated there comes back as data imported into the new store.
 
-Two products (S-181): **the Kernel** (the store) and **Substrate** (everything that runs, including the experiments
-once moved in from MetaSoar); `docs/repos.md` says what each repository owns. Name parts by their role (the
-assistant, the voice front end, the gate, the judge) and models by their alias (`fast`, `slow`, `cloud`), never by
-model.
+The layers (S-185, `docs/framework.md`, `docs/repos.md`): **the Kernel** (Postgres made into a kernel), **Substrate**
+(the orchestrator kit, the adapters, the reference stack), **Morphogen** (the optimiser, a Claude Code plugin),
+**distributions** (folders in `distributions/` here for now), **MetaSoar** (the research). Every dependency is a
+contract, never another project's code. Environments are OpenEnv environments (S-184). Name parts by their role and
+models by their alias (`fast`, `slow`, `cloud`), never by model. **The table below is what is in the tree today:**
+the companion, voice head, worker, blocks and the ladder's experience store are the assistant distribution's parts
+and move into `distributions/assistant/` (plan step 3).
 
 | Part | Where | Role |
 | --- | --- | --- |
@@ -52,8 +56,9 @@ model.
    reached over a process boundary (S-146). Check before adding.
 8. **Every change ends with `scripts/check.sh` passing**, and `scripts/test.sh` where tests exist, or with the
    failure named and explained.
-9. **Morphogen is out of the build** while the owner refactors it elsewhere: do not touch `repos/morphogen` or
-   depend on it. Fixes to an upstream project go by pull request (the `upstream` skill).
+9. **Morphogen is the optimiser** (S-185; it was out of the build only so it could be iterated on quickly): use it
+   through its contract (the cell file, its Claude Code plugin and MCP server), never by importing its code; change
+   it only by pull request in its own repository, like any upstream project (the `upstream` skill).
 
 ## Working with the owner
 

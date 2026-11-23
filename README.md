@@ -1,35 +1,34 @@
 # Substrate
 
-An agent framework, built around one working system so far: **the assistant**, which you can talk to in text or
-out loud with a face. It does real work in the background on models you host, asks before anything leaves your
-machine, and improves its own parts under a judge it cannot reach. A **gate** in front of every model call is
-learning which calls a compiled skill or a smaller model can answer (being built, `docs/plan.md` step 3).
-
-The idea: you put an **environment** on a system you need. An environment is data in Postgres: the signals that
-arrive, the actuators that can be acted on, and a record of everything. With nothing else configured, every
-signal goes to an LLM harness (Claude Code), which acts only through gated actuators. That is **pass-through**.
-From the record, the system writes **components** that handle what repeats, each with a **card** saying what it
-is for, how it is measured and how it is tested. A **judge** tests each new version against the one in use, on
-cases its author never saw, and **you** decide what goes live.
-
-It is two products (S-181):
+**An operating system for AI agents.** Today's agents live in a terminal where everything is a file. Here a working
+system (a business, a codebase, a household, a game) lives in a **kernel** made of Postgres, where everything is an
+object: state, actions behind permission gates (`free`, `propose` for your approval, `deny`), events anyone allowed
+can subscribe to, and every change recorded. A **top-level orchestrator**, an ordinary LLM harness (Claude Code
+first) given skills, MCP servers and hooks, keeps that system working: it **maps** it, **orchestrates** it through
+sub-agents in shared environments (any harness, any model, or no model), and **optimises** it through an optimiser
+whose judge it cannot edit, toward goals you set, asking before anything that matters. Harnesses join unmodified,
+models come through one gateway, tools through MCP, and environments through [OpenEnv](https://huggingface.co/docs/openenv),
+so a change can be rehearsed on a copy before it runs for real.
 
 | Part | What it is |
 | --- | --- |
-| **Substrate** (this repository) | everything that runs: environments, streams and gated actuators, the model gateway and the gate in front of it, the assistant and its voice front end, components with cards, the judge, the UI, and the experiments |
-| **[Knowledge Kernel](https://github.com/OpenReplicant/kernel)**, the store | everything known, each statement with who said it, its source and how sure; permissions enforced by Postgres per caller; review before anything counts; recall by words and by meaning (BM25 and pgvector) |
+| **[Knowledge Kernel](https://github.com/OpenReplicant/kernel)** | Postgres made into a kernel: knowledge with provenance, objects and gated actions, logins and row-level security, the record |
+| **Substrate** (this repository) | the orchestrator kit (skills `map`, `catalog`, `research`, `orchestrate`, `optimize`; hooks; adapters for OpenEnv, the model endpoint and compose), the reference stack, and the documentation |
+| **[Morphogen](https://github.com/OpenReplicant/Morphogen)** | the optimiser, a Claude Code plugin: cells, optimizers behind a judge they cannot edit, an evidence log |
+| **Distributions** (`distributions/`, here for now) | what is built with it: the personal assistant (voice, face, local models), the SMB Foundry, games |
+| **[MetaSoar](https://github.com/OpenReplicant/MetaSoar)** | the research on cognitive architecture: System 1 distilled from experience (M-17) |
 
-The research behind the gate, impasse-driven compilation after Soar's chunking, is written up in
-[MetaSoar](https://github.com/OpenReplicant/MetaSoar); its experiments run here. The judge is an interface (a
-candidate in, a verdict out, on cases its author never saw); [Morphogen](https://github.com/OpenReplicant/Morphogen)
-is one filler, out of the build for now.
+Every dependency between them is a contract, not another project's code: the shape, the slots and what each needs
+are in [`docs/framework.md`](docs/framework.md); what is built next is [`docs/plan.md`](docs/plan.md).
 
-All of that now runs end to end once, on one component (the voice head's replies). The rest of the framework is
-described in [`docs/framework.md`](docs/framework.md) and built as the plan's steps need it.
+**Where it stands (2026-11-23):** the stack below runs on one machine. The parts that make up the personal
+assistant (the companion, the voice head, the worker, blocks, the ladder's experience store) are still at the
+repository's top level and move into `distributions/assistant/` (plan step 3); the first new work is an OpenEnv
+spike (step 1), then Morphogen as the optimiser (step 2).
 
 ## What runs
 
-Everything is in containers under Podman compose, published on 127.0.0.1 only.
+The reference stack and, for now, the assistant distribution's parts. Everything is in containers under Podman compose, published on 127.0.0.1 only.
 
 | Part | Where | What it does |
 | --- | --- | --- |
@@ -157,19 +156,17 @@ message content. The gate's experience keeps your requests word for word, encryp
 
 ## Not built yet
 
-- Components beyond the first; the judge running each case more than once (so smaller differences can be told
-  from noise), judging answer quality, and comparing against plain pass-through; holding out whole days.
-- The component lifecycle past activation: demotion when you keep overriding one, and the rate of model calls
-  per event, the number that should fall as it learns.
-- The view (how the environment is laid out for each model) as a tested component; environments nested in one
-  another; a review lane in the UI beyond the companion page.
-- A VRM avatar for the face, mixed reality on a Quest 3, and the embodied environments after it
-  (`docs/plan.md` steps 7 to 10).
+`docs/plan.md`, "Next, in order": the OpenEnv spike; Morphogen as the optimiser; the repository in its shape
+(distributions in folders); one database; the `orchestrate` and `optimize` skills and gate hooks; the ladder on
+OpenEnv and M-17's experiment; the SMB Foundry distribution. Later, in the assistant distribution: a VRM avatar,
+mixed reality on a Quest 3, and the embodied environments after it.
 
 ## Where to read more
 
 - [`docs/plan.md`](docs/plan.md): the steps, and where each stands
-- [`docs/framework.md`](docs/framework.md): the shape of the framework
+- [`docs/framework.md`](docs/framework.md): the shape: layers, the orchestrator, objects, slots and contracts
+- [`docs/repos.md`](docs/repos.md): what each repository owns and depends on
+- [`docs/research/`](docs/research/): the prior-art research behind the shape (2026-11-23)
 - [`DECISIONS.md`](DECISIONS.md): every default, every measurement behind it, and why (append-only)
 - `CLAUDE.md`: the parts and the rules for working on it
 
