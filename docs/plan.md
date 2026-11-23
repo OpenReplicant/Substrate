@@ -97,7 +97,8 @@ are views of the same items and claims; what can be said in one format can be ca
 
 The multi-response ladder (System 1 at the model endpoint: compiled skills, then the fast, slow and cloud models,
 chosen by a decider that learns from outcome-labelled experience) is a **distribution component**, built on OpenEnv
-(S-186), not part of Substrate. Its design stands in S-178 to S-183; its code moves to `distributions/assistant/`.
+(S-186), not part of Substrate. Its design stands in S-178 to S-183, as an input to the new assistant and not a commitment; its code was removed
+(S-194, S-195), and git keeps it.
 
 ## Next, in order (2026-11-23)
 
@@ -115,11 +116,8 @@ and experience (S-179, S-183).
    rebuild 7); install its plugin in the orchestrator's harness; one map skill (Substrate's writes the Backstage
    entities, Morphogen adds cells from them); one cell on Substrate's own configuration judged end to end. Changes
    to Morphogen go by pull request there (the `upstream` skill).
-3. **Changed 2026-11-23 (S-194): the assistant is not ported; it starts again from scratch, so this step keeps only Substrate's own parts in shape and retires the old assistant's once the owner agrees.** The repository in its shape (S-185, S-186): `distributions/assistant/` takes the companion, the voice head
-   and avatar, the worker, blocks and the skill gate, the ladder (proxy, deciders, experience, the decider trial);
-   envkit is retired (S-196: OpenEnv replaces it); components and the judge (S-151) give way to Morphogen; Substrate keeps the
-   stack, the skills, the channel, the catalog and the adapters. In batches, each with `scripts/check.sh` and
-   `scripts/test.sh` passing.
+3. **Done 2026-11-23 (S-194 to S-197): the old assistant's code removed, not ported; envkit retired; the pins moved to what runs; no reader of the dropped `store` schema left.** Left for later steps: Substrate's own map in the kernel (Q10, from v1's import) still names removed parts (`store/`, `voice/`), which step 7's snapshot map replaces. The repository in its shape (S-185, S-186): Substrate keeps the stack, the skills, the channel, the catalog
+   and the adapters; components and the judge (S-151) gave way to Morphogen.
 4. **One database, the kernel's** (S-190): the kernel defines the schemas and the ways of doing things, and Substrate
    follows them, so the `env` schema (objects' live state, queues, gates, experience) moves into the kernel's
    database, by the kernel's D-126 superseding D-94 (c) (drafted on the kernel's branch `claude/one-database`). Then
@@ -130,8 +128,8 @@ and experience (S-179, S-183).
    the manual for the exact version in use (the project's docs, `llms.txt`, the registry's page, a docs MCP server
    where one is trusted); ingest it into the kernel with its source and version, so it is searched and recalled by
    association and cited; and answer from it, not from memory. Rule 1 ("look it up, then pin it") as a skill.
-6. **Everything else runs on top of the settled shape** (S-187): each distribution (the assistant, the SMB Foundry's
-   first cut), MetaSoar's experiments and every test suite run against Substrate through its contracts only. Done
+6. **Everything else runs on top of the settled shape** (S-187): each distribution (the new assistant, started from
+   scratch once the owner names its first two or three uses, S-194; the SMB Foundry's first cut), MetaSoar's experiments and every test suite run against Substrate through its contracts only. Done
    when `scripts/test.sh` passes, each distribution comes up from its own folder, and MetaSoar's worlds run as OpenEnv
    environments.
 7. **The bootstrap instance** (S-187): what a new Substrate instance starts with, so the orchestrator knows itself
@@ -146,8 +144,9 @@ and experience (S-179, S-183).
    each part?" from its own store.
 8. **A second pass over the documentation** (S-187): README, `docs/framework.md`, the skills and each distribution's
    README read cold by someone new; every concept explained once, where it is used.
-9. **The ladder on OpenEnv and M-17's experiment** (S-186, MetaSoar): a task-family environment, the proxy in the
-   Anthropic format, rubric scores as outcomes, the frozen blind run (S-179).
+9. **M-17's experiment** (S-186, MetaSoar), on OpenEnv: a task-family environment, a model proxy in the Anthropic
+   format, rubric scores as outcomes, the frozen blind run (S-179). The ladder's code is gone (S-195); if the new
+   assistant takes the ladder's design (S-178 to S-183), it is rebuilt there, not restored.
 10. **The SMB Foundry and other business opportunities** (S-188 c): in **a session of their own**, without the code
     in context, **as soon as steps 6 to 8 are done**. The first customers are design partners and the most
     valuable, paid or not. Starting point: `docs/research/Object environments prior art.md` (a five-day "map and
