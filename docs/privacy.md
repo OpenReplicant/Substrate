@@ -21,3 +21,8 @@ The owner decides what each stream may do. These rules are the **default flow po
 (spec section 7, S-89): privacy is adjustable, because some of it cannot be kept on every machine or stream. The
 owner may loosen a rule for a named stream or label; each loosening is a decision in the review lane, saying who,
 when and why, and the rule's check then tests the policy as set rather than the default.
+
+**The gate's decision log (S-178, S-181).** The gate logs every routed call with its outcome, the rows its decider
+learns from. Keeping the request word for word lets features be recomputed when the embedder changes, but P6 forbids
+it for a personal stream by default. Until the owner turns transcripts on for this log only (recommended, with P7's
+retention set), it keeps the embedding, the route, the impasse type and the outcome, not the words.

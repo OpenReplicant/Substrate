@@ -87,9 +87,31 @@ are views of the same items and claims; what can be said in one format can be ca
 - **Observability:** OpenTelemetry where the parts already speak it (the gateway, the runtimes, our processes), an
   OTel Collector picked with the `research` skill, traces to a viewer and metrics to Prometheus, which the kernel's
   `observer-prometheus` turns into observed claims; a component's card carries measured latency and cost.
-- **Agents:** our agent loop (the worker's) and the voice front-end are components; Claude Code (the owner's
-  subscription) and other harnesses are agent instances, each a component with its own interfaces
+- **Agents:** **one assistant** (S-181): the voice front end, and behind it one agent loop (the worker's) whose
+  model calls the gate routes by rung: a compiled skill (no model), `fast`, `slow`, `cloud` (Claude on the owner's
+  login, always behind `propose`). The companion as a separate agent retires once the cloud rung works. Claude Code
+  and other harnesses are agent instances, each a component with its own interfaces
   (`scripts/trials/harness/candidates.json` holds the surveyed list).
+
+## The gate (S-178 to S-181, 2026-11-22)
+
+M-17's gate sits in a proxy in front of the gateway, so every caller passes it whatever harness it runs. At every
+model call it asks a decision question, System One style (a state and typed questions in, a calibrated probability
+per option out): which proposed skill, or which model rung, should answer. Above a threshold it answers or routes;
+below it, it abstains to the model, and the impasse's type (`none`, `tie`, `low`) is logged.
+
+- **The decider learns online** (S-179): TabICL over the request's embedding, with the outcome-labelled rows from
+  Postgres as its context (nothing imported, nothing to keep in sync), and the fast model's own next-token
+  probabilities as the cold start for a route with too few rows. Trial on a self-written set: pending a blind run.
+- **Labels are outcomes, not the decider's choice,** and feedback is long-horizon: a correction or a result that
+  arrives later attaches to the decision's id. Thompson sampling decides how often a skill is still checked by the
+  model (S-180).
+- **As in Soar** (S-180): skills propose by their conditions, the decider selects (Soar-RL's role), the model call
+  is the substate, and **the skill compiler is chunking**: a solved trace becomes a skill whose conditions are what
+  the answer depended on. Choosing lives in the gate; compiling is M-17's experiment.
+- **Measured prequentially:** each row predicted before its label is seen, in arrival order.
+- **The owner dogfoods it** as their own assistant with real tools; real use is the test set and the source of
+  recurring tasks.
 
 ## Next, in order (2026-11-22)
 
@@ -102,10 +124,15 @@ are views of the same items and claims; what can be said in one format can be ca
    test (decoded from the map, it should match what runs; the running state encoded back). — built 2026-11-22 (S-177, the
    kernel's D-125): `encoder-compose` and `decoder-compose`; Substrate's compose file round-trips through the kernel.
    Left: the running state encoded back, and a `scripts/kernel.sh compose` job once the kernel image has the modules.
-3. **M-17's gate at the model endpoint**, then M-17's first experiment (S-178): a proxy in front of the gateway
-   (OpenAI and Anthropic formats) asking decision questions at every model call, System One style, with pluggable
-   deciders (the fast model's probabilities, a small decision model, embeddings with a tabular in-context head as the
-   first online learning), every route logged. The owner dogfoods it as their personal assistant with real tools.
+3. **The gate, then one assistant, then M-17's first experiment** ("The gate" above; S-178 to S-181), in order:
+   (a) the decision log in the `env` schema (raw request, features, route, impasse type, what the answer depended
+   on; outcome signals attached by decision id); (b) the proxy, OpenAI format first, passing through and logging;
+   (c) the deciders behind a threshold, with Thompson sampling; (d) the voice front end and the assistant through
+   it; (e) the `cloud` rung and the Anthropic format, retiring the companion as a separate agent; (f) the frozen blind
+   run (the owner's own requests and a set another model writes unseen); (g) M-17's experiment under
+   `experiments/m17/`, with the skill compiler. Done when the owner uses the assistant daily, every model call
+   passes the gate and is logged, and the share of calls the gate answers or sends to a smaller rung is measured
+   prequentially.
 4. **The telemetry collector and a process runtime** (process-compose first), picked with the `research` skill, as
    the second decoder target.
 5. Then, as before: the live map and avatar page (S-158), the business distribution, process KPIs and one real
@@ -124,9 +151,12 @@ publication and reproductions, the hosted mapper and hosted judging, the slot mo
 ## The owner's to decide
 
 - Which game comes first (step 9), and which embodied environment after that (step 10).
-- Rotating the Postgres password; putting the Gemma model at the gateway.
+- Rotating the Postgres password.
 - The licence and whether the repository goes public.
 - Whether a Business-Source-licensed part (Nomad) may ever be a default; recommended no (S-173).
 - When to migrate kernel v0's P-Plan IRIs to PROV-O and the profile's terms (S-175; a kernel change).
 - Confirming the kernel's D-101 (the content framing) once the catalog entry has proved it or not.
 - Whether LFM3 (LFM Open License v1.0) may be the recommended fast model (S-169).
+- Whether the gate's log may keep the owner's requests verbatim (privacy P6, S-181 f); recommended yes for that
+  log only, with a retention period (P7).
+- Which real tools the assistant gets first (S-178 e).

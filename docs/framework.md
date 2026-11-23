@@ -61,7 +61,7 @@ Postgres backend, so it is a model to borrow from, not a part to add.
 | --- | --- | --- | --- |
 | **Substrate** | this one | the environment, streams and gated actuators, pass-through, the record, components and their cards, the hierarchy, the gateway, the UI | a harness: Claude Code is the harness |
 | **The store** | [Knowledge Kernel](https://github.com/OpenReplicant/kernel) | items and claims with provenance, each caller its own Postgres login under row-level security, the review lane, recall (BM25 and pgvector), reasoning (conclusions with premises, truth maintenance), the agent's MCP tools | Substrate's own `store/` package, retired in S-156 (`docs/store-to-kernel.md`) |
-| **The cognitive layer** | [MetaSoar](https://github.com/OpenReplicant/MetaSoar) | how an agent inside an environment perceives, attends, predicts and learns: perception from pixels, the workspace and attention, simulators and surprise, a lockstep runtime for worlds faster than the wall clock; its hypothesis and the predictions that would show it wrong (`docs/cognitive-model.md` there) | required: pass-through works without it, and each of its parts is judged against pass-through like any component |
+| **The cognitive layer** | [MetaSoar](https://github.com/OpenReplicant/MetaSoar) for the hypothesis and its write-up; its experiments run in Substrate's `experiments/` (S-181) | how an agent inside an environment perceives, attends, predicts and learns: perception from pixels, the workspace and attention, simulators and surprise, a lockstep runtime for worlds faster than the wall clock; its hypothesis and the predictions that would show it wrong (`docs/cognitive-model.md` there) | required: pass-through works without it, and each of its parts is judged against pass-through like any component |
 | **The judge** | an interface here; Morphogen is one filler | a card and a candidate in, a verdict out, on cases the candidate's author cannot read | a framework; Morphogen is optional |
 
 ## The environment is data (decided)
@@ -321,7 +321,8 @@ P4 for the companion's text is then one change to one key, visible in the record
 ### Placement is a trade-off the system can choose (decided, S-131)
 
 On the owner's machine today (a GTX 1070, 8 GB, weights already partly offloaded to system RAM), each part runs
-on the GPU or the CPU, at a cost in latency: Gemma 4 26B or 12B for the local model, speech parts on the CPU.
+on the GPU or the CPU, at a cost in latency: today the slow model (Inkling 2 Mini) on the CPU, the fast model (LFM3
+1.7B) and speech on the GPU (S-169), where S-131 had Gemma 4 for one local model.
 These are parameters on each component's card (placement, model, quantization), measured for latency, quality
 and memory, and choosing among them within the budget is a self-lever; the owner can pin any of them.
 
