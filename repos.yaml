@@ -7,10 +7,10 @@
 morphogen:
   url: https://github.com/OpenReplicant/Morphogen
   branch: main
-  checked: b57fbbbae477534066b3aa231bd6472bf461acbc   # 2026-11-16 (#81 unnamed metrics kept; #82 a short-scored run refused; #83 the intake)
+  checked: 9769a0b5781d3f576ede95a90e1f7599caf05c24   # 2026-11-23 main after #101; the same commit the plugin is pinned to (.claude/settings.json, S-193)
 # The Knowledge Kernel, Substrate's store (S-153, S-154): its image is built from this clone (scripts/build.sh kernel) and
 # the tests of the store on the kernel run in it; its published image (ghcr.io/openreplicant/kernel:main) is pulled (S-167).
 kernel:
   url: https://github.com/OpenReplicant/kernel
   branch: main
-  checked: 041146054f7b7a155a76dda3bc843ad1405b3739   # 2026-11-22 main after #132 (D-120 bundles); the image's revision; test_kernel, test_ui, test_worker pass
+  checked: e176b03a072f14e0a46150ecd4e53ccd7e3a8186   # 2026-11-23 main after #136 (D-125 compose codec, D-126 one database); the image's revision; all five suites pass

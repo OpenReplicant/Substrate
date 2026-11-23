@@ -1,27 +1,24 @@
-"""Historical (S-156): reads the old `store` schema, which stays in database `substrate` until the owner drops it; the
-store package it was written against is retired.
-
-The trial's cases as JSON (nodes with kind, edges with kind) in .state/trials/map-diagram/cases/:
-substrate.json is Substrate's own map from the store (store.map_nodes, store.map on Q10, the real data);
+"""The trial's cases as JSON (nodes with kind, edges with kind) in .state/trials/map-diagram/cases/:
+substrate.json is Substrate's own map from the kernel, read through the UI's API (/api/map/Q10, the real data; the UI
+must be up, scripts/up.sh);
 wide.json is a synthetic map ten times its size (a whole, 4 subsystems of 12 parts, a role each, interfaces
 shared between roles, 2 candidates per subsystem), for how the layout copes as maps grow.
 
     bin/in-tools python3 scripts/trials/map-diagram/cases.py
 """
-import json, sys
+import json, os, urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
-sys.path[:0] = [str(ROOT / "scripts"), str(ROOT)]
-from db import connect, DB  # noqa: E402
-from gateway import settings  # noqa: E402
+UI = os.environ.get("UI_URL", "http://127.0.0.1:8100")
 
 OUT = ROOT / ".state/trials/map-diagram/cases"
 OUT.mkdir(parents=True, exist_ok=True)
 
-with connect(settings(), DB) as c:
-    nodes = [{"id": i, "label": la, "kind": k} for i, la, _, k in c.execute("select * from store.map_nodes('Q10')")]
-    edges = [{"source": s, "target": t, "kind": k} for s, t, k, *_ in c.execute("select * from store.map('Q10')")]
+with urllib.request.urlopen(f"{UI}/api/map/Q10", timeout=30) as r:
+    got = json.load(r)
+nodes = [{"id": n["id"], "label": n["label"], "kind": n["kind"]} for n in got["nodes"]]
+edges = [{"source": e["source"], "target": e["target"], "kind": e["kind"]} for e in got["edges"]]
 (OUT / "substrate.json").write_text(json.dumps({"nodes": nodes, "edges": edges}))
 
 N, E = [{"id": "W", "label": "a whole", "kind": "whole"}], []
