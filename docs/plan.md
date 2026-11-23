@@ -100,6 +100,41 @@ chosen by a decider that learns from outcome-labelled experience) is a **distrib
 (S-186), not part of Substrate. Its design stands in S-178 to S-183, as an input to the new assistant and not a commitment; its code was removed
 (S-194, S-195), and git keeps it.
 
+## The product cut (S-201, 2026-11-23)
+
+The owner: "let's get this to a state where it could be presented as a product, and i could use it as a tool in
+consulting"; "the polish can be added later". The product is what the consulting pilot needs (`docs/research/Object
+environments prior art.md`: a five-day, fixed-price "process map plus one gated automation" for firms of 10 to 200
+people): one instance per client, a desktop the consultant and the client sign in to, an assistant to talk to in it,
+the client's system mapped with evidence, and one automation whose writes wait for a person's approval. These steps
+come before the list below; where they overlap, they name its step.
+
+1. **One database, the kernel's** (step 4 below): the `env` schema into the kernel's database, `substrate` dropped.
+2. **The desktop as an environment, and the assistant's first use** (S-200's next idea): the person's messages and
+   actions in the desktop are signals; the assistant (Claude Code behind the channel, S-143) answers through
+   actuators: a message, a notification, a window it opens to show something (`free`), a question that waits for the
+   person, and anything that changes something behind `propose`, decided in the desktop's Review. A chat window in
+   the shell; structured events, not screenshots. The same environment served as OpenEnv for tests and simulation.
+   Done when the owner talks to the assistant in the desktop, it shows him a map in a window, and a change it proposes
+   waits for his approval there.
+3. **The pilot, end to end, on a demo firm:** the kernel's interview and process maps (its D-115 to D-119) and
+   Substrate's `map` and `catalog` skills on a made-up firm of about 30 people (documents, one event log, an
+   interview); the assistant finds a step worth automating, builds it as a gated automation, a person approves its
+   writes in the desktop, and the evidence (claims, quotes, the approval) is a report. Done when a scripted run goes
+   from an empty instance to the report without help, and the same run works on a real firm's material.
+4. **An instance per client** (step 7's bootstrap, cut to what a client needs): one command brings up a named
+   instance on a laptop or a small server (its own `.env`, secrets, volumes, ports), with backup, export and restore,
+   and an upgrade path; nothing of one client in another's instance.
+5. **Signing in for a hosted instance** (S-200's SSO idea): an identity provider picked with the `research` skill
+   behind Caddy's `forward_auth` for every app; OIDC where an app supports it; header sign-in or the app's own login
+   off where it allows; a password manager's autofill as the last resort, never the proxy holding passwords. The
+   kernel's person logins mapped from it (the kernel's O-6, a kernel decision). TLS on a public host name.
+6. **Presentable:** README and a getting-started page read cold (step 8), a demo script and a recorded run of step
+   3, a one-page description of the offer. Then the business session (step 10).
+
+The owner's to decide before step 6: the product's name, the licence and whether the repositories go public, and
+whether a client's instance is hosted by him or runs on the client's machine.
+
 ## Next, in order (2026-11-23)
 
 Done from the 2026-11-22 list: the catalog entry (S-176), compose into the kernel and back (S-177), the decider trial
