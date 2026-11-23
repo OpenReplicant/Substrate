@@ -104,7 +104,7 @@ chosen by a decider that learns from outcome-labelled experience) is a **distrib
 Done from the 2026-11-22 list: the catalog entry (S-176), compose into the kernel and back (S-177), the decider trial
 and experience (S-179, S-183).
 
-1. **The OpenEnv spike** (S-184): `openenv` 0.12.0 in the tools image (or a trial container), one Postgres-backed
+1. **Done 2026-11-23 (S-192): all seven points pass; gates stay a `propose` tool (fastmcp caps `mcp` below 2, so no `input_required` yet).** The OpenEnv spike (S-184): `openenv` 0.12.0 in the tools image (or a trial container), one Postgres-backed
    environment, and the seven points: (1) many agents' sessions share one live environment; (2) events reach a
    subscriber in production mode; (3) `reset` clones a template database fast enough; (4) Claude Code runs through
    the harness adapter; (5) against our model proxy via `ANTHROPIC_BASE_URL`, with an episode id in a header;

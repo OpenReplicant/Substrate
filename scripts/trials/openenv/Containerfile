@@ -1,0 +1,6 @@
+# The OpenEnv spike (S-184, plan step 1): openenv 0.12.0 beside Claude Code and psycopg. Trial only, never published.
+FROM localhost/substrate-companion:local
+USER root
+RUN pip install --no-cache-dir openenv==0.12.0
+USER companion
+CMD ["sleep", "infinity"]
