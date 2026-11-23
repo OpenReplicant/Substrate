@@ -138,9 +138,10 @@ and experience (S-179, S-183).
    README read cold by someone new; every concept explained once, where it is used.
 9. **The ladder on OpenEnv and M-17's experiment** (S-186, MetaSoar): a task-family environment, the proxy in the
    Anthropic format, rubric scores as outcomes, the frozen blind run (S-179).
-10. **The SMB Foundry distribution** (the business angle, `docs/research/Object environments prior art.md`): a
-    five-day fixed-price "map and one gated automation" pilot; outreach once Substrate's shape is solid (after
-    steps 6 to 8).
+10. **The SMB Foundry and other business opportunities** (S-188 c): in **a session of their own**, without the code
+    in context, **as soon as steps 6 to 8 are done**. The first customers are design partners and the most
+    valuable, paid or not. Starting point: `docs/research/Object environments prior art.md` (a five-day "map and
+    one gated automation" pilot).
 
 Later, built on all of this: mapping and modelling things beyond software, agents and organisations (the owner's
 original "map anything" idea, `owner-vision` in S-117's terms).
@@ -156,12 +157,9 @@ publication and reproductions, the hosted mapper and hosted judging, the slot mo
 
 ## The owner's to decide
 
-- Which game comes first (step 9), and which embodied environment after that (step 10).
+- Which game comes first and which embodied environment after it (the steps table's 9 and 10; a games distribution now).
 - Rotating the Postgres password.
 - The licence and whether the repository goes public.
 - Whether a Business-Source-licensed part (Nomad) may ever be a default; recommended no (S-173).
 - When to migrate kernel v0's P-Plan IRIs to PROV-O and the profile's terms (S-175; a kernel change).
 - Confirming the kernel's D-101 (the content framing) once the catalog entry has proved it or not.
-- Whether LFM3 (LFM Open License v1.0) may be the recommended fast model (S-169).
-- Which trusted registry the MCP installer reads from (S-182 c; the official MCP Registry recommended, to be checked).
-- The SMB Foundry's offer and price, and when outreach starts (after step 3 or so).

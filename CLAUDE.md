@@ -53,7 +53,8 @@ and move into `distributions/assistant/` (plan step 3).
    Claude Code. A tool goes into a container (`deploy/tools/Containerfile`, or the companion's).
 7. **Licences:** permissive or LGPL for what the repository contains or links into Substrate's code. A GPL part may
    be a default when it is fetched at setup (never in the repository), runs unmodified in its own container and is
-   reached over a process boundary (S-146). Check before adding.
+   reached over a process boundary (S-146). Models and tools the user downloads themselves (never bundled or
+   committed) may be recommended whatever their licence, with the licence named (S-188). Check before adding.
 8. **Every change ends with `scripts/check.sh` passing**, and `scripts/test.sh` where tests exist, or with the
    failure named and explained.
 9. **Morphogen is the optimiser** (S-185; it was out of the build only so it could be iterated on quickly): use it
