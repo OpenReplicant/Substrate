@@ -115,7 +115,7 @@ and experience (S-179, S-183).
    rebuild 7); install its plugin in the orchestrator's harness; one map skill (Substrate's writes the Backstage
    entities, Morphogen adds cells from them); one cell on Substrate's own configuration judged end to end. Changes
    to Morphogen go by pull request there (the `upstream` skill).
-3. **The repository in its shape** (S-185, S-186): `distributions/assistant/` takes the companion, the voice head
+3. **Changed 2026-11-23 (S-194): the assistant is not ported; it starts again from scratch, so this step keeps only Substrate's own parts in shape and retires the old assistant's once the owner agrees.** The repository in its shape (S-185, S-186): `distributions/assistant/` takes the companion, the voice head
    and avatar, the worker, blocks and the skill gate, the ladder (proxy, deciders, experience, the decider trial);
    envkit goes to MetaSoar's side; components and the judge (S-151) give way to Morphogen; Substrate keeps the
    stack, the skills, the channel, the catalog and the adapters. In batches, each with `scripts/check.sh` and
