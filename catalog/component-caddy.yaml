@@ -1,0 +1,22 @@
+# A catalog entry (S-176): Backstage's entity format, read into the kernel by encoder-backstage.
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: caddy
+  title: The front door
+  description: Caddy in front of the kernel's UI shell (/ui, the desktop) and MCP server (/mcp) on 127.0.0.1:8080, and the desktop's framed apps on origins of their own (8081 the gateway's dashboard, 8082 the map pages).
+  annotations:
+    substrate.dev/licence: Apache-2.0
+    substrate.dev/image: docker.io/library/caddy
+    substrate.dev/compose-service: caddy
+    substrate.dev/decision: S-199, S-200
+spec:
+  type: service
+  lifecycle: experimental
+  owner: owner
+  system: substrate
+  consumesApis:
+  - kernel-http
+  - ui-http
+  dependsOn:
+  - component:kernel

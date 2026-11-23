@@ -1,13 +1,13 @@
 """The Knowledge Kernel as Substrate's store (S-153, S-154; the old `store` package is retired, S-156), in a throwaway
-kernel it drops after (ADMIN_URL from scripts/test.sh). A small store in the old schema (scripts/tests/oldschema, the
-exporter's fixture) is exported into the kernel. It should:
-- export: the items and statements apply, and exporting again submits nothing
+kernel it drops after (ADMIN_URL from scripts/test.sh). A small fixture (scripts/tests/seed.py) is submitted into the
+kernel directly. It should:
+- seed: the items and statements apply, and seeding again submits nothing
 - answer the agent's tools over the kernel's MCP server in the substrate profile (search, read, expand, locate, path,
   alternatives, violations, create_item, say, deprecate) with claim handles and belief
 - write as the calling agent's claims, and deprecate only its own
 
-It needs the kernel's `kk` command and modules (scripts/tests/kernelfx.py), pgvector and pg_trgm; the old schema's
-files 001, 003 and 004 only. Not pgGraph, pgmq or pg_cron.
+It needs the kernel's `kk` command and modules (scripts/tests/kernelfx.py), pgvector and pg_trgm. Not pgGraph, pgmq
+or pg_cron.
 
     scripts/test.sh scripts/tests/test_kernel.py
 """
@@ -21,10 +21,8 @@ from pathlib import Path
 import psycopg
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-sys.path.insert(0, str(Path(__file__).resolve().parent / "oldschema"))
 import kernelfx  # noqa: E402
-import legacy  # noqa: E402
-from legacy import Store, person  # noqa: E402
+from seed import Seed, person  # noqa: E402
 
 checks = []
 
@@ -44,33 +42,31 @@ def main():
     sys.exit(0 if all(checks) else 1)
 
 
-def kernel_fixture(c):
+def kernel_fixture():
     """A store with what the agent's tools are asked about: a hammer with an alias, a preferred and a deprecated
     statement; a bicycle taken apart into a part with a role, an interface, and a candidate."""
-    legacy.apply(c)
-    s = Store(c, actor="test")
+    s = Seed()
     me = person("tester")
     ids = {}
-    with s.edit("the kernel test's things"):
-        tool = s.item("tool", key="tool")
-        hammer = s.item("hammer", key="hammer", description="a tool for nails", aliases=["mallet"])
-        s.say(hammer, s.id("instance-of"), tool, by=me)
-        old = s.say(hammer, s.id("described-at-url"), "https://old.example/hammer", by=me)
-        s.say(hammer, s.id("described-at-url"), "https://example.org/hammer", by=me, rank="preferred")
-        s.say(hammer, s.id("described-at-url"), "https://example.org/forged-hammer", by=me, rank="preferred")
-        s.rank(old, "deprecated", "moved")
-        bike = s.item("bicycle")
-        drive = s.item("drivetrain role")
-        s.say(drive, s.id("instance-of"), s.id("role"), by=me)
-        fit = s.item("1/2 x 3/32 inch chain fitting")
-        s.say(fit, s.id("instance-of"), s.id("interface"), by=me)
-        s.say(drive, s.id("requires-interface"), fit, by=me)
-        chain, belt, other = s.item("derailleur chain"), s.item("belt drive"), s.item("single-speed chain")
-        for x in (chain, other):
-            s.say(x, s.id("provides-interface"), fit, by=me)
-        s.say(bike, s.id("has-part"), chain, by=me, qualifiers=[(s.id("object-has-role"), drive)])
+    tool = s.item("tool", key="tool")
+    hammer = s.item("hammer", key="hammer", description="a tool for nails", aliases=["mallet"])
+    s.say(hammer, "instance-of", tool, by=me)
+    old = s.say(hammer, "described-at-url", "https://old.example/hammer", by=me)
+    s.say(hammer, "described-at-url", "https://example.org/hammer", by=me, rank="preferred")
+    s.say(hammer, "described-at-url", "https://example.org/forged-hammer", by=me, rank="preferred")
+    s.rank(old, "deprecated", "moved")
+    bike = s.item("bicycle")
+    drive = s.item("drivetrain role")
+    s.say(drive, "instance-of", s.id("role"), by=me)
+    fit = s.item("1/2 x 3/32 inch chain fitting")
+    s.say(fit, "instance-of", s.id("interface"), by=me)
+    s.say(drive, "requires-interface", fit, by=me)
+    chain, belt, other = s.item("derailleur chain"), s.item("belt drive"), s.item("single-speed chain")
+    for x in (chain, other):
+        s.say(x, "provides-interface", fit, by=me)
+    s.say(bike, "has-part", chain, by=me, qualifiers=[("object-has-role", drive)])
     ids.update(tool=tool, hammer=hammer, bike=bike, drive=drive, fit=fit, chain=chain, belt=belt, other=other)
-    return ids
+    return s, ids
 
 
 async def kernel_part(admin):
@@ -79,18 +75,13 @@ async def kernel_part(admin):
     why = kernelfx.available()
     if why:
         raise RuntimeError(why)
-    sname = f"store_kfx_{os.getpid()}"
-    with psycopg.connect(admin, autocommit=True) as a:
-        a.execute(f"create database {sname}")
-    surl = admin.rsplit("/", 1)[0] + "/" + sname
     k = None
     try:
-        with psycopg.connect(surl, autocommit=True) as c:
-            ids = kernel_fixture(c)
+        fixture, ids = kernel_fixture()
         k = kernelfx.Kernel(admin)
-        out = k.export(surl)
-        check("kernel: the store's items and statements are exported and applied", out["new"] > 0 and out["not_applied"] == 0, out)
-        check("kernel: exporting again submits nothing", k.export(surl)["new"] == 0)
+        out = k.seed(fixture)
+        check("kernel: the fixture's items and statements are submitted and applied", out["new"] > 0 and out["not_applied"] == 0, out)
+        check("kernel: seeding again submits nothing", k.seed(fixture)["new"] == 0)
         agent = k.agent("substrate-test")
         env = {x: os.environ[x] for x in ("PATH", "PYTHONPATH", "HOME") if x in os.environ}
         env.update(DATABASE_URL=agent, KK_PROFILE="substrate", KK_SUBSTRATE_WAIT="30")
@@ -101,8 +92,6 @@ async def kernel_part(admin):
     finally:
         if k:
             k.close()
-        with psycopg.connect(admin, autocommit=True) as a:
-            a.execute(f'drop database if exists "{sname}" with (force)')
 
 
 async def kernel_tools(session, ids, k):

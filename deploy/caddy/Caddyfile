@@ -1,47 +1,52 @@
-# The front door (workbench/BRIEF.md section 7):
-#   /api/*            PostgREST; the prefix is stripped, so /api/note is PostgREST's /note
-#   /wb/api/*         the Workbench server: live events (streamed, so never buffered), extractors, MCP
-#   /sparql           the graph endpoint (Ontop), read-only SPARQL over the same tables
-#   /plugins/*/web/*  each installed plugin's browser files; nothing else in a plugin folder is served
-#   everything else   Workbench's shell from workbench/web; / is index.html, a template that finds the plugins
-# With PUBLIC_HOST set to a public host name, Caddy gets and renews a certificate.
-{$PUBLIC_HOST::80} {
+# The front door (S-199, S-200), on 127.0.0.1 only (deploy/compose.yaml publishes each port there):
+#   :8080  the desktop: the kernel's UI shell at /ui/ (its D-44, D-127) and MCP at /mcp; /ui/apps.json, the framed apps
+#          the shell lists (deploy/caddy/apps.json), is served from here, and the shell's own Content-Security-Policy
+#          gains a frame-src naming exactly those apps' origins
+#   :8081  Bifrost's dashboard (the gateway), framable by the desktop only
+#   :8082  Substrate's map pages (ui/), framable by the desktop only
+# Each framed app is on an origin of its own: a frame on the shell's origin, allowed scripts and same-origin, could undo
+# its sandbox and read the person's token. The apps' own headers are rewritten here, in the proxy, not in their code:
+# only `frame-ancestors 'none'` becomes the desktop's origins, and Bifrost's X-Frame-Options (DENY, which a browser
+# applies even beside frame-ancestors in some versions) is dropped; the rest of each policy is theirs, unchanged.
+# Caddy's header_down replaces by an RE2 regular expression (caddyserver.com/docs/caddyfile/directives/reverse_proxy,
+# read 2026-11-23); these patterns have no special characters, so they match literally.
+{
+	admin off
+	auto_https off
+}
+
+:8080 {
 	encode zstd gzip
 
-	redir /api /api/
-	handle_path /api/* {
-		reverse_proxy postgrest:3000
-	}
-
-	handle /sparql {
-		reverse_proxy graph:8080
-	}
-
-	handle /wb/api/* {
-		reverse_proxy workbench:8100 {
-			flush_interval -1
-		}
-	}
-
-	@pluginweb path_regexp ^/plugins/[a-z0-9_-]+/web/
-	handle @pluginweb {
-		root * /srv
+	redir / /ui/
+	handle /ui/apps.json {
+		root * /etc/caddy
+		rewrite * /apps.json
+		header Content-Type application/json
+		header X-Content-Type-Options nosniff
 		file_server
 	}
-	handle /plugins/* {
-		respond 404
+	handle /mcp* {
+		reverse_proxy kernel:8000
 	}
-
 	handle {
-		root * /srv
-		# Alpine's CSP build and vendored Dockview need nothing inline; apps on other origins go in {$WB_FRAME_SRC}
-		header {
-			Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-src 'self' {$WB_FRAME_SRC}; frame-ancestors 'self'; object-src 'none'; base-uri 'none'; form-action 'self'"
-			X-Content-Type-Options nosniff
-			Referrer-Policy same-origin
+		reverse_proxy kernel:8000 {
+			header_down Content-Security-Policy "default-src 'self';" "default-src 'self'; frame-src http://127.0.0.1:8081 http://127.0.0.1:8082;"
 		}
-		rewrite / /wb/index.html
-		templates
-		file_server
+	}
+}
+
+:8081 {
+	encode zstd gzip
+	reverse_proxy gateway:8080 {
+		header_down -X-Frame-Options
+		header_down Content-Security-Policy "frame-ancestors 'none'" "frame-ancestors http://127.0.0.1:8080 http://localhost:8080"
+	}
+}
+
+:8082 {
+	encode zstd gzip
+	reverse_proxy ui:8100 {
+		header_down Content-Security-Policy "frame-ancestors 'none'" "frame-ancestors http://127.0.0.1:8080 http://localhost:8080"
 	}
 }

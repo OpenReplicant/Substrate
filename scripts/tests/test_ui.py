@@ -1,6 +1,5 @@
-"""The UI (S-140, S-154, S-156), against throwaway databases it drops after (ADMIN_URL from scripts/test.sh): a store
-in the old schema (scripts/tests/oldschema, the exporter's fixture) with a bicycle's map, exported into a throwaway
-Knowledge Kernel (scripts/tests/kernelfx.py), and the UI on that kernel. It should:
+"""The UI (S-140, S-154, S-156), against a throwaway Knowledge Kernel it drops after (ADMIN_URL from scripts/test.sh;
+scripts/tests/kernelfx.py): a bicycle's map seeded into it (scripts/tests/seed.py), and the UI on that kernel. It should:
 - serve its vendored files as recorded in ui/static/vendor/VENDOR.md (SHA-256), with their licences beside them
 - answer search, wholes, an entity's page and a map (nodes by kind, edges by kind) 
 - send its CSP (scripts and styles from itself only) on every response, and its page needs nothing more: no inline
@@ -15,7 +14,6 @@ import hashlib
 import json
 import os
 import re
-import subprocess
 import sys
 import threading
 import urllib.error
@@ -29,9 +27,7 @@ sys.path.insert(0, str(ROOT))
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import kernelfx  # noqa: E402
-sys.path.insert(0, str(Path(__file__).resolve().parent / "oldschema"))
-import legacy  # noqa: E402
-from legacy import Store, person  # noqa: E402
+from seed import Seed, person  # noqa: E402
 from ui import server  # noqa: E402
 
 checks = []
@@ -51,17 +47,7 @@ def get(base, path):
 
 
 def main():
-    admin = os.environ["ADMIN_URL"]
-    name = f"ui_test_{os.getpid()}"
-    with psycopg.connect(admin, autocommit=True) as a:
-        a.execute(f"create database {name}")
-    url = admin.rsplit("/", 1)[0] + "/" + name
-    try:
-        with psycopg.connect(url, autocommit=True) as c:
-            run(c, url, admin)
-    finally:
-        with psycopg.connect(admin, autocommit=True) as a:
-            a.execute(f"drop database {name} with (force)")
+    run(os.environ["ADMIN_URL"])
     print(f"{sum(checks)}/{len(checks)} checks passed")
     sys.exit(0 if all(checks) else 1)
 
@@ -82,22 +68,20 @@ def vendored():
     check("the script never writes HTML", "innerHTML" not in js and "insertAdjacentHTML" not in js and "document.write" not in js)
 
 
-def run(c, url, admin):
+def run(admin):
     vendored()
-    legacy.apply(c)
-    s = Store(c, actor="test")
+    s = Seed()
     me = person("tester")
-    with s.edit("a bicycle"):
-        bike = s.item("bicycle", description="a whole")
-        drive = s.item("drivetrain role")
-        s.say(drive, s.id("instance-of"), s.id("role"), by=me)
-        fit = s.item("1/2 x 3/32 inch chain fitting")
-        s.say(fit, s.id("instance-of"), s.id("interface"), by=me)
-        s.say(drive, s.id("requires-interface"), fit, by=me)
-        chain, other = s.item("derailleur chain"), s.item("single-speed chain")
-        for x in (chain, other):
-            s.say(x, s.id("provides-interface"), fit, by=me)
-        s.say(bike, s.id("has-part"), chain, by=me, qualifiers=[(s.id("object-has-role"), drive)])
+    bike = s.item("bicycle", description="a whole")
+    drive = s.item("drivetrain role")
+    s.say(drive, "instance-of", s.id("role"), by=me)
+    fit = s.item("1/2 x 3/32 inch chain fitting")
+    s.say(fit, "instance-of", s.id("interface"), by=me)
+    s.say(drive, "requires-interface", fit, by=me)
+    chain, other = s.item("derailleur chain"), s.item("single-speed chain")
+    for x in (chain, other):
+        s.say(x, "provides-interface", fit, by=me)
+    s.say(bike, "has-part", chain, by=me, qualifiers=[("object-has-role", drive)])
     ids = dict(bike=bike, drive=drive, fit=fit, chain=chain, other=other)
 
     why = kernelfx.available()
@@ -106,15 +90,15 @@ def run(c, url, admin):
         return
     k = kernelfx.Kernel(admin)
     try:
-        out = k.export(url)
-        check("the store is exported into a kernel", out["new"] > 0 and out["not_applied"] == 0, out)
-        scenario("kernel", url, k.url, ids)
-        kernel_only(k, url, ids)
+        out = k.seed(s)
+        check("the fixture is seeded into a kernel", out["new"] > 0 and out["not_applied"] == 0, out)
+        scenario("kernel", k.url, ids)
+        kernel_only(k, ids)
     finally:
         k.close()
 
 
-def scenario(backend, url, kernel, ids):
+def scenario(backend, kernel, ids):
     bike, drive, fit, chain, other = (ids[x] for x in ("bike", "drive", "fit", "chain", "other"))
     srv = server.serve("127.0.0.1", 0, kernel)
     threading.Thread(target=srv.serve_forever, daemon=True).start()
@@ -157,7 +141,7 @@ def scenario(backend, url, kernel, ids):
         srv.shutdown()
 
 
-def kernel_only(k, url, ids):
+def kernel_only(k, ids):
     """The kernel's own rules reach the UI: its session is the read model's role, read-only, and sees only the scopes
     that role is cleared for."""
     st = server.Store(k.url, role=server.KERNEL_ROLE)
@@ -178,15 +162,11 @@ def kernel_only(k, url, ids):
         a.execute("insert into kernel.scope(iri, label) values (%s, 'ui test: private')", (scope,))
         for role, w in (("kkm_encoder_substrate", True), ("kkm_validator", False)):
             a.execute("insert into kernel.scope_grant(scope, db_role, can_read, can_write) values (%s, %s, true, %s)", (scope, role, w))
-    with psycopg.connect(url, autocommit=True) as sc:
-        s = Store(sc, actor="test-private")
-        with s.edit("something private"):
-            vault = s.item("Zebrafish vault", description="a secret whole")
-            part = s.item("Zebrafish part")
-            s.say(vault, s.id("has-part"), part, by=person("pete"))
-    cmd = [sys.executable, "-m", "encoder_substrate", "--store", url, "--scope", scope]
-    subprocess.run(cmd, check=True, env=k.env, capture_output=True)
-    k.wait_applied()
+    s = Seed(first=1000)
+    vault = s.item("Zebrafish vault", description="a secret whole")
+    part = s.item("Zebrafish part")
+    s.say(vault, "has-part", part, by=person("pete"))
+    k.seed(s, scope=scope)
     srv = server.serve("127.0.0.1", 0, k.url)
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     base = f"http://127.0.0.1:{srv.server_port}"

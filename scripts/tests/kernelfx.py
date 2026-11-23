@@ -1,7 +1,7 @@
 """A throwaway Knowledge Kernel for the tests that read Substrate's store from it (S-154).
 
     k = Kernel(ADMIN_URL)          # a database, `kk init`, and the kernel's validator running
-    k.export(store_url)            # the store's items and statements as change sets, applied
+    k.seed(seed.Seed(...))         # a fixture's items and statements as change sets, applied (scripts/tests/seed.py)
     k.url                          # the kernel's login (kk_authenticator): the UI switches it to the read model's role
     k.close()                      # stops the validator and drops the database
 
@@ -75,14 +75,17 @@ class Kernel:
                 time.sleep(0.5)
         raise RuntimeError("change sets did not apply: is the validator running?")
 
-    def export(self, store_url: str) -> dict:
-        """encoder-substrate over the store, as the kernel's own module; waits for the validator to apply it."""
-        out = subprocess.run([sys.executable, "-m", "encoder_substrate", "--store", store_url], check=True, env=self.env,
-                             capture_output=True, text=True).stdout
+    def seed(self, fixture, scope: str | None = None) -> dict:
+        """A fixture (seed.Seed) submitted by the kernel's encoder-substrate, in its own role, as the claims the read
+        model answers from; waits for the validator to apply them."""
+        from encoder_substrate.__main__ import export
+        from encoder_substrate.encode import SCOPE
+        from kk.lib import connect
+        with connect("kkm_encoder_substrate", url=self.url) as conn, conn.cursor() as cur:
+            summary = export(cur, list(fixture.entities.values()), fixture.statements, scope or SCOPE)
         self.wait_applied()
         with psycopg.connect(self.admin, autocommit=True) as c:
             bad = c.execute("select count(*) from kernel.change_set where status in ('invalid', 'rejected', 'conflict')").fetchone()[0]
-        summary = json.loads(out.strip().splitlines()[-1])
         summary["not_applied"] = bad
         return summary
 

@@ -25,10 +25,11 @@ removed on 2026-11-23 (S-194): the assistant starts again from scratch, not port
 | Local models | container `ollama`; containers `llm` and `llm-fast` (llama.cpp, profile `llm`) | Ollama for the store's embeddings; two chat models (S-169): the slow capable one, Inkling 2 Mini on the CPU, at the gateway as `local/slow`; the fast one, LFM3 1.7B on the GPU, as `fast/fast` (the alias names the role, not the model; Gemma is retired) |
 | Tools | `bin/`, container `substrate-tools` | the scripts' Python and gitleaks, run in a container as you (S-19) |
 | The UI | `ui/` (`ui/server.py`, `ui/static`), compose service `ui` on 127.0.0.1:8100 | the store's pages and maps as diagrams (S-140), read-only; v1's Workbench rebuilt, with no name of its own (S-141) |
+| The desktop | compose service `caddy` (`deploy/caddy/Caddyfile`, `deploy/caddy/apps.json`) on 127.0.0.1:8080, in front of the kernel's `kk serve`; its framed apps on 8081 (the gateway's dashboard) and 8082 (the map pages) | the kernel's UI shell as a desktop (the kernel's D-127): a launcher and windows for search, review, change sets, the graph, the view modules and framed apps, each app on an origin of its own with its headers rewritten in the proxy; MCP over HTTP at `/mcp`; a person signs in with `scripts/kernel.sh person NAME` (S-199, S-200) |
 | Images | `.github/workflows/images.yml`, `image_ref` in `scripts/lib.sh` | `ghcr.io/openreplicant/substrate-{db,tools}` and the kernel's image are pulled (tags `SUBSTRATE_IMAGE_TAG`, `KERNEL_IMAGE_TAG`); compose keeps `build:` as the fallback (S-167) |
 | Glue | `scripts/`, `deploy/` | brings the parts up and connects them |
 
-`deploy/caddy` (in front of the UI) and `deploy/ontop` (SPARQL) are kept and not started yet.
+`deploy/ontop` (SPARQL) is kept and not started yet.
 
 ## Rules
 
@@ -71,9 +72,9 @@ scripts/up.sh              # the stack (db, gateway, ollama, ui), the tools cont
 scripts/check.sh           # is everything up and wired
 scripts/test.sh [FILE...]  # the test suites, in the tools container
 scripts/build.sh [db|tools|kernel]   # none: pull published images, build what did not pull; SUBSTRATE_BUILD=1 builds all
-scripts/logs.sh SERVICE    # db, gateway, ollama, kernel, ui, llm, llm-fast
+scripts/logs.sh SERVICE    # db, gateway, ollama, kernel, ui, caddy, llm, llm-fast
 scripts/tools.sh start|stop|status
-scripts/kernel.sh init|catalog|login NAME|mcp NAME   # the Knowledge Kernel: its schema, the catalog into it, an agent's login and its MCP server
+scripts/kernel.sh init|catalog|login NAME|mcp NAME|person NAME   # the Knowledge Kernel: its schema, the catalog into it, an agent's login, its MCP server, a person's sign-in
 scripts/down.sh [--volumes]   # stop (deleting data asks first)
 python3 scripts/gateway.py render|keys   # the gateway's config from .env and its callers
 bin/in-tools python3 scripts/db.py init   # the databases and the environment's schema (environment/sql/)

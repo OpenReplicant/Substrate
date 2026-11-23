@@ -9,6 +9,7 @@ spec:
   - ./api-anthropic-api.yaml
   - ./api-anthropic-messages.yaml
   - ./api-embeddings.yaml
+  - ./api-kernel-http.yaml
   - ./api-kernel-mcp-memory.yaml
   - ./api-kernel-mcp-substrate.yaml
   - ./api-llama-chat-fast.yaml
@@ -18,6 +19,7 @@ spec:
   - ./api-ollama-api.yaml
   - ./api-ui-http.yaml
   - ./component-anthropic.yaml
+  - ./component-caddy.yaml
   - ./component-environment.yaml
   - ./component-gateway.yaml
   - ./component-kernel-catalog.yaml
