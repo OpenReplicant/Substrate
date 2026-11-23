@@ -122,10 +122,28 @@ and experience (S-179, S-183).
    `scripts/test.sh` passing.
 4. **One database** (S-185): a kernel decision superseding D-94 (c), then the `env` schema in the kernel's database.
 5. **The orchestrator's `orchestrate` and `optimize` skills**, and hooks enforcing gates in the harness.
-6. **The ladder on OpenEnv and M-17's experiment** (S-186, MetaSoar): a task-family environment, the proxy in the
+6. **Everything else runs on top of the settled shape** (S-187): each distribution (the assistant, the SMB Foundry's
+   first cut), MetaSoar's experiments and every test suite run against Substrate through its contracts only. Done
+   when `scripts/test.sh` passes, each distribution comes up from its own folder, and MetaSoar's worlds run as OpenEnv
+   environments.
+7. **The bootstrap instance** (S-187): what a new Substrate instance starts with, so the orchestrator knows itself
+   from the first run: a **snapshot map** of Substrate's own parts (the `catalog/` Backstage entities, the stack's
+   compose file in the kernel, S-176, S-177), **catalogs** of the candidates already researched for each intended
+   component (models, the gateway, harnesses, deciders, the environment standards; with their measurements), the
+   vocabularies (S-175), **Morphogen cells** for Substrate's own configuration, the default gates and privacy
+   rules, the skills, and a first task: map yourself, check the map against what runs. Loaded by one command into
+   an empty kernel. Done when a fresh machine's instance answers "what are you made of, and what could replace
+   each part?" from its own store.
+8. **A second pass over the documentation** (S-187): README, `docs/framework.md`, the skills and each distribution's
+   README read cold by someone new; every concept explained once, where it is used.
+9. **The ladder on OpenEnv and M-17's experiment** (S-186, MetaSoar): a task-family environment, the proxy in the
    Anthropic format, rubric scores as outcomes, the frozen blind run (S-179).
-7. **The SMB Foundry distribution** (the business angle, `docs/research/Object environments prior art.md`): a
-   five-day fixed-price "map and one gated automation" pilot; outreach once Substrate's shape is solid.
+10. **The SMB Foundry distribution** (the business angle, `docs/research/Object environments prior art.md`): a
+    five-day fixed-price "map and one gated automation" pilot; outreach once Substrate's shape is solid (after
+    steps 6 to 8).
+
+Later, built on all of this: mapping and modelling things beyond software, agents and organisations (the owner's
+original "map anything" idea, `owner-vision` in S-117's terms).
 
 The telemetry collector and a process runtime (the old step 4) wait until a step needs them.
 

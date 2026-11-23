@@ -1,5 +1,7 @@
 # Substrate
 
+> **Map or design software, agents and organisations. Optimise all the things!**
+
 **An operating system for AI agents.** Today's agents live in a terminal where everything is a file. Here a working
 system (a business, a codebase, a household, a game) lives in a **kernel** made of Postgres, where everything is an
 object: state, actions behind permission gates (`free`, `propose` for your approval, `deny`), events anyone allowed
