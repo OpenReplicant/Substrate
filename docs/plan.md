@@ -102,7 +102,10 @@ are views of the same items and claims; what can be said in one format can be ca
    test (decoded from the map, it should match what runs; the running state encoded back). — built 2026-11-22 (S-177, the
    kernel's D-125): `encoder-compose` and `decoder-compose`; Substrate's compose file round-trips through the kernel.
    Left: the running state encoded back, and a `scripts/kernel.sh compose` job once the kernel image has the modules.
-3. **M-17's gate at the model endpoint**, then M-17's first experiment (the handoff, 2026-11-22).
+3. **M-17's gate at the model endpoint**, then M-17's first experiment (S-178): a proxy in front of the gateway
+   (OpenAI and Anthropic formats) asking decision questions at every model call, System One style, with pluggable
+   deciders (the fast model's probabilities, a small decision model, embeddings with a tabular in-context head as the
+   first online learning), every route logged. The owner dogfoods it as their personal assistant with real tools.
 4. **The telemetry collector and a process runtime** (process-compose first), picked with the `research` skill, as
    the second decoder target.
 5. Then, as before: the live map and avatar page (S-158), the business distribution, process KPIs and one real
