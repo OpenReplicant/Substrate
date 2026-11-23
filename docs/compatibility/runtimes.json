@@ -1,0 +1,593 @@
+{
+ "what": "Runtimes, orchestrators, cloud services and interchange standards Substrate can talk to: it decodes a map into a runtime's native format and encodes the runtime's state and history back (S-174). A licence decides only whether one can be a default part (rule 7); any of them can be a target for a business that already runs it.",
+ "licence_classes": {
+  "open": "OSI-approved; may be a default (GPL only in its own container, S-146)",
+  "source-available": "BUSL, SSPL, Sustainable Use, Camunda, FSL: a target, not a default",
+  "proprietary": "a cloud service: a target"
+ },
+ "sources": [
+  "2026-11-22, subagent reports from official docs and GitHub (licences from GitHub's API or the LICENSE file)"
+ ],
+ "service_and_process_runtimes": [
+  {
+   "label": "Docker Compose",
+   "kind": "service runtime",
+   "catalog_ids": {
+    "github": "docker/compose"
+   },
+   "licence": "Apache-2.0 (the Compose Specification, compose-spec/compose-spec)",
+   "licence_class": "open",
+   "definition_format": "compose.yaml (the Compose Specification)",
+   "format_spec": "https://github.com/compose-spec/compose-spec/blob/master/schema/compose-spec.json",
+   "deploy_and_read_api": "docker compose up; docker compose ps --format json (State, Health)",
+   "health": "healthchecks",
+   "telemetry": "engine Prometheus (metrics-addr); Compose itself: not found",
+   "notes": "the default; Substrate runs on it with Podman",
+   "source": "2026-11-22, subagent reports from official docs and GitHub (licences from GitHub's API or the LICENSE file)"
+  },
+  {
+   "label": "Podman",
+   "kind": "service runtime",
+   "catalog_ids": {
+    "github": "containers/podman"
+   },
+   "licence": "Apache-2.0",
+   "licence_class": "open",
+   "definition_format": "Quadlet units (.container, .pod, .kube ...); podman kube play takes Kubernetes YAML (a subset)",
+   "format_spec": "not found (Quadlet)",
+   "deploy_and_read_api": "Docker-compatible and Libpod REST APIs on a Unix socket; podman ps",
+   "health": "Quadlet HealthCmd",
+   "telemetry": "not found (a third-party OTel receiver)",
+   "notes": "the engine under Substrate's compose (rule 5)",
+   "source": "2026-11-22, subagent reports from official docs and GitHub (licences from GitHub's API or the LICENSE file)"
+  },
+  {
+   "label": "process-compose",
+   "kind": "process runtime",
+   "catalog_ids": {
+    "github": "F1bonacc1/process-compose"
+   },
+   "licence": "Apache-2.0",
+   "licence_class": "open",
+   "definition_format": "process-compose.yaml",
+   "format_spec": "not found",
+   "deploy_and_read_api": "REST (OpenAPI), token PC_API_TOKEN; CLI start/stop/restart",
+   "health": "liveness and readiness probes",
+   "telemetry": "not found",
+   "notes": "lead candidate for processes (S-173)",
+   "source": "2026-11-22, subagent reports from official docs and GitHub (licences from GitHub's API or the LICENSE file)"
+  },
+  {
+   "label": "systemd",
+   "kind": "service and process runtime",
+   "catalog_ids": {
+    "github": "systemd/systemd"
+   },
+   "licence": "LGPL-2.1-or-later (core)",
+   "licence_class": "open",
+   "definition_format": "unit files (INI)",
+   "format_spec": "systemd.unit(5)",
+   "deploy_and_read_api": "systemctl show / status / is-active",
+   "health": "unit states, Type=notify",
+   "telemetry": "not found",
+   "source": "2026-11-22, subagent reports from official docs and GitHub (licences from GitHub's API or the LICENSE file)"
+  },
+  {
+   "label": "Kubernetes",
+   "kind": "service runtime",
+   "catalog_ids": {
+    "github": "kubernetes/kubernetes"
+   },
+   "licence": "Apache-2.0",
+   "licence_class": "open",
+   "definition_format": "YAML manifests",
+   "format_spec": "the OpenAPI spec in api/openapi-spec",
+   "deploy_and_read_api": "the API server (REST)",
+   "health": "liveness, readiness, startup probes",
+   "telemetry": "Prometheus /metrics; OTLP traces from components",
+   "source": "2026-11-22, subagent reports from official docs and GitHub (licences from GitHub's API or the LICENSE file)"
+  },
+  {
+   "label": "k3s",
+   "kind": "service runtime",
+   "catalog_ids": {
+    "github": "k3s-io/k3s"
+   },
+   "licence": "Apache-2.0",
+   "licence_class": "open",
+   "definition_format": "Kubernetes manifests",
+   "format_spec": "Kubernetes'",
+   "deploy_and_read_api": "the Kubernetes API",
+   "health": "Kubernetes'",
+   "telemetry": "not found",
+   "source": "2026-11-22, subagent reports from official docs and GitHub (licences from GitHub's API or the LICENSE file)"
+  },
+  {
+   "label": "HashiCorp Nomad",
+   "kind": "service and process runtime",
+   "catalog_ids": {
+    "github": "hashicorp/nomad"
+   },
+   "licence": "BUSL-1.1",
+   "licence_class": "source-available",
+   "definition_format": "HCL jobspec (JSON accepted)",
+   "format_spec": "not found (JSON schema)",
+   "deploy_and_read_api": "PUT /v1/jobs, GET /v1/jobs",
+   "health": "HealthyAllocs / UnhealthyAllocs",
+   "telemetry": "Prometheus, StatsD and others; OTel not found",
+   "notes": "can be a target for a business that runs it; not a default (rule 7, S-173)",
+   "source": "2026-11-22, subagent reports from official docs and GitHub (licences from GitHub's API or the LICENSE file)"
+  },
+  {
+   "label": "Docker Swarm",
+   "kind": "service runtime",
+   "catalog_ids": {
+    "github": "moby/moby"
+   },
+   "licence": "Apache-2.0",
+   "licence_class": "open",
+   "definition_format": "Compose files (3.x) as stacks",
+   "format_spec": "the Compose Specification",
+   "deploy_and_read_api": "docker stack deploy; docker service ls",
+   "health": "not found",
+   "telemetry": "engine Prometheus",
+   "source": "2026-11-22, subagent reports from official docs and GitHub (licences from GitHub's API or the LICENSE file)"
+  },
+  {
+   "label": "s6 / s6-overlay",
+   "kind": "process supervisor",
+   "catalog_ids": {
+    "github": "just-containers/s6-overlay"
+   },
+   "licence": "ISC (s6); s6-overlay's not confirmed",
+   "licence_class": "open",
+   "definition_format": "service directories of scripts",
+   "format_spec": "not found",
+   "deploy_and_read_api": "s6-svstat",
+   "health": "not found",
+   "telemetry": "not found",
+   "source": "2026-11-22, subagent reports from official docs and GitHub (licences from GitHub's API or the LICENSE file)"
+  },
+  {
+   "label": "supervisord",
+   "kind": "process supervisor",
+   "catalog_ids": {
+    "github": "Supervisor/supervisor"
+   },
+   "licence": "BSD-style with a modification-notice clause (no SPDX id)",
+   "licence_class": "open (check)",
+   "definition_format": "INI [program:x]",
+   "format_spec": "supervisord.org/configuration",
+   "deploy_and_read_api": "XML-RPC over HTTP",
+   "health": "autorestart, startretries",
+   "telemetry": "not found",
+   "source": "2026-11-22, subagent reports from official docs and GitHub (licences from GitHub's API or the LICENSE file)"
+  }
+ ],
+ "workflow_orchestrators": [
+  {
+   "label": "Temporal",
+   "kind": "workflow orchestrator",
+   "catalog_ids": {
+    "github": "temporalio/temporal"
+   },
+   "licence": "MIT",
+   "licence_class": "open",
+   "definition_format": "code (Go, Java, TypeScript, Python); no definition file",
+   "format_spec": "none",
+   "deploy_and_read_api": "SDK client (gRPC, port 7233)",
+   "health": "workflow history",
+   "telemetry": "OTel tracing in SDKs; Prometheus metrics",
+   "source": "2026-11-22, subagent reports from official docs and GitHub (licences from GitHub's API or the LICENSE file)"
+  },
+  {
+   "label": "Apache Airflow",
+   "kind": "workflow orchestrator",
+   "catalog_ids": {
+    "github": "apache/airflow"
+   },
+   "licence": "Apache-2.0",
+   "licence_class": "open",
+   "definition_format": "Python DAGs",
+   "format_spec": "none",
+   "deploy_and_read_api": "REST API",
+   "health": "task states",
+   "telemetry": "OTel traces ([traces])",
+   "source": "2026-11-22, subagent reports from official docs and GitHub (licences from GitHub's API or the LICENSE file)"
+  },
+  {
+   "label": "Argo Workflows",
+   "kind": "workflow orchestrator",
+   "catalog_ids": {
+    "github": "argoproj/argo-workflows"
+   },
+   "licence": "Apache-2.0",
+   "licence_class": "open",
+   "definition_format": "Kubernetes Workflow resource (YAML)",
+   "format_spec": "its CRD",
+   "deploy_and_read_api": "REST API server (Swagger)",
+   "health": "workflow status",
+   "telemetry": "metrics over OTLP and Prometheus",
+   "source": "2026-11-22, subagent reports from official docs and GitHub (licences from GitHub's API or the LICENSE file)"
+  },
+  {
+   "label": "Prefect",
+   "kind": "workflow orchestrator",
+   "catalog_ids": {
+    "github": "PrefectHQ/prefect"
+   },
+   "licence": "Apache-2.0",
+   "licence_class": "open",
+   "definition_format": "Python flows",
+   "format_spec": "none",
+   "deploy_and_read_api": "REST: create_flow_run, flow_runs/filter",
+   "health": "flow run states",
+   "telemetry": "not found",
+   "source": "2026-11-22, subagent reports from official docs and GitHub (licences from GitHub's API or the LICENSE file)"
+  },
+  {
+   "label": "Dagster",
+   "kind": "workflow orchestrator",
+   "catalog_ids": {
+    "github": "dagster-io/dagster"
+   },
+   "licence": "Apache-2.0",
+   "licence_class": "open",
+   "definition_format": "Python assets and jobs",
+   "format_spec": "none",
+   "deploy_and_read_api": "GraphQL (not verified)",
+   "health": "run states",
+   "telemetry": "not found",
+   "source": "2026-11-22, subagent reports from official docs and GitHub (licences from GitHub's API or the LICENSE file)"
+  },
+  {
+   "label": "Kestra",
+   "kind": "workflow orchestrator",
+   "catalog_ids": {
+    "github": "kestra-io/kestra"
+   },
+   "licence": "Apache-2.0",
+   "licence_class": "open",
+   "definition_format": "YAML flows; ZIP export/import",
+   "format_spec": "its flow schema",
+   "deploy_and_read_api": "REST: POST /api/v1/main/flows (YAML)",
+   "health": "executions",
+   "telemetry": "OTel: traces, metrics, logs",
+   "source": "2026-11-22, subagent reports from official docs and GitHub (licences from GitHub's API or the LICENSE file)"
+  },
+  {
+   "label": "Windmill",
+   "kind": "workflow orchestrator",
+   "catalog_ids": {
+    "github": "windmill-labs/windmill"
+   },
+   "licence": "AGPL-3.0 (most), Apache-2.0 (clients), proprietary EE",
+   "licence_class": "open (AGPL) / mixed",
+   "definition_format": "scripts and flows in code",
+   "format_spec": "not verified",
+   "deploy_and_read_api": "OpenAPI",
+   "health": "jobs",
+   "telemetry": "OTLP tracing (Enterprise)",
+   "notes": "a target, not a default without the owner's licence call",
+   "source": "2026-11-22, subagent reports from official docs and GitHub (licences from GitHub's API or the LICENSE file)"
+  },
+  {
+   "label": "n8n",
+   "kind": "workflow orchestrator",
+   "catalog_ids": {
+    "github": "n8n-io/n8n"
+   },
+   "licence": "Sustainable Use License",
+   "licence_class": "source-available",
+   "definition_format": "visual editor, workflows as JSON",
+   "format_spec": "none",
+   "deploy_and_read_api": "public REST API (OpenAPI)",
+   "health": "executions",
+   "telemetry": "not found",
+   "notes": "a target only",
+   "source": "2026-11-22, subagent reports from official docs and GitHub (licences from GitHub's API or the LICENSE file)"
+  },
+  {
+   "label": "Camunda 8 (Zeebe)",
+   "kind": "workflow orchestrator (BPMN)",
+   "catalog_ids": {
+    "github": "camunda/camunda"
+   },
+   "licence": "Camunda License v1",
+   "licence_class": "source-available",
+   "definition_format": "BPMN 2.0 (Modeler)",
+   "format_spec": "BPMN 2.0",
+   "deploy_and_read_api": "REST: POST /deployments (BPMN), POST /process-instances; Zeebe gRPC",
+   "health": "process instances",
+   "telemetry": "metrics over OTLP (Micrometer)",
+   "notes": "a target only; BPMN is the bridge (the kernel's encoder-bpmn)",
+   "source": "2026-11-22, subagent reports from official docs and GitHub (licences from GitHub's API or the LICENSE file)"
+  },
+  {
+   "label": "Flowable",
+   "kind": "workflow orchestrator (BPMN)",
+   "catalog_ids": {
+    "github": "flowable/flowable-engine"
+   },
+   "licence": "Apache-2.0",
+   "licence_class": "open",
+   "definition_format": "BPMN 2.0 XML (also CMMN, DMN)",
+   "format_spec": "BPMN 2.0",
+   "deploy_and_read_api": "REST /flowable-rest/process-api (deploy BPMN XML)",
+   "health": "process instances",
+   "telemetry": "via Spring Boot (Micrometer)",
+   "notes": "the open BPMN engine",
+   "source": "2026-11-22, subagent reports from official docs and GitHub (licences from GitHub's API or the LICENSE file)"
+  },
+  {
+   "label": "Conductor (conductor-oss)",
+   "kind": "workflow orchestrator",
+   "catalog_ids": {
+    "github": "conductor-oss/conductor"
+   },
+   "licence": "Apache-2.0",
+   "licence_class": "open",
+   "definition_format": "JSON workflow definitions",
+   "format_spec": "its JSON model",
+   "deploy_and_read_api": "REST /api (metadata, start, workflow)",
+   "health": "workflow status",
+   "telemetry": "not found",
+   "source": "2026-11-22, subagent reports from official docs and GitHub (licences from GitHub's API or the LICENSE file)"
+  },
+  {
+   "label": "Node-RED",
+   "kind": "flow runtime",
+   "catalog_ids": {
+    "github": "node-red/node-red"
+   },
+   "licence": "Apache-2.0",
+   "licence_class": "open",
+   "definition_format": "flows as JSON",
+   "format_spec": "its flow JSON",
+   "deploy_and_read_api": "Admin API GET/POST /flows, /flow/:id",
+   "health": "not found",
+   "telemetry": "not found",
+   "source": "2026-11-22, subagent reports from official docs and GitHub (licences from GitHub's API or the LICENSE file)"
+  },
+  {
+   "label": "Hatchet",
+   "kind": "workflow orchestrator",
+   "catalog_ids": {
+    "github": "hatchet-dev/hatchet"
+   },
+   "licence": "MIT",
+   "licence_class": "open",
+   "definition_format": "code (Python, TypeScript, Go)",
+   "format_spec": "none",
+   "deploy_and_read_api": "REST and gRPC (not verified)",
+   "health": "runs",
+   "telemetry": "OTel and Prometheus (not verified)",
+   "source": "2026-11-22, subagent reports from official docs and GitHub (licences from GitHub's API or the LICENSE file)"
+  },
+  {
+   "label": "Restate",
+   "kind": "durable execution",
+   "catalog_ids": {
+    "github": "restatedev/restate"
+   },
+   "licence": "BUSL-1.1 (Apache-2.0 after four years)",
+   "licence_class": "source-available",
+   "definition_format": "code (TypeScript, Java, Kotlin)",
+   "format_spec": "none",
+   "deploy_and_read_api": "HTTP ingress /service/handler",
+   "health": "invocations",
+   "telemetry": "OTLP traces",
+   "notes": "a target only",
+   "source": "2026-11-22, subagent reports from official docs and GitHub (licences from GitHub's API or the LICENSE file)"
+  },
+  {
+   "label": "Inngest",
+   "kind": "durable execution",
+   "catalog_ids": {
+    "github": "inngest/inngest"
+   },
+   "licence": "SSPL v1.0 (Apache-2.0 future licence)",
+   "licence_class": "source-available",
+   "definition_format": "code (TypeScript)",
+   "format_spec": "none",
+   "deploy_and_read_api": "REST api.inngest.com/v1, /v2",
+   "health": "function runs",
+   "telemetry": "OTel (extended traces)",
+   "notes": "a target only",
+   "source": "2026-11-22, subagent reports from official docs and GitHub (licences from GitHub's API or the LICENSE file)"
+  }
+ ],
+ "cloud_services": [
+  {
+   "label": "AWS Step Functions",
+   "kind": "cloud workflow",
+   "catalog_ids": {},
+   "licence": "proprietary service; ASL spec copyright Amazon",
+   "licence_class": "proprietary",
+   "definition_format": "Amazon States Language (JSON)",
+   "format_spec": "https://states-language.net/spec.html",
+   "deploy_and_read_api": "CreateStateMachine, DescribeStateMachine, GetExecutionHistory",
+   "health": "executions",
+   "telemetry": "CloudWatch; OTel not found",
+   "source": "2026-11-22, subagent reports from official docs and GitHub (licences from GitHub's API or the LICENSE file)"
+  },
+  {
+   "label": "Azure Logic Apps",
+   "kind": "cloud workflow",
+   "catalog_ids": {},
+   "licence": "proprietary service",
+   "licence_class": "proprietary",
+   "definition_format": "Workflow Definition Language (JSON)",
+   "format_spec": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json",
+   "deploy_and_read_api": "Workflow REST API",
+   "health": "run history",
+   "telemetry": "Azure Monitor; OTel not found",
+   "source": "2026-11-22, subagent reports from official docs and GitHub (licences from GitHub's API or the LICENSE file)"
+  },
+  {
+   "label": "Google Cloud Workflows",
+   "kind": "cloud workflow",
+   "catalog_ids": {},
+   "licence": "proprietary service",
+   "licence_class": "proprietary",
+   "definition_format": "YAML or JSON syntax",
+   "format_spec": "not found (schema)",
+   "deploy_and_read_api": "workflowexecutions API",
+   "health": "executions",
+   "telemetry": "Cloud Logging",
+   "source": "2026-11-22, subagent reports from official docs and GitHub (licences from GitHub's API or the LICENSE file)"
+  },
+  {
+   "label": "Cloudflare Workflows",
+   "kind": "cloud workflow",
+   "catalog_ids": {},
+   "licence": "proprietary service",
+   "licence_class": "proprietary",
+   "definition_format": "TypeScript class run(event, step)",
+   "format_spec": "none",
+   "deploy_and_read_api": "Workers binding (create, get, status)",
+   "health": "instance status",
+   "telemetry": "built-in observability",
+   "source": "2026-11-22, subagent reports from official docs and GitHub (licences from GitHub's API or the LICENSE file)"
+  },
+  {
+   "label": "Azure Durable Functions",
+   "kind": "cloud workflow",
+   "catalog_ids": {},
+   "licence": "proprietary service",
+   "licence_class": "proprietary",
+   "definition_format": "code",
+   "format_spec": "none",
+   "deploy_and_read_api": "not found",
+   "health": "not found",
+   "telemetry": "not found",
+   "source": "2026-11-22, subagent reports from official docs and GitHub (licences from GitHub's API or the LICENSE file)"
+  },
+  {
+   "label": "AWS ECS",
+   "kind": "cloud service runtime",
+   "catalog_ids": {},
+   "licence": "proprietary service",
+   "licence_class": "proprietary",
+   "definition_format": "task definitions (JSON)",
+   "format_spec": "the TaskDefinition reference",
+   "deploy_and_read_api": "RegisterTaskDefinition, DescribeTaskDefinition",
+   "health": "task health",
+   "telemetry": "CloudWatch; ADOT (OTel) sidecar",
+   "source": "2026-11-22, subagent reports from official docs and GitHub (licences from GitHub's API or the LICENSE file)"
+  },
+  {
+   "label": "Google Cloud Run",
+   "kind": "cloud service runtime",
+   "catalog_ids": {},
+   "licence": "proprietary service",
+   "licence_class": "proprietary",
+   "definition_format": "Knative Service YAML (serving.knative.dev/v1)",
+   "format_spec": "https://docs.cloud.google.com/run/docs/reference/yaml/v1",
+   "deploy_and_read_api": "Cloud Run Admin API v1",
+   "health": "revisions",
+   "telemetry": "Cloud Monitoring; OTel sidecar",
+   "source": "2026-11-22, subagent reports from official docs and GitHub (licences from GitHub's API or the LICENSE file)"
+  }
+ ],
+ "standards": [
+  {
+   "label": "BPMN 2.0",
+   "describes": "processes",
+   "version": "2.0.2, 2014-01",
+   "governance_and_licence": "OMG",
+   "spec": "https://www.omg.org/spec/BPMN/",
+   "notes": "the kernel has encoder-bpmn and the BBO profile pack"
+  },
+  {
+   "label": "CNCF Serverless Workflow",
+   "describes": "workflows",
+   "version": "1.1.0",
+   "governance_and_licence": "CNCF; repo Apache-2.0",
+   "spec": "https://github.com/serverlessworkflow/specification",
+   "notes": "no orchestrator above confirmed as an adopter"
+  },
+  {
+   "label": "Compose Specification",
+   "describes": "deployments",
+   "version": "living spec",
+   "governance_and_licence": "Compose Spec project; Apache-2.0",
+   "spec": "https://github.com/compose-spec/compose-spec"
+  },
+  {
+   "label": "OASIS TOSCA",
+   "describes": "deployments",
+   "version": "2.0, OASIS Standard 2025-07-22",
+   "governance_and_licence": "OASIS",
+   "spec": "https://docs.oasis-open.org/tosca/TOSCA/v2.0/TOSCA-v2.0.html",
+   "notes": "the kernel's kk-tosca mirror"
+  },
+  {
+   "label": "Common Workflow Language",
+   "describes": "workflows",
+   "version": "1.2.0",
+   "governance_and_licence": "CWL project (Software Freedom Conservancy)",
+   "spec": "https://www.commonwl.org/specification/"
+  },
+  {
+   "label": "W3C WoT Thing Description",
+   "describes": "interfaces (affordances and protocol forms)",
+   "version": "1.1, W3C Recommendation 2023-12-05",
+   "governance_and_licence": "W3C",
+   "spec": "https://www.w3.org/TR/wot-thing-description11/",
+   "notes": "blocks' interfaces follow its shape (S-164)"
+  },
+  {
+   "label": "OpenAPI",
+   "describes": "HTTP APIs",
+   "version": "3.2.1, 2026-09-10",
+   "governance_and_licence": "OpenAPI Initiative (Linux Foundation); Apache-2.0",
+   "spec": "https://spec.openapis.org/oas/latest.html"
+  },
+  {
+   "label": "AsyncAPI",
+   "describes": "event and message APIs",
+   "version": "3.1.0",
+   "governance_and_licence": "AsyncAPI Initiative; Apache-2.0",
+   "spec": "https://www.asyncapi.com/docs/reference/specification/latest",
+   "notes": "the natural description of a pgmq link"
+  },
+  {
+   "label": "CloudEvents",
+   "describes": "event envelopes",
+   "version": "1.0.2, 2022-02",
+   "governance_and_licence": "CNCF (graduated)",
+   "spec": "https://github.com/cloudevents/spec"
+  },
+  {
+   "label": "OpenTelemetry GenAI semantic conventions",
+   "describes": "model and agent telemetry",
+   "version": "stability to check (moved repo)",
+   "governance_and_licence": "OpenTelemetry",
+   "spec": "https://github.com/open-telemetry/semantic-conventions-genai"
+  },
+  {
+   "label": "Model Context Protocol",
+   "describes": "agent tools",
+   "version": "spec dated 2026-07-28",
+   "governance_and_licence": "to confirm (second source)",
+   "spec": "https://modelcontextprotocol.io/specification/latest"
+  },
+  {
+   "label": "W3C PROV-O",
+   "describes": "provenance",
+   "version": "W3C Recommendation 2013-04-30",
+   "governance_and_licence": "W3C",
+   "spec": "https://www.w3.org/TR/prov-o/",
+   "notes": "the kernel's provenance"
+  },
+  {
+   "label": "P-Plan",
+   "describes": "plans",
+   "version": "rev 1.1, 2013-09-17",
+   "governance_and_licence": "no body; CC BY-NC-SA 2.0",
+   "spec": "https://www.opmw.org/model/p-plan/",
+   "notes": "non-commercial licence: the owner to decide how blocks' plans and the kernel refer to it"
+  }
+ ]
+}

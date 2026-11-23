@@ -1,0 +1,30 @@
+# A catalog entry (S-176): Backstage's entity format, read into the kernel by encoder-backstage.
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: gateway
+  title: Bifrost
+  description: Every model call passes here, under its caller's key, and is logged (S-77).
+  annotations:
+    substrate.dev/licence: Apache-2.0
+    substrate.dev/image: docker.io/maximhq/bifrost:v2.3.2
+    substrate.dev/compose-service: gateway
+    substrate.dev/decision: S-04, S-77
+    substrate.dev/otel-service: bifrost
+spec:
+  type: service
+  lifecycle: experimental
+  owner: owner
+  system: substrate
+  providesApis:
+  - model-chat
+  - model-responses
+  - anthropic-messages
+  - embeddings
+  consumesApis:
+  - ollama-api
+  - llama-chat-slow
+  - llama-chat-fast
+  - anthropic-api
+  dependsOn:
+  - resource:db

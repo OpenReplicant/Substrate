@@ -139,6 +139,29 @@ services:
     depends_on:
       db: {condition: service_healthy}
 
+  # Substrate's catalog into the kernel (S-176): encoder-backstage (the kernel's D-100) reads catalog/*.yaml, one Backstage
+  # entity per file, as claims in Backstage's terms, each citing its file and line; each file is kept as an artifact in
+  # the volume kernel-artifacts. An unchanged file submits nothing; a changed one supersedes what it said
+  # (scripts/kernel.sh catalog). Profile kernel-admin: run, not kept running.
+  kernel-catalog:
+    profiles: [kernel-admin]
+    image: ghcr.io/openreplicant/kernel:${KERNEL_IMAGE_TAG:-main}
+    # --root /: files are recorded as substrate/catalog/<file> whatever the image's working directory (a different root
+    # re-keys every file: the kernel's D-125 lesson)
+    entrypoint: ["sh", "-c", "exec python3 -m encoder_backstage --project substrate --root / /substrate/catalog/*.yaml"]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: [/tmp]
+    environment:
+      DATABASE_URL: postgresql://kk_authenticator:${KK_AUTHENTICATOR_PASSWORD:?set in .env}@db:5432/kernel
+      KK_ARTIFACTS: /artifacts
+    volumes:
+      - ../catalog:/substrate/catalog:ro
+      - kernel-artifacts:/artifacts
+    depends_on:
+      db: {condition: service_healthy}
+
   # The UI (S-140, S-141: Substrate's UI, no name of its own): the store's pages and maps, read-only, on the standard
   # library (ui/server.py) in the tools image. It sees only ui/ and reaches Postgres as db: the entities, pages and
   # maps from the kernel's read model (S-154), the companion's page from the substrate database.
@@ -235,7 +258,7 @@ services:
       PYTHONDONTWRITEBYTECODE: "1"
       STORE_URL: postgresql://judge:${JUDGE_DB_PASSWORD:?set in .env}@db:5432/substrate
       JUDGE_KEY: ${JUDGE_KEY:?set in .env}
-      JUDGE_MODEL: local/${LLM_ALIAS:-gemma}
+      JUDGE_MODEL: local/${LLM_ALIAS:-slow}
     volumes:
       - ../environment:/app/environment:ro
       - ../voice:/app/voice:ro
@@ -244,20 +267,22 @@ services:
     depends_on:
       db: {condition: service_healthy}
 
-  # The local model (plan step 5): llama.cpp's server on the GPU (as deploy/compose.nvidia.yaml gives it to Ollama:
-  # device nodes and the driver's libraries, no CDI, no root), serving LLM_MODEL from LLM_MODELS_DIR read-only.
-  # Reached only through the gateway (provider local). Started with the profile `llm` (COMPOSE_PROFILES in .env).
+  # The local slow model (plan step 5, S-169): llama.cpp's server, serving LLM_MODEL from LLM_MODELS_DIR read-only, by
+  # default on the CPU and in RAM (LLM_ARGS -ngl 0) so the GPU stays free for the models that answer at once (llm-fast,
+  # tts). The GPU's device nodes and driver libraries are still given (as deploy/compose.nvidia.yaml gives them to
+  # Ollama: no CDI, no root) for a machine that wants layers there. Reached only through the gateway (provider local).
+  # Started with the profile `llm` (COMPOSE_PROFILES in .env).
   llm:
     profiles: [llm]
-    image: ${LLM_IMAGE:-ghcr.io/ggml-org/llama.cpp:server-cuda12-b12098}
+    image: ${LLM_IMAGE:-ghcr.io/ggml-org/llama.cpp:server-cuda12-b12627}
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
     restart: unless-stopped
     entrypoint: ["sh", "-c", "exec /app/llama-server -m \"/models/$$LLM_MODEL\" --host 0.0.0.0 --port 8080 --alias \"$$LLM_ALIAS\" --jinja $$LLM_ARGS"]
     environment:
       LLM_MODEL: ${LLM_MODEL:-}
-      LLM_ALIAS: ${LLM_ALIAS:-gemma}
-      LLM_ARGS: ${LLM_ARGS:--ngl 999 --cpu-moe -c 16384 -ctk q4_0 -ctv q4_0 -fa auto}
+      LLM_ALIAS: ${LLM_ALIAS:-slow}
+      LLM_ARGS: ${LLM_ARGS:--ngl 0 --no-op-offload -t 6 -c 16384 -b 512 -ub 128 -ctk q4_0 -ctv q4_0 -fa on}
     devices:
       - /dev/nvidia0
       - /dev/nvidiactl
@@ -272,6 +297,36 @@ services:
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://127.0.0.1:8080/health"]
       interval: 10s
+      retries: 60
+
+  # The local fast model (S-169): a small model wholly on the GPU for what must answer at once (the voice head's replies,
+  # quick tool calls); the slow model takes the bigger jobs on the CPU. LLM_FAST_MODEL from LLM_FAST_MODELS_DIR,
+  # read-only; at the gateway as fast/LLM_FAST_ALIAS. Profile `llm`; empty LLM_FAST_MODEL: it is not started.
+  llm-fast:
+    profiles: [llm]
+    image: ${LLM_IMAGE:-ghcr.io/ggml-org/llama.cpp:server-cuda12-b12627}
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+    entrypoint: ["sh", "-c", "[ -n \"$$LLM_MODEL\" ] || { echo 'LLM_FAST_MODEL is empty: no fast model'; exec sleep infinity; }; exec /app/llama-server -m \"/models/$$LLM_MODEL\" --host 0.0.0.0 --port 8080 --alias \"$$LLM_ALIAS\" --jinja $$LLM_ARGS"]
+    environment:
+      LLM_MODEL: ${LLM_FAST_MODEL:-}
+      LLM_ALIAS: ${LLM_FAST_ALIAS:-fast}
+      LLM_ARGS: ${LLM_FAST_ARGS:--ngl 999 -t 2 -c 32768 -fa on -ctk q8_0 -ctv q8_0}
+    devices:
+      - /dev/nvidia0
+      - /dev/nvidiactl
+      - /dev/nvidia-uvm
+      - /dev/nvidia-uvm-tools
+    volumes:
+      - ${LLM_FAST_MODELS_DIR:-/nonexistent}:/models:ro
+      - ${NVIDIA_LIB_DIR:-/usr/lib/x86_64-linux-gnu}/libcuda.so.1:/usr/lib/x86_64-linux-gnu/libcuda.so.1:ro
+      - ${NVIDIA_LIB_DIR:-/usr/lib/x86_64-linux-gnu}/libcuda.so.1:/usr/lib/x86_64-linux-gnu/libcuda.so:ro
+      - ${NVIDIA_LIB_DIR:-/usr/lib/x86_64-linux-gnu}/libnvidia-ml.so.1:/usr/lib/x86_64-linux-gnu/libnvidia-ml.so.1:ro
+      - ${NVIDIA_LIB_DIR:-/usr/lib/x86_64-linux-gnu}/libnvidia-ptxjitcompiler.so.1:/usr/lib/x86_64-linux-gnu/libnvidia-ptxjitcompiler.so.1:ro
+    healthcheck:
+      test: ["CMD-SHELL", "[ -z \"$$LLM_MODEL\" ] || curl -sf http://127.0.0.1:8080/health"]
+      interval: 5s
       retries: 60
 
   # Text-to-speech on the GPU (S-150): Kokoro-FastAPI (Apache-2.0; espeak-ng inside, S-146), the owner's local
@@ -318,7 +373,12 @@ services:
       VOICE_STYLE: ${VOICE_STYLE:-af_heart}
       VOICE_THREADS: ${VOICE_THREADS:-4}
       VOICE_SILENCE_S: ${VOICE_SILENCE_S:-0.6}
-      LLM_NAME: local/${LLM_ALIAS:-gemma}
+      LLM_NAME: ${VOICE_MODEL:-local/${LLM_ALIAS:-slow}}
+      VOICE_ROUTER: ${VOICE_ROUTER:-tools}
+      SEARCH_URL: http://search:8080
+      VOICE_NOTES_ROOT: /workspace
+      TZ: ${TZ:-UTC}
+      EMBED_MODEL: ${STORE_EMBED_MODEL:-ollama/qwen3-embedding:0.6b}
       TTS_URL: ${TTS_URL:-}
       AVATAR_FILE: ${AVATAR_FILE:-}
       STORE_URL: postgresql://postgres:${POSTGRES_PASSWORD:?set in .env}@db:5432/substrate
@@ -326,11 +386,33 @@ services:
       - voice-models:/models
       - ../voice:/app/voice:ro
       - ../.state/avatar:/avatar:ro            # AVATAR_FILE lives here, never committed (S-160)
+      - worker-workspace:/workspace            # its quick tools read and write notes/ there, beside the worker (S-171)
+    group_add: ["65534"]                       # the worker's group: notes/ is group-writable (the worker sets it up)
     ports:
       - "127.0.0.1:${VOICE_PORT:-8110}:8110"
     depends_on:
       db: {condition: service_healthy}
       gateway: {condition: service_started}
+
+  # Web search for the voice head's `search` tool (S-171): SearXNG (AGPL-3.0, the owner's choice: fetched at setup, run
+  # unmodified in its own container and reached over HTTP, as S-146 treats a GPL part), image pinned (2026.11.8, the newest
+  # at least two weeks old on 2026-11-22). It forwards queries to public search engines. No host port: only the compose
+  # network reaches it. Settings in deploy/searxng/settings.yml (the JSON API on, no limiter). Profile `voice`.
+  search:
+    profiles: [voice]
+    image: ${SEARCH_IMAGE:-docker.io/searxng/searxng:2026.11.8-74418092d}
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+    environment:
+      SEARXNG_SECRET: ${SEARXNG_SECRET:?set in .env}
+      FORCE_OWNERSHIP: "false"
+    # podman 4.9's network DNS does not answer an AAAA query for a name with no IPv6 address, so every lookup of such an
+    # engine stalled 5 s and SearXNG's 3 s engine timeout lost them all (S-171); a 1 s resolver wait caps the stall
+    dns_opt: ["timeout:1", "attempts:1"]
+    volumes:
+      - ./searxng/settings.yml:/etc/searxng/settings.yml:ro
+      - search-cache:/var/cache/searxng
 
   # The worker (plan step 1, S-163): an offline agent on the local model. Its loop is ours (environment/worker.py, S-162):
   # the model only through the gateway as worker:loop (local models only), the kernel's `memory` profile over stdio
@@ -356,7 +438,7 @@ services:
       PYTHONPATH: /app
       GATEWAY_URL: http://gateway:8080
       WORKER_KEY: ${WORKER_KEY:?set in .env}
-      WORKER_MODEL: ${WORKER_MODEL:-local/${LLM_ALIAS:-gemma}}
+      WORKER_MODEL: ${WORKER_MODEL:-local/${LLM_ALIAS:-slow}}
       WORKER_MAX_STEPS: ${WORKER_MAX_STEPS:-8}
       WORKER_CONTEXT_TOKENS: ${WORKER_CONTEXT_TOKENS:-11000}
       WORKER_REASONING: ${WORKER_REASONING:-}
@@ -373,6 +455,9 @@ services:
       gateway: {condition: service_started}
 
 volumes:
+  kernel-artifacts:
+    name: ${KERNEL_ARTIFACTS_VOLUME:-substrate_kernel-artifacts}   # the kernel's artifact store: catalog files as they were read
+  search-cache:
   worker-workspace:
     name: ${WORKER_VOLUME:-substrate_worker-workspace}   # the only place its file tools reach
   voice-models:

@@ -1,0 +1,26 @@
+# A catalog entry (S-176): Backstage's entity format, read into the kernel by encoder-backstage.
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: ui-http
+  title: The UI
+spec:
+  type: http
+  lifecycle: experimental
+  owner: owner
+  system: substrate
+  definition: |-
+    {
+     "openapi": "3.1.0",
+     "info": {
+      "title": "the pages; the API under /api",
+      "version": "0"
+     },
+     "paths": {
+      "/": {
+       "get": {
+        "summary": "the pages; the API under /api"
+       }
+      }
+     }
+    }

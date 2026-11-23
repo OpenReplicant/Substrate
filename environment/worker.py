@@ -18,7 +18,7 @@ Actuators:
 The loop (`run_task`) is the seam for MetaSoar's M-17, the model is called only at impasses: before EVERY model call it
 asks `gate(state)`; a string answers the task without the model (a compiled skill), None lets the model be called.
 The loop counts the model calls and the skipped calls itself. Settings (environment): GATEWAY_URL, WORKER_KEY (the
-caller `worker:loop`, local models only), WORKER_MODEL (local/gemma), WORKER_WORKSPACE (/workspace),
+caller `worker:loop`, local models only), WORKER_MODEL (local/slow), WORKER_WORKSPACE (/workspace),
 WORKER_MAX_STEPS (8), WORKER_CONTEXT_TOKENS (11000 of the model's 16k), WORKER_MAX_TOKENS (1024),
 WORKER_REASONING (empty), WORKER_MCP_COMMAND (kernel-mcp), WORKER_LOGIN_FILE (/login, from scripts/kernel.sh login worker).
 """
@@ -206,7 +206,7 @@ Model = Callable[[list, list], Awaitable[dict]]     # (messages, tool specs) -> 
 
 def openai_model(gateway: str | None = None, key: str | None = None, model: str | None = None) -> Model:
     from openai import AsyncOpenAI
-    key, name = key or setting("WORKER_KEY"), model or setting("WORKER_MODEL", "local/gemma")
+    key, name = key or setting("WORKER_KEY"), model or setting("WORKER_MODEL", "local/slow")
     base = (gateway or setting("GATEWAY_URL", "http://gateway:8080")).rstrip("/") + "/v1"
     clients: dict = {}       # one client per event loop: each task is its own asyncio.run, and a client's connections
                              # belong to the loop that opened them ("Event loop is closed" on the next task otherwise)
@@ -297,7 +297,10 @@ async def run_task(task: str, model: Model, tools: Tools, gate: Gate | None = No
             return finish(f"the model call failed: {type(x).__name__}: {str(x)[:300]}", False)
         calls = m.get("tool_calls") or []
         if not calls:
-            return finish((m.get("content") or "").strip(), True)
+            text = (m.get("content") or "").strip()
+            if not text:                                             # e.g. the model spent its tokens thinking (S-171)
+                return finish("the model gave no answer (it may have used its tokens thinking; WORKER_MAX_TOKENS)", False)
+            return finish(text, True)
         msgs.append({"role": "assistant", "content": m.get("content"), "tool_calls": [
             {"id": c["id"], "type": "function", "function": {"name": c["name"], "arguments": c["arguments"]}} for c in calls]})
         for c in calls:
@@ -387,7 +390,9 @@ def handle(e, m: dict, model: Model, gate: Gate | None = None, mcp_factory=None)
         except Exception as x:                                       # noqa: BLE001 - e.g. the kernel's MCP server did not start
             out = {"text": f"could not start the tools: {type(x).__name__}: {str(x)[:300]}", "ok": False, "model_calls": 0,
                    "skipped_calls": 0, "steps": 0, "cited": []}
-    e.publish(f"{ENV}.task.done", {**out, "task": text or "", "msg": m["msg_id"]}, SOURCE)
+    # reply_to: who asked, when they want the answer back (the voice head reads out its own, S-170)
+    reply_to = body.get("reply_to") if isinstance(body, dict) and isinstance(body.get("reply_to"), str) else None
+    e.publish(f"{ENV}.task.done", {**out, "task": text or "", "msg": m["msg_id"], **({"reply_to": reply_to} if reply_to else {})}, SOURCE)
     action, _ = e.act(f"{ENV}.reply", {"text": out["text"]}, SOURCE)
     for r in e.read(f"act_{ENV}_reply", 60, 10):
         e.done(r["action"], {"shown": True})
@@ -409,6 +414,14 @@ def run() -> None:
     import psycopg
     model = openai_model()
     gate, gate_env = None, None
+    # notes/ is shared with the voice head (S-171), which runs in the worker's group: group-writable, setgid
+    ws = setting("WORKER_WORKSPACE", "/workspace")
+    for d in (ws, os.path.join(ws, "notes")):
+        try:
+            os.makedirs(d, exist_ok=True)
+            os.chmod(d, 0o2775)
+        except OSError as x:
+            log(f"workspace {d}: {x}")
     cmd = shlex.split(setting("WORKER_MCP_COMMAND", "kernel-mcp"))
     factory = lambda: McpTools(cmd, kernel_env())                    # noqa: E731
     e = None

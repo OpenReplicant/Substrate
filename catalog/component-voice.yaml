@@ -1,0 +1,29 @@
+# A catalog entry (S-176): Backstage's entity format, read into the kernel by encoder-backstage.
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: voice
+  title: The voice head
+  description: Microphone in, speech out, the avatar; the fast layer's tools (S-147, S-170, S-171).
+  annotations:
+    substrate.dev/licence: Apache-2.0 (ours); GPL-3.0 espeak-ng in its own container (S-146)
+    substrate.dev/image: localhost/substrate-voice:local
+    substrate.dev/compose-service: voice
+    substrate.dev/decision: S-147, S-170, S-171
+spec:
+  type: service
+  lifecycle: experimental
+  owner: owner
+  system: substrate
+  providesApis:
+  - voice-ws
+  consumesApis:
+  - model-chat
+  - embeddings
+  - speech-api
+  - search-api
+  - wikipedia-rest
+  - worker-tasks
+  - worker-results
+  dependsOn:
+  - resource:db

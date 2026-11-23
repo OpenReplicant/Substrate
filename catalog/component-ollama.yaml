@@ -1,0 +1,19 @@
+# A catalog entry (S-176): Backstage's entity format, read into the kernel by encoder-backstage.
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: ollama
+  title: Ollama
+  description: Local embeddings for the store and the voice router (qwen3-embedding:0.6b).
+  annotations:
+    substrate.dev/licence: MIT
+    substrate.dev/image: docker.io/ollama/ollama:0.40.12
+    substrate.dev/compose-service: ollama
+    substrate.dev/decision: S-83
+spec:
+  type: service
+  lifecycle: experimental
+  owner: owner
+  system: substrate
+  providesApis:
+  - ollama-api

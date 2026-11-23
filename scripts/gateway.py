@@ -32,7 +32,7 @@ OUT = ROOT / ".state/gateway/config.json"
 NAMES = ("POSTGRES_PASSWORD", "DB_PORT", "OPENROUTER_API_KEY", "OLLAMA_URL", "GATEWAY_OPENROUTER_MODELS",
          "GATEWAY_REQUESTS_PER_HOUR", "GATEWAY_DB_PASSWORD", "GATEWAY_METER_PASSWORD", "GATEWAY_KEY_SECRET",
          "GATEWAY_PORT", "COMPANION_MODELS", "COMPANION_DB_PASSWORD",
-         "LLM_MODEL", "JUDGE_DB_PASSWORD", "WORKER_DB_PASSWORD", "WORKER_BLOCKS", "KERNEL_URL", "KK_AUTHENTICATOR_PASSWORD")
+         "LLM_MODEL", "LLM_FAST_MODEL", "JUDGE_DB_PASSWORD", "WORKER_DB_PASSWORD", "WORKER_BLOCKS", "KERNEL_URL", "KK_AUTHENTICATOR_PASSWORD")
 
 
 def settings() -> dict[str, str]:
@@ -54,10 +54,12 @@ def caller_key(secret: str, caller: str) -> str:
 # The voice head (plan step 5) talks with the local model (llama.cpp, provider `local`) only: what the owner says
 # aloud stays on this machine (P3) unless the model hands a request to the companion. The worker (plan step 1, S-163)
 # is an offline agent on the same local model: its loop, its tool calls and its recall never leave the machine.
+# Two local models (S-169): `local`, the slow one on the CPU, and `fast`, the small one on the GPU; both stay here.
+# The voice head also embeds through Ollama, for its router (S-170).
 CALLERS = {"store:embed": ("ollama",), "companion:session": ("anthropic",), "companion:task": ("anthropic",),
-           "voice:head": ("local",), "companion:author": ("local",), "judge:voice": ("local",),
-           "worker:loop": ("local",)}
-LOCAL = ("ollama", "local")
+           "voice:head": ("local", "fast", "ollama"), "companion:author": ("local",), "judge:voice": ("local",),
+           "worker:loop": ("local", "fast")}
+LOCAL = ("ollama", "local", "fast")
 FIXED_KEYS = {"store:embed": "STORE_EMBED_KEY", "companion:session": "COMPANION_SESSION_KEY",
               "companion:task": "COMPANION_TASK_KEY", "voice:head": "VOICE_KEY",
               "companion:author": "COMPANION_AUTHOR_KEY", "judge:voice": "JUDGE_KEY",
@@ -88,9 +90,17 @@ def render(env: dict[str, str]) -> dict:
                                "allow_private_network": True},
             "custom_provider_config": {"base_provider_type": "openai",
                                        "allowed_requests": {"chat_completion": True, "chat_completion_stream": True}}}
+    # the fast local model (compose service llm-fast, S-169), the same way
+    if env.get("LLM_FAST_MODEL"):
+        providers["fast"] = {
+            "keys": [{"name": "llm-fast", "value": "no-key", "models": ["*"], "weight": 1.0}],
+            "network_config": {"base_url": "http://llm-fast:8080", "default_request_timeout_in_seconds": 120,
+                               "allow_private_network": True},
+            "custom_provider_config": {"base_provider_type": "openai",
+                                       "allowed_requests": {"chat_completion": True, "chat_completion_stream": True}}}
     # Anthropic with no key of its own: only calls carrying a Claude login (the companion's) can use it
     providers["anthropic"] = {"keys": []}
-    allowed = {"local": ["*"], "anthropic": [m.strip() for m in (env.get("COMPANION_MODELS") or "regex:claude-haiku.*").split(",") if m.strip()],
+    allowed = {"local": ["*"], "fast": ["*"], "anthropic": [m.strip() for m in (env.get("COMPANION_MODELS") or "regex:claude-haiku.*").split(",") if m.strip()],
                "openrouter": [m.strip() for m in (env.get("GATEWAY_OPENROUTER_MODELS") or "regex:.*:free").split(",") if m.strip()],
                "ollama": ["regex:.*"]}
     secret = env.get("GATEWAY_KEY_SECRET") or ""

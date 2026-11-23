@@ -1,0 +1,8 @@
+# A catalog entry (S-176): Backstage's entity format, read into the kernel by encoder-backstage.
+apiVersion: backstage.io/v1alpha1
+kind: System
+metadata:
+  name: substrate
+  description: 'Substrate: an environment put on a system, run, watched and changed; its own parts as catalog entries (S-174).'
+spec:
+  owner: owner

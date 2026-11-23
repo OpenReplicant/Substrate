@@ -1,0 +1,26 @@
+# A catalog entry (S-176): Backstage's entity format, read into the kernel by encoder-backstage.
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: anthropic-messages
+  title: Anthropic Messages at the gateway
+spec:
+  type: openapi
+  lifecycle: experimental
+  owner: owner
+  system: substrate
+  definition: |-
+    {
+     "openapi": "3.1.0",
+     "info": {
+      "title": "Messages API, and the pass-through route for a Claude login",
+      "version": "0"
+     },
+     "paths": {
+      "/anthropic/v1/messages": {
+       "post": {
+        "summary": "Messages API, and the pass-through route for a Claude login"
+       }
+      }
+     }
+    }

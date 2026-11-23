@@ -1,0 +1,21 @@
+# A catalog entry (S-176): Backstage's entity format, read into the kernel by encoder-backstage.
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: kernel-mcp
+  title: kernel-mcp
+  description: The kernel's MCP server, run per agent over stdio with the agent's own login.
+  annotations:
+    substrate.dev/licence: Apache-2.0
+    substrate.dev/image: ghcr.io/openreplicant/kernel
+    substrate.dev/decision: S-154, the kernel's D-88, D-105
+spec:
+  type: tool
+  lifecycle: experimental
+  owner: owner
+  system: substrate
+  providesApis:
+  - kernel-mcp-memory
+  - kernel-mcp-substrate
+  dependsOn:
+  - component:kernel

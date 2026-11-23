@@ -1,0 +1,8 @@
+# The decider trial's stage 2 (S-178): small decision models and TabICL on the CPU. Trial only, never published.
+FROM docker.io/library/python:3.13.17-slim-bookworm
+RUN pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch==2.15.0 \
+ && pip install --no-cache-dir transformers==5.17.0 gliner2==2.1.0 tabicl==2.2.0 scikit-learn==1.9.1 \
+      safetensors tokenizers huggingface_hub
+RUN useradd -m -u 1000 trial
+USER trial
+WORKDIR /home/trial

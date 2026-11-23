@@ -1,0 +1,19 @@
+# A catalog entry (S-176): Backstage's entity format, read into the kernel by encoder-backstage.
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: tts
+  title: Kokoro-FastAPI
+  description: Speech on the GPU (S-150).
+  annotations:
+    substrate.dev/licence: Apache-2.0
+    substrate.dev/image: ghcr.io/remsky/kokoro-fastapi-gpu:latest
+    substrate.dev/compose-service: tts
+    substrate.dev/decision: S-150
+spec:
+  type: service
+  lifecycle: experimental
+  owner: owner
+  system: substrate
+  providesApis:
+  - speech-api

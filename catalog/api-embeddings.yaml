@@ -1,0 +1,26 @@
+# A catalog entry (S-176): Backstage's entity format, read into the kernel by encoder-backstage.
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: embeddings
+  title: Embeddings at the gateway
+spec:
+  type: openapi
+  lifecycle: experimental
+  owner: owner
+  system: substrate
+  definition: |-
+    {
+     "openapi": "3.1.0",
+     "info": {
+      "title": "ollama/qwen3-embedding:0.6b",
+      "version": "0"
+     },
+     "paths": {
+      "/v1/embeddings": {
+       "post": {
+        "summary": "ollama/qwen3-embedding:0.6b"
+       }
+      }
+     }
+    }

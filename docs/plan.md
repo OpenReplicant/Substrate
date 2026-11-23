@@ -4,13 +4,14 @@ The one current plan (S-124, 2026-11-17). It replaces the plans in `docs/archive
 the experiment-first direction, the handoff, the task briefs); those are kept as history and are not to be worked
 from. Every default and its reason is still in `DECISIONS.md`.
 
-## What Substrate is now
+## What Substrate is now (S-185, 2026-11-23)
 
-An agent framework. You put an environment on a system you need, run it, and watch and change it in the UI,
-Substrate's web page over the store (`ui/`, S-140, S-141; rebuilt on the fresh tree, S-137). Its shape is `docs/framework.md` (S-125): the environment is data in
-Postgres, pass-through to Claude Code is the default, components distilled from the record carry cards, a judge
-tests them on cases their author never saw, and environments nest. Morphogen stays a part you can use as it is;
-no more work goes into it for now.
+**An operating system for AI agents:** a top-level orchestrator (an ordinary LLM harness, Claude Code first, given
+skills, MCP servers and hooks) that maps, orchestrates and optimises a working system, on a kernel made of Postgres
+where everything is an object. Its shape, layers, slots and contracts are `docs/framework.md`. Environments are
+OpenEnv environments (S-184); the optimiser is Morphogen's Claude Code plugin; what is built with it lives in
+`distributions/` (S-185, S-186). The steps table below is the history of how the current parts came to be; what
+comes next is "Next, in order".
 
 ## The fresh start (S-137)
 
@@ -43,13 +44,119 @@ Self-levers beyond budget and model choice, and the other layers in `docs/framew
 need them, each tested against pass-through. The UI is no longer frozen: add what these steps need, and
 nothing they don't.
 
-## Next, in order (2026-11-21)
+## Describe, check, decode: components and runtimes (S-174, 2026-11-22)
 
-1. **Offline agents on the local model:** an agent loop picked with the `research` skill (open, permissive, OpenAI API and MCP), Gemma's tool calls checked on llama.cpp, the kernel's model-using modules on `local/gemma`. Done when, with the network off, a task given in the UI is done with a cited recall and a remembered result, every call in the gateway's log.
-2. **The live map and the avatar page** (S-158; the kernel's D-115): interactive mapping, the map redrawn as claims apply, edits and new terms from the page.
-3. **Blocks, assemblies and executors** (S-157), with its first check.
-4. **The business distribution** in the kernel: distributions (M5-T9), interactive mapping as its first job, logs mined beside it.
-5. **Process KPIs** as observed claims; then one real actuator beyond Compose, behind a gate.
+Supersedes S-173's runtime engine. The owner's direction: Substrate does not build a runtime or sit in the links
+between components. It **describes** a system in the Knowledge Kernel, **checks** that its parts can talk, puts a
+**translator** between two that cannot, and **decodes** the description into the native formats of existing runtimes
+and **encodes** what they report back; "otherwise we would be just encoding and decoding, like file formats, for
+existing runtimes". That is the kernel's own architecture: decoders turn models into running things, encoders read
+them back, automations stay in their runners' native formats (the kernel's D-41; chain runners parked, D-36).
+
+**The kernel as a symbolic latent space** (the owner): one universal symbolic representation that systems are
+interpreted into (encoders) and out of (decoders). A map, a BPMN process, a compose file and a running deployment
+are views of the same items and claims; what can be said in one format can be carried to another through it.
+
+- **Components describe their interfaces; Substrate does not mediate them.** An interface is described in the shape
+  of a W3C WoT Thing Description: the affordance (an action, property or event) with its data schema, and the forms
+  that reach it (protocol, address, content type): MCP over stdio or HTTP, an OpenAI-compatible API, a pgmq queue
+  (AsyncAPI describes one), plain HTTP, anything else. Components talk to each other directly, as they already do.
+- **Compatibility is checked, and translators are components.** Two parts fit when one provides the interface the
+  other requires (the map vocabulary's *provides interface* and *requires interface*). Where none fits directly, a
+  translator from the catalog goes between them (an MCP bridge, a proxy, an adapter block), found like any other
+  part.
+- **The catalog entry is D-101's first content type.** Each component (block, MCP server, service, model, agent
+  instance) is an item in the kernel: a typed document of fields and prose, with claims derived from it for checking,
+  drift and alternatives (the kernel's D-101, proposed 2026-11-08, waits on exactly this proof).
+- **Runtimes are pluggable, Compose first.** A decoder writes the map out in one runtime's format; an encoder reads
+  its state back. Compose (with Podman) is the first, since Substrate runs on it; process-compose is the lead
+  candidate for plain processes. `docs/compatibility/` lists the runtimes, orchestrators, cloud services and
+  standards a decoder could target, with formats, APIs and licences: what to tell a business that already runs
+  Kubernetes, Camunda or Step Functions. A licence decides only whether a part can be a default (rule 7).
+- **Light by default.** Our blocks are components that implement some protocol, as clients or servers; they run on
+  demand (measured: about 19 ms a call for a Python block with JSON in and out, 8 MB idle, S-173) or kept hot by the
+  runtime when a measured plan needs it.
+- **What stays ours, kept small:** the description and the compatibility check; the decoders and encoders; gates at
+  the chokepoints that exist (the model gateway, an MCP proxy where one is chosen, our own agents' actuators), not on
+  every link. (The voice front end's loop and M-17's ladder were listed here; they are distribution components now,
+  S-186.)
+- **The kernel's boundary is the kernel's own decisions:** queues belong to a distribution in its own database
+  (D-94 c, superseded by the kernel's D-126: one database, the kernel's, S-190); signals and telemetry are observations, not claims ("a
+  measurement is not content anyone wrote", D-101); what is worth knowing crosses as claims and items through an
+  encoder (`encoder-substrate`); `propose`-gated actions are meant to reach the kernel's review lane, so a person
+  approves in one place.
+- **Observability:** OpenTelemetry where the parts already speak it (the gateway, the runtimes, our processes), an
+  OTel Collector picked with the `research` skill, traces to a viewer and metrics to Prometheus, which the kernel's
+  `observer-prometheus` turns into observed claims; a component's card carries measured latency and cost.
+- **Agents:** the orchestrator is an ordinary harness (S-185); sub-agents are harness sub-agents, OpenEnv
+  environments or MCP components (`docs/framework.md`, "Slots"). The one assistant of S-181 (the voice front end
+  and one loop over model rungs) is the assistant distribution's design (S-186). `scripts/trials/harness/candidates.json`
+  holds the surveyed harnesses.
+
+## The ladder (S-178 to S-183, placed by S-186)
+
+The multi-response ladder (System 1 at the model endpoint: compiled skills, then the fast, slow and cloud models,
+chosen by a decider that learns from outcome-labelled experience) is a **distribution component**, built on OpenEnv
+(S-186), not part of Substrate. Its design stands in S-178 to S-183; its code moves to `distributions/assistant/`.
+
+## Next, in order (2026-11-23)
+
+Done from the 2026-11-22 list: the catalog entry (S-176), compose into the kernel and back (S-177), the decider trial
+and experience (S-179, S-183).
+
+1. **Done 2026-11-23 (S-192): all seven points pass; gates stay a `propose` tool (fastmcp caps `mcp` below 2, so no `input_required` yet).** The OpenEnv spike (S-184): `openenv` 0.12.0 in the tools image (or a trial container), one Postgres-backed
+   environment, and the seven points: (1) many agents' sessions share one live environment; (2) events reach a
+   subscriber in production mode; (3) `reset` clones a template database fast enough; (4) Claude Code runs through
+   the harness adapter; (5) against our model proxy via `ANTHROPIC_BASE_URL`, with an episode id in a header;
+   (6) a skill's answer reaches Claude Code in a form its loop accepts; (7) a rubric's score attaches afterwards to
+   every model call of its episode. Also: whether MCP's `input_required` (revision 2026-07-28) is final, for gates.
+   Done when each point has a result line in `.state/trials/openenv/` and a row in `DECISIONS.md`.
+2. **Morphogen as the optimiser** (S-185): update `~/Projects/Morphogen` from GitHub (it is rebuild 5 here; main is
+   rebuild 7); install its plugin in the orchestrator's harness; one map skill (Substrate's writes the Backstage
+   entities, Morphogen adds cells from them); one cell on Substrate's own configuration judged end to end. Changes
+   to Morphogen go by pull request there (the `upstream` skill).
+3. **The repository in its shape** (S-185, S-186): `distributions/assistant/` takes the companion, the voice head
+   and avatar, the worker, blocks and the skill gate, the ladder (proxy, deciders, experience, the decider trial);
+   envkit goes to MetaSoar's side; components and the judge (S-151) give way to Morphogen; Substrate keeps the
+   stack, the skills, the channel, the catalog and the adapters. In batches, each with `scripts/check.sh` and
+   `scripts/test.sh` passing.
+4. **One database, the kernel's** (S-190): the kernel defines the schemas and the ways of doing things, and Substrate
+   follows them, so the `env` schema (objects' live state, queues, gates, experience) moves into the kernel's
+   database, by the kernel's D-126 superseding D-94 (c) (drafted on the kernel's branch `claude/one-database`). Then
+   the `substrate` database is empty and is dropped (its retired `store` schema went on 2026-11-23, S-191). Bifrost's `gateway` database is a third party's private store and stays apart
+   unless Bifrost can use a schema in the kernel's database (to check).
+5. **The orchestrator's `orchestrate` and `optimize` skills**, hooks enforcing gates in the harness, and an **`rtfm`
+   skill** (S-189) for every agent: assume what it knows about a library, tool, API or standard is out of date; find
+   the manual for the exact version in use (the project's docs, `llms.txt`, the registry's page, a docs MCP server
+   where one is trusted); ingest it into the kernel with its source and version, so it is searched and recalled by
+   association and cited; and answer from it, not from memory. Rule 1 ("look it up, then pin it") as a skill.
+6. **Everything else runs on top of the settled shape** (S-187): each distribution (the assistant, the SMB Foundry's
+   first cut), MetaSoar's experiments and every test suite run against Substrate through its contracts only. Done
+   when `scripts/test.sh` passes, each distribution comes up from its own folder, and MetaSoar's worlds run as OpenEnv
+   environments.
+7. **The bootstrap instance** (S-187): what a new Substrate instance starts with, so the orchestrator knows itself
+   from the first run: a **snapshot map** of Substrate's own parts (the `catalog/` Backstage entities, the stack's
+   compose file in the kernel, S-176, S-177), **catalogs** of the candidates already researched for each intended
+   component (models, the gateway, harnesses, deciders, the environment standards; with their measurements), the
+   vocabularies (S-175), **Morphogen cells** for Substrate's own configuration, the default gates and privacy
+   rules, the skills, **agent-facing documentation** (S-189: more than skills: how the system works, its contracts,
+   each tool and each part, written for an agent to read and loaded into the kernel for recall, with the manuals of
+   the parts' exact versions fetched by `rtfm`), and a first task: map yourself, check the map against what runs. Loaded by one command into
+   an empty kernel. Done when a fresh machine's instance answers "what are you made of, and what could replace
+   each part?" from its own store.
+8. **A second pass over the documentation** (S-187): README, `docs/framework.md`, the skills and each distribution's
+   README read cold by someone new; every concept explained once, where it is used.
+9. **The ladder on OpenEnv and M-17's experiment** (S-186, MetaSoar): a task-family environment, the proxy in the
+   Anthropic format, rubric scores as outcomes, the frozen blind run (S-179).
+10. **The SMB Foundry and other business opportunities** (S-188 c): in **a session of their own**, without the code
+    in context, **as soon as steps 6 to 8 are done**. The first customers are design partners and the most
+    valuable, paid or not. Starting point: `docs/research/Object environments prior art.md` (a five-day "map and
+    one gated automation" pilot).
+
+Later, built on all of this: mapping and modelling things beyond software, agents and organisations (the owner's
+original "map anything" idea, `owner-vision` in S-117's terms).
+
+The telemetry collector and a process runtime (the old step 4) wait until a step needs them.
 
 ## Deferred
 
@@ -60,6 +167,9 @@ publication and reproductions, the hosted mapper and hosted judging, the slot mo
 
 ## The owner's to decide
 
-- Which game comes first (step 9), and which embodied environment after that (step 10).
-- Rotating the Postgres password; putting the Gemma model at the gateway.
+- Which game comes first and which embodied environment after it (the steps table's 9 and 10; a games distribution now).
+- Rotating the Postgres password.
 - The licence and whether the repository goes public.
+- Whether a Business-Source-licensed part (Nomad) may ever be a default; recommended no (S-173).
+- When to migrate kernel v0's P-Plan IRIs to PROV-O and the profile's terms (S-175; a kernel change).
+- Confirming the kernel's D-101 (the content framing) once the catalog entry has proved it or not.

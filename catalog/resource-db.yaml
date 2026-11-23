@@ -1,0 +1,16 @@
+# A catalog entry (S-176): Backstage's entity format, read into the kernel by encoder-backstage.
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: db
+  title: Postgres 17 (pgvector, pg_cron, pgmq, pgGraph)
+  description: 'The one database: the env schema, the kernel''s database, the gateway''s log.'
+  annotations:
+    substrate.dev/licence: PostgreSQL
+    substrate.dev/image: ghcr.io/openreplicant/substrate-db
+    substrate.dev/compose-service: db
+    substrate.dev/decision: S-19, the kernel's D-94
+spec:
+  type: database
+  owner: owner
+  system: substrate

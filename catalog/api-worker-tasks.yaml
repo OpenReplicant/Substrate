@@ -1,0 +1,26 @@
+# A catalog entry (S-176): Backstage's entity format, read into the kernel by encoder-backstage.
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: worker-tasks
+  title: The worker's task queue
+spec:
+  type: asyncapi
+  lifecycle: experimental
+  owner: owner
+  system: substrate
+  definition: |-
+    {
+     "asyncapi": "3.0.0",
+     "info": {
+      "title": "worker.owner.message and worker.task: tasks for the worker, which receives on this channel (so it provides it); the voice head and the UI publish to it; reply_to says who wants the answer",
+      "version": "0"
+     },
+     "channels": {
+      "worker_loop": {
+       "address": "worker_loop",
+       "description": "worker.owner.message and worker.task: tasks for the worker, which receives on this channel (so it provides it); the voice head and the UI publish to it; reply_to says who wants the answer"
+      }
+     },
+     "x-transport": "pgmq (Postgres), the env schema's topics and queues (S-143)"
+    }

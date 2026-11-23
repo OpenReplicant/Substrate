@@ -20,6 +20,7 @@ frame of audio, {"type": "stop"} to drop queued audio, {"type": "error", "text"}
 from __future__ import annotations
 
 import asyncio
+import datetime as dt
 import json
 import mimetypes
 import os
@@ -36,14 +37,24 @@ from websockets.asyncio.server import serve
 from websockets.datastructures import Headers
 from websockets.http11 import Response
 
-from voice import reply
+from voice import reply, route, tools
 
 ROOT = Path(__file__).resolve().parent
 STATIC = ROOT / "static"
 MODELS = Path(os.environ.get("VOICE_MODELS") or "/models")
 GATEWAY = os.environ.get("GATEWAY_URL", "http://gateway:8080")
-LLM = os.environ.get("LLM_NAME") or "local/gemma"
+LLM = os.environ.get("LLM_NAME") or "local/slow"
 KEY = os.environ.get("VOICE_KEY", "")
+# the router (S-170): tools (the default): LLM calls talk, delegate or save_note each turn; embed: an embedding vote
+# decides talk or work first; off: LLM's reply component decides with its HANDOFF line (to the companion), as before
+ROUTER = (os.environ.get("VOICE_ROUTER") or "tools").strip()
+NOTED = "Noted."
+NOTES_ROOT = os.environ.get("VOICE_NOTES_ROOT") or "/workspace"     # the worker's workspace: notes/<name>.txt (S-171)
+SEARCH_URL = os.environ.get("SEARCH_URL", "")                         # the local SearXNG (compose service search)
+EMBED_MODEL = os.environ.get("EMBED_MODEL") or "ollama/qwen3-embedding:0.6b"
+ON_IT = "On it. I'll tell you when it's done."
+WORKER_SAYS = ("Say this result to the owner out loud in one to three short spoken sentences: plain words, no lists, "
+               "markdown, file paths read character by character, or code. Keep what matters; drop the rest.")
 THREADS = int(os.environ.get("VOICE_THREADS") or 4)
 VOICE = os.environ.get("VOICE_STYLE") or "af_heart"
 TTS_URL = os.environ.get("TTS_URL", "").rstrip("/")
@@ -193,6 +204,49 @@ class Record:
             self._card_at = now
         return self._card
 
+    def route_examples(self) -> tuple[int, list[tuple[str, str]]]:
+        """The owner's corrections (voice.route.example signals) after the seed: (the last one's id, the examples)."""
+        try:
+            rows = self.conn().execute("select id, body->>'text', body->>'route' from env.signal where key = 'voice.route.example' "
+                                       "order by id").fetchall()
+            return (rows[-1][0] if rows else 0), [(t, r) for _, t, r in rows if t and r in route.ROUTES]
+        except psycopg.Error as e:
+            log(f"record: {e}")
+            self.c = None
+            return -1, []
+
+    def worker_done_after(self, last: int) -> list[tuple[int, str, bool]]:
+        """The worker's finished tasks that the voice head asked for: reply_to voice, or voice:quiet when it failed
+        (a saved note is confirmed at once with "Noted"; only a failure is read out)."""
+        try:
+            return self.conn().execute("select id, body->>'text', coalesce((body->>'ok')::boolean, false) from env.signal "
+                                       "where key = 'worker.task.done' and id > %s and (body->>'reply_to' = 'voice' or "
+                                       "(body->>'reply_to' = 'voice:quiet' and not coalesce((body->>'ok')::boolean, false))) "
+                                       "order by id", (last,)).fetchall()
+        except psycopg.Error as e:
+            log(f"record: {e}")
+            self.c = None
+            return []
+
+    def last_worker_done(self) -> int:
+        try:
+            return self.conn().execute("select coalesce(max(id), 0) from env.signal where key = 'worker.task.done'").fetchone()[0]
+        except psycopg.Error:
+            self.c = None
+            return 0
+
+    def due_reminders(self) -> list[tuple[int, str]]:
+        """Reminders whose time has come and that have not been said (voice.reminder.said names them)."""
+        try:
+            return self.conn().execute(
+                "select r.id, r.body->>'text' from env.signal r where r.key = 'voice.reminder' "
+                "and (r.body->>'due')::timestamptz <= now() and not exists (select 1 from env.signal s "
+                "where s.key = 'voice.reminder.said' and (s.body->>'reminder')::bigint = r.id) order by r.id").fetchall()
+        except psycopg.Error as e:
+            log(f"record: {e}")
+            self.c = None
+            return []
+
     def last_reply(self) -> int:
         try:
             return self.conn().execute("select coalesce(max(id), 0) from env.action where actuator = 'companion.reply'").fetchone()[0]
@@ -249,6 +303,11 @@ class Session:
             return await self.state("listening")
         await self.send({"type": "heard", "text": text})
         heard = self.rec.publish("companion.voice.heard", {"text": text, "audio_s": round(len(seg) / 16000, 2), "stt_ms": stt_ms}, "owner (voice)")
+        if ROUTER == "tools":
+            return await self.tools_turn(text, heard, stt_ms, t0)
+        decided, why = await asyncio.to_thread(ROUTE.decide, text)
+        if decided == "work":
+            return await self.hand_to_worker(text, heard, stt_ms, why, t0)
         comp_id, card = await asyncio.to_thread(self.rec.reply_component)
         prior = list(self.history)
         self.history.append({"role": "user", "content": text})
@@ -300,8 +359,12 @@ class Session:
                                                       "interrupted": True, "stt_ms": stt_ms, "first_audio_ms": first_ms}, "voice head")
             raise
         spoken = " ".join(said)
+        dropped = None
+        if decided == "talk" and handoff is not None:                # the router said talk: the model's hand-over is not sent
+            dropped, handoff = (handoff.strip() or None), None
         self.history.append({"role": "assistant", "content": spoken + (f"\nHANDOFF: {handoff.strip()}" if handoff else "")})
         self.rec.publish("companion.voice.said", {"text": spoken, "by": LLM, "heard": heard, "component": comp_id,
+                                                  "route": decided, "routed_by": why, "handoff_dropped": dropped,
                                                   "handoff": (handoff or "").strip() or None, "stt_ms": stt_ms,
                                                   "first_audio_ms": first_ms, "turn_ms": round((time.perf_counter() - t0) * 1000)},
                          "voice head")
@@ -310,6 +373,166 @@ class Session:
                              "owner (voice, relayed by the voice head)")
             await self.send({"type": "say", "text": f"handed to the companion: {handoff.strip()}", "by": "voice head"})
         await self.state("listening")
+
+    async def tools_turn(self, text: str, heard, stt_ms: int, t0: float):
+        """One turn decided by the tools the voice model calls (S-170, S-171). Each step streams: a talk call's text is
+        spoken sentence by sentence as it arrives; a quick tool runs here and its result goes back for the next step (at
+        most route.QUICK_STEPS, then only talk and delegate are offered); delegate sends the task to the worker."""
+        now = dt.datetime.now().astimezone()
+        steps: list[dict] = []
+        said: list = []
+        used: list[dict] = []
+        first_ms = None
+        tool, arg = "", ""
+        for n in range(route.QUICK_STEPS + 1):
+            body = route.tools_body(LLM, self.history[-20:], text, f"{now:%A %-d %B %Y, %H:%M} ({now.tzname()})", steps,
+                                    final=n == route.QUICK_STEPS, stream=True)
+            try:
+                tool, arg, call_id, spoke = await self.stream_step(body, said)
+            except Exception as e:                                   # noqa: BLE001 - reported, and the turn ends
+                await self.send({"type": "error", "text": f"the voice model: {e}"})
+                break
+            if spoke and first_ms is None:
+                first_ms = round((time.perf_counter() - t0) * 1000)
+            if tool in route.ENDS or not tool:
+                break
+            result = await asyncio.to_thread(self.quick, tool, arg, now)
+            used.append({"tool": tool, "args": arg, "result": result[:300]})
+            steps += [{"role": "assistant", "content": None, "tool_calls": [{"id": call_id, "type": "function",
+                                                                             "function": {"name": tool, "arguments": arg}}]},
+                      {"role": "tool", "tool_call_id": call_id, "content": result}]
+        if tool == "delegate":
+            self.rec.publish("worker.owner.message", {"text": arg, "said": text, "reply_to": "voice"}, "owner (voice)")
+            await self.say(ON_IT, said)
+        elif not said:
+            await self.say("Sorry, could you say that again?", said)
+        if first_ms is None:
+            first_ms = round((time.perf_counter() - t0) * 1000)
+        spoken = " ".join(said)
+        self.history.append({"role": "user", "content": text})
+        # only what was said: tool results written into the history were copied into later replies, "(calculate: ...)"
+        self.history.append({"role": "assistant", "content": spoken})
+        self.rec.publish("companion.voice.said", {"text": spoken, "by": LLM, "heard": heard, "route": tool or None, "routed_by": "tools",
+                                                  "quick_tools": used, "task": arg if tool == "delegate" else None, "stt_ms": stt_ms,
+                                                  "first_audio_ms": first_ms, "turn_ms": round((time.perf_counter() - t0) * 1000)},
+                         "voice head")
+        await self.state("listening")
+
+    async def stream_step(self, body: dict, said: list) -> tuple[str, str, str, bool]:
+        """One streamed step: (tool, its text or JSON arguments, the call's id, whether anything was spoken). A talk
+        call's text (or plain words with no call) is spoken as each sentence completes."""
+        req = urllib.request.Request(f"{GATEWAY}/v1/chat/completions", json.dumps(body).encode(),
+                                     {"Content-Type": "application/json", "x-bf-vk": KEY, "x-wb-call": f"voice-{time.time_ns()}"})
+        q: asyncio.Queue = asyncio.Queue()
+        loop = asyncio.get_running_loop()
+
+        def pump():
+            try:
+                with urllib.request.urlopen(req, timeout=60) as r:
+                    for ev in route.stream_events(r):
+                        loop.call_soon_threadsafe(q.put_nowait, ev)
+            except Exception as e:                                   # noqa: BLE001 - raised in the turn
+                loop.call_soon_threadsafe(q.put_nowait, ("error", e))
+            loop.call_soon_threadsafe(q.put_nowait, None)
+        loop.run_in_executor(None, pump)
+        name, call_id, args, content, buf, spoke = None, "", "", "", "", False
+        talk = route.TalkText()
+        while (ev := await q.get()) is not None:
+            if ev[0] == "error":
+                raise ev[1]
+            new = ""
+            if ev[0] == "content" and name is None:
+                content += ev[1]
+                new = ev[1]
+            elif ev[0] == "tool" and ev[1] == 0:
+                name = name or ev[3]
+                call_id = call_id or ev[2] or f"call-{time.time_ns()}"
+                args += ev[4]
+                if name == "talk":
+                    new = talk.feed(ev[4])
+            if new:
+                buf += new
+                while m := SENTENCE.match(buf):
+                    sentence, buf = route.speakable(m.group(1)), buf[m.end():]
+                    if sentence:
+                        await self.say(sentence, said)
+                        spoke = True
+        if name in (None, "talk") and route.speakable(buf):
+            await self.say(route.speakable(buf), said)
+            spoke = True
+        if name is None:
+            return ("talk", content.strip(), "", spoke) if content.strip() else ("", "", "", spoke)
+        tool, arg = route.tools_decision({"tool_calls": [{"function": {"name": name, "arguments": args}}]})
+        return tool, arg, call_id, spoke
+
+    def quick(self, tool: str, arg: str, now: dt.datetime) -> str:
+        """A quick tool, run here (voice/tools.py); its result goes back to the model."""
+        a = json.loads(arg or "{}")
+        try:
+            if tool == "save_note":
+                return tools.save_note(NOTES_ROOT, a.get("text", ""))
+            if tool == "read_notes":
+                return tools.read_notes(NOTES_ROOT, a.get("topic", ""))
+            if tool == "remind":
+                result, r = tools.remind(a.get("text", ""), a.get("when", ""), now)
+                if r:
+                    self.rec.publish("voice.reminder", r, "owner (voice)")
+                return result
+            if tool == "calculate":
+                return tools.calculate(a.get("expression", ""))
+            if tool == "lookup":
+                return tools.lookup(a.get("topic", ""))
+            if tool == "search":
+                return tools.search(a.get("query", ""), SEARCH_URL)
+        except OSError as e:
+            return f"error: {e}"
+        return f"error: no tool {tool}"
+
+    async def speak_reminder(self, text: str):
+        while self.hearing or (self.turn and not self.turn.done()):
+            await asyncio.sleep(0.3)
+        line = f"A reminder: {text}"
+        await self.send({"type": "say", "text": line, "by": "reminder"})
+        pcm = await asyncio.to_thread(self.m.speak, line)
+        await self.send({"type": "audio", "rate": 24000}, pcm)
+        self.history.append({"role": "assistant", "content": line})
+
+    async def hand_to_worker(self, text: str, heard, stt_ms: int, why: dict, t0: float):
+        """Work: say so at once, and put the request on the worker's queue; its answer is read out when it comes."""
+        said: list = []
+        self.rec.publish("worker.owner.message", {"text": text, "reply_to": "voice"}, "owner (voice)")
+        await self.say(ON_IT, said)
+        first_ms = round((time.perf_counter() - t0) * 1000)
+        self.history.append({"role": "user", "content": text})
+        self.history.append({"role": "assistant", "content": ON_IT + " (handed to the worker)"})
+        self.rec.publish("companion.voice.said", {"text": ON_IT, "by": "voice head", "heard": heard, "route": "work",
+                                                  "routed_by": why, "to": "worker", "stt_ms": stt_ms, "first_audio_ms": first_ms},
+                         "voice head")
+        await self.state("listening")
+
+    async def speak_worker(self, text: str, ok: bool):
+        """The worker's answer, condensed by the voice model into a few spoken sentences and read out in a quiet moment."""
+        while self.hearing or (self.turn and not self.turn.done()):
+            await asyncio.sleep(0.3)
+        if not (text or "").strip():
+            text, ok = "The task finished with no answer.", False
+        card = {"params": {"system": WORKER_SAYS, "temperature": 0.3, "max_tokens": 200, "reasoning_effort": "none",
+                           "history_turns": 0}}
+        try:
+            spoken = "".join(await asyncio.to_thread(lambda: list(reply.stream(card, [], text, GATEWAY, KEY, LLM)))).strip()
+            spoken = reply.split(spoken)[0] or spoken
+        except Exception as e:                                       # noqa: BLE001 - the answer is read as it is
+            log(f"condensing the worker's answer: {e}")
+            spoken = " ".join(sentences(text)[:3])
+        spoken = re.sub(r"[`*_#]+", "", spoken).strip()               # markdown the model kept would be read out
+        if not ok:
+            spoken = "The task did not finish. " + spoken
+        self.history.append({"role": "assistant", "content": f"(the worker's answer) {spoken}"})
+        await self.send({"type": "say", "text": spoken, "by": "worker"})
+        for sentence in sentences(spoken) or [spoken]:
+            pcm = await asyncio.to_thread(self.m.speak, sentence)
+            await self.send({"type": "audio", "rate": 24000}, pcm)
+        self.rec.publish("companion.voice.said", {"text": spoken, "by": "worker", "condensed_from": text[:2000]}, "voice head")
 
     async def say(self, sentence: str, said: list):
         said.append(sentence)
@@ -348,6 +571,73 @@ async def warm():
         except Exception as e:                          # noqa: BLE001 - the model may still be loading
             log(f"warming the local model: {e}; again in 15 s")
             await asyncio.sleep(15)
+
+
+class Route:
+    """The router as the voice head runs it: built once its embeddings answer, rebuilt when the owner adds an example.
+    decide() returns (None, {}) when routing is off or not ready, and the model's own HANDOFF line decides, as before."""
+
+    def __init__(self):
+        self.router, self.seen = None, None
+
+    def embed(self, texts: list[str]) -> list[list[float]]:
+        body = json.dumps({"model": EMBED_MODEL, "input": texts}).encode()
+        req = urllib.request.Request(f"{GATEWAY}/v1/embeddings", body, {"Content-Type": "application/json", "x-bf-vk": KEY})
+        with urllib.request.urlopen(req, timeout=30) as r:
+            return [d["embedding"] for d in sorted(json.load(r)["data"], key=lambda d: d["index"])]
+
+    def refresh(self, record: Record) -> None:
+        last, extra = record.route_examples()
+        if last < 0 or (self.router is not None and last == self.seen):
+            return
+        self.router = route.Router(self.embed, route.SEED + extra)
+        self.seen = last
+        log(f"router: {len(route.SEED)} seed and {len(extra)} owner examples")
+
+    def decide(self, text: str) -> tuple[str | None, dict]:
+        if ROUTER != "embed" or self.router is None:
+            return None, {}
+        try:
+            t = time.perf_counter()
+            r, why = self.router.route(text)
+            return r, {**why, "ms": round((time.perf_counter() - t) * 1000)}
+        except Exception as e:                                       # noqa: BLE001 - the model decides, as before
+            log(f"router: {e}")
+            return None, {"error": str(e)[:200]}
+
+
+ROUTE = Route()
+
+
+async def keep_router(record: Record):
+    while ROUTER == "embed":
+        try:
+            await asyncio.to_thread(ROUTE.refresh, record)
+        except Exception as e:                                       # noqa: BLE001 - e.g. the embedding model not up yet
+            log(f"router not ready: {e}")
+        await asyncio.sleep(30 if ROUTE.router else 5)
+
+
+async def worker_replies(record: Record):
+    last = await asyncio.to_thread(record.last_worker_done)
+    while True:
+        await asyncio.sleep(1)
+        for sid, text, ok in await asyncio.to_thread(record.worker_done_after, last):
+            last = sid
+            for s in list(SESSIONS):
+                asyncio.create_task(s.speak_worker(text or "", ok))
+
+
+async def reminders(record: Record):
+    """Say each reminder when it falls due, to whoever is listening; one with no page open waits for one."""
+    while True:
+        await asyncio.sleep(10)
+        if not SESSIONS:
+            continue
+        for rid, text in await asyncio.to_thread(record.due_reminders):
+            for s in list(SESSIONS):
+                asyncio.create_task(s.speak_reminder(text or ""))
+            record.publish("voice.reminder.said", {"reminder": rid, "text": text}, "voice head")
 
 
 async def companion_replies(record: Record):
@@ -405,6 +695,9 @@ async def main():
         return None
 
     asyncio.create_task(companion_replies(record))
+    asyncio.create_task(worker_replies(record))
+    asyncio.create_task(reminders(record))
+    asyncio.create_task(keep_router(record))
     asyncio.create_task(warm())
     host, port = os.environ.get("VOICE_HOST", "127.0.0.1"), int(os.environ.get("VOICE_PORT") or 8110)
     async with serve(handler, host, port, process_request=process, max_size=2**20):

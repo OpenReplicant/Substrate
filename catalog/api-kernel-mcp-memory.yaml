@@ -1,0 +1,23 @@
+# A catalog entry (S-176): Backstage's entity format, read into the kernel by encoder-backstage.
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: kernel-mcp-memory
+  title: The kernel's memory profile
+spec:
+  type: mcp
+  lifecycle: experimental
+  owner: owner
+  system: substrate
+  definition: |-
+    {
+     "protocol": "model-context-protocol",
+     "transport": "stdio",
+     "tools": [
+      "remember",
+      "recall",
+      "explain",
+      "changes_since"
+     ],
+     "note": "KK_PROFILE=memory"
+    }

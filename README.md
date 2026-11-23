@@ -1,31 +1,36 @@
 # Substrate
 
-An agent framework, built around one working system so far: **the companion**, an assistant you can talk to,
-in text or out loud with a face, that does real work in the background and improves its own parts under a
-judge it cannot reach.
+> **Map, design and orchestrate software, agents and organisations. Optimise all the things!**
 
-The idea: you put an **environment** on a system you need. An environment is data in Postgres: the signals that
-arrive, the actuators that can be acted on, and a record of everything. With nothing else configured, every
-signal goes to an LLM harness (Claude Code), which acts only through gated actuators. That is **pass-through**.
-From the record, the system writes **components** that handle what repeats, each with a **card** saying what it
-is for, how it is measured and how it is tested. A **judge** tests each new version against the one in use, on
-cases its author never saw, and **you** decide what goes live.
-
-It is four parts, each its own repository (S-153):
+**An operating system for AI agents.** Today's agents live in a terminal where everything is a file. Here a working
+system (a business, a codebase, a household, a game) lives in a **kernel** made of Postgres, where everything is an
+object: state, actions behind permission gates (`free`, `propose` for your approval, `deny`), events anyone allowed
+can subscribe to, and every change recorded. A **top-level orchestrator**, an ordinary LLM harness (Claude Code
+first) given skills, MCP servers and hooks, keeps that system working: it **maps** it, **orchestrates** it through
+sub-agents in shared environments (any harness, any model, or no model), and **optimises** it through an optimiser
+whose judge it cannot edit, toward goals you set, asking before anything that matters. Harnesses join unmodified,
+models come through one gateway, tools through MCP, and environments through [OpenEnv](https://huggingface.co/docs/openenv),
+so a change can be rehearsed on a copy before it runs for real.
 
 | Part | What it is |
 | --- | --- |
-| **Substrate** (this repository) | environments, streams and gated actuators, pass-through to Claude Code, components with cards, the judge interface, the model gateway, the UI |
-| **[Knowledge Kernel](https://github.com/OpenReplicant/kernel)**, the store | everything known, each statement with who said it, its source and how sure; permissions enforced by Postgres per caller; review before anything counts; recall by words and by meaning (BM25 and pgvector) |
-| **[MetaSoar](https://github.com/OpenReplicant/MetaSoar)**, the cognitive layer | how an agent perceives, attends, predicts and learns inside an environment, with the predictions that would show its model wrong; today it plays ARC-AGI-3 games and Super Mario Bros. from the screen |
-| **The judge** | an interface: a candidate in, a verdict out, on cases its author never saw; [Morphogen](https://github.com/OpenReplicant/Morphogen) is one filler |
+| **[Knowledge Kernel](https://github.com/OpenReplicant/kernel)** | Postgres made into a kernel: knowledge with provenance, objects and gated actions, logins and row-level security, the record |
+| **Substrate** (this repository) | the orchestrator kit (skills `map`, `catalog`, `research`, `orchestrate`, `optimize`; hooks; adapters for OpenEnv, the model endpoint and compose), the reference stack, and the documentation |
+| **[Morphogen](https://github.com/OpenReplicant/Morphogen)** | the optimiser, a Claude Code plugin: cells, optimizers behind a judge they cannot edit, an evidence log |
+| **Distributions** (`distributions/`, here for now) | what is built with it: the personal assistant (voice, face, local models), the SMB Foundry, games |
+| **[MetaSoar](https://github.com/OpenReplicant/MetaSoar)** | the research on cognitive architecture: System 1 distilled from experience (M-17) |
 
-All of that now runs end to end once, on one component (the voice head's replies). The rest of the framework is
-described in [`docs/framework.md`](docs/framework.md) and built as the plan's steps need it.
+Every dependency between them is a contract, not another project's code: the shape, the slots and what each needs
+are in [`docs/framework.md`](docs/framework.md); what is built next is [`docs/plan.md`](docs/plan.md).
+
+**Where it stands (2026-11-23):** the stack below runs on one machine. The parts that make up the personal
+assistant (the companion, the voice head, the worker, blocks, the ladder's experience store) are still at the
+repository's top level and move into `distributions/assistant/` (plan step 3); the first new work is an OpenEnv
+spike (step 1), then Morphogen as the optimiser (step 2).
 
 ## What runs
 
-Everything is in containers under Podman compose, published on 127.0.0.1 only.
+The reference stack and, for now, the assistant distribution's parts. Everything is in containers under Podman compose, published on 127.0.0.1 only.
 
 | Part | Where | What it does |
 | --- | --- | --- |
@@ -33,10 +38,11 @@ Everything is in containers under Podman compose, published on 127.0.0.1 only.
 | The environment | `environment/`, schema `env` | Signals logged whole and fanned out as pgmq topics; one queue per actuator behind a gate (`free`, `propose`, `deny`); proposals wait for a person; every action recorded |
 | The channel | `environment/channel.py` | Pushes an environment's signals into a live Claude Code session; a signal not acknowledged comes back |
 | The gateway | `gateway` (Bifrost), `scripts/gateway.py` | Every model call goes through it under its caller's key and is logged there, not by the caller. Keys decide which providers a caller may reach (voice stays local) |
-| The companion | `deploy/companion`, service `companion` | Claude Code on Haiku, on your own Claude login, in its own container with no built-in tools, only the channel. It replies, starts background tasks (a separate Claude Code run with tools), and proposes budget and model changes |
+| The assistant | `environment/worker.py`, service `worker`, the UI's `#/worker` | One agent loop on your own models: the slow model (`slow`, Inkling 2 Mini on the CPU here) with the kernel's memory and a workspace; compiled skills answer without a model. Handing work to the cloud waits for your approval |
+| The companion (to retire) | `deploy/companion`, service `companion` | Claude Code on Haiku, on your own Claude login, in its own container with only the channel. It replies, starts background tasks and proposes budget and model changes; it becomes the assistant's `cloud` level (S-181) |
 | The companion's environment | `environment/companion.py`, service `environment` | The clock, the gateway's meter of the companion's own spend, the daily budget (background tasks are refused while over it), and the appliers of approved proposals: outside the companion's reach |
-| The local model | service `llm` (llama.cpp) | Your own GGUF (Gemma 4 26B-A4B here) on the GPU, mixture-of-experts weights in system RAM |
-| The voice head | `voice/`, service `voice`, http://127.0.0.1:8110 | The microphone in over a WebSocket; Silero cuts utterances, Parakeet turns them into text, the local model answers, Kokoro speaks each sentence, a face moves with the audio. Talk over it and it stops. Real work is handed to the companion, whose answers are read out |
+| The local models | services `llm` and `llm-fast` (llama.cpp) | Two of your own GGUFs (S-169): a slow capable one on the CPU (`slow`; Inkling 2 Mini here) and a small fast one on the GPU (`fast`; LFM3 1.7B here) |
+| The voice head | `voice/`, service `voice`, http://127.0.0.1:8110 | The microphone in over a WebSocket; Silero cuts utterances, Parakeet turns them into text, the fast model decides each turn by the tool it calls (talk, quick tools such as notes, reminders, lookups and search, or hand over), Kokoro speaks each sentence, a face moves with the audio. Talk over it and it stops. Real work goes to the assistant, whose answers are read out (S-170, S-171) |
 | Components and the judge | `env.component`, `env.verdict`, `environment/author.py`, `environment/judge.py`, service `judge` | Every version of a component with its card; an author writes new versions from the record; the judge tests them on cases only it can read; you activate |
 | The UI | `ui/`, service `ui`, http://127.0.0.1:8100 | The store's pages and maps as diagrams; the companion's page: the conversation, proposals to approve or refuse, the meter, the components and their verdicts |
 
@@ -98,7 +104,7 @@ Picked: Parakeet 110M and kokoro-onnx, both on the CPU, so the GPU stays the lan
 not worth sharing the card. Every candidate is in the store's catalog with a note on when it would be the better
 choice (Kokoro on the GPU if the model moves off this card; Parakeet 0.6B for other languages).
 
-**The local model** (S-149). llama.cpp rather than Ollama, because only llama.cpp keeps a mixture-of-experts
+**The local model** (S-149; since replaced by two models, S-169). llama.cpp rather than Ollama, because only llama.cpp keeps a mixture-of-experts
 model's experts in system RAM (`--cpu-moe`): Gemma 4 26B-A4B then uses 2.9 GB of the 1070's 8 GB. Gemma 4 thinks
 before answering by default, about 6 s before the first word; with thinking off, 0.4 s. The first answer after
 the model loads took 14 s while its weights were read in from disk, so the voice head warms it at start. Spoken
@@ -145,25 +151,24 @@ allow the microphone; headphones help).
 
 The defaults are in [`docs/privacy.md`](docs/privacy.md): nothing personal leaves the machine unless a rule is
 loosened for a named stream, and each loosening is a recorded decision. Loosened so far: your typed messages to
-the companion reach Anthropic (S-136). What you say aloud stays on this machine: the voice head, its author and
-its judge use only the local model, and only requests the voice hands over reach the companion. The gateway keeps
-no message content.
+the companion reach Anthropic (S-136). What you say aloud stays on this machine: the voice head, the assistant,
+the author and the judge use only your own models, and the assistant hands work to the cloud only when you approve
+it. Two quick tools you chose send questions out: Wikipedia lookups and SearXNG search (S-171). The gateway keeps no
+message content. The gate's experience keeps your requests word for word, encrypted, deletable and kept only as long as you set (S-182).
 
 ## Not built yet
 
-- Components beyond the first; the judge running each case more than once (so smaller differences can be told
-  from noise), judging answer quality, and comparing against plain pass-through; holding out whole days.
-- The component lifecycle past activation: demotion when you keep overriding one, and the rate of model calls
-  per event, the number that should fall as it learns.
-- The view (how the environment is laid out for each model) as a tested component; environments nested in one
-  another; a review lane in the UI beyond the companion page.
-- A VRM avatar for the face, mixed reality on a Quest 3, and the embodied environments after it
-  (`docs/plan.md` steps 7 to 10).
+`docs/plan.md`, "Next, in order": the OpenEnv spike; Morphogen as the optimiser; the repository in its shape
+(distributions in folders); the `orchestrate` and `optimize` skills and gate hooks; the ladder on
+OpenEnv and M-17's experiment; the SMB Foundry distribution. Later, in the assistant distribution: a VRM avatar,
+mixed reality on a Quest 3, and the embodied environments after it.
 
 ## Where to read more
 
 - [`docs/plan.md`](docs/plan.md): the steps, and where each stands
-- [`docs/framework.md`](docs/framework.md): the shape of the framework
+- [`docs/framework.md`](docs/framework.md): the shape: layers, the orchestrator, objects, slots and contracts
+- [`docs/repos.md`](docs/repos.md): what each repository owns and depends on
+- [`docs/research/`](docs/research/): the prior-art research behind the shape (2026-11-23)
 - [`DECISIONS.md`](DECISIONS.md): every default, every measurement behind it, and why (append-only)
 - `CLAUDE.md`: the parts and the rules for working on it
 
