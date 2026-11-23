@@ -55,8 +55,11 @@ Like GNU on Linux, with Postgres made into the kernel:
 - **Orchestrate:** the orchestrator watches its system by subscription and delegates work: a quick task to its own
   sub-agents, long or risky work to a separate harness process with its own login, rehearsal to an OpenEnv
   environment in simulation, deterministic work to an MCP component.
-- **Optimise:** the `optimize` skill chooses a cell and when to work on it; Morphogen (its Claude Code plugin)
-  searches and judges; a winner becomes a proposal the person approves. Who proposes never grades their own work.
+- **Optimise:** the `optimize` skill chooses what to improve and which optimiser does it (S-198). **Morphogen** (its
+  Claude Code plugin) changes files and settings in a cell and judges them by tests and a measure; **an OpenEnv
+  environment's rubrics** score a model's or a policy's episodes, and a trainer (reinforcement learning, distillation)
+  learns from those scores. A winner becomes a proposal the person approves. Who proposes never grades their own
+  work: the judge, a cell's tests or an environment's rubric, is outside what is being changed.
 - **Error correction and monitoring** are the same loop: observe, notice, delegate or optimise, verify.
 - **Autopoiesis:** Substrate's own stack is an environment like any other (its compose file goes into the map and
   back out, S-177), so the orchestrator maintains and grows its own system with the same skills.
@@ -94,7 +97,7 @@ stay a database of its own on the same server.)
 | --- | --- | --- | --- |
 | Environment and delegation | OpenEnv (production and simulation) + MCP; A2A's task states for a delegated task | the kernel's Postgres environment, served as OpenEnv | any OpenEnv environment, any MCP server, a harness sub-agent |
 | The map | Backstage entity files, over MCP | the kernel | the plain files in `catalog/` |
-| The optimiser | Morphogen's cell contract | Morphogen | anyone's optimiser and judge |
+| The optimiser (S-198) | Morphogen's cell contract (files and settings); OpenEnv's rubrics (a model's or a policy's behaviour) | Morphogen; an OpenEnv environment with a trainer | anyone's optimiser and judge |
 | The harness | skills, MCP servers, hooks | Claude Code | any harness that takes them |
 | Models | an OpenAI- or Anthropic-compatible endpoint | Bifrost (`gateway`) | any gateway, a provider directly |
 

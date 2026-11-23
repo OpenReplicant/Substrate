@@ -1,6 +1,6 @@
 # Substrate's stack on the fresh tree (S-137): Postgres, the model gateway, local models, the kernel and the UI (S-140).
 # The old assistant's services (the companion, the voice head, the worker, the judge) were retired in S-194.
-# SPARQL (deploy/ontop) and Caddy in front (deploy/caddy) come later (docs/plan.md 3b).
+# SPARQL (deploy/ontop) comes later (docs/plan.md 3b); Caddy is the front door to the kernel's shell (S-199).
 # Images (S-167): each service names its published image (ghcr.io/openreplicant/substrate-NAME:SUBSTRATE_IMAGE_TAG, the
 # kernel's at KERNEL_IMAGE_TAG, both default main) and keeps its build: as the fallback. scripts/up.sh pulls first and builds
 # what did not pull (SUBSTRATE_BUILD=1 builds all).
@@ -110,7 +110,8 @@ services:
   kernel:
     <<: *locked
     image: ghcr.io/openreplicant/kernel:${KERNEL_IMAGE_TAG:-main}
-    command: ["kk", "serve", "--only", "validator"]
+    # MCP over HTTP and the kernel's UI shell at /ui (the kernel's D-44), reached through caddy (S-199)
+    command: ["kk", "serve", "--host", "0.0.0.0", "--port", "8000", "--only", "mcp,validator"]
     tmpfs: [/tmp]
     environment:
       DATABASE_URL: postgresql://kk_authenticator:${KK_AUTHENTICATOR_PASSWORD:?set in .env}@db:5432/kernel
@@ -168,6 +169,25 @@ services:
       retries: 10
     depends_on:
       db: {condition: service_healthy}
+
+  # The front door (S-199): Caddy in front of the kernel's shell (/ui) and its MCP server (/mcp), on 127.0.0.1 only.
+  # Pinned as the kernel's own deploy pins it (deploy/.env.example there). deploy/caddy/Caddyfile says what goes where.
+  caddy:
+    <<: *locked
+    image: docker.io/library/caddy:2.11.7-alpine
+    # the image's caddy binary carries the file capability cap_net_bind_service, which an unprivileged user cannot
+    # take under no-new-privileges (exec fails): the container's root (the owner's own user under rootless Podman),
+    # holding only that one capability
+    cap_add: [NET_BIND_SERVICE]
+    tmpfs: [/data, /config]
+    environment:
+      XDG_DATA_HOME: /data
+      XDG_CONFIG_HOME: /config
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+    ports:
+      - "127.0.0.1:${DESKTOP_PORT:-8080}:8080"
+    depends_on: [kernel]
 
   # The local slow model (plan step 5, S-169): llama.cpp's server, serving LLM_MODEL from LLM_MODELS_DIR read-only, by
   # default on the CPU and in RAM (LLM_ARGS -ngl 0) so the GPU stays free for the model that answers at once

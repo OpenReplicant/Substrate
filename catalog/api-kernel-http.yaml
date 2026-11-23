@@ -1,0 +1,31 @@
+# A catalog entry (S-176): Backstage's entity format, read into the kernel by encoder-backstage.
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: kernel-http
+  title: The kernel over HTTP
+spec:
+  type: http
+  lifecycle: experimental
+  owner: owner
+  system: substrate
+  definition: |-
+    {
+     "openapi": "3.1.0",
+     "info": {
+      "title": "kk serve: the UI shell and its view modules under /ui, MCP (streamable HTTP) at /mcp",
+      "version": "0"
+     },
+     "paths": {
+      "/ui/": {
+       "get": {
+        "summary": "the UI shell (the kernel's D-44)"
+       }
+      },
+      "/mcp": {
+       "post": {
+        "summary": "MCP over streamable HTTP, with the caller's bearer token"
+       }
+      }
+     }
+    }

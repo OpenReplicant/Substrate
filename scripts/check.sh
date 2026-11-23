@@ -9,14 +9,14 @@ fails=0
 ok()   { printf '  ok    %s\n' "$*"; }
 bad()  { printf '  FAIL  %s\n' "$*"; fails=$((fails + 1)); }
 note() { printf '  note  %s\n' "$*"; }
-CORE="db gateway ollama kernel ui"
+CORE="db gateway ollama kernel ui caddy"
 
 say "Services ($RUNTIME on $ENGINE)"
 running=$(rt_status 2>/dev/null | awk 'NR > 1 {print $1}' | tr '\n' ' ')
 for s in $CORE; do
   case "$running" in *"-$s-"*) ;; *) bad "service $s is not running (scripts/logs.sh $s)" ;; esac
 done
-extra=$(printf '%s\n' $running | grep -v -e '-db-' -e '-gateway-' -e '-ollama-' -e '-kernel-' -e '-ui-' -e '-llm-' || true)
+extra=$(printf '%s\n' $running | grep -v -e '-db-' -e '-gateway-' -e '-ollama-' -e '-kernel-' -e '-ui-' -e '-caddy-' -e '-llm-' || true)
 [ -z "$extra" ] && ok "only the core runs ($CORE)" || note "also running, outside the core: $(echo $extra)"
 if "$ROOT/bin/in-tools" python3 -c '
 import sys; sys.path.insert(0, "scripts")
@@ -84,6 +84,14 @@ case "$hdr" in
   *" 200 "*"script-src 'self'; style-src 'self'"*) ok "ui          $ui/ (maps at $ui/#/map/<id>; scripts and styles from itself only)" ;;
   *" 200 "*) bad "the UI answers without its CSP (ui/server.py)" ;;
   *) bad "the UI does not answer at $ui/api/wholes (scripts/logs.sh ui)" ;;
+esac
+# The front door (S-199): Caddy to the kernel's shell, with the kernel's own security headers on it
+desk="http://127.0.0.1:$(env_value DESKTOP_PORT || true)"; [ "$desk" = "http://127.0.0.1:" ] && desk=http://127.0.0.1:8080
+hdr=$(curl -s -D - -o /dev/null "$desk/ui/" 2>/dev/null | tr -d '\r')
+case "$hdr" in
+  *" 200 "*"frame-ancestors"*) ok "desktop     $desk/ui/ (the kernel's shell; sign in: kk person add NAME in the kernel container)" ;;
+  *" 200 "*) bad "the kernel's shell answers without its CSP at $desk/ui/" ;;
+  *) bad "the kernel's shell does not answer at $desk/ui/ (scripts/logs.sh caddy, scripts/logs.sh kernel)" ;;
 esac
 
 say "Wiring"

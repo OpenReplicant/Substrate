@@ -1,47 +1,21 @@
-# The front door (workbench/BRIEF.md section 7):
-#   /api/*            PostgREST; the prefix is stripped, so /api/note is PostgREST's /note
-#   /wb/api/*         the Workbench server: live events (streamed, so never buffered), extractors, MCP
-#   /sparql           the graph endpoint (Ontop), read-only SPARQL over the same tables
-#   /plugins/*/web/*  each installed plugin's browser files; nothing else in a plugin folder is served
-#   everything else   Workbench's shell from workbench/web; / is index.html, a template that finds the plugins
-# With PUBLIC_HOST set to a public host name, Caddy gets and renews a certificate.
-{$PUBLIC_HOST::80} {
+# The front door (S-199), on 127.0.0.1:${DESKTOP_PORT:-8080} (deploy/compose.yaml):
+#   /mcp*        the kernel's MCP server (streamable HTTP); callers send their own bearer token (kk token ROLE)
+#   /ui/*        the kernel's UI shell (its modules/ui, the kernel's D-44) and its view modules; / goes there
+# The kernel sets the shell's own security headers (Content-Security-Policy, nosniff, no-referrer). Framed apps on
+# their own origins come with the desktop (the next step): each gets a site block of its own here.
+{
+	admin off
+	auto_https off
+}
+
+:8080 {
 	encode zstd gzip
 
-	redir /api /api/
-	handle_path /api/* {
-		reverse_proxy postgrest:3000
+	redir / /ui/
+	handle /mcp* {
+		reverse_proxy kernel:8000
 	}
-
-	handle /sparql {
-		reverse_proxy graph:8080
-	}
-
-	handle /wb/api/* {
-		reverse_proxy workbench:8100 {
-			flush_interval -1
-		}
-	}
-
-	@pluginweb path_regexp ^/plugins/[a-z0-9_-]+/web/
-	handle @pluginweb {
-		root * /srv
-		file_server
-	}
-	handle /plugins/* {
-		respond 404
-	}
-
 	handle {
-		root * /srv
-		# Alpine's CSP build and vendored Dockview need nothing inline; apps on other origins go in {$WB_FRAME_SRC}
-		header {
-			Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-src 'self' {$WB_FRAME_SRC}; frame-ancestors 'self'; object-src 'none'; base-uri 'none'; form-action 'self'"
-			X-Content-Type-Options nosniff
-			Referrer-Policy same-origin
-		}
-		rewrite / /wb/index.html
-		templates
-		file_server
+		reverse_proxy kernel:8000
 	}
 }

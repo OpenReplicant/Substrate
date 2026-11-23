@@ -9,6 +9,9 @@
 #                                        # its MCP entry `kernel` in .mcp.json (the profile substrate: ten tools)
 #   scripts/kernel.sh login NAME --no-mcp-json   # the same, without touching .mcp.json (for a service's own login)
 #   scripts/kernel.sh mcp NAME           # the stdio MCP server for that login (what .mcp.json runs)
+#   scripts/kernel.sh person NAME        # a person's sign-in for the shell at the front door (S-199): a reviewer; the
+#                                        # password printed nowhere, kept in .state/kernel/person-NAME.password (mode 600);
+#                                        # run again for a new password
 set -eu
 . "$(dirname "$0")/lib.sh"
 # --no-deps: these need db up, not restarted. Without it, Podman's compose recreated db on every run, which restarted
@@ -46,6 +49,22 @@ open(mcp, "w").write(json.dumps(cfg, indent=2) + "\n")
 print("  login %s: .state/kernel/%s.env; .mcp.json has the `kernel` server (tools mcp__kernel__*)" % (out["role"], name))
 ' "$ROOT" "$name" "$(env_value DB_PORT)" "$nomcp"
     ;;
+  person)
+    name=${2:?usage: scripts/kernel.sh person NAME}
+    port=$(env_value DESKTOP_PORT || true); [ -n "$port" ] || port=8080
+    mkdir -p "$ROOT/.state/kernel"
+    out=$(compose run --rm --no-deps -T kernel-init kk person add "$name" | grep '^{' | tail -1)
+    printf '%s' "$out" | python3 -c '
+import json, os, sys
+root, name, port = sys.argv[1:4]
+out = json.load(sys.stdin)
+path = os.path.join(root, ".state/kernel", "person-" + name + ".password")
+fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+with os.fdopen(fd, "w") as f:
+    f.write(out["password"] + "\n")
+print("  %s signs in at http://127.0.0.1:%s/ui/ as %s, with the password in .state/kernel/person-%s.password" % (out["role"], port, name, name))
+' "$ROOT" "$name" "$port"
+    ;;
   mcp)
     name=${2:?usage: scripts/kernel.sh mcp NAME}
     login="$ROOT/.state/kernel/$name.env"
@@ -56,7 +75,7 @@ print("  login %s: .state/kernel/%s.env; .mcp.json has the `kernel` server (tool
     exec "$ENGINE" run "$@" "$(image)" kernel-mcp
     ;;
   *)
-    sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//' >&2
+    sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//' >&2
     exit 2
     ;;
 esac

@@ -4,16 +4,18 @@ kind: Component
 metadata:
   name: kernel
   title: The Knowledge Kernel
-  description: Claims with provenance, belief and clearance; validator and belief model (kk serve).
+  description: Claims with provenance, belief and clearance; kk serve runs the validator, MCP over HTTP and the UI shell.
   annotations:
     substrate.dev/licence: Apache-2.0
     substrate.dev/image: ghcr.io/openreplicant/kernel
     substrate.dev/compose-service: kernel
-    substrate.dev/decision: S-153, S-154
+    substrate.dev/decision: S-153, S-154, S-199
 spec:
   type: service
   lifecycle: experimental
   owner: owner
   system: substrate
+  providesApis:
+  - kernel-http
   dependsOn:
   - resource:db
