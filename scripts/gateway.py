@@ -205,25 +205,27 @@ def meter_open(env: dict[str, str], run_id: str) -> dict:
     return {"env": {"GATEWAY_KEY": caller_key(env["GATEWAY_KEY_SECRET"], JUDGE_CALLER), "GATEWAY_CALL_TAG": run_id}}
 
 
-def meter_close(env: dict[str, str], run_id: str, settle: float = 1.5) -> dict:
-    """That run's counts from the gateway's own record, read by the meter's login once the count stops moving (the
-    gateway writes its log after the reply). In the tools container: it needs psycopg."""
+def meter_close(env: dict[str, str], run_id: str, settle: float = 1.0, quiet: int = 3) -> dict:
+    """That run's counts from the gateway's own record, read by the meter's login once the count stops moving: the
+    gateway writes its log in batches after the replies (a run's last calls arrived up to seconds late, seen
+    2026-11-23), so it waits two seconds, then until `quiet` reads in a row agree. In the tools container (psycopg)."""
     import time
     import psycopg
     url = f"postgresql://gateway_meter:{env['GATEWAY_METER_PASSWORD']}@127.0.0.1:{env.get('DB_PORT') or 5432}/gateway"
     q = """select count(*), count(*) filter (where status <> 'success'), coalesce(sum(prompt_tokens), 0),
                   coalesce(sum(completion_tokens), 0), coalesce(sum(latency), 0)
              from logs where virtual_key_name = %s and metadata::jsonb->>'x-wb-call' like %s"""
-    last, deadline = None, time.monotonic() + 20
+    time.sleep(2)
+    last, same, deadline = None, 0, time.monotonic() + 30
     with psycopg.connect(url, connect_timeout=5, autocommit=True) as c:
-        while True:
+        while time.monotonic() < deadline:
             row = c.execute(q, (JUDGE_CALLER, run_id.replace("%", "") + "-%")).fetchone()
-            # settled: the same count twice, once there is one (a run with no calls waits out its first seconds)
-            if (row == last and (row[0] or time.monotonic() > deadline - 14)) or time.monotonic() > deadline:
-                break
+            same = same + 1 if row == last else 1
             last = row
+            if same >= quiet:
+                break
             time.sleep(settle)
-    calls, errors, prompt, completion, latency = row
+    calls, errors, prompt, completion, latency = last
     return {"calls": calls, "errors": errors, "prompt_tokens": int(prompt), "completion_tokens": int(completion),
             "tokens": int(prompt) + int(completion), "latency_ms": float(latency)}
 
