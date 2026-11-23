@@ -3,19 +3,16 @@ apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
   name: environment
-  title: The companion's environment
-  description: Its streams, actuators and gates on pgmq; the clock and the meter (environment/companion.py).
+  title: The real-time environment
+  description: Signals, subscribers, actuators behind gates and the record of actions on pgmq (schema env, environment/sql/); the channel into Claude Code (environment/channel.py).
   annotations:
     substrate.dev/licence: Apache-2.0
-    substrate.dev/image: ghcr.io/openreplicant/substrate-tools
-    substrate.dev/compose-service: environment
-    substrate.dev/decision: S-143, S-144
+    substrate.dev/source: environment/
+    substrate.dev/decision: S-143, S-144, S-194
 spec:
-  type: service
+  type: library
   lifecycle: experimental
   owner: owner
   system: substrate
-  providesApis:
-  - companion-session
   dependsOn:
   - resource:db

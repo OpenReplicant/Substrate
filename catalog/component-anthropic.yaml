@@ -4,7 +4,7 @@ kind: Component
 metadata:
   name: anthropic
   title: Anthropic API
-  description: Claude, reached only with a caller's own Claude login (the companion's).
+  description: Claude, reached only with a caller's own Claude login, through the gateway's pass-through route.
   annotations:
     substrate.dev/licence: proprietary service
 spec:

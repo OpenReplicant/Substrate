@@ -6,14 +6,5 @@
 backstage: catalog/catalog-info.yaml
 sandbox: podman
 sandbox_image: docker.io/library/python:3.13.17-slim-bookworm
-cells:
-  voice-route:
-    in: component:voice
-    description: >-
-      The voice head's router: the fast model's system prompt, which picks the first tool for what the owner said:
-      talk (or a quick fact on the way to talking) or work (delegate, notes, reminders, web search).
-    change: voice/tools_system.txt
-    run: python3 voice/bench/run.py
-    score: python3 voice/bench/score.py
-    better: accuracy higher
-    tests: python3 scripts/tests/test_voice_route.py
+# The first cell, voice-route (S-193), measured the old voice head and went with it (S-194); its verdict stays in the
+# evidence log. The next cell is one on a part that stays.

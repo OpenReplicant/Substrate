@@ -22,16 +22,6 @@ say "Databases"
 
 say "The Knowledge Kernel (S-154)"
 "$ROOT/scripts/kernel.sh" init       # its schema and default modules in the `kernel` database (the kernel service then applies change sets)
-"$ROOT/scripts/kernel.sh" export     # the store's items as change sets; an unchanged item submits nothing
-
-[ -s "$ROOT/.state/kernel/worker.env" ] || "$ROOT/scripts/kernel.sh" login worker --no-mcp-json   # the worker's own login (memory profile)
-# the worker reads it from .env (WORKER_KERNEL_URL), not a mounted file; once copied, its container is recreated with it
-if [ -z "$(env_value WORKER_KERNEL_URL)" ]; then
-  sec_start
-  sed -n 's/^KK_DATABASE_URL=//p' "$ROOT/.state/kernel/worker.env" | tr -d '\n' | sec_put WORKER_KERNEL_URL
-  echo "  the worker's kernel login: in .env (WORKER_KERNEL_URL)"
-  rt_up
-fi
 
 say "Up"
 "$ROOT/scripts/check.sh"

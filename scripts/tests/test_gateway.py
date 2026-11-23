@@ -2,7 +2,7 @@
 It should:
 - name every caller in CALLERS, each with its own key, and no other
 - hold a local-only caller (the store's embeddings) to Ollama even when OpenRouter is configured
-- hold the companion's callers to Anthropic (on the owner's own login: no Anthropic key in the config)
+- hold Morphogen's judged runs to the local models, and give no caller Anthropic (no Anthropic key in the config)
 - refuse calls without a key, keep no message content, and carry no secret (only env.NAME references or derived keys)
 - give no caller a key when GATEWAY_KEY_SECRET is unset
 
@@ -41,22 +41,18 @@ def main():
     lk = {k["name"]: k for k in local["governance"]["virtual_keys"]}
     check("with a local model, it is a provider of its own", "local" in local["providers"]
           and local["providers"]["local"]["network_config"]["base_url"] == "http://llm:8080")
-    check("the voice head reaches local providers only (what is said aloud stays here)",
-          {p["provider"] for p in lk["voice:head"]["provider_configs"]} <= set(gateway.LOCAL)
-          and "local" in {p["provider"] for p in lk["voice:head"]["provider_configs"]}, lk["voice:head"]["provider_configs"])
+    check("Morphogen's judged runs reach local providers only (S-193)",
+          {p["provider"] for p in lk["morphogen:judge"]["provider_configs"]} <= set(gateway.LOCAL)
+          and "local" in {p["provider"] for p in lk["morphogen:judge"]["provider_configs"]}, lk["morphogen:judge"]["provider_configs"])
+    check("its key is derived from GATEWAY_KEY_SECRET, not stored", lk["morphogen:judge"]["value"].startswith("sk-bf-"))
     both = gateway.render({**env, "LLM_MODEL": "model.gguf", "LLM_FAST_MODEL": "fast.gguf"})
     bk = {k["name"]: k for k in both["governance"]["virtual_keys"]}
-    check("with a fast model too, it is provider fast, which the voice head and the worker reach (S-169)",
+    check("with a fast model too, it is provider fast, which Morphogen's runs reach (S-169)",
           both["providers"]["fast"]["network_config"]["base_url"] == "http://llm-fast:8080"
-          and all("fast" in {p["provider"] for p in bk[c]["provider_configs"]} for c in ("voice:head", "worker:loop")))
-    check("the companion does not reach the local model", all(p["provider"] == "anthropic" for c in ("companion:session", "companion:task")
-                                                               for p in lk[c]["provider_configs"]))
+          and "fast" in {p["provider"] for p in bk["morphogen:judge"]["provider_configs"]})
+    check("no caller reaches Anthropic since the old assistant retired (S-194)",
+          not any(p["provider"] == "anthropic" for k in bk.values() for p in k["provider_configs"]))
     check("Anthropic has no key of its own (only a caller's Claude login reaches it)", cfg["providers"]["anthropic"] == {"keys": []})
-    for c in ("companion:session", "companion:task"):
-        pc = keys[c]["provider_configs"]
-        check(f"{c} reaches Anthropic only, Haiku by default", [p["provider"] for p in pc] == ["anthropic"]
-              and pc[0]["allowed_models"] == ["regex:claude-haiku.*"], pc)
-        check(f"{c}'s key is read from .env", keys[c]["value"].startswith("env.COMPANION_"), keys[c]["value"])
     client = cfg["client"]
     check("a call needs a key", client["enforce_auth_on_inference"] is True)
     check("no message content is logged", client["disable_content_logging"] is True)

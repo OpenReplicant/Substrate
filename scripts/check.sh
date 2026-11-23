@@ -9,14 +9,14 @@ fails=0
 ok()   { printf '  ok    %s\n' "$*"; }
 bad()  { printf '  FAIL  %s\n' "$*"; fails=$((fails + 1)); }
 note() { printf '  note  %s\n' "$*"; }
-CORE="db gateway ollama kernel ui environment companion"
+CORE="db gateway ollama kernel ui"
 
 say "Services ($RUNTIME on $ENGINE)"
 running=$(rt_status 2>/dev/null | awk 'NR > 1 {print $1}' | tr '\n' ' ')
 for s in $CORE; do
   case "$running" in *"-$s-"*) ;; *) bad "service $s is not running (scripts/logs.sh $s)" ;; esac
 done
-extra=$(printf '%s\n' $running | grep -v -e '-db-' -e '-gateway-' -e '-ollama-' -e '-kernel-' -e '-ui-' -e '-environment-' -e '-companion-' -e '-llm-' -e '-voice-' -e '-judge-' -e '-worker-' -e '-tts-' || true)
+extra=$(printf '%s\n' $running | grep -v -e '-db-' -e '-gateway-' -e '-ollama-' -e '-kernel-' -e '-ui-' -e '-llm-' || true)
 [ -z "$extra" ] && ok "only the core runs ($CORE)" || note "also running, outside the core: $(echo $extra)"
 if "$ROOT/bin/in-tools" python3 -c '
 import sys; sys.path.insert(0, "scripts")
@@ -65,15 +65,7 @@ for _ in $(seq 1 30); do
   [ "$code" = 000 ] || break; sleep 2
 done
 [ "$code" = "401" ] && ok "gateway     http://127.0.0.1:$(env_value GATEWAY_PORT)/ (Bifrost; a call without a key is refused)" || bad "the model gateway returned $code to a call without a key (scripts/logs.sh gateway)"
-# The companion (plan step 4, S-136): its session in tmux, and whether the owner's Claude login is in its home yet
-if out=$(compose exec -T companion sh -c 'tmux has-session -t companion 2>/dev/null && echo session; test -s "$HOME/.claude/.credentials.json" && echo login; true' 2>/dev/null); then
-  case "$out" in
-    *session*login*) ok "companion   session running, logged in (scripts/companion.sh attach; talk at the UI's #/companion)" ;;
-    *session*) note "companion   session running, not logged in yet: scripts/companion.sh login" ;;
-    *) bad "companion   no session in its container (scripts/logs.sh companion)" ;;
-  esac
-else bad "companion   its container does not answer (scripts/logs.sh companion)"; fi
-# The local model and the voice head (plan step 5), when COMPOSE_PROFILES in .env turns them on
+# The local models (S-169), when COMPOSE_PROFILES in .env turns them on
 case ",$(env_value COMPOSE_PROFILES)," in *,llm,*)
   case "$running" in *-llm-*) ;; *) bad "service llm is not running (scripts/logs.sh llm)" ;; esac
   if [ "$("$ENGINE" inspect -f '{{.State.Health.Status}}' substrate-llm-1 2>/dev/null)" = healthy ]; then
@@ -84,13 +76,6 @@ case ",$(env_value COMPOSE_PROFILES)," in *,llm,*)
       ok "llm-fast    $(env_value LLM_FAST_MODEL) on llama.cpp, at the gateway as fast/$(env_value LLM_FAST_ALIAS)"
     else note "llm-fast    not healthy yet (scripts/logs.sh llm-fast)"; fi
   fi ;;
-esac
-case ",$(env_value COMPOSE_PROFILES)," in *,voice,*)
-  vp=$(env_value VOICE_PORT); vp=${vp:-8110}
-  case "$running" in *-voice-*) ;; *) bad "service voice is not running (scripts/logs.sh voice)" ;; esac
-  hdr=$(curl -s -D - -o /dev/null "http://127.0.0.1:$vp/" 2>/dev/null | tr -d '\r')
-  case "$hdr" in *" 200 "*"script-src 'self'"*) ok "voice       http://127.0.0.1:$vp/ (the companion's voice and face; press Start)" ;;
-    *) bad "the voice head does not answer at 127.0.0.1:$vp (scripts/logs.sh voice)" ;; esac ;;
 esac
 # The UI (S-140): its API answers from the store, under a CSP that allows scripts and styles from itself only
 ui="http://127.0.0.1:$(env_value UI_PORT || true)"; [ "$ui" = "http://127.0.0.1:" ] && ui=http://127.0.0.1:8100

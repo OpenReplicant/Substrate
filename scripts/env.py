@@ -3,7 +3,7 @@
 
     bin/in-tools python3 scripts/env.py waiting                        # proposals waiting for a person
     bin/in-tools python3 scripts/env.py decide ACTION yes|no [REASON] --as NAME
-    bin/in-tools python3 scripts/env.py publish KEY JSON --as SOURCE   # e.g. companion.owner.message '{"text":"hi"}'
+    bin/in-tools python3 scripts/env.py publish KEY JSON --as SOURCE   # e.g. owner.inbox.message '{"text":"hi"}'
     bin/in-tools python3 scripts/env.py actuators                      # each actuator, its gate and queue
     bin/in-tools python3 scripts/env.py gate NAME free|propose|deny --as NAME
     bin/in-tools python3 scripts/env.py queues                         # each queue: waiting, hidden, archived

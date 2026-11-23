@@ -4,7 +4,7 @@ with encoder-backstage (the kernel's D-100). This script checks them, without th
 - **fit**: every API a component consumes has a provider; every API is provided by someone; every reference
   (providesApis, consumesApis, dependsOn, owner, system) names an entity that exists;
 - **what uses what**: each component that uses some APIs to provide others (the gateway uses llama-server's API to
-  provide its own chat API, a translator; the voice head uses several to provide its page); where two parts share no
+  provide its own chat API, a translator; a service may use several to provide its own); where two parts share no
   API, a translator from the catalog has to go between them;
 - **compose**: the catalog against deploy/compose.yaml, both ways: a service with no entry, an entry naming a service
   compose does not have;

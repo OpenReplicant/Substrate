@@ -4,7 +4,7 @@ kind: Component
 metadata:
   name: ollama
   title: Ollama
-  description: Local embeddings for the store and the voice router (qwen3-embedding:0.6b).
+  description: Local embeddings for the store (qwen3-embedding:0.6b).
   annotations:
     substrate.dev/licence: MIT
     substrate.dev/image: docker.io/ollama/ollama:0.40.12

@@ -69,56 +69,6 @@ def init(env: dict[str, str]) -> None:
     with connect(env, DB) as c:
         applied = migrate(c)
     print(f"  the environment's schema: {'applied ' + ', '.join(applied) if applied else 'up to date'}")
-    if env.get("COMPANION_DB_PASSWORD"):
-        companion_login(env)
-    if env.get("JUDGE_DB_PASSWORD"):
-        judge_login(env)
-    if env.get("WORKER_DB_PASSWORD"):
-        worker_login(env)
-
-
-def companion_login(env: dict[str, str]) -> None:
-    """The companion's container's login (environment/sql/006_logins.sql): a member of env_agent, so it may publish, act
-    and read the queues it is given, and nothing else; then its actuators and queues (environment.companion)."""
-    from psycopg import sql
-    with connect(env, DB) as c:
-        c.autocommit = True
-        if not c.execute("select 1 from pg_roles where rolname = 'companion'").fetchone():
-            c.execute("create role companion login")
-        c.execute(sql.SQL("alter role companion password {}").format(sql.Literal(env["COMPANION_DB_PASSWORD"])))
-        c.execute("grant env_agent to companion")
-        from environment import Env
-        from environment.companion import setup
-        setup(Env(c))
-
-
-def worker_login(env: dict[str, str]) -> None:
-    """The worker's container's login (S-163): a member of env_agent like the companion's; its actuators and queue
-    (environment.worker)."""
-    from psycopg import sql
-    with connect(env, DB) as c:
-        c.autocommit = True
-        if not c.execute("select 1 from pg_roles where rolname = 'worker'").fetchone():
-            c.execute("create role worker login")
-        c.execute(sql.SQL("alter role worker password {}").format(sql.Literal(env["WORKER_DB_PASSWORD"])))
-        c.execute("grant env_agent to worker")
-        from environment import Env
-        from environment.worker import setup
-        root = __import__("os").path.join(HERE, "..", env["WORKER_BLOCKS"]) if env.get("WORKER_BLOCKS") else ""
-        setup(Env(c), blocks=root)
-
-
-def judge_login(env: dict[str, str]) -> None:
-    """The judge's login (environment/sql/007_components.sql): a member of env_judge, so it reads the record and records
-    verdicts, and cannot activate a component or decide a proposal."""
-    from psycopg import sql
-    with connect(env, DB) as c:
-        c.autocommit = True
-        if not c.execute("select 1 from pg_roles where rolname = 'judge'").fetchone():
-            c.execute("create role judge login")
-        c.execute(sql.SQL("alter role judge password {}").format(sql.Literal(env["JUDGE_DB_PASSWORD"])))
-        c.execute("grant env_judge to judge")
-    print("  judge: login judge (env_judge)")
 
 
 def main() -> None:

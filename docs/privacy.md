@@ -22,9 +22,8 @@ The owner decides what each stream may do. These rules are the **default flow po
 owner may loosen a rule for a named stream or label; each loosening is a decision in the review lane, saying who,
 when and why, and the rule's check then tests the policy as set rather than the default.
 
-**The assistant's experience (S-178, S-182).** The gate keeps one episode per model call (the scenario, the
-response, the outcome), the rows System 1 is distilled from. P6 is loosened for this store only, by the owner's
-decision (S-182): episodes keep the owner's words verbatim, with the text encrypted at rest, deletion of one episode,
-a time range or all of it (P9; the embeddings and every derived row with it, since embeddings can be partly turned
-back into text), and a retention period the owner sets (P7). The checks to build with it: a test that the stored text
-is not readable without the key, and one that deleting leaves no embedding or derived row behind.
+**The assistant's experience (S-178, S-182; its code removed in S-194).** P6 was loosened for one store only: the
+episodes a gate keeps of each model call, the owner's words verbatim, encrypted at rest, deletable (P9) and kept no
+longer than the owner sets (P7). The store was removed with the old assistant and held no episodes; a new assistant
+that keeps experience takes the same terms, and the same two checks: the stored text unreadable without the key, and
+deletion leaving no embedding or derived row behind.

@@ -1,16 +1,13 @@
 #!/bin/sh
-# The Knowledge Kernel beside the store (S-153, S-154): its schema, the one-off export of the `store` schema into it,
-# an agent's login, and the MCP server Claude Code starts. The kernel runs in its own image (published, or scripts/build.sh kernel)
+# The Knowledge Kernel (S-153, S-154): its schema, Substrate's catalog in it, an agent's login, and the MCP server Claude Code starts. The kernel runs in its own image (published, or scripts/build.sh kernel)
 # in the stack's Postgres, database `kernel` (scripts/db.py init makes it); nothing is installed on the host.
 #
 #   scripts/kernel.sh init               # install the kernel's schema and default modules (safe to run again)
-#   scripts/kernel.sh export             # the store's items and statements as kernel change sets (safe to run again:
-#                                        # an unchanged item submits nothing); the kernel service applies them
 #   scripts/kernel.sh catalog            # catalog/*.yaml (Substrate's parts, Backstage entities) into the kernel by
 #                                        # encoder-backstage (S-176); an unchanged file submits nothing
 #   scripts/kernel.sh login NAME         # an agent's own login (printed nowhere: .state/kernel/NAME.env, mode 600) and
 #                                        # its MCP entry `kernel` in .mcp.json (the profile substrate: ten tools)
-#   scripts/kernel.sh login NAME --no-mcp-json   # the same, without touching .mcp.json (the worker's: up.sh runs it)
+#   scripts/kernel.sh login NAME --no-mcp-json   # the same, without touching .mcp.json (for a service's own login)
 #   scripts/kernel.sh mcp NAME           # the stdio MCP server for that login (what .mcp.json runs)
 set -eu
 . "$(dirname "$0")/lib.sh"
@@ -22,9 +19,6 @@ image() { image_ref kernel; }
 case "${1:-}" in
   init)
     compose run --rm --no-deps kernel-init
-    ;;
-  export)
-    compose run --rm --no-deps kernel-export
     ;;
   catalog)
     compose run --rm --no-deps kernel-catalog

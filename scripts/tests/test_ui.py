@@ -116,7 +116,7 @@ def run(c, url, admin):
 
 def scenario(backend, url, kernel, ids):
     bike, drive, fit, chain, other = (ids[x] for x in ("bike", "drive", "fit", "chain", "other"))
-    srv = server.serve("127.0.0.1", 0, url, kernel)
+    srv = server.serve("127.0.0.1", 0, kernel)
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     base = f"http://127.0.0.1:{srv.server_port}"
     try:
@@ -187,7 +187,7 @@ def kernel_only(k, url, ids):
     cmd = [sys.executable, "-m", "encoder_substrate", "--store", url, "--scope", scope]
     subprocess.run(cmd, check=True, env=k.env, capture_output=True)
     k.wait_applied()
-    srv = server.serve("127.0.0.1", 0, url, k.url)
+    srv = server.serve("127.0.0.1", 0, k.url)
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     base = f"http://127.0.0.1:{srv.server_port}"
     try:

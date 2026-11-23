@@ -14,8 +14,6 @@
 <header>
   <a href="#/" class="home">Substrate</a>
   <input id="q" type="search" placeholder="Search the store" autocomplete="off" aria-label="Search the store">
-  <a href="#/companion" class="nav">Companion</a>
-  <a href="#/worker" class="nav">Worker</a>
   <span id="crumb"></span>
 </header>
 <main>
@@ -29,26 +27,6 @@
     </div>
     <div id="map" hidden></div>
     <article id="page" hidden></article>
-    <div id="work" hidden>
-      <div id="wstatus"></div>
-      <div id="wwaiting"></div>
-      <ol id="wlog" aria-live="polite"></ol>
-      <form id="wsay">
-        <textarea id="wtext" rows="2" placeholder="Give the offline worker a task (Enter sends, Shift+Enter for a new line)" aria-label="Task"></textarea>
-        <button type="submit">Send</button>
-      </form>
-    </div>
-    <div id="talk" hidden>
-      <div id="status"></div>
-      <div id="waiting"></div>
-      <ol id="convo" aria-live="polite"></ol>
-      <form id="say">
-        <textarea id="text" rows="2" placeholder="Say something to the companion (Enter sends, Shift+Enter for a new line)" aria-label="Message"></textarea>
-        <button type="submit">Send</button>
-        <button type="button" id="improve" title="Ask for a new version of the voice reply component (the text box, if filled, says why)">Improve voice</button>
-      </form>
-      <details id="comps"><summary>Components</summary><ol id="components"></ol></details>
-    </div>
   </section>
   <aside id="side" hidden>
     <button id="close" type="button" aria-label="Close">×</button>

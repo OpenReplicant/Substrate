@@ -32,8 +32,8 @@ OUT = ROOT / ".state/gateway/config.json"
 
 NAMES = ("POSTGRES_PASSWORD", "DB_PORT", "OPENROUTER_API_KEY", "OLLAMA_URL", "GATEWAY_OPENROUTER_MODELS",
          "GATEWAY_REQUESTS_PER_HOUR", "GATEWAY_DB_PASSWORD", "GATEWAY_METER_PASSWORD", "GATEWAY_KEY_SECRET",
-         "GATEWAY_PORT", "COMPANION_MODELS", "COMPANION_DB_PASSWORD",
-         "LLM_MODEL", "LLM_FAST_MODEL", "JUDGE_DB_PASSWORD", "WORKER_DB_PASSWORD", "WORKER_BLOCKS", "KERNEL_URL", "KK_AUTHENTICATOR_PASSWORD")
+         "GATEWAY_PORT", "ANTHROPIC_MODELS", "COMPANION_MODELS",
+         "LLM_MODEL", "LLM_FAST_MODEL", "KERNEL_URL", "KK_AUTHENTICATOR_PASSWORD")
 
 
 def settings() -> dict[str, str]:
@@ -49,22 +49,13 @@ def caller_key(secret: str, caller: str) -> str:
 
 
 # Every caller, and the only providers each may use (S-83): the store's embeddings stay local. A caller is added
-# here when a step needs one. The companion (S-136, plan step 4): its session and its background tasks, each on the
-# owner's own Claude login (subscription mode: the gateway forwards the login's token to Anthropic and keeps the
-# call under the caller's key), held to Anthropic's models in COMPANION_MODELS.
-# The voice head (plan step 5) talks with the local model (llama.cpp, provider `local`) only: what the owner says
-# aloud stays on this machine (P3) unless the model hands a request to the companion. The worker (plan step 1, S-163)
-# is an offline agent on the same local model: its loop, its tool calls and its recall never leave the machine.
-# Two local models (S-169): `local`, the slow one on the CPU, and `fast`, the small one on the GPU; both stay here.
-# The voice head also embeds through Ollama, for its router (S-170).
-CALLERS = {"store:embed": ("ollama",), "companion:session": ("anthropic",), "companion:task": ("anthropic",),
-           "voice:head": ("local", "fast", "ollama"), "companion:author": ("local",), "judge:voice": ("local",),
-           "worker:loop": ("local", "fast"), "morphogen:judge": ("local", "fast")}
+# here when a step needs one. Two local models (S-169): `local`, the slow one on the CPU, and `fast`, the small one on
+# the GPU; both stay here. Morphogen's judged runs (S-193) reach the local models only, counted by its meter. The old
+# assistant's callers (the companion, the voice head, the worker, the components judge) were retired in S-194; the
+# Anthropic provider stays for a caller on a Claude login, held to ANTHROPIC_MODELS, though none has one now.
+CALLERS = {"store:embed": ("ollama",), "morphogen:judge": ("local", "fast")}
 LOCAL = ("ollama", "local", "fast")
-FIXED_KEYS = {"store:embed": "STORE_EMBED_KEY", "companion:session": "COMPANION_SESSION_KEY",
-              "companion:task": "COMPANION_TASK_KEY", "voice:head": "VOICE_KEY",
-              "companion:author": "COMPANION_AUTHOR_KEY", "judge:voice": "JUDGE_KEY",
-              "worker:loop": "WORKER_KEY"}   # keys read from .env by the gateway and the caller
+FIXED_KEYS = {"store:embed": "STORE_EMBED_KEY"}   # keys read from .env by the gateway and the caller
 
 
 def callers() -> list[str]:
@@ -99,9 +90,9 @@ def render(env: dict[str, str]) -> dict:
                                "allow_private_network": True},
             "custom_provider_config": {"base_provider_type": "openai",
                                        "allowed_requests": {"chat_completion": True, "chat_completion_stream": True}}}
-    # Anthropic with no key of its own: only calls carrying a Claude login (the companion's) can use it
+    # Anthropic with no key of its own: only calls carrying a Claude login can use it
     providers["anthropic"] = {"keys": []}
-    allowed = {"local": ["*"], "fast": ["*"], "anthropic": [m.strip() for m in (env.get("COMPANION_MODELS") or "regex:claude-haiku.*").split(",") if m.strip()],
+    allowed = {"local": ["*"], "fast": ["*"], "anthropic": [m.strip() for m in (env.get("ANTHROPIC_MODELS") or env.get("COMPANION_MODELS") or "regex:claude-haiku.*").split(",") if m.strip()],
                "openrouter": [m.strip() for m in (env.get("GATEWAY_OPENROUTER_MODELS") or "regex:.*:free").split(",") if m.strip()],
                "ollama": ["regex:.*"]}
     secret = env.get("GATEWAY_KEY_SECRET") or ""

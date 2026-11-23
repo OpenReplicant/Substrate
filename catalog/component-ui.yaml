@@ -4,7 +4,7 @@ kind: Component
 metadata:
   name: ui
   title: The UI
-  description: The store's pages and maps, the companion's and worker's pages (127.0.0.1:8100).
+  description: The store's pages and maps, read-only (127.0.0.1:8100).
   annotations:
     substrate.dev/licence: Apache-2.0
     substrate.dev/image: ghcr.io/openreplicant/substrate-tools
@@ -17,9 +17,6 @@ spec:
   system: substrate
   providesApis:
   - ui-http
-  consumesApis:
-  - worker-tasks
-  - companion-session
   dependsOn:
   - resource:db
   - component:kernel

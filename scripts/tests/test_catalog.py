@@ -42,7 +42,7 @@ def main():
     ents = C.load(ROOT / "catalog")
     problems = C.check(ents, ROOT / "deploy/compose.yaml")
     check("the repository's catalog fits and matches compose", problems == [], problems)
-    check("it describes its components and their APIs", sum(k == "component" for k, _ in ents) >= 20 and sum(k == "api" for k, _ in ents) >= 20)
+    check("it describes its components and their APIs", sum(k == "component" for k, _ in ents) >= 10 and sum(k == "api" for k, _ in ents) >= 10)
     check("the gateway is listed as using the model servers to provide the chat API",
           any(n == "gateway" and "llama-chat-slow" in ins and "model-chat" in outs for n, ins, outs in C.translators(ents)))
 

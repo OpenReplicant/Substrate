@@ -10,8 +10,8 @@ version kept as an artifact, and the kernel's claims about it (each citing its f
   WoT Thing Description action read from its `block.yaml`.
 - **Annotations** (`substrate.dev/*`): `licence`, `image`, `compose-service`, `decision`, `source`, `gate`,
   `otel-service`, `trigger`.
-- **A queue's provider** is the component that receives on it (the worker provides `worker-tasks`; the voice head
-  and the UI consume it by publishing to it), as in AsyncAPI.
+- **A queue's provider** is the component that receives on it (a worker provides its task queue; the parts that
+  publish to it consume it), as in AsyncAPI.
 
 ```sh
 bin/in-tools python3 scripts/catalog.py check --compose deploy/compose.yaml   # every consumed API provided, compose matched
