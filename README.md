@@ -73,7 +73,8 @@ full-text search beyond chance, so none is used until the record gives real quer
 
 ## Running it
 
-Needs git, python3, Podman with compose, and Claude Code on the host; everything else runs in containers.
+Needs git, python3, Podman with compose, Claude Code and uv (for Morphogen's plugin) on the host; everything else
+runs in containers.
 
 ```sh
 scripts/bootstrap.sh       # once: images and the tools container

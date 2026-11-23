@@ -1,6 +1,18 @@
 # The OpenEnv spike (S-184, plan step 1): openenv 0.12.0 beside Claude Code and psycopg. Trial only, never published.
-FROM localhost/substrate-companion:local
-USER root
-RUN pip install --no-cache-dir openenv==0.12.0
-USER companion
+FROM docker.io/library/python:3.13.17-slim-bookworm
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl && rm -rf /var/lib/apt/lists/*
+RUN pip install --no-cache-dir "psycopg[binary]==3.3.6" openenv==0.12.0
+# Claude Code 2.1.311 (npm's stable tag, 2026-10-26), its native linux-x64 binary from the npm registry, checked
+# against the SHA-256 of the tarball whose sha512 integrity the registry publishes (read 2026-11-17; as the retired
+# companion image installed it)
+ARG CLAUDE_CODE_VERSION=2.1.311
+ARG CLAUDE_CODE_SHA256=4353c611f9a33063c5525348a15f1212bdc0085e4a7a81b8370b790003df1b56
+RUN curl -fsSL -o /tmp/cc.tgz "https://registry.npmjs.org/@anthropic-ai/claude-code-linux-x64/-/claude-code-linux-x64-${CLAUDE_CODE_VERSION}.tgz" \
+ && echo "${CLAUDE_CODE_SHA256}  /tmp/cc.tgz" | sha256sum -c - \
+ && tar -xzf /tmp/cc.tgz -C /tmp package/claude && install -m 755 /tmp/package/claude /usr/local/bin/claude \
+ && rm -rf /tmp/cc.tgz /tmp/package
+RUN useradd --uid 1000 --create-home --shell /bin/bash trial
+USER trial
+WORKDIR /home/trial
+ENV DISABLE_AUTOUPDATER=1
 CMD ["sleep", "infinity"]

@@ -117,7 +117,7 @@ and experience (S-179, S-183).
    to Morphogen go by pull request there (the `upstream` skill).
 3. **Changed 2026-11-23 (S-194): the assistant is not ported; it starts again from scratch, so this step keeps only Substrate's own parts in shape and retires the old assistant's once the owner agrees.** The repository in its shape (S-185, S-186): `distributions/assistant/` takes the companion, the voice head
    and avatar, the worker, blocks and the skill gate, the ladder (proxy, deciders, experience, the decider trial);
-   envkit goes to MetaSoar's side; components and the judge (S-151) give way to Morphogen; Substrate keeps the
+   envkit is retired (S-196: OpenEnv replaces it); components and the judge (S-151) give way to Morphogen; Substrate keeps the
    stack, the skills, the channel, the catalog and the adapters. In batches, each with `scripts/check.sh` and
    `scripts/test.sh` passing.
 4. **One database, the kernel's** (S-190): the kernel defines the schemas and the ways of doing things, and Substrate

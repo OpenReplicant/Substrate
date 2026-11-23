@@ -22,6 +22,7 @@ else
   required_missing="$required_missing compose"
 fi
 show claude "Claude Code, to work in this repository (not needed to run the stack)"
+show uv "https://docs.astral.sh/uv/ (Morphogen's plugin runs its MCP server with it; S-196)"
 if [ -n "$required_missing" ]; then
   echo "Install:$required_missing, then run this again." >&2
   exit 1
