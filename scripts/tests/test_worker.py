@@ -57,6 +57,13 @@ def say(text):
     return {"content": text, "tool_calls": []}
 
 
+def says_nothing():
+    """A model that must not be called."""
+    async def model(messages, specs):
+        raise AssertionError("the model was called")
+    return model
+
+
 def run(coro):
     return asyncio.run(coro)
 
@@ -184,7 +191,10 @@ def chat_endpoint():
     log = tempfile.mktemp()
     os.environ["STUB_LOG"] = log
     spec.loader.exec_module(stub)
-    srv = ThreadingHTTPServer(("127.0.0.1", 0), stub.H)
+    # HTTP/1.1 keeps the connection open, as the gateway does: a pooled connection from one task's event loop is what a
+    # client shared across asyncio.run calls trips on
+    srv = ThreadingHTTPServer(("127.0.0.1", 0), type("H11", (stub.H,), {"protocol_version": "HTTP/1.1"}))
+    srv.daemon_threads = True
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     model = w.openai_model(f"http://127.0.0.1:{srv.server_port}", "stub-key", "local/gemma")
 
@@ -192,9 +202,11 @@ def chat_endpoint():
         async with w.McpTools([sys.executable, str(d / "stub_mcp.py")], dict(os.environ), ("add",)) as t:
             return await w.run_task("What is 2 + 3? Use the add tool.", model, w.Tools(tempfile.mkdtemp(), mcp=t.session, mcp_specs=t.specs))
     r = run(go())
+    r2 = run(go())          # a second task, its own event loop, the same model: the client must not be the first loop's
     srv.shutdown()
-    seen = [json.loads(x) for x in open(log)]
+    seen = [json.loads(x) for x in open(log)][:2]
     check("the OpenAI client does the round trip with the tool", r["ok"] and r["text"] == "The answer is 5." and r["model_calls"] == 2, r)
+    check("a second task in a new event loop reuses the model (no 'Event loop is closed')", r2["ok"] and r2["model_calls"] == 2, r2)
     check("the stub saw two calls, as the model, with the key and the tools", len(seen) == 2 and seen[0]["model"] == "local/gemma"
           and seen[0]["auth"] == "Bearer stub-key" and "add" in seen[0]["tools"], seen)
 
@@ -217,7 +229,9 @@ def database():
             c.execute(f"create role {login} login password 'test-only'")
             c.execute(f"grant env_agent to {login}")
             owner = Env(c)
-            w.setup(owner, login)
+            w.setup(owner, login, blocks=str(ROOT / "blocks/examples"))
+            check("each world-changing block in WORKER_BLOCKS gets its actuator, free", c.execute(
+                "select gate from env.actuator where name = 'blocks.write_note'").fetchone() == ("free",))
             check("the gate on ask_companion is propose, reply is free", dict(c.execute("select name, gate from env.actuator where name like 'worker.%'").fetchall())
                   == {"worker.reply": "free", "worker.ask_companion": "propose"})
             host = url.split("@", 1)[1].split("/", 1)[0]
@@ -245,6 +259,13 @@ def database():
                 check("approved, it reaches the companion as an owner message", c.execute(
                     "select body from env.signal where key = 'companion.owner.message'").fetchone()[0] == {"text": "tax question"})
                 check("it may not decide its own proposal", refused(lambda: me.decide(prop[0], True, "owner")))
+                os.environ["WORKER_BLOCKS"] = str(ROOT / "blocks/examples")
+                gate = w.skills(me)
+                out = run(w.run_task("save a note called t1: one two three", says_nothing(), w.Tools(ws), gate=gate))
+                check("a task matching a plan runs it under the worker's login, no model call", out["ok"] and out["model_calls"] == 0
+                      and out["skipped_calls"] == 1 and out["text"] == "Saved notes/t1.txt (3 words).", out)
+                check("the block's action is applied (its queue is the worker's to close)", c.execute(
+                    "select status from env.action where actuator = 'blocks.write_note'").fetchall() == [("applied",)])
     finally:
         with psycopg.connect(admin, autocommit=True) as a:
             a.execute(f"drop database {name} with (force)")

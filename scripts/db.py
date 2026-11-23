@@ -104,7 +104,8 @@ def worker_login(env: dict[str, str]) -> None:
         c.execute("grant env_agent to worker")
         from environment import Env
         from environment.worker import setup
-        setup(Env(c))
+        root = __import__("os").path.join(HERE, "..", env["WORKER_BLOCKS"]) if env.get("WORKER_BLOCKS") else ""
+        setup(Env(c), blocks=root)
 
 
 def judge_login(env: dict[str, str]) -> None:

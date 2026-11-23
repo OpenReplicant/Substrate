@@ -66,7 +66,10 @@ export async function loadAvatar(url, stage, creditEl) {
   const names = Object.keys(morphs);
   const expressions = vrm && vrm.expressionManager ? Object.keys(vrm.expressionManager.expressionMap || {}) : [];
   console.log("avatar:", vrm ? "VRM" : "glTF", "morph targets:", names, "VRM expressions:", expressions, "bones:", Object.keys(bones).filter(k => B.head && /head|neck|spine|hips|arm/.test(k)));
-  const mouthKeys = names.filter(n => MOUTH.test(n)), blinkKeys = names.filter(n => BLINK.test(n));
+  // a dedicated open-mouth key wins (ARKit's 52 have jawOpen beside ~25 other mouth shapes; driving all of them at once,
+  // smile, frown, pucker and mouthClose together, garbles the mouth); otherwise every key that looks like a mouth
+  const OPEN = ["jawopen", "mouthopen", "viseme_aa", "aa"].filter(n => n in morphs);
+  const mouthKeys = OPEN.length ? OPEN.slice(0, 1) : names.filter(n => MOUTH.test(n)), blinkKeys = names.filter(n => BLINK.test(n));
   const cur = {}, want = {};          // smoothed and wanted weights per morph or VRM expression name
   const setW = (n, w) => { want[n] = w; };
   const apply = (n, w) => {

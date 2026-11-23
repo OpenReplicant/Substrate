@@ -325,6 +325,7 @@ services:
     volumes:
       - voice-models:/models
       - ../voice:/app/voice:ro
+      - ../.state/avatar:/avatar:ro            # AVATAR_FILE lives here, never committed (S-160)
     ports:
       - "127.0.0.1:${VOICE_PORT:-8110}:8110"
     depends_on:
@@ -361,11 +362,10 @@ services:
       WORKER_REASONING: ${WORKER_REASONING:-}
       WORKER_WORKSPACE: /workspace
       WORKER_BLOCKS: ${WORKER_BLOCKS:+/app/${WORKER_BLOCKS}}
-      WORKER_LOGIN_FILE: /login
+      WORKER_KERNEL_URL: ${WORKER_KERNEL_URL:-}         # its kernel login; scripts/up.sh copies it from scripts/kernel.sh login worker
       STORE_URL: postgresql://worker:${WORKER_DB_PASSWORD:?set in .env}@db:5432/substrate
     volumes:
       - worker-workspace:/workspace
-      - ../.state/kernel/worker.env:/login:ro       # scripts/kernel.sh login worker
       - ../environment:/app/environment:ro
       - ../blocks:/app/blocks:ro
     depends_on:

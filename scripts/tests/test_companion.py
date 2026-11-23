@@ -158,7 +158,7 @@ def appliers(e: Env):
 def ui(url: str, e: Env):
     os.environ["OWNER_NAME"] = "owner"
     from ui import server
-    srv = server.serve("127.0.0.1", 0, url)
+    srv = server.serve("127.0.0.1", 0, url, url)   # kernel: never read here (its Store connects on first query)
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     base = f"http://127.0.0.1:{srv.server_address[1]}"
 
