@@ -130,7 +130,7 @@ below it, it abstains to the model, and the impasse's type (`none`, `tie`, `low`
    Left: the running state encoded back, and a `scripts/kernel.sh compose` job once the kernel image has the modules.
 3. **The gate, then one assistant, then M-17's first experiment** ("The gate" above; S-178 to S-181), in order:
    (a) experience, `env.experience` (S-182: per episode the scenario, the response with what it depended on, the
-   impasse type, outcomes attached later by the episode's id; the text encrypted at rest, deletion and retention); (b) the proxy, OpenAI format first, passing through and logging;
+   impasse type, outcomes attached later by the episode's id; the text encrypted at rest, deletion and retention); — built 2026-11-22 (S-183); (b) the proxy, OpenAI format first, passing through and logging;
    (c) the deciders behind a threshold, with Thompson sampling; (d) the voice front end and the assistant through
    it; (e) the `cloud` rung and the Anthropic format, retiring the companion as a separate agent; (f) the frozen blind
    run (the owner's own requests and a set another model writes unseen); (g) M-17's experiment under
