@@ -1,0 +1,2 @@
+# a test fixture in the router's tests (S-205), not a secret; the line is marked gitleaks:allow since
+f994ec7540ed56c52824f1823012cce936d203cd:mcp-router/router_test.go:generic-api-key:16

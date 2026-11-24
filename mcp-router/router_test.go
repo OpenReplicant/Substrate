@@ -13,7 +13,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-const secret = "0123456789abcdef0123456789abcdef"
+const secret = "0123456789abcdef0123456789abcdef" // a test fixture, not a secret gitleaks:allow
 
 var t0 = time.Unix(1_800_000_000, 0)
 
