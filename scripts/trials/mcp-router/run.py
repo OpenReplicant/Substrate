@@ -10,7 +10,7 @@ caller's role; an agent's token is limited to the read tool by a rule.
 import base64, hashlib, hmac, json, os, sys, time, urllib.error, urllib.request
 from pathlib import Path
 
-URL, DECIDE, NAME = os.environ["ROUTER_URL"], os.environ["DECIDE_URL"], os.environ.get("ROUTER", "router")
+URL, DECIDE, NAME = os.environ["ROUTER_URL"], os.environ.get("DECIDE_URL", ""), os.environ.get("ROUTER", "router")
 SECRET = os.environ.get("KK_JWT_SECRET", "")     # HS256 routers: the kernel's own secret, by name, never printed
 EDKEY = os.environ.get("ED25519_KEY")              # routers that need an asymmetric key: a key made for the trial
 OUT = Path(__file__).resolve().parents[3] / ".state/trials/mcp-router"
@@ -89,40 +89,45 @@ class Session:
         return code, (not res.get("isError") and "error" not in r and code == 200), text or json.dumps(r)[:300]
 
 
-code, _ = Session(None).start()
-check("refuses a call with no token", code in (401, 403), code)
-code, _ = Session(token("person_owner", "not-the-kernel-secret-but-32-chars-long")).start()
-check("refuses a token signed with another secret", code in (401, 403), code)
-if ISS:
-    code, _ = Session(token("person_owner", claims={})).start()
-    check("(today's kernel token, without iss and aud)", True, f"answered {code}")
-    results[-1]["detail"] = f"answered {code}"
-me = Session(token("person_owner"))
-code, r = me.start()
-check(f"takes the kernel's token ({'EdDSA' if EDKEY else 'HS256'}, role claim)", code == 200 and "result" in r, (code, r))
-check("answers initialize at 2025-11-25", (r.get("result") or {}).get("protocolVersion") == "2025-11-25", r.get("result"))
-code, r = me.rpc("tools/list")
-names = [t["name"] for t in (r.get("result") or {}).get("tools", [])]
-find = lambda base: next((n for n in names if n == base or n.endswith("_" + base)), None)
-check("lists both backends' tools as one", find("echo") and find("write_note") and find("whoami"), names[:40])
-code, ok, text = me.call(find("echo") or "echo", {"text": "hello"})
-check("a read tool passes", ok and "hello" in text, text)
-code, ok, text = me.call(find("whoami") or "whoami", {})
-check("the kernel sees the caller (whoami through the router)", ok and "person_owner" in text, text)
-code, ok, text = me.call(find("write_note") or "write_note", {"text": "held?"})
-check("a world-changing tool is held for a person", not ok, text)
-urllib.request.urlopen(urllib.request.Request(DECIDE + "/approve", json.dumps({"tool": "write_note"}).encode(),
-                                              {"content-type": "application/json"}), timeout=10).read()
-code, ok, text = me.call(find("write_note") or "write_note", {"text": "approved"})
-check("once a person approves it, it goes", ok and "written" in text, text)
-log = json.loads(urllib.request.urlopen(DECIDE + "/log", timeout=10).read())
-check("the decision service was asked, with the caller's role and the tool",
-      any(e.get("tool") == "write_note" and "person_owner" in json.dumps(e) for e in log), log[-3:])
-ag = Session(token("agent_claude_code"))
-ag.start()
-code, ok, text = ag.call(find("echo") or "echo", {"text": "agent"})
-check("an agent's token may call the read tool", ok and "agent" in text, text)
-code, ok, text = ag.call(find("write_note") or "write_note", {"text": "agent write"})
-check("a rule limits an agent's token: no world-changing tool", not ok, text)
-(OUT / f"{NAME}.json").write_text(json.dumps(results, indent=1))
-print(f"{NAME}: {sum(r['ok'] for r in results)}/{len(results)} cases")
+def main():
+    code, _ = Session(None).start()
+    check("refuses a call with no token", code in (401, 403), code)
+    code, _ = Session(token("person_owner", "not-the-kernel-secret-but-32-chars-long")).start()
+    check("refuses a token signed with another secret", code in (401, 403), code)
+    if ISS:
+        code, _ = Session(token("person_owner", claims={})).start()
+        check("(today's kernel token, without iss and aud)", True, f"answered {code}")
+        results[-1]["detail"] = f"answered {code}"
+    me = Session(token("person_owner"))
+    code, r = me.start()
+    check(f"takes the kernel's token ({'EdDSA' if EDKEY else 'HS256'}, role claim)", code == 200 and "result" in r, (code, r))
+    check("answers initialize at 2025-11-25", (r.get("result") or {}).get("protocolVersion") == "2025-11-25", r.get("result"))
+    code, r = me.rpc("tools/list")
+    names = [t["name"] for t in (r.get("result") or {}).get("tools", [])]
+    find = lambda base: next((n for n in names if n == base or n.endswith("_" + base)), None)
+    check("lists both backends' tools as one", find("echo") and find("write_note") and find("whoami"), names[:40])
+    code, ok, text = me.call(find("echo") or "echo", {"text": "hello"})
+    check("a read tool passes", ok and "hello" in text, text)
+    code, ok, text = me.call(find("whoami") or "whoami", {})
+    check("the kernel sees the caller (whoami through the router)", ok and "person_owner" in text, text)
+    code, ok, text = me.call(find("write_note") or "write_note", {"text": "held?"})
+    check("a world-changing tool is held for a person", not ok, text)
+    urllib.request.urlopen(urllib.request.Request(DECIDE + "/approve", json.dumps({"tool": "write_note"}).encode(),
+                                                  {"content-type": "application/json"}), timeout=10).read()
+    code, ok, text = me.call(find("write_note") or "write_note", {"text": "approved"})
+    check("once a person approves it, it goes", ok and "written" in text, text)
+    log = json.loads(urllib.request.urlopen(DECIDE + "/log", timeout=10).read())
+    check("the decision service was asked, with the caller's role and the tool",
+          any(e.get("tool") == "write_note" and "person_owner" in json.dumps(e) for e in log), log[-3:])
+    ag = Session(token("agent_claude_code"))
+    ag.start()
+    code, ok, text = ag.call(find("echo") or "echo", {"text": "agent"})
+    check("an agent's token may call the read tool", ok and "agent" in text, text)
+    code, ok, text = ag.call(find("write_note") or "write_note", {"text": "agent write"})
+    check("a rule limits an agent's token: no world-changing tool", not ok, text)
+    (OUT / f"{NAME}.json").write_text(json.dumps(results, indent=1))
+    print(f"{NAME}: {sum(r['ok'] for r in results)}/{len(results)} cases")
+
+
+if __name__ == "__main__":
+    main()

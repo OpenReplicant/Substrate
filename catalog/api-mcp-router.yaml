@@ -1,0 +1,18 @@
+# A catalog entry (S-176): Backstage's entity format, read into the kernel by encoder-backstage.
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: mcp-router
+  title: The MCP router's endpoint
+spec:
+  type: mcp
+  lifecycle: experimental
+  owner: owner
+  system: substrate
+  definition: |-
+    {
+     "transport": "streamable-http",
+     "path": "/mcp",
+     "auth": "Bearer: the kernel's HS256 token (role claim)",
+     "tools": "every connected server's tools as <server>_<tool>, plus router_outcome"
+    }

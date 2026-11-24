@@ -1,0 +1,21 @@
+# A catalog entry (S-176): Backstage's entity format, read into the kernel by encoder-backstage.
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: mcp-router
+  title: The MCP router
+  description: One MCP endpoint for agents and the desktop in front of every connected MCP server; each tool call an environment action behind its gate, recorded (127.0.0.1:8083).
+  annotations:
+    substrate.dev/licence: Apache-2.0
+    substrate.dev/image: ghcr.io/openreplicant/substrate-mcp-router
+    substrate.dev/compose-service: mcp-router
+    substrate.dev/decision: S-203, S-205
+spec:
+  type: service
+  lifecycle: experimental
+  owner: owner
+  system: substrate
+  providesApis:
+  - mcp-router
+  dependsOn:
+  - resource:db

@@ -62,6 +62,26 @@ def init(env: dict[str, str]) -> None:
     with connect(env, DB) as c:
         applied = migrate(c)
     print(f"  the environment's schema: {'applied ' + ', '.join(applied) if applied else 'up to date'}")
+    logins(env)
+
+
+# The environment's logins (S-205): each a login role granted one of the roles environment/sql/010_mcp.sql makes, its
+# password from .env. Made if missing, its password set each time (so a changed .env takes effect).
+LOGINS = (("mcp_router", "env_router", "MCP_ROUTER_DB_PASSWORD"), ("mcp_connector", "env_connector", "MCP_CONNECTOR_DB_PASSWORD"))
+
+
+def logins(env: dict[str, str]) -> None:
+    from psycopg import sql
+    with connect(env, DB) as c:
+        for login, role, secret in LOGINS:
+            if not env.get(secret):
+                print(f"  login {login}: skipped ({secret} is empty in .env; scripts/settings.sh makes it)")
+                continue
+            if not c.execute("select 1 from pg_roles where rolname = %s", (login,)).fetchone():
+                c.execute(sql.SQL("create role {} login").format(sql.Identifier(login)))
+            c.execute(sql.SQL("alter role {} login password {}").format(sql.Identifier(login), sql.Literal(env[secret])))
+            c.execute(sql.SQL("grant {} to {}").format(sql.Identifier(role), sql.Identifier(login)))
+            print(f"  login {login}: ready ({role})")
 
 
 def main() -> None:

@@ -28,6 +28,7 @@ jobs:
         include:
           - {name: db, context: deploy/postgres, file: deploy/postgres/Dockerfile}
           - {name: tools, context: deploy/tools, file: deploy/tools/Containerfile}
+          - {name: mcp-router, context: mcp-router, file: mcp-router/Containerfile}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1

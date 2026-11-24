@@ -9,14 +9,14 @@ fails=0
 ok()   { printf '  ok    %s\n' "$*"; }
 bad()  { printf '  FAIL  %s\n' "$*"; fails=$((fails + 1)); }
 note() { printf '  note  %s\n' "$*"; }
-CORE="db gateway ollama kernel ui caddy"
+CORE="db gateway ollama kernel ui caddy mcp-router mcp-kernel"
 
 say "Services ($RUNTIME on $ENGINE)"
 running=$(rt_status 2>/dev/null | awk 'NR > 1 {print $1}' | tr '\n' ' ')
 for s in $CORE; do
   case "$running" in *"-$s-"*) ;; *) bad "service $s is not running (scripts/logs.sh $s)" ;; esac
 done
-extra=$(printf '%s\n' $running | grep -v -e '-db-' -e '-gateway-' -e '-ollama-' -e '-kernel-' -e '-ui-' -e '-caddy-' -e '-llm-' || true)
+extra=$(printf '%s\n' $running | grep -v -e '-db-' -e '-gateway-' -e '-ollama-' -e '-kernel-' -e '-ui-' -e '-caddy-' -e '-mcp-' -e '-llm-' || true)
 [ -z "$extra" ] && ok "only the core runs ($CORE)" || note "also running, outside the core: $(echo $extra)"
 if "$ROOT/bin/in-tools" python3 -c '
 import sys; sys.path.insert(0, "scripts")
@@ -89,13 +89,13 @@ esac
 desk=http://127.0.0.1:8080   # fixed: the apps.json origins and frame-ancestors name it (S-200)
 hdr=$(curl -s -D - -o /dev/null "$desk/ui/" 2>/dev/null | tr -d '\r')
 case "$hdr" in
-  *" 200 "*"frame-src http://127.0.0.1:8081 http://127.0.0.1:8082;"*"frame-ancestors 'none'"*)
+  *" 200 "*"frame-src http://127.0.0.1:8081 http://127.0.0.1:8082 http://127.0.0.1:8083;"*"frame-ancestors 'none'"*)
     ok "desktop     $desk/ (the kernel's shell; frames only the apps in deploy/caddy/apps.json; sign in: scripts/kernel.sh person NAME)" ;;
   *" 200 "*) bad "the kernel's shell answers at $desk/ui/ without its CSP or the apps' frame-src (deploy/caddy/Caddyfile)" ;;
   *) bad "the kernel's shell does not answer at $desk/ui/ (scripts/logs.sh caddy, scripts/logs.sh kernel)" ;;
 esac
 # Its framed apps (S-200): each on an origin of its own, framable by the desktop only, with no X-Frame-Options left
-for app in 8081:gateway 8082:maps; do
+for app in 8081:gateway 8082:maps 8083:mcp; do
   hdr=$(curl -s -D - -o /dev/null "http://127.0.0.1:${app%%:*}/" 2>/dev/null | tr -d '\r')
   case "$hdr" in
     *[Xx]-[Ff]rame-[Oo]ptions*) bad "app ${app#*:} at :${app%%:*} still sends X-Frame-Options (deploy/caddy/Caddyfile)" ;;

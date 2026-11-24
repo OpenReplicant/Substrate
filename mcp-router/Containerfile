@@ -1,0 +1,15 @@
+# The MCP router (S-203, S-205). Build from the repository root:
+#   podman build -t localhost/substrate-mcp-router:dev -f mcp-router/Containerfile mcp-router
+# golang 1.25.14 (released 2026-08, read at hub.docker.com/_/golang), pinned by tag and digest.
+FROM docker.io/library/golang:1.25.14@sha256:699337d620559a59b4a2bb298ad59611e535d2ee755a34cf2d2a98f37578dc80 AS build
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/mcp-router .
+
+# python:3.13.17-slim-trixie so that stdio servers written in Python run under `connect`.
+FROM docker.io/library/python:3.13.17-slim-trixie@sha256:d98cc29d3266e535dd9da1099688d9cb3ca4753813571e071763d17725460962
+COPY --from=build /out/mcp-router /usr/local/bin/mcp-router
+USER 65532
+ENTRYPOINT ["/usr/local/bin/mcp-router"]

@@ -14,6 +14,7 @@ spec:
   - ./api-kernel-mcp-substrate.yaml
   - ./api-llama-chat-fast.yaml
   - ./api-llama-chat-slow.yaml
+  - ./api-mcp-router.yaml
   - ./api-model-chat.yaml
   - ./api-model-responses.yaml
   - ./api-ollama-api.yaml
@@ -28,6 +29,8 @@ spec:
   - ./component-kernel.yaml
   - ./component-llm-fast.yaml
   - ./component-llm.yaml
+  - ./component-mcp-kernel.yaml
+  - ./component-mcp-router.yaml
   - ./component-ollama.yaml
   - ./component-ui.yaml
   - ./group-owner.yaml
