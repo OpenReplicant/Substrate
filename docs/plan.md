@@ -41,6 +41,11 @@ product cut and "Next, in order", which are now Substrate's running system, buil
 The business itself (offer, pricing, prospect lists) is worked in a session of its own (S-188 c), once step 3 has a
 report to show.
 
+**Amended by S-211 (2026-11-24):** Substrate is a default configuration, not a product: a harness set up to use the
+kernel and Morphogen. Work goes to Morphogen (step 1 above) and the kernel first: its parts become kernel modules or
+standard module types (`docs/kernel-moves.md`, whose order replaces steps 2 and 5 above); the test of the bet is step
+3, one implementation project on a demo SMB carried out under the kernel's gates.
+
 ## The fresh start (S-137)
 
 v1 is tagged `v1-final` and archived. The fresh tree keeps only: the Postgres image (pgvector, pgmq, pg_cron,
