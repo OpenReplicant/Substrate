@@ -2,34 +2,37 @@
 
 > **Map, design and orchestrate software, agents and organisations. Optimise all the things!**
 
-**An operating system for AI agents.** Today's agents live in a terminal where everything is a file. Here a working
-system (a business, a codebase, a household, a game) lives in a **kernel** made of Postgres, where everything is an
-object: state, actions behind permission gates (`free`, `propose` for your approval, `deny`), events anyone allowed
-can subscribe to, and every change recorded. A **top-level orchestrator**, an ordinary LLM harness (Claude Code
-first) given skills, MCP servers and hooks, keeps that system working: it **maps** it, **orchestrates** it through
-sub-agents in shared environments (any harness, any model, or no model), and **optimises** it through an optimiser
-whose judge it cannot edit, toward goals you set, asking before anything that matters. Harnesses join unmodified,
-models come through one gateway, tools through MCP, and environments through [OpenEnv](https://huggingface.co/docs/openenv),
-so a change can be rehearsed on a copy before it runs for real.
+**The default distribution:** an agent harness set up to get things done with two products, interactively. It
+starts with Claude Code, for its Anthropic subscription. Substrate adds no core of its own. It is the configuration,
+the optional parts installed onto the kernel, and the stack that runs them (S-211 to S-214).
 
-| Part | What it is |
+| Project | What it is |
 | --- | --- |
-| **[Knowledge Kernel](https://github.com/OpenReplicant/kernel)** | Postgres made into a kernel: knowledge with provenance, objects and gated actions, logins and row-level security, the record |
-| **Substrate** (this repository) | the orchestrator kit (skills `map`, `catalog`, `research`, `orchestrate`, `optimize`; hooks; adapters for OpenEnv, the model endpoint and compose), the reference stack, and the documentation |
-| **[Morphogen](https://github.com/OpenReplicant/Morphogen)** | the optimiser, a Claude Code plugin: cells, optimizers behind a judge they cannot edit, an evidence log |
-| **Distributions** (`distributions/`, here for now) | what is built with it: a personal assistant (to be designed anew), the SMB Foundry, games |
-| **[MetaSoar](https://github.com/OpenReplicant/MetaSoar)** | the research on cognitive architecture: System 1 distilled from experience (M-17) |
+| **[Morphogen](https://github.com/OpenReplicant/Morphogen)** | **the kit:** map a system (interviews, design work, fact-finding), research and catalogue the options for each part, and optimise behind a judge the optimiser cannot edit. Files only, in Backstage's catalog format, on any harness; no database (S-209) |
+| **[Knowledge Kernel](https://github.com/OpenReplicant/kernel)** | Postgres made into a kernel: knowledge with provenance, review, logins and row-level security, the record, a module contract, and a desktop in the browser. An optional layer above Morphogen: it ingests the same catalog files when indexing, search or graph traversal are wanted |
+| **Substrate** (this repository) | the default distribution: the kernel's core, Substrate's optional parts installed onto it (the live environment and its gates, the channel into a harness, the MCP router, the assistant's view in the kernel's desktop), Morphogen's plugin, a configured harness, a model gateway and local models |
+| **[MetaSoar](https://github.com/OpenReplicant/MetaSoar)** | the research: cognitive architecture, and System 1 skills (learned policies, observers and cases in an Agent Skill's folder, each judged as a Morphogen cell) |
 
-Every dependency between them is a contract, not another project's code: the shape, the slots and what each needs
-are in [`docs/framework.md`](docs/framework.md); what is built next is [`docs/plan.md`](docs/plan.md).
+A part of Substrate is a kernel module only when it needs the kernel: its own role, its data in the kernel's
+database, the review lane. Otherwise it is the standard thing it already is: an Agent Skill, an MCP server, a
+compose service or an outside service (S-213). Our agents and experiments are built on this distribution. Every
+dependency is a contract (Backstage files, MCP, OpenEnv, Morphogen's cells, an OpenAI- or Anthropic-compatible
+endpoint), never another project's code. The shape is [`docs/framework.md`](docs/framework.md); where each part
+goes is [`docs/parts.md`](docs/parts.md); what is built next is [`docs/plan.md`](docs/plan.md).
 
-**Where it stands (2026-11-23):** the stack below runs on one machine. The OpenEnv spike passed (S-192) and
-Morphogen is installed as the optimiser, with Substrate's catalog as its map (S-193). The first assistant (a companion,
-a voice head, a worker) was removed (S-194): the assistant starts again from scratch, on this shape.
+**The bet:** an ordinary strong harness in a well-built environment is the agent we want. It holds where one
+implementation project runs end to end on a demo small business without new core code: Morphogen maps the business
+and picks an opportunity, the harness carries it out under the kernel's gates, a person approves what matters, and
+Morphogen judges the result (S-211).
+
+**Where it stands (2026-11-24):** the stack below runs on one machine, and a person has talked to the assistant in
+the kernel's desktop (S-208). The re-cut is decided and the parts are not moved yet. The work goes to Morphogen
+(the kit) and the kernel first.
 
 ## What runs
 
-The reference stack. Everything is in containers under Podman compose, published on 127.0.0.1 only.
+The stack as it is in the tree today, before the parts move (`docs/parts.md`). Everything is in containers under
+Podman compose, published on 127.0.0.1 only.
 
 | Part | Where | What it does |
 | --- | --- | --- |
@@ -95,16 +98,18 @@ local models keep everything on this machine.
 
 ## Not built yet
 
-`docs/plan.md`, "Next, in order": the repository in its shape; one database, the kernel's; the `orchestrate`,
-`optimize` and `rtfm` skills and gate hooks; everything on top of the shape; the bootstrap instance; a new
-assistant, designed from scratch; the SMB Foundry distribution.
+`docs/plan.md`, "The re-cut": Morphogen as the kit (its pull request), Substrate's parts in their types, the
+default distribution, and the test of the bet on a demo small business.
 
 ## Where to read more
 
 - [`docs/plan.md`](docs/plan.md): the steps, and where each stands
-- [`docs/framework.md`](docs/framework.md): the shape: layers, the orchestrator, objects, slots and contracts
+- [`docs/framework.md`](docs/framework.md): the shape: the projects, the contracts between them, what Substrate adds
+- [`docs/parts.md`](docs/parts.md): every part of this tree and where it goes
+- [`docs/morphogen-kit.md`](docs/morphogen-kit.md): Morphogen as the kit, the proposal for its pull request
 - [`docs/repos.md`](docs/repos.md): what each repository owns and depends on
 - [`docs/research/`](docs/research/): the prior-art research behind the shape (2026-11-23)
+- [`docs/archive/framework-s185.md`](docs/archive/framework-s185.md): the shape before the re-cut (objects, traits, the orchestrator, OpenEnv), history
 - [`DECISIONS.md`](DECISIONS.md): every default, every measurement behind it, and why (append-only)
 - `CLAUDE.md`: the parts and the rules for working on it
 

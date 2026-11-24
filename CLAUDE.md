@@ -1,21 +1,23 @@
 # Substrate
 
-An operating system for AI agents (S-185): a top-level orchestrator (an ordinary LLM harness given skills, MCP
-servers and hooks) that maps, orchestrates and optimises a working system, on a kernel made of Postgres where
-everything is an object. Its shape is `docs/framework.md`; what is built next is `docs/plan.md` ("Next, in order"),
-the one plan; every default and its reason is in `DECISIONS.md` (append-only). Read the plan first.
+The default distribution (S-209 to S-214): an agent harness (Claude Code first) configured to get things done with
+two products, interactively. **Morphogen** is the kit (map, research, catalog, optimise, on Backstage files, no
+database); **the Kernel** is Postgres made into a kernel, a layer above the kit that ingests its files; Substrate adds
+its optional parts onto the kernel (the environment and gates, the channel, the MCP router, the assistant's view) and
+the stack. Its shape is `docs/framework.md`; where each part goes is `docs/parts.md`; what is built next is
+`docs/plan.md` ("The re-cut"), the one plan; every default and its reason is in `DECISIONS.md` (append-only). Read
+the plan first.
 
 This is the **fresh tree** (S-137). v1 is tagged `v1-final` and its plans are in `docs/archive/`: history, not
 plans to work from. v1's databases are kept in the same Postgres volume (`workbench`, `gateway`) and dumped in
 `.state/backups/`; what people stated there comes back as data imported into the new store.
 
-The layers (S-185, `docs/framework.md`, `docs/repos.md`): **the Kernel** (Postgres made into a kernel), **Substrate**
-(the orchestrator kit, the adapters, the reference stack), **Morphogen** (the optimiser, a Claude Code plugin),
-**distributions** (folders in `distributions/` here for now), **MetaSoar** (the research). Every dependency is a
-contract, never another project's code. Environments are OpenEnv environments (S-184). Name parts by their role and
-models by their alias (`fast`, `slow`, `cloud`), never by model. **The table below is what is in the tree today.**
-The old assistant (the companion, the voice head, the worker, blocks, the components judge, the ladder's code) was
-removed on 2026-11-23 (S-194): the assistant starts again from scratch, not ported; git keeps the old parts.
+The projects (S-209, S-212; `docs/framework.md`, `docs/repos.md`): **Morphogen** (the kit), **the Kernel**, **Substrate**
+(the default distribution), **MetaSoar** (the research). A part of Substrate is a kernel module only when it needs the
+kernel; otherwise it is an Agent Skill, an MCP server, a compose service or an outside service (S-213). Every
+dependency is a contract, never another project's code. Name parts by their role and models by their alias (`fast`,
+`slow`, `cloud`), never by model. **The table below is what is in the tree today, before the parts move**
+(`docs/parts.md`). The old assistant was removed on 2026-11-23 (S-194); git keeps it.
 
 | Part | Where | Role |
 | --- | --- | --- |
@@ -54,7 +56,7 @@ removed on 2026-11-23 (S-194): the assistant starts again from scratch, not port
    committed) may be recommended whatever their licence, with the licence named (S-188). Check before adding.
 8. **Every change ends with `scripts/check.sh` passing**, and `scripts/test.sh` where tests exist, or with the
    failure named and explained.
-9. **Morphogen is the optimiser** (S-185; it was out of the build only so it could be iterated on quickly): use it
+9. **Morphogen is the kit** (S-209: map, research, catalog, optimise; S-185 made it the optimiser): use it
    through its contract (the cell file, its Claude Code plugin and MCP server), never by importing its code; change
    it only by pull request in its own repository, like any upstream project (the `upstream` skill).
 
