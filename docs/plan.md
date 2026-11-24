@@ -4,14 +4,13 @@ The one current plan (S-124, 2026-11-17). It replaces the plans in `docs/archive
 the experiment-first direction, the handoff, the task briefs); those are kept as history and are not to be worked
 from. Every default and its reason is still in `DECISIONS.md`.
 
-## What Substrate is now (S-185, 2026-11-23)
+## What Substrate is now (S-209 to S-214, 2026-11-24)
 
-**An operating system for AI agents:** a top-level orchestrator (an ordinary LLM harness, Claude Code first, given
-skills, MCP servers and hooks) that maps, orchestrates and optimises a working system, on a kernel made of Postgres
-where everything is an object. Its shape, layers, slots and contracts are `docs/framework.md`. Environments are
-OpenEnv environments (S-184); the optimiser is Morphogen's Claude Code plugin; what is built with it lives in
-`distributions/` (S-185, S-186). The steps table below is the history of how the current parts came to be; what
-comes next is "Next, in order".
+**The default distribution:** an agent harness (Claude Code first) configured to get things done with the kernel
+and Morphogen, interactively, with Substrate's optional parts installed onto the kernel. Morphogen is the kit (map,
+research, catalog, optimise, on files); the kernel is the layer above it; MetaSoar is the research. The shape is
+`docs/framework.md`, every part and where it goes is `docs/parts.md`. The steps table further down is the history
+of how the current parts came to be; what comes next is "The re-cut" just below.
 
 ## The re-cut, and what comes first (S-209, S-210, 2026-11-24)
 
@@ -73,7 +72,7 @@ in v1. v1's databases are in `.state/backups/` (2026-11-17); what people stated 
 | 9 | **Adaptive video game playing** (S-142): after the avatar, the companion plays games as environments (the screen and game state as sensors, input as gated actuators) and gets better at a game from its own record, by distilled components judged against pass-through | the owner picks the first game; done-when is set then |
 | 10 | The next embodied child: Resonite (in-world editing; ResoniteLink's WebSocket and community MCP servers, every world-changing tool gated), VRChat, Virt-A-Mate or a ROS2 simulation (the owner's pick), by the same adapter pattern | the companion acts there through the same avatar actuators, under the same gates and budget |
 
-Self-levers beyond budget and model choice, and the other layers in `docs/framework.md`, come as these steps
+Self-levers beyond budget and model choice, and the other layers in `docs/archive/framework-s185.md`, come as these steps
 need them, each tested against pass-through. The UI is no longer frozen: add what these steps need, and
 nothing they don't.
 
@@ -122,7 +121,7 @@ are views of the same items and claims; what can be said in one format can be ca
   OTel Collector picked with the `research` skill, traces to a viewer and metrics to Prometheus, which the kernel's
   `observer-prometheus` turns into observed claims; a component's card carries measured latency and cost.
 - **Agents:** the orchestrator is an ordinary harness (S-185); sub-agents are harness sub-agents, OpenEnv
-  environments or MCP components (`docs/framework.md`, "Slots"). The one assistant of S-181 (the voice front end
+  environments or MCP components (`docs/archive/framework-s185.md`, "Slots"). The one assistant of S-181 (the voice front end
   and one loop over model rungs) is the assistant distribution's design (S-186). `scripts/trials/harness/candidates.json`
   holds the surveyed harnesses.
 
