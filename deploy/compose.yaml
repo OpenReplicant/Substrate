@@ -116,6 +116,9 @@ services:
     environment:
       DATABASE_URL: postgresql://kk_authenticator:${KK_AUTHENTICATOR_PASSWORD:?set in .env}@db:5432/kernel
       KK_JWT_SECRET: ${KK_JWT_SECRET:?set in .env}
+      # its MCP's DNS-rebinding guard: the kernel's default list, and `kernel` without a port, as a router on the
+      # stack's network sends it (agentgateway, S-204)
+      KK_MCP_ALLOWED_HOSTS: "localhost:*,127.0.0.1:*,kernel:8000,kernel"
     depends_on:
       db: {condition: service_healthy}
 

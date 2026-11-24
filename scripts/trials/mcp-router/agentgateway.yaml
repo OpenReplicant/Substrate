@@ -1,0 +1,45 @@
+# The router trial (S-204): agentgateway in front of a stdio server (the trial's tools) and the kernel's MCP over HTTP.
+# The caller's kernel token (HS256, a `role` claim) is checked with the kernel's secret as an `oct` JWK, passed on to the
+# kernel, a CEL rule lets an agent call only the read tool, and every tool call is asked of the decision service.
+mcp:
+  port: 3000
+  policies:
+    jwtAuth:
+      mode: strict
+      issuer: urn:kk:kernel                # agentgateway requires an issuer: today's kernel tokens carry none (S-204)
+      audiences: [urn:kk:mcp]
+      jwks:
+        file: /keys/jwks.json
+    backendAuth:
+      passthrough: {}
+    mcpAuthorization:
+      rules:
+      - 'jwt.role.startsWith("person_")'
+      - 'mcp.tool.name == "echo"'
+      - 'mcp.tool.name == "whoami"'
+    extAuthz:
+      conditional:
+      - condition: has(mcp.tool)
+        host: decide:9090
+        protocol:
+          http:
+            path: '"/decide"'
+            addRequestHeaders:
+              content-type: '"application/json"'
+              :method: '"POST"'
+            body: |
+              {"subject": {"type": "role", "id": jwt.role}, "resource": {"type": "tool", "id": mcp.tool.name}}
+            metadata:
+              decision: json(response.body).decision
+    authorization:
+      rules:
+      - require: '!has(mcp.tool) || extauthz.decision == true'
+  targets:
+  - name: tools
+    stdio:
+      cmd: python3
+      args: ["/trial/tools_server.py"]
+  - name: kernel
+    mcp:
+      host: http://kernel:8000/mcp
+    # it sends Host without the port (a header modifier does not change it); the kernel's KK_MCP_ALLOWED_HOSTS has `kernel`
