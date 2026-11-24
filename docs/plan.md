@@ -110,7 +110,7 @@ the client's system mapped with evidence, and one automation whose writes wait f
 come before the list below; where they overlap, they name its step.
 
 1. **Done 2026-11-23 (S-202).** **One database, the kernel's** (step 4 below): the `env` schema into the kernel's database, `substrate` dropped.
-2. **Built 2026-11-23 (S-205, S-206): the MCP router, the desktop's conversation and the Assistant window, `scripts/assistant.sh`; left: the owner's own first conversation (its done-when), and kernel PRs #138, #139 merged.** **The desktop as an environment, and the assistant's first use** (S-200's next idea): the person's messages and
+2. **Built 2026-11-23 (S-205, S-206): the MCP router, the desktop's conversation and the Assistant window, `scripts/assistant.sh`; the owner's first conversation held 2026-11-24 (S-208): it works and was convoluted, so left: kernel #138 merged (reads pass the router), a chat interface from a library picked with the `research` skill (the owner: "there's a library for this kind of interface"), and the assistant run without its narration in a terminal.** **The desktop as an environment, and the assistant's first use** (S-200's next idea): the person's messages and
    actions in the desktop are signals; the assistant (Claude Code behind the channel, S-143) answers through
    actuators: a message, a notification, a window it opens to show something (`free`), a question that waits for the
    person, and anything that changes something behind `propose`, decided in the desktop's Review. A chat window in

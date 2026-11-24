@@ -1,4 +1,4 @@
-"""The desktop as an environment (S-206), end to end in a real browser against the stack: the person signs in, opens the
+"""The desktop as an environment (S-206), end to end in a real browser against the stack: the trial's own test person (`trial`, so a live assistant, which hears only its person, does not answer it) signs in, opens the
 Assistant and says something; an agent (its own token, through the MCP router) reads it, says something back, shows the
 person an app and asks a question; each appears in the chat; the person answers the question (the answer replies to
 it) and opens what was shown, which comes up in its own window; every agent action is in the router's record. Runs in
@@ -44,14 +44,14 @@ with sync_playwright() as p:
     chat.locator(".msg.mine", has_text=stamp).wait_for(timeout=15000)
     check("the person's message shows as theirs", True)
 
-    code, ok, text = agent.call("desktop_feed", {"person": "person_owner", "after": 0})
+    code, ok, text = agent.call("desktop_feed", {"person": "person_trial", "after": 0})
     heard = ok and stamp in text
     check("an agent reads it through the router (desktop_feed)", heard, text[-200:])
-    code, ok, text = agent.call("desktop_say", {"text": f"Here are the maps ({stamp}).", "to": "person_owner"})
+    code, ok, text = agent.call("desktop_say", {"text": f"Here are the maps ({stamp}).", "to": "person_trial"})
     check("an agent says something (desktop_say, free by the desktop's policy)", ok, text)
-    code, ok, text = agent.call("desktop_show", {"kind": "app", "id": "app:maps", "title": "Substrate's maps", "to": "person_owner"})
+    code, ok, text = agent.call("desktop_show", {"kind": "app", "id": "app:maps", "title": "Substrate's maps", "to": "person_trial"})
     check("an agent shows the person an app (desktop_show)", ok, text)
-    code, ok, text = agent.call("desktop_ask", {"question": f"Which map first? ({stamp})", "to": "person_owner"})
+    code, ok, text = agent.call("desktop_ask", {"question": f"Which map first? ({stamp})", "to": "person_trial"})
     asked = int(re.search(r"signal (\d+)", text).group(1)) if ok and re.search(r"signal (\d+)", text) else None
     check("an agent asks the person a question (desktop_ask)", ok and asked, text)
 
@@ -65,7 +65,7 @@ with sync_playwright() as p:
     chat.locator("textarea").fill(f"The substrate map ({stamp})")
     chat.locator("textarea").press("Enter")
     chat.locator(".msg.mine", has_text=f"The substrate map ({stamp})").wait_for(timeout=15000)
-    code, ok, text = agent.call("desktop_feed", {"person": "person_owner", "after": 0})
+    code, ok, text = agent.call("desktop_feed", {"person": "person_trial", "after": 0})
     rows = json.loads(text) if ok else []
     answer = next((r for r in rows if r["kind"] == "message" and f"The substrate map ({stamp})" in r["body"].get("text", "")), {})
     check("the person's answer replies to the question", answer.get("body", {}).get("reply_to") == asked, answer)
@@ -76,7 +76,7 @@ with sync_playwright() as p:
     code, calls = 0, []
     import urllib.request
     req = urllib.request.Request("http://127.0.0.1:8083/api/calls?limit=50",
-                                 headers={"authorization": "Bearer " + base.token("person_owner")})
+                                 headers={"authorization": "Bearer " + base.token("person_trial")})
     calls = json.loads(urllib.request.urlopen(req, timeout=10).read())
     done = {c["tool"] for c in calls if c["caller"] == "agent_claude_code" and c["status"] == "applied"
             and c["tool"].startswith("desktop_")}
