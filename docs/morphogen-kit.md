@@ -21,26 +21,53 @@ Everything is files on the harness the user chooses. No database, no kernel.
 | Optimise | change a cell, judge it | Morphogen's `morphogen` skill, MCP server and judge | unchanged |
 | Orchestrate | delegate and build | the harness itself | nothing to build: the harness, given MCP servers for access |
 
-## The files
+## The files: two
 
-- **The map:** Backstage entity files (Component, API, Resource, System, Group), the format Substrate's
-  `catalog/` already uses and Morphogen already reads. Each part's role and the interfaces it provides and
-  requires are in its entity; where a claim came from is an annotation or a linked evidence note.
-- **A catalog entry:** one file per option for a role: what it is, the interfaces it provides and requires, its
-  adjustable parameters (name, type, range, what it does), its licence, and a link to its docs; how it was
-  measured against the need when it was tested.
-- **The targets:** `morphogen.yaml`, unchanged: cells, what may change, how each is run and judged.
+- **The map and its option catalogs:** Backstage entity files (Component, API, Resource, System, Group), the
+  format Substrate's `catalog/` already uses and Morphogen already reads (`backstage:` in `morphogen.yaml`). Each
+  part's role and the interfaces it provides and requires are in its entity; where a claim came from is an
+  annotation or a linked evidence note. Annotations move from `substrate.dev/*` to a neutral prefix.
+- **An option for a role is an ordinary Component**, not a new kind, so stock Backstage and the kernel's
+  `encoder-backstage` read it unchanged: `spec.lifecycle: candidate`, the interfaces it provides and requires in
+  the usual fields (so the fit check works), and our own fields under one namespaced key in `spec` (`spec.morphogen`:
+  the part it could fill, its adjustable parameters as JSON Schema, its licence, its docs link, how it was
+  evaluated). Checked 2026-11-24 in Backstage's Component schema (no `additionalProperties` on `spec`) and its
+  "extending the model" page: the catalog "will happily store whatever is in it" in a spec; annotation values
+  must be strings; a new kind or `apiVersion` needs a catalog processor, which this avoids. One key keeps us clear
+  of fields Backstage may add later, the risk that page names.
+- **The cells:** `morphogen.yaml`, the optimisation envelope, unchanged: cells, what may change, how each is run,
+  measured and scored, and which tests must keep passing. It already goes beyond any one optimiser: the selector
+  chooses scope, optimiser and measure, and adapters hand a cell to GEPA, Optuna, OpenEvolve, AFlow or a Claude Code
+  worker. A cell's settings bounds can be checked against the option's parameter schema: the catalog says what can
+  be tuned, the cell what this run may tune.
 
-The open question for the PR: whether the map's entity files and `morphogen.yaml` stay two files (the map
-describes, the cells say what may change), or the cells are annotations on the map's entities. Recommended: two
-files, with the `map` skill writing the first and drafting the second from it, so Morphogen's cell format stays
-as it is.
+## Documentation, as files
+
+Research needs an option's docs, not only a link. A documentation MCP server that turns web documentation into
+markdown for agents is recommended (or bundled, if its licence allows), picked with the `research` skill; a local
+one first, since a hosted one sends what is looked up off the machine (`docs/privacy.md`). Its output is a folder of
+markdown files beside the catalog: Morphogen works with them wherever it is deployed, and the kernel ingests them
+deterministically when it is there. Candidates to check, not chosen: arabold's docs-mcp-server, Context7, Firecrawl's
+MCP server, the reference `fetch` server, Crawl4AI.
+
+## How it ships
+
+Morphogen is already built in layers, and the kit keeps them:
+
+1. **The core:** the Python package (`morphogen`): the file formats' schemas, the judge, the optimiser adapters (as
+   extras: `optuna`, `gepa`), the CLI (`morphogen`) and the MCP server (`morphogen-mcp`). Anyone can integrate it
+   by hand or write a package for any harness against it.
+2. **The skills:** Agent Skills folders (`map`, `catalog`, `research`, `morphogen`), which any harness that reads
+   SKILL.md can load; their scripts and references go in the folders, as the spec allows. They name the MCP
+   tools by their server's own names, not one harness's prefix.
+3. **Packages per harness:** the Claude Code plugin first (`.claude-plugin/`, which exists), each other harness a
+   thin manifest over the same core and skills, written when a user needs it.
 
 ## What moves
 
 1. Substrate's `map`, `catalog` and `research` skills go into `repos/morphogen/skills/`, rewritten to read and
    write files instead of calling `mcp__kernel__*`; Morphogen's `map` skill and Substrate's are merged into one.
-2. The catalog entry's format (above) is written down in Morphogen's `schemas/`, beside the cell file's.
+2. The option's fields (`spec.morphogen`, above) are written down as a schema in Morphogen's `schemas/`, beside the cell file's.
 3. Morphogen's README and BRIEF say what it is now: the kit, with the judge at its core.
 4. In Substrate afterwards: the three skills are removed from `.claude/skills/` (Substrate uses the plugin like
    any user); `setup` and `upstream` stay, since they are about this repository.
