@@ -3,19 +3,20 @@
 Substrate is the home of the kernel's **optional modules** and of the **default distribution** that includes them.
 The kernel's core ships without them (knowledge, review, authentication, the module contract, the record); a
 person who wants only the kernel never installs them. Our agents and experiments are built on the default
-distribution. Every part is either a **kernel module** written to the kernel's module contract (a manifest, its
-code, its own role, run on its own; S-203) and shipped from this repository, or a **standard module type** (a
-compose service, an MCP server, an Agent Skill, a harness plugin). Nothing has been rebuilt as a module yet.
+distribution. **A part is a kernel module only when it needs the kernel** (its own role, its data in the kernel's database, the
+review lane; S-213), written to the kernel's module contract (S-203) and shipped from this repository. Otherwise it
+is the standard type it already is: an Agent Skill, an MCP server, a compose service, a harness plugin, or an external
+service in the default collection. Nothing has been rebuilt yet.
 
-## Substrate's modules (optional kernel modules, shipped from here)
+## Substrate's optional parts (shipped from here, not with the kernel's core)
 
-| Module | Where it is now | What it becomes |
+| Part | Where it is now | What it becomes |
 | --- | --- | --- |
-| The live environment: signals, a queue per actuator, gates, the record | `environment/sql/`, `environment/db.py` | a module whose gates send `propose` to the kernel's review lane, so a person approves in one place |
-| The channel into a harness session | `environment/channel.py` | part of the environment module: an MCP server a harness connects to |
-| The MCP router: one endpoint, each tool an action behind its gate | `mcp-router/` (Go), `environment/sql/010_mcp.sql` | a module of its own (a kept service), its registry in the environment module's schema |
-| The desktop: windows, the launcher, framed apps | the kernel's shell (`modules/ui`, the kernel's D-127); `deploy/caddy/` | a module, if the kernel agrees to move its window manager out of its core shell (the kernel's decision, by its pull request) |
-| The assistant's conversation | `desktop/`, `environment/sql/011_desktop.sql` | a view module in the desktop, its server folded into the environment module |
+| The live environment: signals, a queue per actuator, gates, the record | `environment/sql/`, `environment/db.py` | a kernel module (it needs the kernel's database and review lane): its gates send `propose` to the review lane, so a person approves in one place |
+| The channel into a harness session | `environment/channel.py` | an MCP server a harness connects to, reading the environment module's queues |
+| The MCP router: one endpoint, each tool an action behind its gate | `mcp-router/` (Go), `environment/sql/010_mcp.sql` | an MCP server run as a compose service, its registry in the environment module's schema |
+| The desktop: windows, the launcher, framed apps | the kernel's shell (`modules/ui`, the kernel's D-127); `deploy/caddy/` | built here against real use cases (S-213): a modular web UI that hosts anything and that agents can drive; when it settles, it may go into the kernel's core distribution with only Substrate's parts layered on it, or become a product of its own |
+| The assistant's conversation | `desktop/`, `environment/sql/011_desktop.sql` | a view in the desktop, its messages kept in the environment module |
 | Substrate's read model and encoder | the kernel's `view-substrate`, `encoder-substrate` | brought here as Substrate's modules, or retired once maps are items (S-207) |
 | The old store UI | `ui/` | retired: the kernel's views and the map viewer (S-207) do its job |
 
@@ -43,8 +44,8 @@ or a module on top of the default one.
 ## Order
 
 1. Morphogen's kit (`docs/morphogen-kit.md`), by pull request there.
-2. Substrate's parts rebuilt as kernel modules, in this repository: the environment and channel, the router, the
-   assistant's conversation; the desktop when the kernel has decided where its window manager lives.
+2. Substrate's parts in their types, in this repository: the environment as a kernel module, the channel and the
+   router as MCP servers on it; the desktop and the assistant's conversation built as far as a use case needs.
 3. The default distribution: the compose file installs the kernel's core and Substrate's modules, the harness is
    configured to use them, `scripts/check.sh` checks the wiring.
 4. The test of the bet (S-211 c): one implementation project on a demo SMB, end to end.
