@@ -43,7 +43,7 @@ report to show.
 
 **Amended by S-211 (2026-11-24):** Substrate is a default configuration, not a product: a harness set up to use the
 kernel and Morphogen. Work goes to Morphogen (step 1 above) and the kernel first: its parts become kernel modules or
-standard module types (`docs/kernel-moves.md`, whose order replaces steps 2 and 5 above); the test of the bet is step
+standard module types (`docs/parts.md`, whose order replaces steps 2 and 5 above; S-212: the optional modules stay in this repository, written to the kernel's module contract, and make up the default distribution with the kernel's core); the test of the bet is step
 3, one implementation project on a demo SMB carried out under the kernel's gates.
 
 ## The fresh start (S-137)
