@@ -1,6 +1,8 @@
 # The repositories and what each owns
 
-The layers are in `docs/framework.md` (S-185). Every dependency between them is a contract (OpenEnv, MCP, Backstage
+The layers are in `docs/framework.md` (S-185), re-cut by S-209: mapping, research, cataloguing and optimising become
+one file-based kit in Morphogen; the kernel ingests its files; Substrate is what runs on both (`docs/morphogen-kit.md`;
+until Morphogen's pull request lands, the table below is what is in the tree). Every dependency between them is a contract (OpenEnv, MCP, Backstage
 entity files, Morphogen's cell file, an OpenAI- or Anthropic-compatible model endpoint), never another project's code.
 
 | Repository | Owns | Depends on |

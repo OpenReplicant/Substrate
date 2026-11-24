@@ -1,6 +1,9 @@
 # The framework
 
-What Substrate is, its parts, and how they plug together (S-184 to S-186, 2026-11-23). Every default and its reason
+What Substrate is, its parts, and how they plug together (S-184 to S-186, 2026-11-23). **Re-cut by S-209
+(2026-11-24):** mapping, research, cataloguing and optimising are one file-based kit in Morphogen, needing no
+database; the kernel is the layer above it, ingesting its files; Substrate is what runs on both. This document is
+rewritten to match once Morphogen's pull request lands (`docs/morphogen-kit.md`). Every default and its reason
 is in `DECISIONS.md`. The framework this replaces (S-125 onward) is `docs/archive/framework-s125.md`: history.
 
 ## In one paragraph

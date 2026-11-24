@@ -13,6 +13,34 @@ OpenEnv environments (S-184); the optimiser is Morphogen's Claude Code plugin; w
 `distributions/` (S-185, S-186). The steps table below is the history of how the current parts came to be; what
 comes next is "Next, in order".
 
+## The re-cut, and what comes first (S-209, S-210, 2026-11-24)
+
+The owner: "the thing that I wanted to make substrate or at least some project dedicated to was the idea of building
+a map and maintaining it along with optimization targets", and "the business opportunity right now is in morphogen
+mapping organizations and systems for smb's to identify the optimization opportunities and present those as
+implementation projects". Mapping, research, cataloguing and optimising become one file-based kit in Morphogen, on
+the harness the user chooses, with no database (S-209, the proposal `docs/morphogen-kit.md`); the kernel ingests
+its files when indexing and traversal are wanted; Substrate is what runs on both. These steps come before the
+product cut and "Next, in order", which are now Substrate's running system, built after them.
+
+1. **The kit, in Morphogen, by pull request:** the `map`, `catalog` and `research` skills moved there and rewritten
+   for files, Morphogen's and Substrate's `map` merged into one, the catalog entry's format (interfaces, adjustable
+   parameters, licence, docs link) in its `schemas/`, its README saying what it is now. Done when the plugin, with
+   no kernel running, maps a made-up firm from its documents and an interview into entity files, catalogues the
+   options for one role, and drafts cells for one opportunity.
+2. **Substrate uses the plugin like any user:** its three skills removed from `.claude/skills/`. Done when
+   `scripts/check.sh` passes and mapping Substrate itself works through the plugin.
+3. **The engagement, on a demo SMB:** from the firm's material to a report of optimisation opportunities, each
+   written up as an implementation project (what changes, the target and its measure, the options catalogued, the
+   cost and risk). Done when a scripted run goes from the material to the report without help.
+4. **Prospecting:** the same mapping on public sources about a firm, giving a first opportunity list before a first
+   call. Done when it runs on three real firms and the owner judges the lists worth opening a conversation with.
+5. **The kernel above it, when wanted:** the kit's files ingested by the kernel's `encoder-backstage` and searched
+   and traversed there. Done when a demo firm's map reads the same in the kernel as in its files.
+
+The business itself (offer, pricing, prospect lists) is worked in a session of its own (S-188 c), once step 3 has a
+report to show.
+
 ## The fresh start (S-137)
 
 v1 is tagged `v1-final` and archived. The fresh tree keeps only: the Postgres image (pgvector, pgmq, pg_cron,
