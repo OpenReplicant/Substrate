@@ -10,7 +10,7 @@ with a visibility timeout (CHANNEL_VT seconds, 300 by default) and archived only
 one left unacknowledged becomes visible again and is delivered again, with its delivery count.
 
 Tools: ack (archive handled messages), act (call an actuator through its gate), escalate (to the level above).
-The database is STORE_URL, or the substrate database from .env. MCP 2025-11-25 (and 2025-06-18 if asked): newline-delimited
+The database is ENV_URL or STORE_URL, else the kernel's database from .env (S-202). MCP 2025-11-25 (and 2025-06-18 if asked): newline-delimited
 JSON-RPC on stdin and stdout, logs on stderr.
 """
 from __future__ import annotations

@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-"""The databases beside v1's, which stay in the same volume: `substrate` (the environment's schema `env`) and `kernel`
-(the Knowledge Kernel's, S-154).
+"""One database, the kernel's (S-202; the kernel's D-126): `kernel` holds the Knowledge Kernel's schemas (S-154) and the
+environment's schema `env` beside them. v1's databases stay in the same volume.
 
-    bin/in-tools python3 scripts/db.py init        # wait for Postgres, make the `substrate` and `kernel` databases if
-                                                   # missing, and apply the environment's schema (environment/sql/) not yet
-                                                   # applied
+    bin/in-tools python3 scripts/db.py init        # wait for Postgres, make the `kernel` database if missing, and apply
+                                                   # the environment's schema (environment/sql/) not yet applied
 
 It waits up to a minute for Postgres to take connections, and stops at once on a refused password: that never
 comes right by waiting, and most often means the volume outlived the .env that made it (the setup skill says how
@@ -20,8 +19,8 @@ sys.path.insert(0, HERE)
 sys.path.insert(0, __import__("os").path.join(HERE, ".."))
 from gateway import settings  # noqa: E402  (the same env_value path, so the secrets slot is honoured)
 
-DB = "substrate"
 KERNEL_DB = "kernel"      # the Knowledge Kernel's database in the same Postgres (S-154); its schema is installed by kk init
+DB = KERNEL_DB            # the environment's schema lives there too (S-202); the `substrate` database is gone
 
 
 def admin_url(env: dict[str, str], db: str = "postgres") -> str:
@@ -54,21 +53,36 @@ def connect(env: dict[str, str], db: str = "postgres"):
 
 def init(env: dict[str, str]) -> None:
     with connect(env) as c:
-        if c.execute("select 1 from pg_database where datname = %s", (DB,)).fetchone():
-            print(f"  database {DB}: present")
-        else:
-            c.execute(f"create database {DB} encoding 'UTF8' template template0")
-            print(f"  database {DB}: made (pg_cron runs in it from Postgres's next start)")
-    with connect(env) as c:
         if c.execute("select 1 from pg_database where datname = %s", (KERNEL_DB,)).fetchone():
             print(f"  database {KERNEL_DB}: present (the kernel's schema: scripts/kernel.sh init)")
         else:
             c.execute(f"create database {KERNEL_DB} encoding 'UTF8' template template0")
-            print(f"  database {KERNEL_DB}: made (the kernel's schema: scripts/kernel.sh init)")
+            print(f"  database {KERNEL_DB}: made (the kernel's schema: scripts/kernel.sh init; pg_cron runs in it from Postgres's next start)")
     from environment.db import migrate
     with connect(env, DB) as c:
         applied = migrate(c)
     print(f"  the environment's schema: {'applied ' + ', '.join(applied) if applied else 'up to date'}")
+    logins(env)
+
+
+# The environment's logins (S-205): each a login role granted one of the roles environment/sql/010_mcp.sql makes, its
+# password from .env. Made if missing, its password set each time (so a changed .env takes effect).
+LOGINS = (("mcp_router", "env_router", "MCP_ROUTER_DB_PASSWORD"), ("mcp_connector", "env_connector", "MCP_CONNECTOR_DB_PASSWORD"),
+          ("mcp_desktop", "env_desktop", "MCP_DESKTOP_DB_PASSWORD"))
+
+
+def logins(env: dict[str, str]) -> None:
+    from psycopg import sql
+    with connect(env, DB) as c:
+        for login, role, secret in LOGINS:
+            if not env.get(secret):
+                print(f"  login {login}: skipped ({secret} is empty in .env; scripts/settings.sh makes it)")
+                continue
+            if not c.execute("select 1 from pg_roles where rolname = %s", (login,)).fetchone():
+                c.execute(sql.SQL("create role {} login").format(sql.Identifier(login)))
+            c.execute(sql.SQL("alter role {} login password {}").format(sql.Identifier(login), sql.Literal(env[secret])))
+            c.execute(sql.SQL("grant {} to {}").format(sql.Identifier(role), sql.Identifier(login)))
+            print(f"  login {login}: ready ({role})")
 
 
 def main() -> None:

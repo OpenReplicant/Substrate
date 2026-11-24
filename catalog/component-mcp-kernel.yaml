@@ -1,0 +1,22 @@
+# A catalog entry (S-176): Backstage's entity format, read into the kernel by encoder-backstage.
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: mcp-kernel
+  title: The kernel's MCP connector
+  description: Connects the kernel's MCP server to the MCP router; registers its tools and applies their calls, each as its caller.
+  annotations:
+    substrate.dev/licence: Apache-2.0
+    substrate.dev/image: ghcr.io/openreplicant/substrate-mcp-router
+    substrate.dev/compose-service: mcp-kernel
+    substrate.dev/decision: S-205
+spec:
+  type: service
+  lifecycle: experimental
+  owner: owner
+  system: substrate
+  consumesApis:
+  - kernel-http
+  dependsOn:
+  - resource:db
+  - component:kernel

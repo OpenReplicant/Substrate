@@ -13,6 +13,39 @@ OpenEnv environments (S-184); the optimiser is Morphogen's Claude Code plugin; w
 `distributions/` (S-185, S-186). The steps table below is the history of how the current parts came to be; what
 comes next is "Next, in order".
 
+## The re-cut, and what comes first (S-209, S-210, 2026-11-24)
+
+The owner: "the thing that I wanted to make substrate or at least some project dedicated to was the idea of building
+a map and maintaining it along with optimization targets", and "the business opportunity right now is in morphogen
+mapping organizations and systems for smb's to identify the optimization opportunities and present those as
+implementation projects". Mapping, research, cataloguing and optimising become one file-based kit in Morphogen, on
+the harness the user chooses, with no database (S-209, the proposal `docs/morphogen-kit.md`); the kernel ingests
+its files when indexing and traversal are wanted; Substrate is what runs on both. These steps come before the
+product cut and "Next, in order", which are now Substrate's running system, built after them.
+
+1. **The kit, in Morphogen, by pull request:** the `map`, `catalog` and `research` skills moved there and rewritten
+   for files, Morphogen's and Substrate's `map` merged into one, the catalog entry's format (interfaces, adjustable
+   parameters, licence, docs link) in its `schemas/`, its README saying what it is now. Done when the plugin, with
+   no kernel running, maps a made-up firm from its documents and an interview into entity files, catalogues the
+   options for one role, and drafts cells for one opportunity.
+2. **Substrate uses the plugin like any user:** its three skills removed from `.claude/skills/`. Done when
+   `scripts/check.sh` passes and mapping Substrate itself works through the plugin.
+3. **The engagement, on a demo SMB:** from the firm's material to a report of optimisation opportunities, each
+   written up as an implementation project (what changes, the target and its measure, the options catalogued, the
+   cost and risk). Done when a scripted run goes from the material to the report without help.
+4. **Prospecting:** the same mapping on public sources about a firm, giving a first opportunity list before a first
+   call. Done when it runs on three real firms and the owner judges the lists worth opening a conversation with.
+5. **The kernel above it, when wanted:** the kit's files ingested by the kernel's `encoder-backstage` and searched
+   and traversed there. Done when a demo firm's map reads the same in the kernel as in its files.
+
+The business itself (offer, pricing, prospect lists) is worked in a session of its own (S-188 c), once step 3 has a
+report to show.
+
+**Amended by S-211 (2026-11-24):** Substrate is a default configuration, not a product: a harness set up to use the
+kernel and Morphogen. Work goes to Morphogen (step 1 above) and the kernel first: its parts become kernel modules or
+standard module types (`docs/parts.md`, whose order replaces steps 2 and 5 above; S-212: the optional modules stay in this repository, written to the kernel's module contract, and make up the default distribution with the kernel's core); the test of the bet is step
+3, one implementation project on a demo SMB carried out under the kernel's gates.
+
 ## The fresh start (S-137)
 
 v1 is tagged `v1-final` and archived. The fresh tree keeps only: the Postgres image (pgvector, pgmq, pg_cron,
@@ -100,6 +133,41 @@ chosen by a decider that learns from outcome-labelled experience) is a **distrib
 (S-186), not part of Substrate. Its design stands in S-178 to S-183, as an input to the new assistant and not a commitment; its code was removed
 (S-194, S-195), and git keeps it.
 
+## The product cut (S-201, 2026-11-23)
+
+The owner: "let's get this to a state where it could be presented as a product, and i could use it as a tool in
+consulting"; "the polish can be added later". The product is what the consulting pilot needs (`docs/research/Object
+environments prior art.md`: a five-day, fixed-price "process map plus one gated automation" for firms of 10 to 200
+people): one instance per client, a desktop the consultant and the client sign in to, an assistant to talk to in it,
+the client's system mapped with evidence, and one automation whose writes wait for a person's approval. These steps
+come before the list below; where they overlap, they name its step.
+
+1. **Done 2026-11-23 (S-202).** **One database, the kernel's** (step 4 below): the `env` schema into the kernel's database, `substrate` dropped.
+2. **Built 2026-11-23 (S-205, S-206): the MCP router, the desktop's conversation and the Assistant window, `scripts/assistant.sh`; the owner's first conversation held 2026-11-24 (S-208): it works and was convoluted, so left: kernel #138 merged (reads pass the router), a chat interface from a library picked with the `research` skill (the owner: "there's a library for this kind of interface"), and the assistant run without its narration in a terminal.** **The desktop as an environment, and the assistant's first use** (S-200's next idea): the person's messages and
+   actions in the desktop are signals; the assistant (Claude Code behind the channel, S-143) answers through
+   actuators: a message, a notification, a window it opens to show something (`free`), a question that waits for the
+   person, and anything that changes something behind `propose`, decided in the desktop's Review. A chat window in
+   the shell; structured events, not screenshots. The same environment served as OpenEnv for tests and simulation.
+   Done when the owner talks to the assistant in the desktop, it shows him a map in a window, and a change it proposes
+   waits for his approval there.
+3. **The pilot, end to end, on a demo firm:** the kernel's interview and process maps (its D-115 to D-119) and
+   Substrate's `map` and `catalog` skills on a made-up firm of about 30 people (documents, one event log, an
+   interview); the assistant finds a step worth automating, builds it as a gated automation, a person approves its
+   writes in the desktop, and the evidence (claims, quotes, the approval) is a report. Done when a scripted run goes
+   from an empty instance to the report without help, and the same run works on a real firm's material.
+4. **An instance per client** (step 7's bootstrap, cut to what a client needs): one command brings up a named
+   instance on a laptop or a small server (its own `.env`, secrets, volumes, ports), with backup, export and restore,
+   and an upgrade path; nothing of one client in another's instance.
+5. **Signing in for a hosted instance** (S-200's SSO idea): an identity provider picked with the `research` skill
+   behind Caddy's `forward_auth` for every app; OIDC where an app supports it; header sign-in or the app's own login
+   off where it allows; a password manager's autofill as the last resort, never the proxy holding passwords. The
+   kernel's person logins mapped from it (the kernel's O-6, a kernel decision). TLS on a public host name.
+6. **Presentable:** README and a getting-started page read cold (step 8), a demo script and a recorded run of step
+   3, a one-page description of the offer. Then the business session (step 10).
+
+The owner's to decide before step 6: the product's name, the licence and whether the repositories go public, and
+whether a client's instance is hosted by him or runs on the client's machine.
+
 ## Next, in order (2026-11-23)
 
 Done from the 2026-11-22 list: the catalog entry (S-176), compose into the kernel and back (S-177), the decider trial
@@ -118,7 +186,7 @@ and experience (S-179, S-183).
    to Morphogen go by pull request there (the `upstream` skill).
 3. **Done 2026-11-23 (S-194 to S-197): the old assistant's code removed, not ported; envkit retired; the pins moved to what runs; no reader of the dropped `store` schema left.** Left for later steps: Substrate's own map in the kernel (Q10, from v1's import) still names removed parts (`store/`, `voice/`), which step 7's snapshot map replaces. The repository in its shape (S-185, S-186): Substrate keeps the stack, the skills, the channel, the catalog
    and the adapters; components and the judge (S-151) gave way to Morphogen.
-4. **One database, the kernel's** (S-190): the kernel defines the schemas and the ways of doing things, and Substrate
+4. **Done 2026-11-23 (S-202): `env` in the kernel's database, `substrate` dropped (backed up); Bifrost's `gateway` database stays apart.** **One database, the kernel's** (S-190): the kernel defines the schemas and the ways of doing things, and Substrate
    follows them, so the `env` schema (objects' live state, queues, gates, experience) moves into the kernel's
    database, by the kernel's D-126 superseding D-94 (c) (drafted on the kernel's branch `claude/one-database`). Then
    the `substrate` database is empty and is dropped (its retired `store` schema went on 2026-11-23, S-191). Bifrost's `gateway` database is a third party's private store and stays apart
@@ -147,7 +215,17 @@ and experience (S-179, S-183).
 9. **M-17's experiment** (S-186, MetaSoar), on OpenEnv: a task-family environment, a model proxy in the Anthropic
    format, rubric scores as outcomes, the frozen blind run (S-179). The ladder's code is gone (S-195); if the new
    assistant takes the ladder's design (S-178 to S-183), it is rebuilt there, not restored.
-10. **The SMB Foundry and other business opportunities** (S-188 c): in **a session of their own**, without the code
+10. **One notion of a map, and things opened in their viewers** (S-207; found trying the assistant, S-206). The
+    kernel's Map view draws one map (every `org:` and BBO claim as one graph); Substrate has many maps (each thing
+    mapped, with its parts, roles and interfaces). A **map becomes an item** whose parts hang off it, many per store,
+    **one marked self** (the system mapping itself); the kernel's self-model (modules, slots) becomes that self map,
+    not a notion of its own. In the desktop, **the launcher holds apps only** (search, review, the graph, the framed
+    apps); the map, BPM and modules views stop being launcher entries (and the "kernel" group goes) and become **the
+    viewers of their content types**: opening a map or a process shows it in its type's viewer, the Map viewer with
+    a picker that starts on self. A kernel change by pull request (the owner's) and its decision there; here the
+    desktop's launcher and the assistant's `desktop_show`. Done when the self map opens from the launcher with
+    Substrate's parts in it, and a second map opens in the same viewer.
+11. **The SMB Foundry and other business opportunities** (S-188 c): in **a session of their own**, without the code
     in context, **as soon as steps 6 to 8 are done**. The first customers are design partners and the most
     valuable, paid or not. Starting point: `docs/research/Object environments prior art.md` (a five-day "map and
     one gated automation" pilot).

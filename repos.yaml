@@ -13,4 +13,4 @@ morphogen:
 kernel:
   url: https://github.com/OpenReplicant/kernel
   branch: main
-  checked: e176b03a072f14e0a46150ecd4e53ccd7e3a8186   # 2026-11-23 main after #136 (D-125 compose codec, D-126 one database); the image's revision; all five suites pass
+  checked: c443238d77a6a003c0c02adf3f7f823634a8c4b2   # 2026-11-24 main after #139 (D-127 the desktop, D-129 KK.open); the image's revision; all suites, the desktop (23) and assistant (11) trials pass

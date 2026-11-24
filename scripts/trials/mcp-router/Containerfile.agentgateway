@@ -1,0 +1,7 @@
+# agentgateway's binary (its distroless image has no shell or Python) on a Python base, so it can spawn stdio MCP
+# servers. Both pinned: agentgateway v1.7.0 (2026-10-27, Apache-2.0) by digest; Python 3.13.17 slim trixie (the binary needs glibc 2.39; bookworm has 2.36).
+FROM cr.agentgateway.dev/agentgateway:v1.7.0@sha256:60216aafb03d37f94e952ff3d51d2f630a65b10ecaebdc0a864882f92610c45b AS agw
+FROM docker.io/library/python:3.13.17-slim-trixie
+COPY --from=agw /app/agentgateway /usr/local/bin/agentgateway
+USER 65532
+ENTRYPOINT ["/usr/local/bin/agentgateway"]

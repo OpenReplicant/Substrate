@@ -18,5 +18,6 @@ spec:
   consumesApis:
   - kernel-http
   - ui-http
+  - mcp-router
   dependsOn:
   - component:kernel

@@ -1,0 +1,22 @@
+# A catalog entry (S-176): Backstage's entity format, read into the kernel by encoder-backstage.
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: mcp-desktop
+  title: The desktop's MCP connector
+  description: Connects the desktop's server to the MCP router; registers its tools and applies their calls, each as its caller.
+  annotations:
+    substrate.dev/licence: Apache-2.0
+    substrate.dev/image: ghcr.io/openreplicant/substrate-mcp-router
+    substrate.dev/compose-service: mcp-desktop
+    substrate.dev/decision: S-206
+spec:
+  type: service
+  lifecycle: experimental
+  owner: owner
+  system: substrate
+  consumesApis:
+  - desktop-mcp
+  dependsOn:
+  - resource:db
+  - component:desktop

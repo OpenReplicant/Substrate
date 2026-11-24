@@ -1,0 +1,19 @@
+# A catalog entry (S-176): Backstage's entity format, read into the kernel by encoder-backstage.
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: desktop-mcp
+  title: The desktop's tools and chat API
+spec:
+  type: mcp
+  lifecycle: experimental
+  owner: owner
+  system: substrate
+  definition: |-
+    {
+     "transport": "streamable-http (stateless, JSON)",
+     "path": "/mcp",
+     "tools": "say, show, ask, feed",
+     "api": "GET /api/feed?after=&wait=, POST /api/post {text, reply_to}",
+     "auth": "Bearer: the kernel's HS256 token (role claim)"
+    }

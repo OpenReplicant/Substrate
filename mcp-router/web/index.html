@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MCP router</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>MCP router</h1>
+  <span id="who"></span>
+  <button id="signout" type="button" hidden>Sign out</button>
+</header>
+<main>
+  <form id="signin" hidden>
+    <h2>Sign in</h2>
+    <label>Name <input name="name" autocomplete="username" required pattern="[a-z0-9_-]+"></label>
+    <label>Password <input name="password" type="password" autocomplete="current-password" required></label>
+    <button type="submit">Sign in</button>
+    <p id="signin-error" class="error" role="alert"></p>
+  </form>
+  <div id="app" hidden>
+    <p id="status" class="muted"></p>
+    <section>
+      <h2>Waiting <span id="waiting-count" class="badge"></span></h2>
+      <div id="waiting"></div>
+    </section>
+    <section>
+      <h2>Calls</h2>
+      <div class="scroll"><table id="calls"></table></div>
+    </section>
+    <section>
+      <h2>Tools</h2>
+      <div class="scroll"><table id="tools"></table></div>
+    </section>
+  </div>
+</main>
+<script src="app.js"></script>
+</body>
+</html>
