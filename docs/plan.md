@@ -182,7 +182,17 @@ and experience (S-179, S-183).
 9. **M-17's experiment** (S-186, MetaSoar), on OpenEnv: a task-family environment, a model proxy in the Anthropic
    format, rubric scores as outcomes, the frozen blind run (S-179). The ladder's code is gone (S-195); if the new
    assistant takes the ladder's design (S-178 to S-183), it is rebuilt there, not restored.
-10. **The SMB Foundry and other business opportunities** (S-188 c): in **a session of their own**, without the code
+10. **One notion of a map, and things opened in their viewers** (S-207; found trying the assistant, S-206). The
+    kernel's Map view draws one map (every `org:` and BBO claim as one graph); Substrate has many maps (each thing
+    mapped, with its parts, roles and interfaces). A **map becomes an item** whose parts hang off it, many per store,
+    **one marked self** (the system mapping itself); the kernel's self-model (modules, slots) becomes that self map,
+    not a notion of its own. In the desktop, **the launcher holds apps only** (search, review, the graph, the framed
+    apps); the map, BPM and modules views stop being launcher entries (and the "kernel" group goes) and become **the
+    viewers of their content types**: opening a map or a process shows it in its type's viewer, the Map viewer with
+    a picker that starts on self. A kernel change by pull request (the owner's) and its decision there; here the
+    desktop's launcher and the assistant's `desktop_show`. Done when the self map opens from the launcher with
+    Substrate's parts in it, and a second map opens in the same viewer.
+11. **The SMB Foundry and other business opportunities** (S-188 c): in **a session of their own**, without the code
     in context, **as soon as steps 6 to 8 are done**. The first customers are design partners and the most
     valuable, paid or not. Starting point: `docs/research/Object environments prior art.md` (a five-day "map and
     one gated automation" pilot).
