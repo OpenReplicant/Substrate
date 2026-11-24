@@ -119,6 +119,9 @@ services:
       # its MCP's DNS-rebinding guard: the kernel's default list, and `kernel` without a port, as a router on the
       # stack's network sends it (agentgateway, S-204)
       KK_MCP_ALLOWED_HOSTS: "localhost:*,127.0.0.1:*,kernel:8000,kernel"
+    # Substrate's own view modules, through the kernel's module contract (S-203, S-206): the shell lists and serves them
+    volumes:
+      - ../desktop/view-assistant:/kk/modules/view-assistant:ro
     depends_on:
       db: {condition: service_healthy}
 
@@ -201,6 +204,38 @@ services:
     depends_on:
       db: {condition: service_healthy}
       kernel: {condition: service_started}
+
+  # The desktop's server (S-206; desktop/server.py): the conversation between a person and the agents, as signals; MCP for
+  # the router (say, show, ask, feed) and the chat view's API at /desktop/api/ on the desktop's origin (Caddy).
+  desktop:
+    <<: *locked
+    image: ghcr.io/openreplicant/substrate-tools:${SUBSTRATE_IMAGE_TAG:-main}
+    build: {context: ./tools, dockerfile: Containerfile}    # the fallback
+    command: ["python3", "-m", "desktop.server"]
+    working_dir: /app
+    user: "65534:65534"
+    environment:
+      DATABASE_URL: postgresql://mcp_desktop:${MCP_DESKTOP_DB_PASSWORD:?set in .env}@db:5432/kernel
+      KK_JWT_SECRET: ${KK_JWT_SECRET:?set in .env}
+      PORT: "8095"
+      PYTHONDONTWRITEBYTECODE: "1"
+    volumes:
+      - ../desktop:/app/desktop:ro
+    depends_on:
+      db: {condition: service_healthy}
+
+  # The desktop's connector to the router (S-205, S-206): its tools, each call signed as its caller.
+  mcp-desktop:
+    <<: *locked
+    image: ghcr.io/openreplicant/substrate-mcp-router:${SUBSTRATE_IMAGE_TAG:-main}
+    build: {context: ../mcp-router, dockerfile: Containerfile}
+    command: ["connect", "--name", "desktop", "--url", "http://desktop:8095/mcp", "--list-role", "person_owner"]
+    environment:
+      DATABASE_URL: postgresql://mcp_connector:${MCP_CONNECTOR_DB_PASSWORD:?set in .env}@db:5432/kernel
+      KK_JWT_SECRET: ${KK_JWT_SECRET:?set in .env}
+    depends_on:
+      db: {condition: service_healthy}
+      desktop: {condition: service_started}
 
   # The front door (S-199): Caddy in front of the kernel's shell (/ui) and its MCP server (/mcp), on 127.0.0.1 only.
   # Pinned as the kernel's own deploy pins it (deploy/.env.example there). deploy/caddy/Caddyfile says what goes where.

@@ -67,7 +67,8 @@ def init(env: dict[str, str]) -> None:
 
 # The environment's logins (S-205): each a login role granted one of the roles environment/sql/010_mcp.sql makes, its
 # password from .env. Made if missing, its password set each time (so a changed .env takes effect).
-LOGINS = (("mcp_router", "env_router", "MCP_ROUTER_DB_PASSWORD"), ("mcp_connector", "env_connector", "MCP_CONNECTOR_DB_PASSWORD"))
+LOGINS = (("mcp_router", "env_router", "MCP_ROUTER_DB_PASSWORD"), ("mcp_connector", "env_connector", "MCP_CONNECTOR_DB_PASSWORD"),
+          ("mcp_desktop", "env_desktop", "MCP_DESKTOP_DB_PASSWORD"))
 
 
 def logins(env: dict[str, str]) -> None:

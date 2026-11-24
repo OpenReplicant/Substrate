@@ -1,0 +1,26 @@
+# Module manifest — schema: kernel/schemas/module.schema.json (the kernel's). Substrate's own view module (S-203: from its
+# own repository, through the module contract): mounted into the kernel's container at /kk/modules/view-assistant.
+id: urn:kk:module:view-assistant
+name: Assistant
+version: 0.1.0
+description: 'The chat with the assistant in the desktop (Substrate, S-206): what the person says becomes a signal the
+  assistant hears; what the assistant says, shows or asks (through the MCP router, recorded and gated) appears here,
+  with a button that opens what it shows. Reads and posts through the desktop server at /desktop/ on the shell''s origin.'
+license: Apache-2.0
+kind: interface
+slots:
+- ui
+protected: false
+agent:
+  iri: urn:kk:agent:view-assistant
+runtime:
+  type: view
+  entrypoint: view/view.js
+requires:
+- slot: agent-interface
+mcp:
+  expose: []
+accepts:
+- 'desktop signals'
+produces:
+- text/html (the Assistant view)

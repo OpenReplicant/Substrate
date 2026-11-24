@@ -8,6 +8,7 @@ spec:
   targets:
   - ./api-anthropic-api.yaml
   - ./api-anthropic-messages.yaml
+  - ./api-desktop-mcp.yaml
   - ./api-embeddings.yaml
   - ./api-kernel-http.yaml
   - ./api-kernel-mcp-memory.yaml
@@ -21,6 +22,7 @@ spec:
   - ./api-ui-http.yaml
   - ./component-anthropic.yaml
   - ./component-caddy.yaml
+  - ./component-desktop.yaml
   - ./component-environment.yaml
   - ./component-gateway.yaml
   - ./component-kernel-catalog.yaml
@@ -29,6 +31,7 @@ spec:
   - ./component-kernel.yaml
   - ./component-llm-fast.yaml
   - ./component-llm.yaml
+  - ./component-mcp-desktop.yaml
   - ./component-mcp-kernel.yaml
   - ./component-mcp-router.yaml
   - ./component-ollama.yaml

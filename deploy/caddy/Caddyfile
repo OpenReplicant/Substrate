@@ -1,7 +1,7 @@
 # The front door (S-199, S-200), on 127.0.0.1 only (deploy/compose.yaml publishes each port there):
 #   :8080  the desktop: the kernel's UI shell at /ui/ (its D-44, D-127) and MCP at /mcp; /ui/apps.json, the framed apps
 #          the shell lists (deploy/caddy/apps.json), is served from here, and the shell's own Content-Security-Policy
-#          gains a frame-src naming exactly those apps' origins
+#          gains a frame-src naming exactly those apps' origins; /desktop/api/* is the desktop server's chat API (S-206)
 #   :8081  Bifrost's dashboard (the gateway), framable by the desktop only
 #   :8082  Substrate's map pages (ui/), framable by the desktop only
 #   :8083  the MCP router (S-205): its MCP endpoint at /mcp for agents, and its page (waiting calls, the record, the
@@ -30,6 +30,11 @@
 	}
 	handle /mcp* {
 		reverse_proxy kernel:8000
+	}
+	# the desktop's chat API (S-206), on the shell's origin so the Assistant view reaches it (connect-src 'self')
+	handle_path /desktop/api/* {
+		rewrite * /api{uri}
+		reverse_proxy desktop:8095
 	}
 	handle {
 		reverse_proxy kernel:8000 {

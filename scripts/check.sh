@@ -9,14 +9,14 @@ fails=0
 ok()   { printf '  ok    %s\n' "$*"; }
 bad()  { printf '  FAIL  %s\n' "$*"; fails=$((fails + 1)); }
 note() { printf '  note  %s\n' "$*"; }
-CORE="db gateway ollama kernel ui caddy mcp-router mcp-kernel"
+CORE="db gateway ollama kernel ui caddy mcp-router mcp-kernel desktop mcp-desktop"
 
 say "Services ($RUNTIME on $ENGINE)"
 running=$(rt_status 2>/dev/null | awk 'NR > 1 {print $1}' | tr '\n' ' ')
 for s in $CORE; do
   case "$running" in *"-$s-"*) ;; *) bad "service $s is not running (scripts/logs.sh $s)" ;; esac
 done
-extra=$(printf '%s\n' $running | grep -v -e '-db-' -e '-gateway-' -e '-ollama-' -e '-kernel-' -e '-ui-' -e '-caddy-' -e '-mcp-' -e '-llm-' || true)
+extra=$(printf '%s\n' $running | grep -v -e '-db-' -e '-gateway-' -e '-ollama-' -e '-kernel-' -e '-ui-' -e '-caddy-' -e '-mcp-' -e '-desktop-' -e '-llm-' || true)
 [ -z "$extra" ] && ok "only the core runs ($CORE)" || note "also running, outside the core: $(echo $extra)"
 if "$ROOT/bin/in-tools" python3 -c '
 import sys; sys.path.insert(0, "scripts")
