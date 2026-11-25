@@ -51,7 +51,7 @@ print("  login %s: .state/kernel/%s.env; .mcp.json has the `kernel` server (tool
     ;;
   person)
     name=${2:?usage: scripts/kernel.sh person NAME}
-    port=8080
+    port=$(env_value DESKTOP_PORT); port=${port:-8080}
     mkdir -p "$ROOT/.state/kernel"
     out=$(compose run --rm --no-deps -T kernel-init kk person add "$name" | grep '^{' | tail -1)
     printf '%s' "$out" | python3 -c '

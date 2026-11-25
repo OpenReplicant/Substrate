@@ -188,6 +188,7 @@ services:
       DATABASE_URL: postgresql://mcp_router:${MCP_ROUTER_DB_PASSWORD:?set in .env}@db:5432/kernel
       KK_JWT_SECRET: ${KK_JWT_SECRET:?set in .env}
       LISTEN: ":8090"
+      FRAME_ANCESTORS: "http://127.0.0.1:${DESKTOP_PORT:-8080} http://localhost:${DESKTOP_PORT:-8080}"
     depends_on:
       db: {condition: service_healthy}
 
@@ -248,14 +249,16 @@ services:
     cap_add: [NET_BIND_SERVICE]
     tmpfs: [/data, /config]
     environment:
+      DESKTOP_PORT: ${DESKTOP_PORT:-8080}     # the desktop's origin, in frame-ancestors
       XDG_DATA_HOME: /data
       XDG_CONFIG_HOME: /config
     volumes:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - ./caddy/apps.json:/etc/caddy/apps.json:ro
-    # the desktop, then its framed apps on origins of their own (S-200); the Caddyfile and apps.json name these ports
+    # the desktop (DESKTOP_PORT on the host), then its framed apps on origins of their own (S-200); the Caddyfile and
+    # apps.json name these ports
     ports:
-      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:${DESKTOP_PORT:-8080}:8080"
       - "127.0.0.1:8081:8081"
       - "127.0.0.1:8082:8082"
       - "127.0.0.1:8083:8083"
