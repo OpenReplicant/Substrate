@@ -7,6 +7,8 @@ It should:
 - pass an actuator call through its gate: free queued at once; propose waiting, announced, until a person other
   than its maker decides, then queued or refused; deny refused; every call recorded, applied ones archived
 - apply its schema once (environment/sql/, environment/db.py), and again without change
+- give an MCP tool its gate from its annotations when registered, follow them while no person has set the gate (both
+  directions, a deployment's policy first), and keep a gate a person set
 - as the channel (stdio MCP): declare claude/channel, push a subscribed signal as notifications/claude/channel,
   push it again while unacknowledged, stop once ack is called, and act through the gates
 
@@ -129,7 +131,33 @@ def run(e: Env, url: str):
     check("every call is recorded", [r[0] for r in c.execute("select status from env.action order by id")]
           == ["applied", "queued", "refused", "denied"])
 
+    mcp_gates(c)
     channel(e, url)
+
+
+def mcp_gates(c):
+    def register(*tools):
+        rows = c.execute("select tool, gate from env.mcp_register('srv', 'http', '{}', '{}', %s::jsonb, 'connector:srv')",
+                         (json.dumps([{"name": n, "annotations": {"readOnlyHint": ro} if ro is not None else {}}
+                                      for n, ro in tools]),)).fetchall()
+        return dict(rows)
+
+    first = register(("read", True), ("write", False), ("plain", None), ("later", None), ("mine", None))
+    check("MCP: a tool's first gate follows its annotations (read-only free, else propose)",
+          first == {"srv_read": "free", "srv_write": "propose", "srv_plain": "propose", "srv_later": "propose",
+                    "srv_mine": "propose"}, first)
+    act = c.execute("select actuator from env.mcp_tool where server = 'srv' and name = 'mine'").fetchone()[0]
+    c.execute("select env.actuator(%s, 'free', 'person_owner')", (act,))
+    again = register(("read", True), ("write", False), ("plain", None), ("later", True), ("mine", None))
+    check("a tool that becomes read-only is freed while no person has set its gate", again["srv_later"] == "free", again)
+    check("a gate a person set is kept", again["srv_mine"] == "free", again)
+    check("the others are unchanged", (again["srv_read"], again["srv_write"], again["srv_plain"]) == ("free", "propose", "propose"), again)
+    back = register(("read", False), ("write", False), ("plain", None), ("later", True), ("mine", False))
+    check("a tool that stops being read-only goes back to propose", back["srv_read"] == "propose", back)
+    check("and a person's gate is still kept", back["srv_mine"] == "free", back)
+    c.execute("insert into env.mcp_policy (server, tool, gate, set_by) values ('srv', 'write', 'free', 'test')")
+    pol = register(("read", False), ("write", False), ("plain", None), ("later", True), ("mine", False))
+    check("a deployment's policy comes before the annotations", pol["srv_write"] == "free", pol)
 
 
 class Proc:

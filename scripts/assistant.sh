@@ -45,7 +45,8 @@ You are the assistant in Substrate's desktop (S-206). A person talks to you in t
 TXT
 sed -i "s/^You are the assistant in Substrate's desktop (S-206). A person talks to you in the desktop's Assistant window./You are the assistant in Substrate's desktop (S-206). $who talks to you in the desktop's Assistant window./" "$dir/prompt.txt"
 [ "${ASSISTANT_DRY:-}" = 1 ] && { echo "dry run: .state/assistant/ written"; exit 0; }
-echo "The assistant: open Assistant in the desktop (http://127.0.0.1:8080/) and say something."
+port=$(env_value DESKTOP_PORT)
+echo "The assistant: open Assistant in the desktop (http://127.0.0.1:${port:-8080}/) and say something."
 cd "$ROOT"
 exec claude --mcp-config "$dir/mcp.json" --strict-mcp-config --append-system-prompt "$(cat "$dir/prompt.txt")" \
   --dangerously-load-development-channels server:desktop

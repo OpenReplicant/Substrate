@@ -47,14 +47,14 @@
 	encode zstd gzip
 	reverse_proxy gateway:8080 {
 		header_down -X-Frame-Options
-		header_down Content-Security-Policy "frame-ancestors 'none'" "frame-ancestors http://127.0.0.1:8080 http://localhost:8080"
+		header_down Content-Security-Policy "frame-ancestors 'none'" "frame-ancestors http://127.0.0.1:{$DESKTOP_PORT} http://localhost:{$DESKTOP_PORT}"
 	}
 }
 
 :8082 {
 	encode zstd gzip
 	reverse_proxy ui:8100 {
-		header_down Content-Security-Policy "frame-ancestors 'none'" "frame-ancestors http://127.0.0.1:8080 http://localhost:8080"
+		header_down Content-Security-Policy "frame-ancestors 'none'" "frame-ancestors http://127.0.0.1:{$DESKTOP_PORT} http://localhost:{$DESKTOP_PORT}"
 	}
 }
 

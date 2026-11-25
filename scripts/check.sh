@@ -86,7 +86,8 @@ case "$hdr" in
   *) bad "the UI does not answer at $ui/api/wholes (scripts/logs.sh ui)" ;;
 esac
 # The front door (S-199): Caddy to the kernel's shell, with the kernel's own security headers on it
-desk=http://127.0.0.1:8080   # fixed: the apps.json origins and frame-ancestors name it (S-200)
+dport=$(env_value DESKTOP_PORT); dport=${dport:-8080}
+desk=http://127.0.0.1:$dport   # DESKTOP_PORT; the apps stay on 8081 to 8083, which apps.json names (S-200)
 hdr=$(curl -s -D - -o /dev/null "$desk/ui/" 2>/dev/null | tr -d '\r')
 case "$hdr" in
   *" 200 "*"frame-src http://127.0.0.1:8081 http://127.0.0.1:8082 http://127.0.0.1:8083;"*"frame-ancestors 'none'"*)
@@ -99,7 +100,7 @@ for app in 8081:gateway 8082:maps 8083:mcp; do
   hdr=$(curl -s -D - -o /dev/null "http://127.0.0.1:${app%%:*}/" 2>/dev/null | tr -d '\r')
   case "$hdr" in
     *[Xx]-[Ff]rame-[Oo]ptions*) bad "app ${app#*:} at :${app%%:*} still sends X-Frame-Options (deploy/caddy/Caddyfile)" ;;
-    *" 200 "*"frame-ancestors http://127.0.0.1:8080 http://localhost:8080"*) ok "app ${app#*:}  http://127.0.0.1:${app%%:*}/ (framable by the desktop only)" ;;
+    *" 200 "*"frame-ancestors http://127.0.0.1:$dport http://localhost:$dport"*) ok "app ${app#*:}  http://127.0.0.1:${app%%:*}/ (framable by the desktop only)" ;;
     *) bad "app ${app#*:} at :${app%%:*} does not answer with frame-ancestors for the desktop (scripts/logs.sh caddy)" ;;
   esac
 done

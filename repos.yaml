@@ -13,4 +13,4 @@ morphogen:
 kernel:
   url: https://github.com/OpenReplicant/kernel
   branch: main
-  checked: c443238d77a6a003c0c02adf3f7f823634a8c4b2   # 2026-11-24 main after #139 (D-127 the desktop, D-129 KK.open); the image's revision; all suites, the desktop (23) and assistant (11) trials pass
+  checked: e4ed8e28356a9cc8e5a2a268a637ecd0ade76251   # 2026-11-24 main after #140 (#138, D-128: every MCP tool says whether it writes); the image's revision; all suites pass, its 14 read-only tools free in the router (S-218)
