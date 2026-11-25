@@ -1,0 +1,10 @@
+# The project's catalog root for Morphogen and Backstage (S-216): Morphogen reads its rules from catalog-info.yaml at
+# the repository root (Morphogen #103); this Location points at the catalog in catalog/, whose own root names every
+# entity file. Morphogen's settings for this project are on the System entity (catalog/system-substrate.yaml).
+apiVersion: backstage.io/v1alpha1
+kind: Location
+metadata:
+  name: substrate
+spec:
+  targets:
+  - ./catalog/catalog-info.yaml

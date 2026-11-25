@@ -41,7 +41,7 @@ dependency is a contract, never another project's code. Name parts by their role
    pin exact versions; prefer releases at least two weeks old; record what you pinned and where you read it, in
    `DECISIONS.md` when it is a default.
 2. **Core first, open always.** Add a part, code or a view when a plan step's check needs it, and say which.
-3. **Choose from catalogs, not memory**: the `research` skill, for any component, library, service or model.
+3. **Choose from catalogs, not memory**: Morphogen's `research` skill (`morphogen:research`, from its plugin; S-216), for any component, library, service or model.
 4. **Secrets live in `.env`** (gitignored, mode 600), read through `env_value` and the `sec_*` verbs
    (`scripts/lib.sh`). Never print one into a committed file, a log, a commit message or chat. `.env.example`
    lists every setting, empty; `deploy/secrets.txt` says how each secret is made.

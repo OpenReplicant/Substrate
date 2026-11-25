@@ -6,3 +6,7 @@ metadata:
   description: 'Substrate: an environment put on a system, run, watched and changed; its own parts as catalog entries (S-174).'
 spec:
   owner: owner
+  # Morphogen's settings for judged runs here (S-193, moved from morphogen.yaml by S-216): runs in Podman, in this image.
+  morphogen:
+    sandbox: podman
+    sandbox_image: docker.io/library/python:3.13.17-slim-bookworm

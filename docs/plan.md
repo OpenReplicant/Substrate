@@ -22,12 +22,12 @@ the harness the user chooses, with no database (S-209, the proposal `docs/morpho
 its files when indexing and traversal are wanted; Substrate is what runs on both. These steps come before the
 product cut and "Next, in order", which are now Substrate's running system, built after them.
 
-1. **The kit, in Morphogen, by pull request:** the `map`, `catalog` and `research` skills moved there and rewritten
+1. **Built 2026-11-25 (Morphogen #102, #103): the skills, the format, cells in the catalog; not yet run: its done-when, a made-up firm mapped with no kernel.** **The kit, in Morphogen, by pull request:** the `map`, `catalog` and `research` skills moved there and rewritten
    for files, Morphogen's and Substrate's `map` merged into one, the catalog entry's format (interfaces, adjustable
    parameters, licence, docs link) in its `schemas/`, its README saying what it is now. Done when the plugin, with
    no kernel running, maps a made-up firm from its documents and an interview into entity files, catalogues the
    options for one role, and drafts cells for one opportunity.
-2. **Substrate uses the plugin like any user:** its three skills removed from `.claude/skills/`. Done when
+2. **Built 2026-11-25 (S-216): the plugin repinned, the three skills removed, Morphogen reads Substrate's catalog with no errors; `scripts/check.sh` waits on the stack being up.** **Substrate uses the plugin like any user:** its three skills removed from `.claude/skills/`. Done when
    `scripts/check.sh` passes and mapping Substrate itself works through the plugin.
 3. **The engagement, on a demo SMB:** from the firm's material to a report of optimisation opportunities, each
    written up as an implementation project (what changes, the target and its measure, the options catalogued, the
