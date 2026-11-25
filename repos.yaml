@@ -7,7 +7,7 @@
 morphogen:
   url: https://github.com/OpenReplicant/Morphogen
   branch: main
-  checked: 9769a0b5781d3f576ede95a90e1f7599caf05c24   # 2026-11-23 main after #101; the same commit the plugin is pinned to (.claude/settings.json, S-193)
+  checked: 63648cad9ad35968e96128ec3d98f29560651fac   # 2026-11-25 main after #103 (the kit: cells in the catalog, morphogen.yaml gone); the plugin's pin (.claude/settings.json, S-216)
 # The Knowledge Kernel, Substrate's store (S-153, S-154): its image is built from this clone (scripts/build.sh kernel) and
 # the tests of the store on the kernel run in it; its published image (ghcr.io/openreplicant/kernel:main) is pulled (S-167).
 kernel:

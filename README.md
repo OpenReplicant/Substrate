@@ -41,7 +41,7 @@ Podman compose, published on 127.0.0.1 only.
 | The channel | `environment/channel.py` | Pushes an environment's signals into a live Claude Code session; a signal not acknowledged comes back |
 | The gateway | `gateway` (Bifrost), `scripts/gateway.py` | Every model call goes through it under its caller's key and is logged there, not by the caller. Keys decide which providers a caller may reach; a meter counts a judged run's calls (S-193) |
 | The local models | services `llm` and `llm-fast` (llama.cpp) | Two of your own GGUFs (S-169): a slow capable one on the CPU (`slow`; Inkling 2 Mini here) and a small fast one on the GPU (`fast`; LFM3 1.7B here) |
-| The optimiser | Morphogen's Claude Code plugin, `morphogen.yaml` | Cells from Substrate's catalog (`catalog/`); a change is judged on cases it cannot read, its model calls counted at the gateway (S-193) |
+| The optimiser | Morphogen's Claude Code plugin; its rules in the catalog (`catalog-info.yaml` at the root, S-216) | Cells from Substrate's catalog (`catalog/`); a change is judged on cases it cannot read, its model calls counted at the gateway (S-193) |
 | The UI | `ui/`, service `ui`, http://127.0.0.1:8100 | The store's pages and maps as diagrams, read-only |
 
 Who may do what is enforced by Postgres logins, not by convention: a process that runs a model can publish and

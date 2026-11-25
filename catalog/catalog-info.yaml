@@ -1,5 +1,5 @@
 # The catalog's root (S-193): a Backstage Location naming every entity file, so a reader such as Backstage or Morphogen
-# (morphogen.yaml's backstage:) finds them all; scripts/catalog.py check fails when a file is missing from it.
+# (through the root catalog-info.yaml, S-216) finds them all; scripts/catalog.py check fails when a file is missing from it.
 apiVersion: backstage.io/v1alpha1
 kind: Location
 metadata:
