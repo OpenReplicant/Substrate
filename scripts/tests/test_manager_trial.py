@@ -176,5 +176,40 @@ B = [{"routing_ok": True}] * 40 + [{"routing_ok": False}] * 3
 lo, hi = score.boot(score.m_routing, A, B, n=2000)
 check("a paired interval for a 25-point gap lies below zero", hi < 0 and lo < -0.1, (lo, hi))
 
+
+# the cell (S-224): the split, the frozen scorer, and the cell's workload/scorer pair
+import freeze  # noqa: E402
+import split as splitmod  # noqa: E402
+
+ALL = json.load(open(os.path.join(M, "scenarios.json")))["scenarios"]
+out1, _ = splitmod.split(ALL)
+out2, _ = splitmod.split(ALL)
+check("the split is 20/10/13, the same on every run, and covers every scenario once",
+      {k: len(v) for k, v in out1.items()} == {"train": 20, "dev": 10, "heldout": 13} and out1 == out2
+      and sorted(out1["train"] + out1["dev"] + out1["heldout"]) == sorted(s["id"] for s in ALL))
+sp = json.load(open(os.path.join(M, "split.json")))
+srch = json.load(open(os.path.join(M, "scenarios-search.json")))
+check("the committed split is the seeded one, and the search file holds train and dev only (no held-out id)",
+      sp["train"] == sorted(out1["train"]) and sp["dev"] == sorted(out1["dev"]) and sp["heldout"]["sha256_of_sorted_ids"] == splitmod.digest(out1["heldout"])
+      and {s["id"] for s in srch["scenarios"]} == set(out1["train"]) | set(out1["dev"]) and "heldout" not in json.dumps(sp["train"] + sp["dev"]))
+check("recovery cases are in every split (the r-series stratum)", all(any(i.startswith("r") for i in out1[k]) for k in ("train", "dev", "heldout")))
+check("the scoring files match their frozen hashes", freeze.check() == [], freeze.check())
+
+import cell  # noqa: E402
+r = SC[0]
+cells = [{"id": r["id"], "is_event": "event" in r, "portfolio": replay.fresh(PF, r), "trace": [], "final_text": "w-21 is running E-19 on metasoar.",
+          "res": {"launch_ts": 0.0, "wall_s": 1.0, "tokens": drivers.tokens(1, 1), "error": None, "offered_tools": [], "attempts": []}}]
+with tempfile.TemporaryDirectory() as d:
+    json.dump({r["id"]: r["expected"]}, open(os.path.join(d, "labels.json"), "w"))
+    sys.stdin = __import__("io").StringIO("\n".join(json.dumps(c) for c in cells) + "\n" + json.dumps({"closing": "end of run"}) + "\n")
+    os.environ["MORPHOGEN_PRIVATE"] = d
+    buf = __import__("io").StringIO()
+    old, sys.stdout = sys.stdout, buf
+    cell.score_stdin()
+    sys.stdout = old
+    got = json.loads(buf.getvalue())
+check("the cell's scorer reads a run's lines and the labels and prints the metrics, cases_seen = cases_expected",
+      got["cases_seen"] == got["cases_expected"] == 1 and got["routing_accuracy"] == 1.0 and got["work_itself"] == 0, got)
+
 print(f"{sum(checks)}/{len(checks)} checks passed")
 sys.exit(0 if all(checks) else 1)

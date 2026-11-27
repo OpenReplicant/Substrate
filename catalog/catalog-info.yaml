@@ -34,6 +34,7 @@ spec:
   - ./component-llm.yaml
   - ./component-mcp-desktop.yaml
   - ./component-mcp-kernel.yaml
+  - ./component-manager-prompt.yaml
   - ./component-mcp-router.yaml
   - ./component-ollama.yaml
   - ./component-ui.yaml

@@ -1,0 +1,40 @@
+# A catalog entry (S-176) that is also a Morphogen cell (S-224): the manager agent's system prompt, optimised with GEPA
+# and judged on held-out scenarios. `change` names the prompt file alone; the scorer is PM-1a's, frozen by hash
+# (scripts/trials/manager/results/pm1a-scoring-frozen.json). The held-out scenarios are not in this repository: the
+# operator names them in the uncommitted morphogen.local.yaml (see docs/manager-agent.md, "Optimising the prompt").
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: manager-prompt
+  title: The manager agent's system prompt
+  description: The prompt of the manager, a router with a ledger over the portfolio (docs/manager-agent.md); one text file, optimised against PM-1a's labelled scenarios and judged on held-out ones.
+  annotations:
+    substrate.dev/source: scripts/trials/manager/manager.md
+    substrate.dev/decision: S-223, S-224
+spec:
+  type: prompt
+  lifecycle: experimental
+  owner: owner
+  system: substrate
+  morphogen:
+    description: Haiku 5.5 as the manager, through a stripped-down claude -p session on the subscription, on 13 held-out PM-1a scenarios.
+    change: scripts/trials/manager/manager.md
+    run: python3 -I scripts/trials/manager/cell.py run
+    score: python3 -I scripts/trials/manager/cell.py score
+    # The primary metric is routing accuracy (project and action both right), the thing falsifier 1 of PM-1 is stated in.
+    # Constraints, never traded for score: the manager does the work itself in no scenario, and delegation recall (start,
+    # message or stop when one was expected) does not fall by more than 10 points. A pass needs routing to gain 5 points.
+    better:
+      routing_accuracy: {higher: true, min: 0.05, gain: absolute, aggregate: mean}
+      work_itself: {lower: true, max_regression: 0, gain: absolute, aggregate: mean}
+      delegation_recall: {higher: true, max_regression: 0.1, gain: absolute, aggregate: mean}
+    # Tokens and latency, collected by Claude Code's own telemetry outside the workload (PM_PASS_TELEMETRY=1 lets the
+    # driver pass the variable on); recorded with the verdict, not a condition of it.
+    observe:
+      type: otel
+      collected: outside
+      metrics:
+        output_tokens: {metric: claude_code.token.usage, where: {type: output}}
+        input_tokens: {metric: claude_code.token.usage, where: {type: input}}
+        api_ms: {event: claude_code.api_request, field: duration_ms}
+    tests: python3 -I scripts/tests/test_manager_trial.py

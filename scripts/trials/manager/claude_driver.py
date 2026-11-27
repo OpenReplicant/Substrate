@@ -50,6 +50,8 @@ class ClaudeCode:
             json.dump({"mcpServers": {"pm": {"command": "python3", "args": [
                 "-I", os.path.join(HERE, "stub_pm.py"), "--portfolio", pf, "--trace", trace_path]}}}, f)
         env = {k: v for k, v in os.environ.items() if not k.startswith("CLAUDE") and k != "ANTHROPIC_API_KEY"}
+        if os.environ.get("PM_PASS_TELEMETRY") and os.environ.get("CLAUDE_CODE_ENABLE_TELEMETRY"):
+            env["CLAUDE_CODE_ENABLE_TELEMETRY"] = os.environ["CLAUDE_CODE_ENABLE_TELEMETRY"]  # the cell's observer (S-224)
         t0 = time.time()
         try:
             p = subprocess.run(self.argv(cfg) + [text], cwd=self.scratch, env=env, capture_output=True, text=True,

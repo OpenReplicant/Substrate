@@ -526,6 +526,55 @@ models are a second, free check on escalation. Neither replaces PM-1.
 **Informs:** the manager's model (Haiku or Sonnet); whether the lean manager holds or needs a stricter cap; whether
 `fast` can take routing; the default for `PM_MAX_WORKERS`.
 
+### Optimising the prompt, and the feedback loop (S-224)
+
+The manager's prompt (`scripts/trials/manager/manager.md`) is a Morphogen cell, `manager-prompt`
+(`catalog/component-manager-prompt.yaml`): `change` is that one file; `score` is PM-1a's scorer, frozen by hash
+(`results/pm1a-scoring-frozen.json`), on held-out scenarios; the primary metric is routing accuracy (the figure
+falsifier 1 is stated in), with "did the work itself" as a constraint that must stay 0 and delegation recall as a guard
+(not more than 10 points down); tokens and latency are observed through Claude Code's own telemetry. The 43 scenarios
+are split once with a fixed seed (`split.py`, stratified by expected action, the recovery cases a stratum of their own):
+20 train, 10 dev, 13 held out. GEPA (`gepa` 0.1.4, `optimise.py`) reads train for its reflections and dev to select; the
+held-out 13 sit outside the repository, named in the uncommitted `morphogen.local.yaml` as Morphogen's convention has
+it, and only `judge.py` and the cell's scorer open them. **Result (2026-11-27): refused.** GEPA spent 100 Haiku runs and 8 Sonnet reflections (plus 52 Haiku runs lost to a bug and a
+smoke test); the best candidate scored 10 of 10 on dev against the seed's 9, which is one scenario, and on the 13 held-out
+scenarios, 3 paired runs each, routing was 69.2% against the baseline's 71.8% (paired 95% interval [-10, +5] points; the
+rule asked for +5 with the interval above zero). Nothing did the work itself and delegation recall was equal; escalation
+precision fell. `manager.md` is unchanged; the candidate is `results/gepa-2026-11-27/best.md`, kept as a record. The
+candidate's edits were mostly tidying (shorter sentences) and three added rules: use ids exactly as the portfolio spells them;
+a stop order is only a stop (no replacement, no "what next?"); `desktop_ask` only when a missing answer blocks the work.
+What limits the result: dev had a single failing scenario, so GEPA's selection signal was almost empty; held-out had 13, so one
+scenario is 7.7 points; the baseline itself moved from 81.4% (43 scenarios, one run) to 71.8% on this subset (13, three runs),
+which is the noise a gain would have to clear. A larger scenario set, which the loop below grows, is the way to a real answer.
+Files: `results/gepa-2026-11-27.md`, `results/judge-2026-11-27.md`, `results/pm1a-scoring-frozen.md`.
+
+**How the owner's real feedback becomes scenarios** (a design; nothing here runs yet). The scenario set is the manager's
+goal written as examples, so it grows from the places the owner already says what the manager got wrong:
+
+| Source | What becomes a scenario |
+|---|---|
+| A correction ("no, that is the Substrate worker", "I meant Morphogen's judge") | the message as sent, the portfolio as it was (the `given`), the project and action the owner meant |
+| "You should have delegated that" / "why did you answer yourself?" | the message, expected `start` or `message`; and, when the owner says it was too much, the reverse (`answer`) |
+| A decision overturned in the review lane (the manager opened one the owner answered "obviously yes", or merged nothing and the owner wanted it asked) | the event or message, expected `decision` or not, with `escalate` set to what the owner's answer shows |
+| A manager turn the owner never answered because it was wrong or pointless (a decision ignored for a week) | an `ack` or `answer` case |
+
+The manager's turns are already recorded (S-223 b: its routing choices, with the signal and the portfolio state), so a
+correction in the desktop's inbox points at a turn and the scenario is made from that record, with the owner's one-line
+reason as its label; a person confirms the label before it counts (a scenario is the owner's judgement, not the
+model's). New scenarios are added with the same fields as `scenarios.json` and the same rules as the first 43: paraphrased
+where they hold names, labelled before any arm sees them.
+
+**Splits, so the cell does not fit its own tests.** New scenarios go to train and dev in the proportion 2 to 1 (the
+reflections and the selection). Every fourth new batch, a share (about a third, stratified the same way) is moved to
+the held-out set instead, chosen by the same fixed-seed split, and the held-out digest in `split.json` changes with it.
+Moving a scenario into held-out retires it from train and dev for good, and the prompt's next optimisation starts from
+the current prompt, not the old one. The scorer stays frozen within a version; changing a rule is a new version
+(`pm1a-score-<date>`), and the old and new scores of the then-current prompt are recorded together before the next
+optimisation, as PM-1a did for its own change. The cell is judged on its schedule: when held-out has grown by a fifth,
+or after any change of the manager's model or tools (a different prompt may suit Sonnet), a new optimisation is run
+with the same budget rules and the verdict decides; a refusal leaves the prompt as it is. The owner keeps the last word:
+merging the prompt is a review-lane decision (`autonomy` stays `review` for this cell).
+
 ## 9. What is reused, what is new, and the order
 
 | Part | Reused | New |

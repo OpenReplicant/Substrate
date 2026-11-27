@@ -1,0 +1,18 @@
+{
+ "gepa": "0.1.4",
+ "haiku_runs": 100,
+ "reflections": 8,
+ "stopped": "Haiku run budget (100) would be exceeded",
+ "note": "optimise.py's StopRun at the run cap raised out of gepa.optimize, so GEPA's own result object was lost; the candidates were recovered from the reflections in log.jsonl (the sha in each eval line is the first 12 hex of the prompt's sha256). Selection on dev: 8e33a8435d76 and 79dfff3d8f0b both 10/10, the first chosen (shorter, within the +30% length rule).",
+ "dev_runs": {
+  "8b115d278691 (seed)": "9/10",
+  "8e33a8435d76": "10/10",
+  "a091376523af": "9/10",
+  "79dfff3d8f0b": "10/10"
+ },
+ "haiku_runs_outside_this_run": {
+  "first launch, aborted (GEPA 0.1.4 needs adapter.propose_new_texts to exist; no reflection ran)": 49,
+  "smoke test": 3,
+  "held-out judge (3 rounds x 2 arms x 13)": 78
+ }
+}
