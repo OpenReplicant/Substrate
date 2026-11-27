@@ -70,23 +70,44 @@ def post(url, body, timeout=600):
         raise
 
 
+# MetaSoar trials/handler-ladder/parse.py EMPTY_THINKING: Inkling's chat template with its thinking closed before it starts
+# (no request switch stops its thinking: 401 of 450 replies ran out inside it).
+EMPTY_THINKING = "<|message_model|><|content_thinking|><|end_message|><|message_model|><|content_text|>"
+
+
 class OpenAICompatible:
     """A tool-calling loop over a llama.cpp server's /v1/chat/completions with the same tool schemas. `extra` is merged
-    into the request (e.g. {"chat_template_kwargs": {"enable_thinking": false}})."""
+    into the request (e.g. {"chat_template_kwargs": {"enable_thinking": false}}). `prefill` closes the model's thinking
+    before it starts, by ending the messages with an assistant message of EMPTY_THINKING (llama.cpp continues it):
+    "off", "on", or "auto" (plain first; when a turn comes back with no tool call and no text, as when the budget went
+    on thinking, switch to the prefill for the rest of the run, sticky across scenarios). `mode_log` records the switch."""
 
-    def __init__(self, url, model="local", prompt_file=None, extra=None, max_turns=10, timeout=900, name=None):
+    def __init__(self, url, model="local", prompt_file=None, extra=None, max_turns=10, timeout=900, name=None,
+                 prefill="off", max_tokens=2048):
         self.name = name or f"openai-compatible:{model}"
         self.url, self.model, self.extra, self.max_turns, self.timeout = url.rstrip("/"), model, extra or {}, max_turns, timeout
+        self.prefill, self.max_tokens, self.mode_log = prefill, max_tokens, []
         with open(prompt_file or os.path.join(HERE, "manager.md")) as f:
             self.prompt = f.read()
+
+    def turn(self, msgs):
+        pre = self.prefill == "on"
+        body = {"model": self.model, "tools": openai_tools(), "temperature": 0, "max_tokens": self.max_tokens, **self.extra,
+                "messages": msgs + ([{"role": "assistant", "content": EMPTY_THINKING}] if pre else [])}
+        r = post(self.url + "/v1/chat/completions", body, self.timeout)
+        m = r["choices"][0]["message"]
+        if self.prefill == "auto" and not m.get("tool_calls") and not (m.get("content") or "").strip():
+            self.prefill = "on"
+            self.mode_log.append("switched to the empty-thinking prefill after an empty turn")
+            return self.turn(msgs)
+        return r
 
     def run(self, text, portfolio, trace_path):
         stub = stub_pm.Stub(portfolio, trace_path)
         msgs = [{"role": "system", "content": self.prompt}, {"role": "user", "content": text}]
         tok, attempts, final, error, t0 = tokens(), [], "", None, time.time()
         for _ in range(self.max_turns):
-            r = post(self.url + "/v1/chat/completions", {"model": self.model, "messages": msgs, "tools": openai_tools(),
-                                                         "temperature": 0, **self.extra}, self.timeout)
+            r = self.turn(msgs)
             u = r.get("usage") or {}
             tok = tokens(tok["input"] + u.get("prompt_tokens", 0), tok["output"] + u.get("completion_tokens", 0),
                          turns=tok["turns"] + 1)
@@ -99,7 +120,8 @@ class OpenAICompatible:
             for c in calls:
                 fn = c["function"]
                 try:
-                    args = json.loads(fn.get("arguments") or "{}")
+                    args = fn.get("arguments") or "{}"
+                    args = json.loads(args) if isinstance(args, str) else args
                 except ValueError:
                     args = {}
                 attempts.append(fn["name"])
@@ -108,7 +130,8 @@ class OpenAICompatible:
         else:
             error = f"no final answer in {self.max_turns} turns"
         return {"final_text": final, "launch_ts": t0, "wall_s": time.time() - t0, "tokens": tok,
-                "offered_tools": list(stub_pm.NAMES), "attempts": attempts, "error": error, "model": self.model}
+                "offered_tools": list(stub_pm.NAMES), "attempts": attempts, "error": error, "model": self.model,
+                "prefill": self.prefill}
 
 
 class Choice:

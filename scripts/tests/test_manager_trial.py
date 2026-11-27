@@ -125,6 +125,51 @@ try:
 except drivers.RateLimited:
     check("a usage-limit line raises RateLimited", True)
 
+
+# the openai-compatible loop against a mock server that "thinks" unless the empty-thinking prefill is there
+import http.server  # noqa: E402
+import threading  # noqa: E402
+
+
+class Mock(http.server.BaseHTTPRequestHandler):
+    seen = []
+
+    def log_message(self, *a):
+        pass
+
+    def do_POST(self):
+        body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+        Mock.seen.append(body)
+        m = body["messages"]
+        pre = m[-1]["role"] == "assistant" and m[-1]["content"] == drivers.EMPTY_THINKING
+        if (m[-2] if pre else m[-1])["role"] == "tool":
+            msg = {"role": "assistant", "content": "done"}
+        elif pre:
+            msg = {"role": "assistant", "content": None, "tool_calls": [{"id": "1", "type": "function", "function": {
+                "name": "desktop_say", "arguments": json.dumps({"text": "hi"})}}]}
+        else:
+            msg = {"role": "assistant", "content": ""}
+        out = json.dumps({"choices": [{"message": msg}], "usage": {"prompt_tokens": 10, "completion_tokens": 5}}).encode()
+        self.send_response(200)
+        self.send_header("Content-Length", str(len(out)))
+        self.end_headers()
+        self.wfile.write(out)
+
+
+srv = http.server.HTTPServer(("127.0.0.1", 0), Mock)
+threading.Thread(target=srv.serve_forever, daemon=True).start()
+with tempfile.TemporaryDirectory() as d:
+    tp = os.path.join(d, "t.jsonl")
+    drv = drivers.OpenAICompatible(f"http://127.0.0.1:{srv.server_port}", "slow", prefill="auto")
+    res = drv.run("hello", PF, tp)
+    tr = score.load_trace(tp)
+    check("auto prefill switches after an empty turn and the tool call reaches the stub", drv.prefill == "on" and [c["tool"] for c in tr] == ["desktop_say"] and res["final_text"] == "done", (drv.prefill, tr))
+    check("the loop sums usage and sends the manager's tool schemas", res["tokens"]["output"] == 10 and len(Mock.seen[-1]["tools"]) == 9, res["tokens"])
+    plain = drivers.OpenAICompatible(f"http://127.0.0.1:{srv.server_port}", "fast", extra={"chat_template_kwargs": {"enable_thinking": False}})
+    plain.run("hello", PF, os.path.join(d, "t2.jsonl"))
+    check("the extra request fields are sent", Mock.seen[-1]["chat_template_kwargs"] == {"enable_thinking": False})
+srv.shutdown()
+
 # the paired bootstrap
 A = [{"routing_ok": True}] * 30 + [{"routing_ok": False}] * 13
 B = [{"routing_ok": True}] * 40 + [{"routing_ok": False}] * 3

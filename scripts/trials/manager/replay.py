@@ -56,7 +56,8 @@ def make_driver(a):
         import claude_driver  # not in the copy that runs on Kaggle
         return claude_driver.ClaudeCode(a.model, a.effort, a.prompt)
     if a.driver == "openai-compatible":
-        return drivers.OpenAICompatible(a.url, a.model or "local", a.prompt, json.loads(a.extra or "{}"), name=f"openai-compatible:{a.label}")
+        return drivers.OpenAICompatible(a.url, a.model or "local", a.prompt, json.loads(a.extra or "{}"),
+                                        name=f"openai-compatible:{a.label}", prefill=a.prefill)
     return drivers.Choice(a.url or "http://127.0.0.1:8083")
 
 
@@ -83,7 +84,7 @@ def run_all(driver, scenarios, portfolio, out_path, only=None, resume=False, log
         sco = S.score(sc, pf, trace, res)
         runs.append({"id": sc["id"], "score": sco, "trace": trace, "final_text": res.get("final_text", ""),
                      "error": res.get("error"), "reported_model": res.get("reported_model") or res.get("model"),
-                     "offered_tools": res.get("offered_tools")})
+                     "offered_tools": res.get("offered_tools"), "prefill": res.get("prefill")})
         log(f"{sc['id']}: {','.join(sco['tags'])} {sco['named']} routing={'ok' if sco['routing_ok'] else 'WRONG'} "
             f"{sco['wall_s']:.1f}s {sco['tokens']['output']} out" + (f" ERROR {res['error'][:80]}" if res.get("error") else ""))
         with open(out_path, "w") as f:
@@ -220,7 +221,8 @@ def main():
     r.add_argument("--model")
     r.add_argument("--effort", default="low")
     r.add_argument("--url")
-    r.add_argument("--extra")
+    r.add_argument("--extra", help="JSON merged into each chat request (openai-compatible)")
+    r.add_argument("--prefill", choices=["off", "on", "auto"], default="off", help="close Inkling's thinking by prefill (openai-compatible)")
     r.add_argument("--prompt")
     r.add_argument("--label", required=True)
     r.add_argument("--out")
