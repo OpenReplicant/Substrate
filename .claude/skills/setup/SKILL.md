@@ -51,8 +51,9 @@ again. Known causes:
   substrate-db-1 psql -U postgres` with `\set pw '…'` and `alter role postgres password :'pw'` on stdin), then
   run `scripts/up.sh` again; it resets the gateway's roles itself.
 - **A port is taken** ("address already in use"): another program has it. Do not stop it; it is the owner's. Set
-  the service's port in `.env`: `DB_PORT`, `GATEWAY_PORT`, `UI_PORT`, `DESKTOP_PORT` (the desktop; its framed apps
-  stay on 8081 to 8083). Find the holder by process name and working directory, never its arguments.
+  the service's port in `.env`: `DB_PORT`, `GATEWAY_PORT`, `UI_PORT`, `OLLAMA_PORT`, `DESKTOP_PORT` (the desktop) and
+  `DESKTOP_GATEWAY_PORT`, `DESKTOP_MAPS_PORT`, `DESKTOP_ROUTER_PORT` (its framed apps; S-222). A second copy on one
+  machine also needs its own `COMPOSE_PROJECT_NAME`, `TOOLS_CONTAINER` and volumes (the README). Find the holder by process name and working directory, never its arguments.
 - **The gateway answers 400 to every call**: it knows no provider. With only local models, `.env` needs
   `OLLAMA_URL=http://ollama:11434`.
 
