@@ -2,7 +2,8 @@
 # The old assistant's services (the companion, the voice head, the worker, the judge) were retired in S-194.
 # SPARQL (deploy/ontop) comes later (docs/plan.md 3b); Caddy is the front door to the kernel's shell (S-199).
 # Images (S-167): each service names its published image (ghcr.io/openreplicant/substrate-NAME:SUBSTRATE_IMAGE_TAG, the
-# kernel's at KERNEL_IMAGE_TAG, both default main) and keeps its build: as the fallback. scripts/up.sh pulls first and builds
+# kernel's at KERNEL_IMAGE_TAG; by default this release's, 0.1.0-preview.1 and the kernel's 0.1.0: VERSION, scripts/tests/test_release.py)
+# and keeps its build: as the fallback. scripts/up.sh pulls first and builds
 # what did not pull (SUBSTRATE_BUILD=1 builds all).
 #
 # Started by scripts/up.sh:
@@ -26,7 +27,7 @@ services:
   # Database: substrate (the store, S-135; made by scripts/db.py init). v1's databases (workbench, and the
   # gateway's) stay in the same volume.
   db:
-    image: ghcr.io/openreplicant/substrate-db:${SUBSTRATE_IMAGE_TAG:-main}
+    image: ghcr.io/openreplicant/substrate-db:${SUBSTRATE_IMAGE_TAG:-0.1.0-preview.1}
     build: {context: ./postgres, dockerfile: Dockerfile}
     command: ["postgres", "-c", "shared_preload_libraries=pg_cron,graph", "-c", "cron.database_name=kernel"]   # one database (S-202)
     environment:
@@ -95,7 +96,7 @@ services:
   # 2026-11-21 (S-155).
   kernel-init:
     profiles: [kernel-admin]
-    image: ghcr.io/openreplicant/kernel:${KERNEL_IMAGE_TAG:-main}
+    image: ghcr.io/openreplicant/kernel:${KERNEL_IMAGE_TAG:-0.1.0}
     command: ["kk", "init"]
     read_only: true
     cap_drop: [ALL]
@@ -109,7 +110,7 @@ services:
 
   kernel:
     <<: *locked
-    image: ghcr.io/openreplicant/kernel:${KERNEL_IMAGE_TAG:-main}
+    image: ghcr.io/openreplicant/kernel:${KERNEL_IMAGE_TAG:-0.1.0}
     # MCP over HTTP and the kernel's UI shell at /ui (the kernel's D-44), reached through caddy (S-199)
     command: ["kk", "serve", "--host", "0.0.0.0", "--port", "8000", "--only", "mcp,validator"]
     tmpfs: [/tmp]
@@ -131,7 +132,7 @@ services:
   # (scripts/kernel.sh catalog). Profile kernel-admin: run, not kept running.
   kernel-catalog:
     profiles: [kernel-admin]
-    image: ghcr.io/openreplicant/kernel:${KERNEL_IMAGE_TAG:-main}
+    image: ghcr.io/openreplicant/kernel:${KERNEL_IMAGE_TAG:-0.1.0}
     # --root /: files are recorded as substrate/catalog/<file> whatever the image's working directory (a different root
     # re-keys every file: the kernel's D-125 lesson)
     entrypoint: ["sh", "-c", "exec python3 -m encoder_backstage --project substrate --root / /substrate/catalog/*.yaml"]
@@ -153,7 +154,7 @@ services:
   # maps from the kernel's read model (S-154).
   ui:
     <<: *locked
-    image: ghcr.io/openreplicant/substrate-tools:${SUBSTRATE_IMAGE_TAG:-main}
+    image: ghcr.io/openreplicant/substrate-tools:${SUBSTRATE_IMAGE_TAG:-0.1.0-preview.1}
     build: {context: ./tools, dockerfile: Containerfile}    # the fallback
     command: ["python3", "-m", "ui.server"]
     working_dir: /app
@@ -181,7 +182,7 @@ services:
   # recorded, applied by the server's connector; its page (waiting calls, the record, the tools) is a desktop app.
   mcp-router:
     <<: *locked
-    image: ghcr.io/openreplicant/substrate-mcp-router:${SUBSTRATE_IMAGE_TAG:-main}
+    image: ghcr.io/openreplicant/substrate-mcp-router:${SUBSTRATE_IMAGE_TAG:-0.1.0-preview.1}
     build: {context: ../mcp-router, dockerfile: Containerfile}    # the fallback
     command: ["serve"]
     environment:
@@ -196,7 +197,7 @@ services:
   # caller's role), so the kernel still decides what that caller may see and do.
   mcp-kernel:
     <<: *locked
-    image: ghcr.io/openreplicant/substrate-mcp-router:${SUBSTRATE_IMAGE_TAG:-main}
+    image: ghcr.io/openreplicant/substrate-mcp-router:${SUBSTRATE_IMAGE_TAG:-0.1.0-preview.1}
     build: {context: ../mcp-router, dockerfile: Containerfile}
     command: ["connect", "--name", "kernel", "--url", "http://kernel:8000/mcp", "--list-role", "person_owner"]
     environment:
@@ -210,7 +211,7 @@ services:
   # the router (say, show, ask, feed) and the chat view's API at /desktop/api/ on the desktop's origin (Caddy).
   desktop:
     <<: *locked
-    image: ghcr.io/openreplicant/substrate-tools:${SUBSTRATE_IMAGE_TAG:-main}
+    image: ghcr.io/openreplicant/substrate-tools:${SUBSTRATE_IMAGE_TAG:-0.1.0-preview.1}
     build: {context: ./tools, dockerfile: Containerfile}    # the fallback
     command: ["python3", "-m", "desktop.server"]
     working_dir: /app
@@ -228,7 +229,7 @@ services:
   # The desktop's connector to the router (S-205, S-206): its tools, each call signed as its caller.
   mcp-desktop:
     <<: *locked
-    image: ghcr.io/openreplicant/substrate-mcp-router:${SUBSTRATE_IMAGE_TAG:-main}
+    image: ghcr.io/openreplicant/substrate-mcp-router:${SUBSTRATE_IMAGE_TAG:-0.1.0-preview.1}
     build: {context: ../mcp-router, dockerfile: Containerfile}
     command: ["connect", "--name", "desktop", "--url", "http://desktop:8095/mcp", "--list-role", "person_owner"]
     environment:
@@ -250,18 +251,22 @@ services:
     tmpfs: [/data, /config]
     environment:
       DESKTOP_PORT: ${DESKTOP_PORT:-8080}     # the desktop's origin, in frame-ancestors
+      # the framed apps' origins on the host, in the desktop's frame-src and apps.json
+      DESKTOP_GATEWAY_PORT: ${DESKTOP_GATEWAY_PORT:-8081}
+      DESKTOP_MAPS_PORT: ${DESKTOP_MAPS_PORT:-8082}
+      DESKTOP_ROUTER_PORT: ${DESKTOP_ROUTER_PORT:-8083}
       XDG_DATA_HOME: /data
       XDG_CONFIG_HOME: /config
     volumes:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - ./caddy/apps.json:/etc/caddy/apps.json:ro
-    # the desktop (DESKTOP_PORT on the host), then its framed apps on origins of their own (S-200); the Caddyfile and
-    # apps.json name these ports
+    # the desktop (DESKTOP_PORT on the host), then its framed apps on origins of their own (S-200), each port a setting;
+    # inside the container they stay 8081 to 8083 (the Caddyfile's sites)
     ports:
       - "127.0.0.1:${DESKTOP_PORT:-8080}:8080"
-      - "127.0.0.1:8081:8081"
-      - "127.0.0.1:8082:8082"
-      - "127.0.0.1:8083:8083"
+      - "127.0.0.1:${DESKTOP_GATEWAY_PORT:-8081}:8081"
+      - "127.0.0.1:${DESKTOP_MAPS_PORT:-8082}:8082"
+      - "127.0.0.1:${DESKTOP_ROUTER_PORT:-8083}:8083"
     depends_on: [kernel, gateway, ui, mcp-router]
 
   # The local slow model (plan step 5, S-169): llama.cpp's server, serving LLM_MODEL from LLM_MODELS_DIR read-only, by

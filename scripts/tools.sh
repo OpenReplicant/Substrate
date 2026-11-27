@@ -8,7 +8,8 @@
 set -eu
 . "$(dirname "$0")/lib.sh"
 
-NAME=substrate-tools
+# its name: TOOLS_CONTAINER in .env (default substrate-tools); a second checkout on one machine needs its own
+NAME=$(env_value TOOLS_CONTAINER); NAME=${NAME:-substrate-tools}
 
 # Projects already connected (recorded one per line in .state/projects), plus any named now.
 projects() {
@@ -29,6 +30,12 @@ start() {
   img_want=$("$ENGINE" image inspect -f '{{.Id}}' "$(image)" 2>/dev/null || true)
   img_have=$("$ENGINE" inspect -f '{{.Image}}' "$NAME" 2>/dev/null || true)
   if running && [ "$want" = "$have" ] && [ "${img_want#sha256:}" = "${img_have#sha256:}" ]; then echo "  $NAME running"; return; fi
+  # never replace another checkout's container of the same name (it would lose that checkout's mounts)
+  other=$("$ENGINE" inspect -f '{{.Config.WorkingDir}}' "$NAME" 2>/dev/null || true)
+  if [ -n "$other" ] && [ "$other" != "$ROOT" ]; then
+    echo "  $NAME belongs to another checkout ($other): set TOOLS_CONTAINER in .env to a name of this one's own" >&2
+    exit 1
+  fi
   "$ENGINE" rm -f "$NAME" >/dev/null 2>&1 || true
   set -- --detach --name "$NAME" --label "substrate.mounts=$want" --network host \
     --cap-drop ALL --security-opt no-new-privileges \

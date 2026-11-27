@@ -1,4 +1,6 @@
-# The front door (S-199, S-200), on 127.0.0.1 only (deploy/compose.yaml publishes each port there):
+# The front door (S-199, S-200), on 127.0.0.1 only (deploy/compose.yaml publishes each port there). The ports below are
+# the container's; on the host they are DESKTOP_PORT, DESKTOP_GATEWAY_PORT, DESKTOP_MAPS_PORT and DESKTOP_ROUTER_PORT
+# (defaults 8080 to 8083), which the frame-src below and apps.json name:
 #   :8080  the desktop: the kernel's UI shell at /ui/ (its D-44, D-127) and MCP at /mcp; /ui/apps.json, the framed apps
 #          the shell lists (deploy/caddy/apps.json), is served from here, and the shell's own Content-Security-Policy
 #          gains a frame-src naming exactly those apps' origins; /desktop/api/* is the desktop server's chat API (S-206)
@@ -26,6 +28,10 @@
 		rewrite * /apps.json
 		header Content-Type application/json
 		header X-Content-Type-Options nosniff
+		# apps.json names each app's host port by the DESKTOP_*_PORT settings ({{env "NAME"}})
+		templates {
+			mime application/json
+		}
 		file_server
 	}
 	handle /mcp* {
@@ -38,7 +44,7 @@
 	}
 	handle {
 		reverse_proxy kernel:8000 {
-			header_down Content-Security-Policy "default-src 'self';" "default-src 'self'; frame-src http://127.0.0.1:8081 http://127.0.0.1:8082 http://127.0.0.1:8083;"
+			header_down Content-Security-Policy "default-src 'self';" "default-src 'self'; frame-src http://127.0.0.1:{$DESKTOP_GATEWAY_PORT} http://127.0.0.1:{$DESKTOP_MAPS_PORT} http://127.0.0.1:{$DESKTOP_ROUTER_PORT};"
 		}
 	}
 }

@@ -66,13 +66,17 @@ compose() {
   fi
 }
 
-# The published image for a part (S-167): ghcr.io/openreplicant/substrate-NAME at SUBSTRATE_IMAGE_TAG (default main); the
-# kernel's own is ghcr.io/openreplicant/kernel at KERNEL_IMAGE_TAG. scripts/build.sh tags a local build with the same name,
-# so compose, tools.sh, kernel.sh and test.sh find one image whether it was pulled or built.
-image_ref() {   # NAME: db, tools, kernel
+# The published image for a part (S-167): ghcr.io/openreplicant/substrate-NAME at SUBSTRATE_IMAGE_TAG; the kernel's own is
+# ghcr.io/openreplicant/kernel at KERNEL_IMAGE_TAG. Unset, they are this release's (VERSION) and the kernel release it pins,
+# as deploy/compose.yaml's defaults (scripts/tests/test_release.py keeps them equal); `main` follows the main branches.
+# scripts/build.sh tags a local build with the same name, so compose, tools.sh, kernel.sh and test.sh find one image whether
+# it was pulled or built.
+SUBSTRATE_VERSION=0.1.0-preview.1
+KERNEL_VERSION=0.1.0
+image_ref() {   # NAME: db, tools, mcp-router, kernel
   case "$1" in
-    kernel) _t=$(env_value KERNEL_IMAGE_TAG); echo "ghcr.io/openreplicant/kernel:${_t:-main}" ;;
-    *) _t=$(env_value SUBSTRATE_IMAGE_TAG); echo "ghcr.io/openreplicant/substrate-$1:${_t:-main}" ;;
+    kernel) _t=$(env_value KERNEL_IMAGE_TAG); echo "ghcr.io/openreplicant/kernel:${_t:-$KERNEL_VERSION}" ;;
+    *) _t=$(env_value SUBSTRATE_IMAGE_TAG); echo "ghcr.io/openreplicant/substrate-$1:${_t:-$SUBSTRATE_VERSION}" ;;
   esac
 }
 

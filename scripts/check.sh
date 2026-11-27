@@ -66,13 +66,14 @@ for _ in $(seq 1 30); do
 done
 [ "$code" = "401" ] && ok "gateway     http://127.0.0.1:$(env_value GATEWAY_PORT)/ (Bifrost; a call without a key is refused)" || bad "the model gateway returned $code to a call without a key (scripts/logs.sh gateway)"
 # The local models (S-169), when COMPOSE_PROFILES in .env turns them on
+project=$(env_value COMPOSE_PROJECT_NAME); project=${project:-substrate}
 case ",$(env_value COMPOSE_PROFILES)," in *,llm,*)
   case "$running" in *-llm-*) ;; *) bad "service llm is not running (scripts/logs.sh llm)" ;; esac
-  if [ "$("$ENGINE" inspect -f '{{.State.Health.Status}}' substrate-llm-1 2>/dev/null)" = healthy ]; then
+  if [ "$("$ENGINE" inspect -f '{{.State.Health.Status}}' "$project-llm-1" 2>/dev/null)" = healthy ]; then
     ok "llm         $(env_value LLM_MODEL) on llama.cpp, at the gateway as local/$(env_value LLM_ALIAS)"
   else note "llm         not healthy yet (a large model takes minutes to load; scripts/logs.sh llm)"; fi
   if [ -n "$(env_value LLM_FAST_MODEL)" ]; then
-    if [ "$("$ENGINE" inspect -f '{{.State.Health.Status}}' substrate-llm-fast-1 2>/dev/null)" = healthy ]; then
+    if [ "$("$ENGINE" inspect -f '{{.State.Health.Status}}' "$project-llm-fast-1" 2>/dev/null)" = healthy ]; then
       ok "llm-fast    $(env_value LLM_FAST_MODEL) on llama.cpp, at the gateway as fast/$(env_value LLM_FAST_ALIAS)"
     else note "llm-fast    not healthy yet (scripts/logs.sh llm-fast)"; fi
   fi ;;
@@ -87,16 +88,19 @@ case "$hdr" in
 esac
 # The front door (S-199): Caddy to the kernel's shell, with the kernel's own security headers on it
 dport=$(env_value DESKTOP_PORT); dport=${dport:-8080}
-desk=http://127.0.0.1:$dport   # DESKTOP_PORT; the apps stay on 8081 to 8083, which apps.json names (S-200)
+gport=$(env_value DESKTOP_GATEWAY_PORT); gport=${gport:-8081}
+mport=$(env_value DESKTOP_MAPS_PORT); mport=${mport:-8082}
+rport=$(env_value DESKTOP_ROUTER_PORT); rport=${rport:-8083}
+desk=http://127.0.0.1:$dport   # DESKTOP_PORT; the apps on DESKTOP_GATEWAY_PORT, _MAPS_PORT, _ROUTER_PORT, which apps.json names (S-200)
 hdr=$(curl -s -D - -o /dev/null "$desk/ui/" 2>/dev/null | tr -d '\r')
 case "$hdr" in
-  *" 200 "*"frame-src http://127.0.0.1:8081 http://127.0.0.1:8082 http://127.0.0.1:8083;"*"frame-ancestors 'none'"*)
+  *" 200 "*"frame-src http://127.0.0.1:$gport http://127.0.0.1:$mport http://127.0.0.1:$rport;"*"frame-ancestors 'none'"*)
     ok "desktop     $desk/ (the kernel's shell; frames only the apps in deploy/caddy/apps.json; sign in: scripts/kernel.sh person NAME)" ;;
   *" 200 "*) bad "the kernel's shell answers at $desk/ui/ without its CSP or the apps' frame-src (deploy/caddy/Caddyfile)" ;;
   *) bad "the kernel's shell does not answer at $desk/ui/ (scripts/logs.sh caddy, scripts/logs.sh kernel)" ;;
 esac
 # Its framed apps (S-200): each on an origin of its own, framable by the desktop only, with no X-Frame-Options left
-for app in 8081:gateway 8082:maps 8083:mcp; do
+for app in $gport:gateway $mport:maps $rport:mcp; do
   hdr=$(curl -s -D - -o /dev/null "http://127.0.0.1:${app%%:*}/" 2>/dev/null | tr -d '\r')
   case "$hdr" in
     *[Xx]-[Ff]rame-[Oo]ptions*) bad "app ${app#*:} at :${app%%:*} still sends X-Frame-Options (deploy/caddy/Caddyfile)" ;;
