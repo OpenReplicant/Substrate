@@ -211,5 +211,42 @@ with tempfile.TemporaryDirectory() as d:
 check("the cell's scorer reads a run's lines and the labels and prints the metrics, cases_seen = cases_expected",
       got["cases_seen"] == got["cases_expected"] == 1 and got["routing_accuracy"] == 1.0 and got["work_itself"] == 0, got)
 
+# ---- scenario set v2 (proposed, not active): format, uniqueness, the scorer on it, and the v2 split
+import split as _v1split  # noqa: E402
+import split_v2  # noqa: E402
+V2 = os.path.join(M, "scenarios-v2-proposed.json")
+SC2, PF2 = replay.load_world(V2)
+ids2 = [s["id"] for s in SC2]
+V1IDS = {s["id"] for s in ALL}
+check("v2: unique ids, the 43 v1 scenarios unchanged in their labels, about 200 in all",
+      len(set(ids2)) == len(ids2) and 190 <= len(ids2) <= 240 and all(s["expected"] == next(a for a in ALL if a["id"] == s["id"])["expected"] for s in SC2 if s["id"] in V1IDS))
+req = {"id", "kind", "expected", "source", "label_confidence", "label_reason"}
+check("v2: every scenario has source, label_confidence, label_reason and a message or an event",
+      all(req <= set(s) and (("message" in s) != ("event" in s)) and s["label_confidence"] in ("high", "medium", "low") and s["label_reason"].strip()
+          and (s["source"] in ("v1", "session-paraphrase", "incident") or s["source"].startswith("variation-of:")) for s in SC2))
+check("v2: valid labels (action, project in the portfolio, a named worker is a running worker, a start has a brief list unless a judge)",
+      all(s["expected"]["action"] in ("start", "message", "ask", "decision", "answer", "stop", "ack")
+          and (s["expected"]["project"] is None or s["expected"]["project"] in {p["id"] for p in PF2["projects"]})
+          and (not s["expected"].get("worker") or s["expected"]["worker"] in {w["id"] for w in PF2["workers"]}) for s in SC2))
+check("v2: a recovery scenario has an r-prefixed id and nothing else does (split.py's stratum)",
+      all(s["id"].startswith("r") == (s["kind"] == "recovery") for s in SC2))
+check("v2: message texts are unique (the perfect-manager test keys on them)", len({score.message_for(s) for s in SC2}) == len(SC2))
+check("v2: variation parents exist", all(s["source"].split(":", 1)[1] in set(ids2) for s in SC2 if s["source"].startswith("variation-of:")))
+SC = SC2  # the perfect-manager helper above reads SC
+with tempfile.TemporaryDirectory() as d:
+    runs2, stopped2 = replay.run_all(drivers.Fake(perfect), SC2, PF2, os.path.join(d, "p2.json"), log=lambda s: None)
+    bad2 = [r["id"] for r in runs2 if not r["score"]["routing_ok"]]
+    check("v2: a manager that follows every v2 label routes all of them", len(runs2) == len(SC2) and not stopped2 and not bad2, bad2)
+out2 = split_v2.allocate(SC2)
+n2 = len(SC2)
+check("v2 split: covers every scenario once, held-out about a third, train about twice dev",
+      sorted(sum(out2.values(), [])) == sorted(ids2) and abs(len(out2["heldout"]) - n2 / 3) <= 0.05 * n2 and abs(len(out2["train"]) - 2 * len(out2["dev"])) <= 0.1 * n2)
+old_split, _ = _v1split.split(ALL)
+fam = {s["id"]: split_v2.root_of(s, {x["id"]: x for x in SC2}) for s in SC2}
+home = {i: k for k, ids in out2.items() for i in ids}
+check("v2 split: v1's split is kept and no family straddles splits",
+      all(i in out2[k] for k, ids in old_split.items() for i in ids) and all(home[i] == home[fam[i]] for i in ids2))
+check("v2 split: deterministic", split_v2.allocate(SC2) == out2)
+
 print(f"{sum(checks)}/{len(checks)} checks passed")
 sys.exit(0 if all(checks) else 1)
