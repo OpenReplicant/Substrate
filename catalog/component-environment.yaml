@@ -3,16 +3,19 @@ apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
   name: environment
-  title: The real-time environment
-  description: Signals, subscribers, actuators behind gates and the record of actions on pgmq (schema env, environment/sql/); the channel into Claude Code (environment/channel.py).
+  title: The live environment (a kernel module)
+  description: Signals, subscribers, actuators behind gates and the record of actions on pgmq (schema env, environment/sql/); a kernel module (environment/module.yaml) whose service puts each proposed action in the kernel's review lane and records the person's decision there.
   annotations:
     substrate.dev/licence: Apache-2.0
     substrate.dev/source: environment/
-    substrate.dev/decision: S-143, S-144, S-194
+    substrate.dev/image: ghcr.io/openreplicant/kernel
+    substrate.dev/compose-service: environment
+    substrate.dev/decision: S-143, S-144, S-194, S-219
 spec:
-  type: library
+  type: service
   lifecycle: experimental
   owner: owner
   system: substrate
   dependsOn:
   - resource:db
+  - component:kernel

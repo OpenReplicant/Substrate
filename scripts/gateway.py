@@ -34,7 +34,7 @@ NAMES = ("POSTGRES_PASSWORD", "DB_PORT", "OPENROUTER_API_KEY", "OLLAMA_URL", "GA
          "GATEWAY_REQUESTS_PER_HOUR", "GATEWAY_DB_PASSWORD", "GATEWAY_METER_PASSWORD", "GATEWAY_KEY_SECRET",
          "GATEWAY_PORT", "ANTHROPIC_MODELS", "COMPANION_MODELS",
          "LLM_MODEL", "LLM_FAST_MODEL", "KERNEL_URL", "KK_AUTHENTICATOR_PASSWORD", "MCP_ROUTER_DB_PASSWORD",
-         "MCP_CONNECTOR_DB_PASSWORD", "MCP_DESKTOP_DB_PASSWORD")
+         "MCP_CONNECTOR_DB_PASSWORD", "MCP_DESKTOP_DB_PASSWORD", "MCP_CHANNEL_DB_PASSWORD")
 
 
 def settings() -> dict[str, str]:
@@ -157,7 +157,12 @@ def prune(env: dict[str, str]) -> None:
     keep = [r["id"] for r in cfg["governance"]["rate_limits"]]
     url = f"postgresql://postgres:{env['POSTGRES_PASSWORD']}@127.0.0.1:{env.get('DB_PORT') or 5432}/gateway"
     with psycopg.connect(url, connect_timeout=5, autocommit=True) as c:
-        if not c.execute("select to_regclass('governance_rate_limits')").fetchone()[0]:
+        # a fresh store: Bifrost makes its tables as it first starts, which may still be under way (first install,
+        # 2026-11-27): with any of them missing there is nothing stale to drop
+        tables = ("governance_rate_limits", "governance_model_configs", "governance_virtual_keys",
+                  "governance_virtual_key_provider_configs", "config_providers")
+        if not all(c.execute("select to_regclass(%s)", (t,)).fetchone()[0] for t in tables):
+            print("  gateway store: new (its tables are not all made yet), nothing to prune")
             return
         n = c.execute("delete from governance_model_configs where rate_limit_id is not null and not rate_limit_id = any(%s)", (keep,)).rowcount
         for t in ("governance_virtual_keys", "governance_virtual_key_provider_configs", "config_providers"):

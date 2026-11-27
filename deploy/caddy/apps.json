@@ -1,5 +1,5 @@
 [
-  {"id": "gateway", "title": "Model gateway", "url": "http://127.0.0.1:8081/"},
-  {"id": "maps", "title": "Substrate's maps", "url": "http://127.0.0.1:8082/"},
-  {"id": "mcp", "title": "MCP router", "url": "http://127.0.0.1:8083/"}
+  {"id": "gateway", "title": "Model gateway", "url": "http://127.0.0.1:{{env "DESKTOP_GATEWAY_PORT"}}/"},
+  {"id": "maps", "title": "Substrate's maps", "url": "http://127.0.0.1:{{env "DESKTOP_MAPS_PORT"}}/"},
+  {"id": "mcp", "title": "MCP router", "url": "http://127.0.0.1:{{env "DESKTOP_ROUTER_PORT"}}/"}
 ]

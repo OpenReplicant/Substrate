@@ -9,14 +9,14 @@ fails=0
 ok()   { printf '  ok    %s\n' "$*"; }
 bad()  { printf '  FAIL  %s\n' "$*"; fails=$((fails + 1)); }
 note() { printf '  note  %s\n' "$*"; }
-CORE="db gateway ollama kernel ui caddy mcp-router mcp-kernel desktop mcp-desktop"
+CORE="db gateway ollama kernel environment ui caddy mcp-router mcp-kernel desktop mcp-desktop"
 
 say "Services ($RUNTIME on $ENGINE)"
 running=$(rt_status 2>/dev/null | awk 'NR > 1 {print $1}' | tr '\n' ' ')
 for s in $CORE; do
   case "$running" in *"-$s-"*) ;; *) bad "service $s is not running (scripts/logs.sh $s)" ;; esac
 done
-extra=$(printf '%s\n' $running | grep -v -e '-db-' -e '-gateway-' -e '-ollama-' -e '-kernel-' -e '-ui-' -e '-caddy-' -e '-mcp-' -e '-desktop-' -e '-llm-' || true)
+extra=$(printf '%s\n' $running | grep -v -e '-db-' -e '-gateway-' -e '-ollama-' -e '-kernel-' -e '-environment-' -e '-ui-' -e '-caddy-' -e '-mcp-' -e '-desktop-' -e '-llm-' || true)
 [ -z "$extra" ] && ok "only the core runs ($CORE)" || note "also running, outside the core: $(echo $extra)"
 if "$ROOT/bin/in-tools" python3 -c '
 import sys; sys.path.insert(0, "scripts")
@@ -53,8 +53,10 @@ import sys; sys.path[:0] = ["scripts", "."]
 from db import connect, DB; from gateway import settings
 with connect(settings(), DB) as c:
     s, q, a, w = c.execute("select (select count(*) from env.signal), (select count(*) from pgmq.meta), (select count(*) from env.actuator), (select count(*) from env.action where status = $$proposed$$)").fetchone()
-    print(f"{s} signals, {q} queues, {a} actuators, {w} proposals waiting")' 2>&1); then
-  ok "environment $out (bin/in-tools python3 scripts/env.py waiting)"
+    m = c.execute("select to_regclass($$kernel.agent$$) is not null and exists (select 1 from kernel.agent where iri = $$urn:kk:agent:environment$$)").fetchone()[0]
+    if not m: raise SystemExit("not installed as a kernel module (scripts/kernel.sh init)")
+    print(f"{s} signals, {q} queues, {a} actuators, {w} proposals waiting in the review lane")' 2>&1); then
+  ok "environment $out (a kernel module, S-219: decided in the desktop's Review)"
 else bad "the environment: $(printf '%s\n' "$out" | tail -1) (bin/in-tools python3 scripts/db.py init)"; fi
 # Probe with a provider this machine has: Bifrost answers 400 for one it has none of, before it checks the key
 probe=openrouter/x:free; [ -z "$(env_value OPENROUTER_API_KEY)" ] && [ -n "$(env_value OLLAMA_URL)" ] && probe=ollama/x
@@ -66,13 +68,14 @@ for _ in $(seq 1 30); do
 done
 [ "$code" = "401" ] && ok "gateway     http://127.0.0.1:$(env_value GATEWAY_PORT)/ (Bifrost; a call without a key is refused)" || bad "the model gateway returned $code to a call without a key (scripts/logs.sh gateway)"
 # The local models (S-169), when COMPOSE_PROFILES in .env turns them on
+project=$(env_value COMPOSE_PROJECT_NAME); project=${project:-substrate}
 case ",$(env_value COMPOSE_PROFILES)," in *,llm,*)
   case "$running" in *-llm-*) ;; *) bad "service llm is not running (scripts/logs.sh llm)" ;; esac
-  if [ "$("$ENGINE" inspect -f '{{.State.Health.Status}}' substrate-llm-1 2>/dev/null)" = healthy ]; then
+  if [ "$("$ENGINE" inspect -f '{{.State.Health.Status}}' "$project-llm-1" 2>/dev/null)" = healthy ]; then
     ok "llm         $(env_value LLM_MODEL) on llama.cpp, at the gateway as local/$(env_value LLM_ALIAS)"
   else note "llm         not healthy yet (a large model takes minutes to load; scripts/logs.sh llm)"; fi
   if [ -n "$(env_value LLM_FAST_MODEL)" ]; then
-    if [ "$("$ENGINE" inspect -f '{{.State.Health.Status}}' substrate-llm-fast-1 2>/dev/null)" = healthy ]; then
+    if [ "$("$ENGINE" inspect -f '{{.State.Health.Status}}' "$project-llm-fast-1" 2>/dev/null)" = healthy ]; then
       ok "llm-fast    $(env_value LLM_FAST_MODEL) on llama.cpp, at the gateway as fast/$(env_value LLM_FAST_ALIAS)"
     else note "llm-fast    not healthy yet (scripts/logs.sh llm-fast)"; fi
   fi ;;
@@ -87,16 +90,19 @@ case "$hdr" in
 esac
 # The front door (S-199): Caddy to the kernel's shell, with the kernel's own security headers on it
 dport=$(env_value DESKTOP_PORT); dport=${dport:-8080}
-desk=http://127.0.0.1:$dport   # DESKTOP_PORT; the apps stay on 8081 to 8083, which apps.json names (S-200)
+gport=$(env_value DESKTOP_GATEWAY_PORT); gport=${gport:-8081}
+mport=$(env_value DESKTOP_MAPS_PORT); mport=${mport:-8082}
+rport=$(env_value DESKTOP_ROUTER_PORT); rport=${rport:-8083}
+desk=http://127.0.0.1:$dport   # DESKTOP_PORT; the apps on DESKTOP_GATEWAY_PORT, _MAPS_PORT, _ROUTER_PORT, which apps.json names (S-200)
 hdr=$(curl -s -D - -o /dev/null "$desk/ui/" 2>/dev/null | tr -d '\r')
 case "$hdr" in
-  *" 200 "*"frame-src http://127.0.0.1:8081 http://127.0.0.1:8082 http://127.0.0.1:8083;"*"frame-ancestors 'none'"*)
+  *" 200 "*"frame-src http://127.0.0.1:$gport http://127.0.0.1:$mport http://127.0.0.1:$rport;"*"frame-ancestors 'none'"*)
     ok "desktop     $desk/ (the kernel's shell; frames only the apps in deploy/caddy/apps.json; sign in: scripts/kernel.sh person NAME)" ;;
   *" 200 "*) bad "the kernel's shell answers at $desk/ui/ without its CSP or the apps' frame-src (deploy/caddy/Caddyfile)" ;;
   *) bad "the kernel's shell does not answer at $desk/ui/ (scripts/logs.sh caddy, scripts/logs.sh kernel)" ;;
 esac
 # Its framed apps (S-200): each on an origin of its own, framable by the desktop only, with no X-Frame-Options left
-for app in 8081:gateway 8082:maps 8083:mcp; do
+for app in $gport:gateway $mport:maps $rport:mcp; do
   hdr=$(curl -s -D - -o /dev/null "http://127.0.0.1:${app%%:*}/" 2>/dev/null | tr -d '\r')
   case "$hdr" in
     *[Xx]-[Ff]rame-[Oo]ptions*) bad "app ${app#*:} at :${app%%:*} still sends X-Frame-Options (deploy/caddy/Caddyfile)" ;;

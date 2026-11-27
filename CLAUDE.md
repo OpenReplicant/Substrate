@@ -16,21 +16,22 @@ The projects (S-209, S-212; `docs/framework.md`, `docs/repos.md`): **Morphogen**
 (the default distribution), **MetaSoar** (the research). A part of Substrate is a kernel module only when it needs the
 kernel; otherwise it is an Agent Skill, an MCP server, a compose service or an outside service (S-213). Every
 dependency is a contract, never another project's code. Name parts by their role and models by their alias (`fast`,
-`slow`, `cloud`), never by model. **The table below is what is in the tree today, before the parts move**
-(`docs/parts.md`). The old assistant was removed on 2026-11-23 (S-194); git keeps it.
+`slow`, `cloud`), never by model. **The table below is what is in the tree today; the environment, the channel and the router are in their types
+(S-219 to S-221), the rest moves as `docs/parts.md` says.** The old assistant was removed on 2026-11-23 (S-194); git keeps it.
 
 | Part | Where | Role |
 | --- | --- | --- |
 | The store | the Knowledge Kernel (S-153, S-154, S-156: the UI and the skills read it from the kernel's database `kernel`, the agent's tools are the kernel's MCP `substrate` profile; `scripts/kernel.sh`); the old `store` package is retired and its schema was dropped on 2026-11-23 (S-191; a dump is in `.state/backups/`) | Wikibase's data model with OpenWiki's pinned evidence (S-135, S-138): entities, statements with ranks, references, spans, revisions, a page per entity; the agent's tools over MCP, and maps, roles, interfaces and catalogs (S-139; the `map` and `catalog` skills) |
-| The real-time environment | `environment/` (schema `env` in `environment/sql/`, migrated by `environment/db.py`, the channel in `environment/channel.py`) on pgmq, in the kernel's database `kernel` (S-202, the kernel's D-126: one database) | signals logged whole and fanned out as topics, a queue per actuator behind its gate (`free`, `propose`, `deny`), the channel into Claude Code, archived only on `ack` (S-143) |
+| The real-time environment | `environment/`, a kernel module (S-219: `module.yaml`, `migration.sql`, installed by `scripts/kernel.sh init`; schema `env` in `environment/sql/`, migrated by `environment/db.py`; its service `environment/review.py`, compose `environment`) on pgmq, in the kernel's database `kernel` (S-202, the kernel's D-126: one database) | signals logged whole and fanned out as topics, a queue per actuator behind its gate (`free`, `propose`, `deny`); a proposed action waits in the kernel's review lane and is decided in the desktop's Review (S-219) |
+| The channel | `environment/channel.py`, an MCP server (stdio) a harness starts, as its own login `mcp_channel` (S-220) | an environment queue pushed into a Claude Code session, archived only on `ack` (S-143); acting through the gates |
 | The model gateway | container `gateway` (Bifrost), `scripts/gateway.py` | every model call goes through it with its caller's key and is recorded there, not by the caller (S-77) |
 | Local models | container `ollama`; containers `llm` and `llm-fast` (llama.cpp, profile `llm`) | Ollama for the store's embeddings; two chat models (S-169): the slow capable one, Inkling 2 Mini on the CPU, at the gateway as `local/slow`; the fast one, LFM3 1.7B on the GPU, as `fast/fast` (the alias names the role, not the model; Gemma is retired) |
 | Tools | `bin/`, container `substrate-tools` | the scripts' Python and gitleaks, run in a container as you (S-19) |
 | The UI | `ui/` (`ui/server.py`, `ui/static`), compose service `ui` on 127.0.0.1:8100 | the store's pages and maps as diagrams (S-140), read-only; v1's Workbench rebuilt, with no name of its own (S-141) |
-| The desktop | compose service `caddy` (`deploy/caddy/Caddyfile`, `deploy/caddy/apps.json`) on 127.0.0.1:8080 (`DESKTOP_PORT`), in front of the kernel's `kk serve`; its framed apps on 8081 (the gateway's dashboard) and 8082 (the map pages) | the kernel's UI shell as a desktop (the kernel's D-127): a launcher and windows for search, review, change sets, the graph, the view modules and framed apps, each app on an origin of its own with its headers rewritten in the proxy; MCP over HTTP at `/mcp`; a person signs in with `scripts/kernel.sh person NAME` (S-199, S-200) |
-| The MCP router | `mcp-router/` (Go), compose services `mcp-router` (its endpoint and page, 127.0.0.1:8083 through Caddy) and one connector per server (`mcp-kernel`); its rules in `environment/sql/010_mcp.sql` | one MCP endpoint for agents and the desktop in front of every connected MCP server; each server and tool registered in the environment, each tool an actuator behind its gate, each call an action recorded and, when it changes the world, waiting for a person on the router's page (S-203, S-205) |
+| The desktop | compose service `caddy` (`deploy/caddy/Caddyfile`, `deploy/caddy/apps.json`) on 127.0.0.1:8080 (`DESKTOP_PORT`), in front of the kernel's `kk serve`; its framed apps on 8081 (the gateway's dashboard), 8082 (the map pages) and 8083 (the router; `DESKTOP_GATEWAY_PORT`, `DESKTOP_MAPS_PORT`, `DESKTOP_ROUTER_PORT`, S-222) | the kernel's UI shell as a desktop (the kernel's D-127): a launcher and windows for search, review, change sets, the graph, the view modules and framed apps, each app on an origin of its own with its headers rewritten in the proxy; MCP over HTTP at `/mcp`; a person signs in with `scripts/kernel.sh person NAME` (S-199, S-200) |
+| The MCP router | `mcp-router/` (Go), compose services `mcp-router` (its endpoint and page, 127.0.0.1:8083 through Caddy) and one connector per server (`mcp-kernel`); its registry and rules in the environment module's schema (`environment/sql/010_mcp.sql` to `013`) | one MCP endpoint for agents and the desktop in front of every connected MCP server; each server and tool registered in the environment, each tool an actuator behind its gate, each call an action recorded and, when it changes the world, waiting for a person in the desktop's Review (S-203, S-205, S-219) |
 | The desktop and the assistant | `desktop/` (`server.py`; the Assistant view module, mounted into the kernel's container), compose services `desktop` and its connector `mcp-desktop`; `environment/sql/011_desktop.sql`; `scripts/assistant.sh` | the conversation between a person and the agents as signals: the person talks in the desktop's Assistant window, an agent (a Claude Code session started by `scripts/assistant.sh`) hears it on the channel and answers, shows and asks through the router (S-206) |
-| Images | `.github/workflows/images.yml`, `image_ref` in `scripts/lib.sh` | `ghcr.io/openreplicant/substrate-{db,tools}` and the kernel's image are pulled (tags `SUBSTRATE_IMAGE_TAG`, `KERNEL_IMAGE_TAG`); compose keeps `build:` as the fallback (S-167) |
+| Images | `.github/workflows/images.yml`, `image_ref` in `scripts/lib.sh` | `ghcr.io/openreplicant/substrate-{db,tools,mcp-router}` and the kernel's image are pulled (tags `SUBSTRATE_IMAGE_TAG`, `KERNEL_IMAGE_TAG`; by default the release in `VERSION` and the kernel release it pins, S-222; `main` follows the main branches); compose keeps `build:` as the fallback (S-167) |
 | Glue | `scripts/`, `deploy/` | brings the parts up and connects them |
 
 `deploy/ontop` (SPARQL) is kept and not started yet.
@@ -47,7 +48,7 @@ dependency is a contract, never another project's code. Name parts by their role
    lists every setting, empty; `deploy/secrets.txt` says how each secret is made.
 5. **One tested path.** Compose with Podman. Scripts call only the runtime's four verbs (`rt_up`, `rt_down`,
    `rt_status`, `rt_logs`) and keep engine-specific code in `scripts/lib.sh`.
-6. **Nothing installed on the host** beyond git, python3 (standard library), the engine and its compose, Claude Code,
+6. **Nothing installed on the host** beyond git, python3 (standard library), curl, the engine and its compose, Claude Code,
    and uv, which Claude Code plugins such as Morphogen's run their MCP servers with (S-196). A tool goes into a
    container (`deploy/tools/Containerfile`).
 7. **Licences:** permissive or LGPL for what the repository contains or links into Substrate's code. A GPL part may
@@ -76,12 +77,12 @@ scripts/up.sh              # the stack (db, gateway, ollama, ui), the tools cont
 scripts/check.sh           # is everything up and wired
 scripts/test.sh [FILE...]  # the test suites, in the tools container (the kernel's in its image, the router's Go tests in Go's)
 scripts/build.sh [db|tools|kernel]   # none: pull published images, build what did not pull; SUBSTRATE_BUILD=1 builds all
-scripts/logs.sh SERVICE    # db, gateway, ollama, kernel, ui, caddy, mcp-router, mcp-kernel, llm, llm-fast
+scripts/logs.sh SERVICE    # db, gateway, ollama, kernel, environment, ui, caddy, mcp-router, mcp-kernel, llm, llm-fast
 scripts/tools.sh start|stop|status
-scripts/kernel.sh init|catalog|login NAME|mcp NAME|person NAME   # the Knowledge Kernel: its schema, the catalog into it, an agent's login, its MCP server, a person's sign-in
+scripts/kernel.sh init|catalog|login NAME|mcp NAME|person NAME   # the Knowledge Kernel: its schema and Substrate's modules, the catalog into it, an agent's login, its MCP server, a person's sign-in
 scripts/assistant.sh       # the assistant: a Claude Code session you talk to in the desktop's Assistant window (S-206)
 scripts/down.sh [--volumes]   # stop (deleting data asks first)
 python3 scripts/gateway.py render|keys   # the gateway's config from .env and its callers
 bin/in-tools python3 scripts/db.py init   # the kernel's database and the environment's schema in it (environment/sql/)
-bin/in-tools python3 scripts/env.py waiting|decide|publish|actuators|gate|queues   # the environment, as a person
+bin/in-tools python3 scripts/env.py waiting|publish|actuators|gate|queues   # the environment, as a person (proposals are decided in the desktop's Review, S-219)
 ```
