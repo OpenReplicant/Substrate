@@ -409,11 +409,29 @@ other actions also scored as correct where two are defensible (`also`), and whet
 
 ### PM-1a: the replay
 
-`scripts/trials/manager/replay.py` (to write) starts the manager with `claude -p` and the arm's model, the same
-flags as `scripts/manager.sh`, and a stub portfolio server (`stub_pm.py`, to write) that serves the fixture and
-records every tool call, but starts nothing. Each scenario runs in a fresh session, three times per arm, so a
-scenario scores 0, 1/3, 2/3 or 1. It needs no kernel, supervisor or workers, so it can run as soon as the manager's
-prompt exists (build step 5), before the rest is built.
+Built (S-223), in `scripts/trials/manager/`, standard library only, run with `python3 -I`:
+
+- `stub_pm.py`: an MCP server (stdio) with the manager's tools only (`pm_portfolio`, `kernel_search`, `pm_project_note`,
+  `pm_worker_start`, `pm_worker_message`, `pm_worker_stop`, `pm_decision_open`, `desktop_ask`, `desktop_say`), over a stub
+  portfolio (`scenarios.json`'s portfolio plus `portfolio_fixture.json`). A start records the call and returns a worker id;
+  no tool edits a file or runs a command. Every call and its arguments go to a JSONL trace.
+- `manager.md`: the manager's prompt, written from section 2. `drivers.py`, `claude_driver.py`: the drivers, one
+  interface: `claude-code` (a stripped-down `claude -p` on the subscription login; flags in the class's docstring, no
+  built-in tool, `--strict-mcp-config`, `--setting-sources local`, an empty scratch directory), `openai-compatible`
+  (a tool loop over llama.cpp's `/v1/chat/completions`), `choice` (d1-2B's `/v1/systemone`, project and action only).
+- `score.py`: the metrics and their definitions (its docstring), paired bootstrap intervals, the falsifier.
+  `replay.py`: `run`, `rescore`, `judge` (the optional LLM judge of `brief_must_carry`, off by default), `report`.
+- Tests: `scripts/tests/test_manager_trial.py`, with a fake driver (no model calls).
+
+    python3 -I scripts/trials/manager/replay.py run --driver claude-code --model haiku --label haiku
+    python3 -I scripts/trials/manager/replay.py run --driver claude-code --model sonnet --label sonnet
+    python3 -I scripts/trials/manager/replay.py report scripts/trials/manager/results/pm1a-DATE-haiku.json \
+        scripts/trials/manager/results/pm1a-DATE-sonnet.json --out scripts/trials/manager/results/pm1a-DATE.md
+
+A scenario's message goes into a fresh session against a fresh stub portfolio, one at a time; `run` stops at a rate-limit
+error with what it has (`--resume` continues). Runs: the first results (`results/pm1a-2026-11-27.md`) are one run per
+scenario, not three. Labels were not changed; the scorer's reading of them (when a closing text counts as a reply, what
+`escalated` means, that `ack` and `project: null` are not scored on project) is in `score.py`'s docstring.
 
 ### PM-1b: the live run
 
