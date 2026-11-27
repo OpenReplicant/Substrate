@@ -14,12 +14,12 @@ who=person_$(printf '%s' "${1:-owner}" | tr '-' '_')
 dir="$ROOT/.state/assistant"
 mkdir -p "$dir"; chmod 700 "$dir"; umask 077
 KK_JWT_SECRET=$(env_value KK_JWT_SECRET); export KK_JWT_SECRET
-compose run --rm --no-deps -T kernel-init kk agent add assistant --no-login >/dev/null
-token=$(compose run --rm --no-deps -T -e KK_JWT_SECRET kernel-init kk token agent_assistant --days 1 2>/dev/null | tail -1)
-[ -n "$token" ] || { echo "could not mint the assistant's token (scripts/logs.sh kernel)" >&2; exit 1; }
 # the channel's own login (S-220), for its MCP entry; read from the environment below, never printed
 CHANNEL_PW=$(env_value MCP_CHANNEL_DB_PASSWORD); CHANNEL_PORT=$(env_value DB_PORT); export CHANNEL_PW CHANNEL_PORT
 [ -n "$CHANNEL_PW" ] || { echo "MCP_CHANNEL_DB_PASSWORD is empty: scripts/up.sh makes it and the channel's login (S-220)" >&2; exit 1; }
+compose run --rm --no-deps -T kernel-init kk agent add assistant --no-login >/dev/null
+token=$(compose run --rm --no-deps -T -e KK_JWT_SECRET kernel-init kk token agent_assistant --days 1 2>/dev/null | tail -1)
+[ -n "$token" ] || { echo "could not mint the assistant's token (scripts/logs.sh kernel)" >&2; exit 1; }
 TOKEN=$token ROOT=$ROOT WHO=$who python3 - "$dir/mcp.json" <<'PY'
 import json, os, sys
 cfg = {"mcpServers": {
