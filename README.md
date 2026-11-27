@@ -33,9 +33,9 @@ Morphogen judges the result (S-211).
 **Where it stands (2026-11-27):** the re-cut's kit is done: Morphogen maps a made-up firm from its material to a
 report of implementation projects with no kernel and no stack (Morphogen #102 to #104; S-216, S-217). Substrate uses
 Morphogen's plugin like any user (pinned to `d945a9c`, plugin 0.9.0). The stack runs on the kernel at `e4ed8e2`,
-and a person has talked to the assistant in the kernel's desktop (S-208, S-218). Next is the re-cut's step 2:
-Substrate's parts in their types (the environment as a kernel module, the channel and the router as MCP servers on
-it, the assistant's view installed into the kernel's desktop), then the default distribution.
+and a person has talked to the assistant in the kernel's desktop (S-208, S-218). The re-cut's step 2 is done (S-219 to S-221): the environment is a kernel
+module whose proposals a person decides in the kernel's review lane, the channel and the router are MCP servers on
+it, and the assistant's view is already a view in the kernel's desktop. Next is the default distribution.
 
 ## Preview: what works, what is moving
 
@@ -49,17 +49,18 @@ release 10 checks, the router's Go tests):
   modules, and the framed apps: the gateway's dashboard, Substrate's map pages and the MCP router's page;
 - a person's sign-in (`scripts/kernel.sh person NAME`) and an agent's own login with the kernel's MCP tools
   (`scripts/kernel.sh login NAME`);
+- the environment as a kernel module: a proposed action (a gated tool call among them) waits in the kernel's review
+  lane, and a person decides it in the desktop's Review with everything else the kernel holds for review (S-219);
 - the MCP router: one endpoint in front of the kernel's and the desktop's tools, read-only tools free, every tool that
-  writes waiting for a person on the router's page;
+  writes waiting for a person's decision;
 - the assistant (`scripts/assistant.sh`): a Claude Code session you talk to in the desktop's Assistant window;
 - the model gateway (Bifrost) with a key per caller and every call logged without content, and Ollama behind it;
 - Morphogen's plugin (map, research, catalog, optimise) in Claude Code, on Substrate's own catalog.
 
 **Moving** (expect changes before 0.1.0):
 
-- `environment/` becomes a kernel module whose gates use the kernel's review lane; the channel and `mcp-router/`
-  become MCP servers on it; `desktop/` becomes a view installed into the kernel's desktop (`docs/parts.md`);
-- `ui/` (the old store pages, on :8100) is retired once the kernel's views and a map viewer do its job;
+- the assistant's view gets what it lacks (a chat library) when its next use case asks (S-221);
+- `ui/` (the old store pages, on :8100) is kept for now; it goes once the kernel's views and a map viewer do its job;
 - the kernel's Substrate-specific modules (`encoder-substrate`, `view-substrate`, kernel-mcp's `substrate` profile)
   are retired once Morphogen's file-based skills replace them; `scripts/kernel.sh mcp` uses that profile today;
 - the compose file becomes the default distribution: the kernel's core and Substrate's modules installed onto it.
@@ -79,9 +80,9 @@ Podman compose, published on 127.0.0.1 only.
 | --- | --- | --- |
 | The kernel | the Knowledge Kernel's image (`ghcr.io/openreplicant/kernel`), its database `kernel` in the stack's Postgres (`deploy/postgres`), `scripts/kernel.sh` | Knowledge with provenance: every claim attributed, cited and reviewed; logins and row-level security; the record. Substrate's catalog (`catalog/`) is read into it as Backstage entities |
 | The desktop | service `caddy` (`deploy/caddy/`) in front of the kernel's `kk serve`, http://127.0.0.1:8080/ | The kernel's UI shell as a desktop: a launcher and windows, framed apps each on an origin of its own (:8081 to :8083), MCP over HTTP at `/mcp` |
-| The environment | `environment/`, schema `env` in the kernel's database | Signals logged whole and fanned out as pgmq topics; one queue per actuator behind a gate (`free`, `propose`, `deny`); proposals wait for a person; every action recorded |
-| The channel | `environment/channel.py` | Pushes an environment's signals into a live Claude Code session; a signal not acknowledged comes back |
-| The MCP router | `mcp-router/` (Go), services `mcp-router`, `mcp-kernel`, `mcp-desktop`; http://127.0.0.1:8083/ | One MCP endpoint for agents in front of every connected MCP server; each tool an actuator behind its gate, each call recorded, writers waiting for a person on its page |
+| The environment | `environment/`, schema `env`, a kernel module (service `environment`) | Signals logged whole and fanned out as pgmq topics; one queue per actuator behind a gate (`free`, `propose`, `deny`); a proposal waits in the kernel's review lane and a person decides it in the desktop's Review, with everything else the kernel holds for review; every action recorded (S-219) |
+| The channel | `environment/channel.py`, an MCP server | Pushes an environment's signals into a live Claude Code session, as a login of its own; a signal not acknowledged comes back (S-220) |
+| The MCP router | `mcp-router/` (Go), services `mcp-router`, `mcp-kernel`, `mcp-desktop`; http://127.0.0.1:8083/ | One MCP endpoint for agents in front of every connected MCP server; each tool an actuator behind its gate, each call recorded, writers waiting for a person's decision in the desktop's Review |
 | The assistant | `desktop/`, services `desktop`, `mcp-desktop`; `scripts/assistant.sh` | The conversation between a person and the agents as signals: you talk in the desktop's Assistant window, a Claude Code session hears it on the channel and answers through the router |
 | The gateway | `gateway` (Bifrost), `scripts/gateway.py` | Every model call goes through it under its caller's key and is logged there, not by the caller. Keys decide which providers a caller may reach; a meter counts a judged run's calls (S-193) |
 | The local models | `ollama`; services `llm` and `llm-fast` (llama.cpp, profile `llm`) | Ollama for embeddings; two of your own GGUFs (S-169): a slow capable one on the CPU (`slow`) and a small fast one on the GPU (`fast`) |

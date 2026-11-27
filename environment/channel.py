@@ -10,7 +10,10 @@ with a visibility timeout (CHANNEL_VT seconds, 300 by default) and archived only
 one left unacknowledged becomes visible again and is delivered again, with its delivery count.
 
 Tools: ack (archive handled messages), act (call an actuator through its gate), escalate (to the level above).
-The database is ENV_URL or STORE_URL, else the kernel's database from .env (S-202). MCP 2025-11-25 (and 2025-06-18 if asked): newline-delimited
+It is an MCP server on the environment module (S-220): it connects with DATABASE_URL, the channel's own login
+(mcp_channel, role env_agent: it publishes, acts through the gates and reads only the queues it subscribed; it cannot
+decide a proposal or change a gate). Without it, ENV_URL or STORE_URL, else the kernel's database from .env as a
+superuser, for a person at the command line (S-202). MCP 2025-11-25 (and 2025-06-18 if asked): newline-delimited
 JSON-RPC on stdin and stdout, logs on stderr.
 """
 from __future__ import annotations
@@ -24,7 +27,12 @@ import time
 import psycopg
 
 from environment import Env
-from environment.db import database_url
+from environment.db import database_url as admin_or_env_url
+
+
+def database_url() -> str:
+    """The channel's own login (DATABASE_URL) when it is given one, else the environment's address (environment.db)."""
+    return os.environ.get("DATABASE_URL") or admin_or_env_url()
 
 VERSIONS = ("2025-11-25", "2025-06-18")           # MCP protocol versions it speaks, newest first
 
@@ -39,7 +47,8 @@ TOOLS = [
      "not delivered again. An unacknowledged message comes back after the visibility timeout.",
      "inputSchema": obj({"msg_ids": {**A, "items": I}}, ["msg_ids"])},
     {"name": "act", "description": "Call an actuator (<env>.<name>) with an input object, through its gate: free is queued "
-     "at once, propose waits for a person (the outcome arrives as an <env>.review.decided event), deny is refused.",
+     "at once, propose waits for a person's decision in the desktop's Review (the outcome arrives as an "
+     "<env>.review.decided event), deny is refused.",
      "inputSchema": obj({"actuator": S, "input": {"type": "object"}}, ["actuator", "input"])},
     {"name": "escalate", "description": "Hand something you cannot or should not handle to the level above (<env>.escalate), "
      "saying what and why.", "inputSchema": obj({"env": S, "text": S}, ["env", "text"])},

@@ -105,6 +105,27 @@ services:
     environment:
       KK_ADMIN_URL: postgresql://postgres:${POSTGRES_PASSWORD:?set in .env}@db:5432/kernel
       KK_AUTHENTICATOR_PASSWORD: ${KK_AUTHENTICATOR_PASSWORD:?set in .env}
+    # Substrate's kernel modules, for `kk module install` (scripts/kernel.sh init; S-219)
+    volumes:
+      - ../environment:/substrate/environment:ro
+    depends_on:
+      db: {condition: service_healthy}
+
+  # The environment as a kernel module (S-219; environment/module.yaml): a proposed action waits in the kernel's review
+  # lane, a person decides it in the desktop's Review, and this service records that decision on the action. In the
+  # kernel's image, with kk.lib, as every kernel module: the kernel's login, switched to the module's role.
+  environment:
+    <<: *locked
+    image: ghcr.io/openreplicant/kernel:${KERNEL_IMAGE_TAG:-0.1.0}
+    command: ["python3", "-m", "environment.review"]
+    tmpfs: [/tmp]
+    environment:
+      DATABASE_URL: postgresql://kk_authenticator:${KK_AUTHENTICATOR_PASSWORD:?set in .env}@db:5432/kernel
+      KK_ROLE: kkm_environment
+      PYTHONPATH: /substrate
+      PYTHONDONTWRITEBYTECODE: "1"
+    volumes:
+      - ../environment:/substrate/environment:ro
     depends_on:
       db: {condition: service_healthy}
 

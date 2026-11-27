@@ -1,0 +1,19 @@
+# A catalog entry (S-176): Backstage's entity format, read into the kernel by encoder-backstage.
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: channel
+  title: The channel into a harness
+  description: An MCP server (stdio) a harness session starts; it pushes a subscribed queue of the environment module as channel events, archived only on ack, and acts through the gates, as its own login (mcp_channel, role env_agent).
+  annotations:
+    substrate.dev/licence: Apache-2.0
+    substrate.dev/source: environment/channel.py
+    substrate.dev/decision: S-143, S-144, S-220
+spec:
+  type: service
+  lifecycle: experimental
+  owner: owner
+  system: substrate
+  dependsOn:
+  - resource:db
+  - component:environment
