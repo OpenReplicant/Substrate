@@ -33,7 +33,8 @@ func (s *Server) apiRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/login", s.login)
 	mux.Handle("GET /api/tools", s.auth(http.HandlerFunc(s.apiTools)))
 	mux.Handle("GET /api/calls", s.auth(http.HandlerFunc(s.apiCalls)))
-	mux.Handle("POST /api/decide", s.auth(http.HandlerFunc(s.apiDecide)))
+	// No decide: a waiting call is decided by a person in the kernel's review lane (the desktop's Review), and the
+	// environment module records that decision on the action (S-219). The router only shows what waits.
 }
 
 func writeJSON(w http.ResponseWriter, code int, v any) {
@@ -86,26 +87,4 @@ func (s *Server) apiCalls(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, 200, b)
-}
-
-func (s *Server) apiDecide(w http.ResponseWriter, r *http.Request) {
-	role, _ := r.Context().Value(roleKey{}).(string)
-	if !isPerson(role) {
-		writeJSON(w, 403, map[string]string{"error": "only a person decides"})
-		return
-	}
-	var in struct {
-		Action  int64  `json:"action"`
-		Approve bool   `json:"approve"`
-		Reason  string `json:"reason"`
-	}
-	if json.NewDecoder(http.MaxBytesReader(w, r.Body, 16384)).Decode(&in) != nil || in.Action <= 0 {
-		writeJSON(w, 400, map[string]string{"error": "bad request"})
-		return
-	}
-	if err := s.store.Decide(r.Context(), in.Action, in.Approve, role, in.Reason); err != nil {
-		writeJSON(w, 400, map[string]string{"error": pgMessage(err)})
-		return
-	}
-	writeJSON(w, 200, map[string]any{"ok": true})
 }

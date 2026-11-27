@@ -9,8 +9,9 @@ It should:
 - apply its schema once (environment/sql/, environment/db.py), and again without change
 - give an MCP tool its gate from its annotations when registered, follow them while no person has set the gate (both
   directions, a deployment's policy first), and keep a gate a person set
-- as the channel (stdio MCP): declare claude/channel, push a subscribed signal as notifications/claude/channel,
-  push it again while unacknowledged, stop once ack is called, and act through the gates
+- as the channel (stdio MCP), on a login of its own (role env_agent, S-220): declare claude/channel, push a subscribed
+  signal as notifications/claude/channel, push it again while unacknowledged, stop once ack is called, and act through
+  the gates; never decide a proposal, change a gate or read another's queue
 
     scripts/test.sh scripts/tests/test_environment.py
 """
@@ -164,7 +165,7 @@ class Proc:
     def __init__(self, url, vt):
         self.p = subprocess.Popen([sys.executable, "-m", "environment.channel", "chan", "home.owner.*"],
                                   stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, cwd=ROOT,
-                                  env={**os.environ, "STORE_URL": url, "CHANNEL_VT": str(vt), "CHANNEL_POLL": "0.2"})
+                                  env={**os.environ, "DATABASE_URL": url, "CHANNEL_VT": str(vt), "CHANNEL_POLL": "0.2"})
         self.q = queue.Queue()
         threading.Thread(target=lambda: [self.q.put(json.loads(l)) for l in self.p.stdout], daemon=True).start()
 
@@ -191,6 +192,24 @@ class Proc:
 
 
 def channel(e: Env, url: str):
+    # the channel's own login, as scripts/db.py makes mcp_channel: role env_agent (roles are the cluster's: dropped after)
+    login, pw = f"chan_test_{os.getpid()}", os.urandom(12).hex()
+    e.c.execute(f"create role {login} login password '{pw}' in role env_agent")
+    own = url.replace(url.split("//", 1)[1].split("@", 1)[0], f"{login}:{pw}", 1)
+    try:
+        with psycopg.connect(own, autocommit=True) as c2:
+            mine = Env(c2)
+            a, _ = e.act("home.budget", {"cap_usd": 2}, "claude-code")
+            check("channel login: may not decide a proposal", refused(lambda: mine.decide(a, True, "owner"), "permission denied"))
+            check("channel login: nor change a gate", refused(lambda: mine.actuator("home.budget", "free", "x"), "permission denied"))
+            check("channel login: nor read a queue it did not subscribe", refused(lambda: mine.read("review", 0), "may not read"))
+        channel_session(e, own)
+    finally:
+        e.c.execute(f"drop owned by {login}")
+        e.c.execute(f"drop role {login}")
+
+
+def channel_session(e: Env, url: str):
     ch = Proc(url, vt=2)
     try:
         ch.send({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {

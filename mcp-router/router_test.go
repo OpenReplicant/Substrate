@@ -152,9 +152,6 @@ func (f *fakeStore) Outcome(_ context.Context, id int64) (*Outcome, error) {
 }
 func (f *fakeStore) ToolsJSON(context.Context) ([]byte, error)      { return []byte(`[]`), nil }
 func (f *fakeStore) CallsJSON(context.Context, int) ([]byte, error) { return []byte(`[]`), nil }
-func (f *fakeStore) Decide(_ context.Context, id int64, approve bool, person, reason string) error {
-	return nil
-}
 func (f *fakeStore) finish(id int64, status string, result string) {
 	f.mu.Lock()
 	o := f.outcomes[id]
@@ -276,7 +273,7 @@ func TestAPIAndHeaders(t *testing.T) {
 			t.Errorf("%s: %d", p, r.StatusCode)
 		}
 	}
-	// an agent role may read but not decide
+	// an agent role may read; no one decides here (the kernel's review lane does, S-219)
 	agent := mintToken("agent_a", secret, time.Minute, time.Now())
 	if r := get("/api/calls?limit=5", agent); r.StatusCode != 200 {
 		t.Errorf("calls: %d", r.StatusCode)
@@ -292,12 +289,9 @@ func TestAPIAndHeaders(t *testing.T) {
 		}
 		return r
 	}
-	if r := post("/api/decide", `{"action":1,"approve":true}`, agent); r.StatusCode != 403 {
-		t.Errorf("agent decide: %d", r.StatusCode)
-	}
 	person := mintToken("person_ann", secret, time.Minute, time.Now())
-	if r := post("/api/decide", `{"action":1,"approve":true}`, person); r.StatusCode != 200 {
-		t.Errorf("person decide: %d", r.StatusCode)
+	if r := post("/api/decide", `{"action":1,"approve":true}`, person); r.StatusCode != 404 && r.StatusCode != 405 {
+		t.Errorf("person decide on the router: %d, want none (decided in the kernel's review lane)", r.StatusCode)
 	}
 	// login
 	r = post("/api/login", `{"name":"ann","password":"pw"}`, "")

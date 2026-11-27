@@ -1,0 +1,51 @@
+# Module manifest — schema: kernel/schemas/module.schema.json (the kernel's). Substrate's environment as a kernel module
+# (S-219; S-213: a part is a kernel module when it needs the kernel: its own role, its data in the kernel's database,
+# the review lane). Installed by `scripts/kernel.sh init` (`kk module install`), its service is compose's `environment`.
+id: urn:kk:module:environment
+name: 'Environment: signals, actuators behind gates, the record'
+version: 0.1.0
+description: 'The live environment (schema env, environment/sql/, on pgmq): signals logged whole and fanned out as
+  topics, one queue per actuator behind its gate (free, propose, deny), every call an action recorded whole. A proposed
+  action waits in the kernel''s review lane: the module submits it as a change set (a sosa:Actuation with its actuator,
+  its caller and its input), a person approves or rejects it in the desktop''s Review, and the module records that
+  decision on the action, which is then queued or refused. The channel and the MCP router are MCP servers on it.'
+license: Apache-2.0
+kind: control
+slots:
+- trigger
+- actuator
+protected: true
+agent:
+  iri: urn:kk:agent:environment
+  db_role: kkm_environment
+  member_of:
+  - kk_agent
+clearance:
+  write:
+  - urn:kk:scope:default
+runtime:
+  type: python-service
+  entrypoint: python3 -m environment.review
+  env:
+    DATABASE_URL: the kernel's login (kk_authenticator), which switches to kkm_environment
+    KK_ROLE: kkm_environment
+    KK_SWEEP_SECONDS: how often it looks at the review lane without a notification (default 5)
+requires:
+- slot: review-lane
+accepts:
+- 'env.action (a proposed action: its actuator, input and caller)'
+- 'change_set (its own, decided in the review lane)'
+produces:
+- add_claim
+- 'http://www.w3.org/ns/sosa/Actuation (rdf:type; sosa:madeByActuator the actuator, as:actor the caller, rdfs:label, dcterms:description the input)'
+- 'env.decide (the reviewer''s decision on the action)'
+triggers:
+- type: notify
+  spec: env_action
+- type: notify
+  spec: kernel_change_set
+- type: schedule
+  spec: every KK_SWEEP_SECONDS (a review decision sends no notification)
+mcp:
+  expose: []
+migration: migration.sql

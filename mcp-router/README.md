@@ -1,8 +1,9 @@
 # mcp-router
 
 Substrate's MCP router (S-203: modules run on their own and meet over MCP; S-205: the router's rules live in Postgres,
-its edge and connectors are processes outside it). One static binary, two modes. The rules (gates, the record, who
-decides) are the `env.mcp_*` functions in `environment/sql/010_mcp.sql`; the binary holds none of them.
+its edge and connectors are processes outside it). One static binary, two modes. The rules (gates, the record) and the registry
+are the `env.mcp_*` functions and tables of the environment module's schema (`environment/sql/010_mcp.sql` to `013`); the binary
+holds none of them.
 
 ## `mcp-router serve`: the edge
 
@@ -10,8 +11,10 @@ decides) are the `env.mcp_*` functions in `environment/sql/010_mcp.sql`; the bin
   at that moment, for the caller in its token). Tools are named `<server>_<tool>`, plus `router_outcome {action}`.
   A call goes through `env.mcp_call`; the router waits (LISTEN `env_action`, one listener for all waits) up to
   `WAIT_SECONDS` for it to end, else answers that it waits for approval.
-- `/api/login`, `/api/tools`, `/api/calls`, `/api/decide`: the JSON API of the desktop page. Sign-in opens a Postgres
-  connection as `person_<name>` with the password and, if it works, mints an 8-hour token. Only `person_` roles decide.
+- `/api/login`, `/api/tools`, `/api/calls`: the JSON API of the desktop page. Sign-in opens a Postgres connection as
+  `person_<name>` with the password and, if it works, mints an 8-hour token. The router decides nothing: a call that
+  waits is decided by a person in the kernel's review lane (the desktop's Review), where the environment module puts
+  it and from which it records the decision (S-219); the page shows what waits.
 - `/`: the page (embedded; no inline script or style, no CDN). `/healthz`: `ok`.
 - Every request to `/mcp` and `/api` (but login) needs `Authorization: Bearer <HS256 JWT>` made as the Knowledge
   Kernel makes them (`repos/kernel/kk/cli.py mint`): claims `role`, `iat`, `exp`.

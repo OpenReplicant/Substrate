@@ -24,6 +24,7 @@ spec:
   - ./component-caddy.yaml
   - ./component-desktop.yaml
   - ./component-environment.yaml
+  - ./component-channel.yaml
   - ./component-gateway.yaml
   - ./component-kernel-catalog.yaml
   - ./component-kernel-init.yaml
