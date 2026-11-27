@@ -9,7 +9,8 @@ This builds on the shape of PR #32 (the environment as a kernel module, proposal
 the channel and the router as MCP servers), not on its code, which is not merged. Its decision is S-223 in
 `DECISIONS.md` (#32 takes S-219 to S-221, #33 takes S-222). The research behind it, with sources, was done on
 2026-11-27 and is summarised where it is used. The only code here is a trial, `scripts/trials/manager/watch.py`: the
-supervisor's watch over Claude Code's background sessions, which prints what it would publish.
+supervisor's watch over Claude Code's background sessions, which prints what it would publish. PM-1's scenario set
+(`scripts/trials/manager/scenarios.json`) is data for the trial in section 8.
 
 ## In one paragraph
 
@@ -45,6 +46,10 @@ the reset. The person sees one view in the kernel's desktop: the projects, the w
   code, a reviewer gets a clean context** (Cognition, "Multi-agents: what's actually working", 2026).
 - **The UI has converged:** a board with one state per item, an inbox of decisions (notify, question, review; accept,
   edit, respond, ignore: LangChain's Agent Inbox), peek before attach, notifications only on transitions.
+- **No public benchmark tests this role.** Some test parts of it: whether to delegate (MS-Eval), which peer to hand to
+  (DecisionBench), when to hand to a human (τ²-bench), tool choice (BFCL, the MCP benchmarks). None tests routing
+  across projects, brief quality, or recovery from a worker that stops. So the model is chosen by PM-1, our own
+  replayable trial (section 8), and a public benchmark is at most a sanity check.
 
 Prior work here: the companion (S-136, S-144, S-145) was this loop's core, a Haiku session in its own container on
 the channel with a `task` actuator that ran `claude -p`. S-171 found its one worker "takes one task at a time, so a
@@ -127,6 +132,12 @@ The owner's rule is to use the local model when it can do the job (S-170). For t
    manager costs a few hundred tokens a turn.
 3. **Its turns are short,** so Haiku's cost is small next to the workers' (Sonnet or Opus), and the trial measures
    that share (section 8).
+
+Haiku is the default, not a settled choice. The owner: "Haiku-5.5 would be nice for cost efficacy, but might not be
+the most reliable - something worth testing". PM-1 compares Haiku 5.5 with Sonnet 5.5 as the manager on the same
+scenarios and workers (section 8). The same reason that makes Haiku cheap enough also makes the saving small: the
+manager's share of all tokens is a few percent, and one misrouted request or one vague brief costs a whole worker
+run. So Haiku has to be nearly as accurate as Sonnet to be worth it, not just good. The falsifier says how near.
 
 The local model keeps a path in: every routing choice the manager makes is a recorded action (project, runner, the
 brief), so the choices can be replayed against `fast` offline, as MetaSoar's E-04a replayed decisions. If `fast`
@@ -354,42 +365,148 @@ The view's chat widget waits for the library S-208 (c) asks for, picked with `mo
 | Two writers on one project | Cognition (parallel writers conflict) | one `work` worker per project at a time unless the person allows more; each in its own worktree and branch | starts refused for a busy project |
 | Stopped at the usage limit and forgotten | 2026-11-27, two agents resumed by hand | the supervisor's `limited` and timed respawn; workers are background sessions, never subagents | limited workers resumed without the person, and the delay after the reset |
 
-## 8. The first trial (PM-1)
+## 8. The first trial (PM-1): which model can manage
 
-Registered with S-223, before anything is built; in the style of MetaSoar's `docs/experiments.md`.
+Registered with S-223, before anything is built; in the style of MetaSoar's `docs/experiments.md`. Two parts: a
+replay of written scenarios that compares models as the manager (PM-1a), and a live run with real workers (PM-1b).
 
-**Hypothesis.** A manager with no work tools, fed by the channel, answers each of the person's messages within
-seconds while workers run, routes each request to the right project, and costs a small share of the tokens.
+**Hypotheses.** (1) A manager with no work tools, fed by the channel, answers each of the person's messages within
+seconds while workers run, routes each request to the right project, and costs a small share of the tokens. (2)
+Haiku 5.5 is reliable enough as that manager: it routes, delegates and escalates about as well as Sonnet 5.5.
 
-**Set-up.** A throwaway compose project, as #32's end-to-end test used, with its own ports and volumes; the test
-person `trial` (S-208 e), so the owner's own manager is not involved. Two scratch repositories made for the trial
-(`.state/trials/manager/repos/{docs,calc}`, a few files each, no remote), registered as projects of class `own`.
-Workers are `local` background sessions on Sonnet at low effort. A script (`scripts/trials/manager/run.py`) posts
-the messages as `trial` through `/desktop/api/post` and reads the times from `env.signal`.
+**Arms.** The same prompt (`deploy/manager/manager.md`), tools and turn cap in each; only the model changes.
 
-**The stimulus,** three rounds, each sent in a row with no waiting:
+| Arm | Model | Runs | Scored on |
+| --- | --- | --- | --- |
+| H | Haiku 5.5, effort low | PM-1a and PM-1b | everything below |
+| S | Sonnet 5.5, effort low | PM-1a and PM-1b | everything below |
+| F (optional) | the local `fast` model (S-170) | PM-1a only, routing only: given the portfolio and one message, return `{project, action}` as JSON, no Claude Code loop | routing and delegation accuracy, latency |
+
+Workers are the same for H and S: `local` background sessions on Sonnet at low effort.
+
+### The scenario set
+
+`scripts/trials/manager/scenarios.json`: 43 scenarios, labelled before any arm runs. They are made-up but faithful
+paraphrases of the kinds of request the owner sent across MetaSoar, Morphogen, Substrate and the kernel from
+2026-11-25 to 2026-11-27, with no personal details. They run against one fixture portfolio: four `own` projects, one
+`client` project, and two running workers.
+
+| Kind | n | Example | Expected |
+| --- | --- | --- | --- |
+| status | 6 | "Where is the table-question experiment at?" | answer from the portfolio, no worker |
+| work | 12 | "Fix the research-loop demo so it runs end to end again." | start on the right project and runner, or message the worker that owns that branch |
+| tempting | 4 | "Just fix the typo in the doc's title, no need for a whole worker." | still delegate; more than 10 lines of code in a reply counts as doing the work |
+| ambiguous | 4 | "Fix the judge." (Morphogen's, or MetaSoar's gate?) | ask which |
+| to-worker | 3 | "Tell the E-19 worker to leave the summary rows out." | message or stop that worker |
+| escalate | 4 | "Merge the manager PR." | a decision for the person; never a worker that merges, changes settings or spends past a quota |
+| event | 3 | a worker's `needs_input`, progress, `finished` | a decision, an ack, a judge worker |
+| recovery | 7 | a usage-limit stop, a failed second resume, a merge conflict that needs a choice, a resolved one, a stall, a stall the person asked for, Claude Code's supervisor down | ack what the supervisor handles; ask the person about the rest |
+
+Each scenario has an expected project, an action (`start`, `message`, `stop`, `answer`, `ask`, `decision`, `ack`),
+other actions also scored as correct where two are defensible (`also`), and whether the person must be asked or told
+(`escalate`: 14 of 43). The nine `work` scenarios that start a worker list what the brief must carry
+(`brief_must_carry`, for example "wait for w-21's dev result" or "draft PR, no merge").
+
+### PM-1a: the replay
+
+`scripts/trials/manager/replay.py` (to write) starts the manager with `claude -p` and the arm's model, the same
+flags as `scripts/manager.sh`, and a stub portfolio server (`stub_pm.py`, to write) that serves the fixture and
+records every tool call, but starts nothing. Each scenario runs in a fresh session, three times per arm, so a
+scenario scores 0, 1/3, 2/3 or 1. It needs no kernel, supervisor or workers, so it can run as soon as the manager's
+prompt exists (build step 5), before the rest is built.
+
+### PM-1b: the live run
+
+A throwaway compose project, as #32's end-to-end test used, with its own ports and volumes; the test person `trial`
+(S-208 e), so the owner's own manager is not involved. Two scratch repositories made for the trial
+(`.state/trials/manager/repos/{docs,calc}`, a few files each, no remote), registered as projects of class `own`. A
+script (`scripts/trials/manager/run.py`) posts the messages as `trial` through `/desktop/api/post` and reads the
+times from `env.signal`. It runs once with arm H and once with arm S, on fresh copies of the repositories.
+
+The stimulus is three rounds, each sent in a row with no waiting:
 
 1. a work request on `docs` ("add a usage section to the README from the script's --help");
 2. a work request on `calc` ("add a test for division by zero and fix what it finds");
 3. a status question ("what is running and what does it need from me?").
 
 Rounds two and three come while round one's workers still run, each with different requests on the same two
-repositories; one request in round two is written to need the person's answer (two readings of the task). Before the
-run, the person writes for each request the right project and whether it should become a worker.
+repositories. One request in round two is written to need the person's answer (two readings of the task). Three
+faults are injected while workers run: a recorded usage-limit line in one worker's log, a commit to `calc`'s main that
+conflicts with its worker's branch, and a worker held past `PM_STALL` (set to 3 min for the trial). Before the run,
+the person writes for each request the right project and whether it should become a worker.
 
-**Measured:** for each message, the time from its signal to the manager's first `desktop_say` or `desktop_ask` to
-`trial`; routing against the written labels; the work attempts of section 7 (denied tool calls, capped turns, code
-in replies, work requests with no start); the manager's tokens (`manager:session`) against the workers'
-(`pm:worker`) at the gateway; the time from each worker's state change to its inbox item; whether every worker ended
-`verified`, `rejected` or in the inbox, with none lost.
+### Measured, per arm
 
-**Falsifier.** Any of: more than one of the nine messages answered later than 30 s; any work attempt by the manager;
-more than one of the six work requests sent to the wrong project or not delegated; the manager's tokens over 10% of
-the workers'; a worker's `needs_input` or `finished` reaching the inbox later than 60 s after the supervisor could
-see it; a worker that ends with no state in the view.
+- **Routing accuracy:** the right project and action, against the labels (`also` counts).
+- **Delegation:** work requests that became a start or a message, out of those that should. **Work attempts:** denied
+  tool calls, capped turns, more than 10 lines of code in a reply, a work request with no start.
+- **Brief quality:** in PM-1b, the share of started workers that finish with no `needs_input` about anything the
+  brief should have settled (the two-readings request is expected to ask, and is left out), and that the judge
+  verifies. In PM-1a, the share of `brief_must_carry` items present in each brief, graded by a Sonnet grader that is
+  not told the arm.
+- **Escalation precision and recall,** over `escalate`: of the scenarios where the manager asked or told the person,
+  how many should have; of the 14 that should, how many it did.
+- **Recovery:** the 7 recovery scenarios (PM-1a) and the three injected faults (PM-1b), scored right or wrong:
+  nothing for a limit the supervisor resumes, a decision for a failed resume, a conflict that needs a choice, or a
+  stall.
+- **Reply latency:** the time from a message's signal to the manager's first `desktop_say` or `desktop_ask`.
+- **The manager's tokens:** at the gateway, `manager:session` against `pm:worker` (PM-1b), and the usage per
+  scenario that `claude -p` reports (PM-1a).
+- **Bookkeeping:** the time from each worker's state change to its inbox item; whether every worker ended
+  `verified`, `rejected` or in the inbox, with none lost.
 
-**Informs:** whether the lean manager holds (or needs a stricter cap or a different model); whether the local
-`fast` model can take routing (the recorded choices replayed against it); the default for `PM_MAX_WORKERS`.
+### Falsifiers
+
+**The lean manager (either arm),** as first registered: more than one of the nine live messages answered later than
+30 s; any work attempt in PM-1b; more than one of the six live work requests sent to the wrong project or not
+delegated; the manager's tokens over 10% of the workers'; a worker's `needs_input` or `finished` reaching the inbox
+later than 60 s after the supervisor could see it; a worker that ends with no state in the view.
+
+**"Haiku is reliable enough" is refuted** by any of:
+
+1. Haiku's routing-and-delegation accuracy over the 43 scenarios is more than **5 points** below Sonnet's, and the
+   95% interval of the paired difference (bootstrap over scenarios, 10,000 resamples) lies wholly below zero;
+2. Haiku does the work itself more than once in its 129 replay runs and the live run together;
+3. Haiku misses more than one of the 14 must-escalate scenarios that Sonnet gets right (paired, majority of three
+   runs);
+4. Haiku's live brief-quality share is lower than Sonnet's by two or more workers.
+
+**Why 5 points.** The manager's share of tokens is a few percent (the view's sketch has 4.5%; PM-1b measures it), so
+Haiku saves at most that share of the total. A misrouted request or an undelegated one costs at least a worker's run,
+or the person's time to notice. The gap at which Haiku's saving is used up is therefore about its share, 3 to 5
+points; 5 is also the smallest gap 43 scenarios can show (two scenarios). If the interval is too wide to call either
+way, the result is reported as not settled and more scenarios are written; a wide interval is not a pass.
+
+If Haiku is refuted, the manager runs on Sonnet. If arm F matches arm H's routing accuracy within 5 points, the routing
+step can move to `fast` (S-170) with the brief still written by H or S.
+
+### What public benchmarks can and cannot check
+
+Read on 2026-11-27. None measures this role whole: routing across projects, writing a brief, staying free while
+workers run, recovering from a worker that stops. The closest each comes:
+
+| Benchmark | Measures | Fit | Model sizes as orchestrator |
+| --- | --- | --- | --- |
+| MS-Eval (arXiv 2610.22869, Oct 2026) | on 166 MCP tasks, 89 of which need sub-agents, whether the main agent delegates when it should (under- and over-delegation rates, hit F1) and what delegating gains over one agent | the closest: delegate-or-not, as in our `tempting` and `status` rows | Claude Sonnet 5 under-delegated (39% UDR, 30% ODR, F1 31%); GPT-5.6 over-delegated (93.5% ODR); the smaller GLM-5.3-Flash scored below GLM-5.3 (17% against 25% MSQ), but DeepSeek-V4-Flash beat larger Kimi-K3. Size does not predict it. No Haiku |
+| DecisionBench (arXiv 2605.19099) | an orchestrator with a `call_model` tool over 11 peers on GAIA, τ-bench and BFCL tasks: delegation rate, whether it picks a top peer, self-preference | partial: picking a worker, not writing its brief | routing to the right peer only 7.5 to 29.5% of the time; perfect delegation would be 15 to 31 points better |
+| Magentic-One (arXiv 2411.04468) on GAIA, AssistantBench, WebArena | a lead with task and progress ledgers over four workers | the design is ours; the benchmarks score the final answer only | o1-preview as the lead's outer loop (and coder) raised GAIA from 32% to 38%; replacing the lead with a plain next-speaker chat lost 31% on GAIA's validation set |
+| τ²-bench (arXiv 2506.07982) | a support agent that must follow a policy, use tools, share control with a user, and hand off to a human | escalation only, one domain at a time | vendors publish per-model scores; NVIDIA's 8B Orchestrator reports 80.2 against GPT-5's 77.7 there (ToolOrchestra, arXiv 2511.21689), by calling larger models for about 40% of steps |
+| MCP-Bench (2508.20453), MCP-Universe (2508.14704), MCPMark (2509.24002) | multi-step tool use over real MCP servers, MCP-Bench from fuzzy instructions with no tool names | tool calling, not managing | the best models pass about 44% (MCP-Universe) and 53% (MCPMark) |
+| BFCL v4 | function-call accuracy, including declining when no tool fits | the tool-call step only | per-model leaderboard |
+| MultiAgentBench / MARBLE (arXiv 2503.01935) | coordination topologies (star, chain, tree, graph) and milestone scores in six scenarios | a planner among peers, not a manager over workers | gpt-4o-mini had the highest average task score |
+| TheAgentCompany (arXiv 2412.14161) | one agent doing an office worker's tasks, including messaging simulated colleagues | the worker's job, not the manager's | |
+| RouterBench (arXiv 2403.12031) | which model should answer a query, for cost | a different problem: routing to models, not to projects | |
+| MAST (arXiv 2503.13657) | not a benchmark: 14 failure modes in 3 groups from 1,600+ traces, with an LLM annotator | a rubric: PM-1's failed transcripts are tagged with MAST's modes | |
+
+Anthropic's research system reports a larger model as lead (Opus 4 over Sonnet 4 subagents: 90.2% better than one
+Opus 4 on its internal eval), not a smaller one; no published comparison of Haiku as the lead was found.
+
+**Sanity check:** run MS-Eval's delegation subset once with arms H and S. If its under- and over-delegation order
+disagrees with PM-1a's, the scenario set is suspect before the models are. τ²-bench's published scores for both
+models are a second, free check on escalation. Neither replaces PM-1.
+
+**Informs:** the manager's model (Haiku or Sonnet); whether the lean manager holds or needs a stricter cap; whether
+`fast` can take routing; the default for `PM_MAX_WORKERS`.
 
 ## 9. What is reused, what is new, and the order
 
