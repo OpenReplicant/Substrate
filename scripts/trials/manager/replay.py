@@ -80,6 +80,9 @@ def run_all(driver, scenarios, portfolio, out_path, only=None, resume=False, log
             except drivers.RateLimited as e:
                 stopped = f"rate limit at {sc['id']}: {e}"
                 break
+            except Exception as e:  # a timeout or a dropped connection costs this scenario, not the run
+                res = {"final_text": "", "launch_ts": 0.0, "wall_s": 0.0, "tokens": drivers.tokens(), "offered_tools": [],
+                       "attempts": [], "error": f"{type(e).__name__}: {e}"[:300], "model": getattr(driver, "model", "")}
             trace = S.load_trace(trace_path)
         sco = S.score(sc, pf, trace, res)
         runs.append({"id": sc["id"], "score": sco, "trace": trace, "final_text": res.get("final_text", ""),
