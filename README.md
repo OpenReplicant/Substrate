@@ -40,7 +40,7 @@ it, and the assistant's view is already a view in the kernel's desktop. Next is 
 ## Preview: what works, what is moving
 
 **Works in this preview** (checked on a fresh clone, 2026-11-27: `scripts/bootstrap.sh`, `scripts/up.sh`,
-`scripts/check.sh` all passing, and `scripts/test.sh`: catalog 9, environment 41, gateway 15, kernel 27, UI 36,
+`scripts/check.sh` all passing, and `scripts/test.sh`: catalog 9, environment 44, gateway 15, kernel 27, review 19, UI 36,
 release 10 checks, the router's Go tests):
 
 - the stack from published images, pinned to this release (Substrate `0.1.0-preview.1`, the kernel `0.1.0`), or built
