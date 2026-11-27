@@ -24,7 +24,6 @@ type Store interface {
 	Outcome(ctx context.Context, id int64) (*Outcome, error)
 	ToolsJSON(ctx context.Context) ([]byte, error)
 	CallsJSON(ctx context.Context, limit int) ([]byte, error)
-	Decide(ctx context.Context, id int64, approve bool, person, reason string) error
 }
 
 type pgStore struct{ pool *pgxpool.Pool }
@@ -86,9 +85,4 @@ func (s pgStore) ToolsJSON(ctx context.Context) ([]byte, error) {
 
 func (s pgStore) CallsJSON(ctx context.Context, limit int) ([]byte, error) {
 	return s.json(ctx, `select coalesce(jsonb_agg(c order by c.id desc), '[]'::jsonb) from env.mcp_calls($1) c`, limit)
-}
-
-func (s pgStore) Decide(ctx context.Context, id int64, approve bool, person, reason string) error {
-	_, err := s.pool.Exec(ctx, `select env.decide($1, $2, $3, nullif($4, ''))`, id, approve, person, reason)
-	return err
 }

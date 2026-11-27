@@ -81,5 +81,5 @@ func mapOutcome(o Outcome) (res *mcp.CallToolResult, done bool) {
 }
 
 func waitingResult(id int64, status string) *mcp.CallToolResult {
-	return textResult(true, "action %d is %s: it waits for a person's approval (or its server); ask router_outcome with action %d", id, status, id)
+	return textResult(true, "action %d is %s: it waits for a person's approval in the desktop's Review (or its server); ask router_outcome with action %d", id, status, id)
 }

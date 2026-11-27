@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""The real-time environment from the command line (plan step 3c): what a person does until the UI has a review lane.
+"""The real-time environment from the command line (plan step 3c). A proposal is decided in the desktop's Review (the
+kernel's review lane, S-219), not here: the environment module records that decision on the action.
 
     bin/in-tools python3 scripts/env.py waiting                        # proposals waiting for a person
-    bin/in-tools python3 scripts/env.py decide ACTION yes|no [REASON] --as NAME
     bin/in-tools python3 scripts/env.py publish KEY JSON --as SOURCE   # e.g. owner.inbox.message '{"text":"hi"}'
     bin/in-tools python3 scripts/env.py actuators                      # each actuator, its gate and queue
     bin/in-tools python3 scripts/env.py gate NAME free|propose|deny --as NAME
@@ -34,8 +34,6 @@ def main(argv: list[str]) -> None:
         if cmd == "waiting":
             for w in e.waiting():
                 print(f"{w['id']}  {w['actuator']}  {json.dumps(w['input'])}  by {w['caller']}  at {w['at']:%Y-%m-%d %H:%M}")
-        elif cmd == "decide" and len(args) >= 2 and who:
-            print(e.decide(int(args[0]), args[1] in ("yes", "y", "approve"), who, " ".join(args[2:]) or None))
         elif cmd == "publish" and len(args) == 2 and who:
             print(f"signal {e.publish(args[0], json.loads(args[1]), who)}")
         elif cmd == "actuators":

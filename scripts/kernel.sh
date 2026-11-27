@@ -2,7 +2,8 @@
 # The Knowledge Kernel (S-153, S-154): its schema, Substrate's catalog in it, an agent's login, and the MCP server Claude Code starts. The kernel runs in its own image (published, or scripts/build.sh kernel)
 # in the stack's Postgres, database `kernel` (scripts/db.py init makes it); nothing is installed on the host.
 #
-#   scripts/kernel.sh init               # install the kernel's schema and default modules (safe to run again)
+#   scripts/kernel.sh init               # install the kernel's schema and default modules, then Substrate's kernel modules
+#                                        # (environment/, by kk module install, S-219); safe to run again
 #   scripts/kernel.sh catalog            # catalog/*.yaml (Substrate's parts, Backstage entities) into the kernel by
 #                                        # encoder-backstage (S-176); an unchanged file submits nothing
 #   scripts/kernel.sh login NAME         # an agent's own login (printed nowhere: .state/kernel/NAME.env, mode 600) and
@@ -22,6 +23,11 @@ image() { image_ref kernel; }
 case "${1:-}" in
   init)
     compose run --rm --no-deps kernel-init
+    # Substrate's kernel modules, through the kernel's module contract (S-219): the manifest checked, its migration applied
+    # once; the module's service (compose `environment`) acts as the kernel's login switched to its role, so the login
+    # kk module install writes for it is not used (written to the container's /tmp and gone with it)
+    compose run --rm --no-deps -T kernel-init kk module install /substrate/environment --out /tmp/modules | grep '^{' | tail -1 |
+      python3 -c 'import json, sys; r = json.load(sys.stdin); print("  module %s %s: migration %s" % (r["module"], r["version"], r["migration"]))'
     ;;
   catalog)
     compose run --rm --no-deps kernel-catalog

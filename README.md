@@ -25,9 +25,10 @@ implementation project runs end to end on a demo small business without new core
 and picks an opportunity, the harness carries it out under the kernel's gates, a person approves what matters, and
 Morphogen judges the result (S-211).
 
-**Where it stands (2026-11-24):** the stack below runs on one machine, and a person has talked to the assistant in
-the kernel's desktop (S-208). The re-cut is decided and the parts are not moved yet. The work goes to Morphogen
-(the kit) and the kernel first.
+**Where it stands (2026-11-27):** the stack below runs on one machine, and a person has talked to the assistant in
+the kernel's desktop (S-208). Morphogen is the kit (the re-cut's first step, S-216, S-217). The environment is now a
+kernel module whose proposals a person decides in the kernel's review lane, and the channel and the router are MCP
+servers on it (S-219 to S-221); the default distribution and the test of the bet come next (`docs/parts.md`).
 
 ## What runs
 
@@ -37,8 +38,8 @@ Podman compose, published on 127.0.0.1 only.
 | Part | Where | What it does |
 | --- | --- | --- |
 | The store | the Knowledge Kernel (`scripts/kernel.sh`), Postgres (`deploy/postgres`) | Wikibase's data model with pinned evidence: things, statements, and the exact span of the source each statement rests on. A changed source flags what cites it, with no model call. Maps of parts, roles and interfaces, and catalogs of candidates with measurements and trade-off notes |
-| The environment | `environment/`, schema `env` | Signals logged whole and fanned out as pgmq topics; one queue per actuator behind a gate (`free`, `propose`, `deny`); proposals wait for a person; every action recorded |
-| The channel | `environment/channel.py` | Pushes an environment's signals into a live Claude Code session; a signal not acknowledged comes back |
+| The environment | `environment/`, schema `env`, a kernel module (service `environment`) | Signals logged whole and fanned out as pgmq topics; one queue per actuator behind a gate (`free`, `propose`, `deny`); a proposal waits in the kernel's review lane and a person decides it in the desktop's Review, with everything else the kernel holds for review; every action recorded (S-219) |
+| The channel | `environment/channel.py`, an MCP server | Pushes an environment's signals into a live Claude Code session, as a login of its own; a signal not acknowledged comes back (S-220) |
 | The gateway | `gateway` (Bifrost), `scripts/gateway.py` | Every model call goes through it under its caller's key and is logged there, not by the caller. Keys decide which providers a caller may reach; a meter counts a judged run's calls (S-193) |
 | The local models | services `llm` and `llm-fast` (llama.cpp) | Two of your own GGUFs (S-169): a slow capable one on the CPU (`slow`; Inkling 2 Mini here) and a small fast one on the GPU (`fast`; LFM3 1.7B here) |
 | The optimiser | Morphogen's Claude Code plugin; its rules in the catalog (`catalog-info.yaml` at the root, S-216) | Cells from Substrate's catalog (`catalog/`); a change is judged on cases it cannot read, its model calls counted at the gateway (S-193) |

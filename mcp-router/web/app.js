@@ -61,28 +61,17 @@
   });
   $('signout').addEventListener('click', signOut);
 
-  function decide(id, approve, reason, box) {
-    api('/api/decide', { method: 'POST', body: JSON.stringify({ action: id, approve: approve, reason: reason }) })
-      .then(refresh)
-      .catch(function (e) { box.textContent = e.message; });
-  }
-
   function renderWaiting(calls) {
     var box = $('waiting'), w = calls.filter(function (c) { return c.status === 'proposed'; });
     $('waiting-count').textContent = w.length ? '(' + w.length + ')' : '';
     box.replaceChildren();
     if (!w.length) { box.appendChild(el('p', { class: 'muted', text: 'Nothing waits for a decision.' })); return; }
+    // decided in the desktop's Review (the kernel's review lane, S-219), not here
+    box.appendChild(el('p', { class: 'muted', text: 'Approve or reject these in the desktop\'s Review window.' }));
     w.forEach(function (c) {
-      var reason = el('input', { class: 'reason', placeholder: 'reason', 'aria-label': 'reason for call ' + c.id });
-      var err = el('span', { class: 'error' });
-      var yes = el('button', { type: 'button', class: 'primary', text: 'Approve' });
-      var no = el('button', { type: 'button', text: 'Reject' });
-      yes.addEventListener('click', function () { decide(c.id, true, reason.value, err); });
-      no.addEventListener('click', function () { decide(c.id, false, reason.value, err); });
       box.appendChild(el('div', { class: 'card' }, [
         el('div', { class: 'row' }, [el('strong', { text: '#' + c.id + ' ' + c.tool }), el('span', { class: 'muted', text: 'by ' + c.caller + ', ' + when(c.at) })]),
-        el('pre', { text: JSON.stringify(c.arguments, null, 2) }),
-        el('div', { class: 'row' }, [reason, yes, no, err])
+        el('pre', { text: JSON.stringify(c.arguments, null, 2) })
       ]));
     });
   }
