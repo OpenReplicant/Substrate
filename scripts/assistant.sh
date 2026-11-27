@@ -20,10 +20,11 @@ CHANNEL_PW=$(env_value MCP_CHANNEL_DB_PASSWORD); CHANNEL_PORT=$(env_value DB_POR
 compose run --rm --no-deps -T kernel-init kk agent add assistant --no-login >/dev/null
 token=$(compose run --rm --no-deps -T -e KK_JWT_SECRET kernel-init kk token agent_assistant --days 1 2>/dev/null | tail -1)
 [ -n "$token" ] || { echo "could not mint the assistant's token (scripts/logs.sh kernel)" >&2; exit 1; }
-TOKEN=$token ROOT=$ROOT WHO=$who python3 - "$dir/mcp.json" <<'PY'
+rport=$(env_value DESKTOP_ROUTER_PORT)
+TOKEN=$token ROOT=$ROOT WHO=$who RPORT=${rport:-8083} python3 - "$dir/mcp.json" <<'PY'
 import json, os, sys
 cfg = {"mcpServers": {
-    "router": {"type": "http", "url": "http://127.0.0.1:8083/mcp",
+    "router": {"type": "http", "url": "http://127.0.0.1:" + os.environ["RPORT"] + "/mcp",
                "headers": {"Authorization": "Bearer " + os.environ["TOKEN"]}},
     "desktop": {"command": os.path.join(os.environ["ROOT"], "bin/in-tools"),
                 "args": ["python3", "-m", "environment.channel", "assistant_" + os.environ["WHO"],

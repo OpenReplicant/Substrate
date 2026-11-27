@@ -1,17 +1,21 @@
 #!/bin/sh
 # Substrate's images, all inside the container engine (S-19). With no argument: pull the published images (db, tools,
-# kernel; S-167) and build only the ones that did not pull. SUBSTRATE_BUILD=1 (here or in .env) builds everything.
+# mcp-router, kernel; S-167) and build only the ones that did not pull. SUBSTRATE_BUILD=1 (here or in .env) builds everything.
 # A build is tagged with the published name, so compose finds it. Cheap to run again: the engine's layer cache keeps unchanged steps.
 #
 #   scripts/build.sh                    # pull, then build what is missing
 #   SUBSTRATE_BUILD=1 scripts/build.sh  # build all of them
-#   scripts/build.sh db|tools|kernel   # build that one
+#   scripts/build.sh db|tools|mcp-router|kernel   # build that one
 set -eu
 . "$(dirname "$0")/lib.sh"
 
 build_db() {
   "$ENGINE" build -q -t "$(image_ref db)" -f "$ROOT/deploy/postgres/Dockerfile" "$ROOT/deploy/postgres" >/dev/null \
     && echo "  $(image_ref db) (Postgres with pgvector, pg_cron, pgmq, pgGraph)"
+}
+build_mcp_router() {
+  "$ENGINE" build -q -t "$(image_ref mcp-router)" -f "$ROOT/mcp-router/Containerfile" "$ROOT/mcp-router" >/dev/null \
+    && echo "  $(image_ref mcp-router) (the MCP router and its connectors)"
 }
 build_tools() {
   "$ENGINE" build -q -t "$(image_ref tools)" -f "$ROOT/deploy/tools/Containerfile" "$ROOT/deploy/tools" >/dev/null \
@@ -25,6 +29,9 @@ build_kernel() {
   if [ ! -d "$ROOT/repos/kernel/.git" ]; then
     url=$(sed -n '/^kernel:/,/^[a-z]/s/^  url: *//p' "$ROOT/repos.yaml" | head -1)
     branch=$(sed -n '/^kernel:/,/^[a-z]/s/^  branch: *//p' "$ROOT/repos.yaml" | head -1)
+    # a kernel release (KERNEL_IMAGE_TAG a version, as by default) builds from its tag, v<version>; else the branch
+    tag=$(image_ref kernel); tag=${tag##*:}
+    case "$tag" in [0-9]*.*) branch=v$tag ;; esac
     mkdir -p "$ROOT/repos" && git clone --quiet --branch "${branch:-main}" "$url" "$ROOT/repos/kernel"
   fi
   if [ -n "${CA_BUNDLE:-}" ]; then set -- --secret "id=ca,src=$CA_BUNDLE"; else set --; fi
@@ -35,7 +42,7 @@ build_kernel() {
 # pull what is published, build what is not
 pull_or_build() {   # NAME
   ref=$(image_ref "$1")
-  if rt_pull "$ref"; then echo "  $ref (pulled)"; else echo "  $1: not pulled ($ref), building"; "build_$1"; fi
+  if rt_pull "$ref"; then echo "  $ref (pulled)"; else echo "  $1: not pulled ($ref), building"; "build_$(echo "$1" | tr - _)"; fi
 }
 
 say "Images ($ENGINE)"
@@ -43,12 +50,13 @@ force=${SUBSTRATE_BUILD:-$(env_value SUBSTRATE_BUILD)}
 case "${1:-all}" in
   db) build_db ;;
   tools) build_tools ;;
+  mcp-router) build_mcp_router ;;
   kernel) build_kernel ;;
   all)
     if [ "$force" = 1 ]; then
-      build_db; build_tools; build_kernel
+      build_db; build_tools; build_mcp_router; build_kernel
     else
-      for n in db tools kernel; do pull_or_build "$n"; done
+      for n in db tools mcp-router kernel; do pull_or_build "$n"; done
     fi ;;
-  *) echo "usage: scripts/build.sh [db|tools|kernel]" >&2; exit 1 ;;
+  *) echo "usage: scripts/build.sh [db|tools|mcp-router|kernel]" >&2; exit 1 ;;
 esac

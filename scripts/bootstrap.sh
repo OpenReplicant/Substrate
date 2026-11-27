@@ -14,6 +14,7 @@ require() { show "$1" "$2"; have "$1" || required_missing="$required_missing $1"
 
 require git "https://git-scm.com"
 require python3 "any Python 3.9+; the scripts use only its standard library"
+require curl "scripts/check.sh probes the services with it"
 require "$ENGINE" "CONTAINER_ENGINE in .env picks podman or docker"
 if "$ENGINE" compose version >/dev/null 2>&1; then
   printf '  %-10s %s\n' compose "$("$ENGINE" compose version 2>/dev/null | head -1)"
