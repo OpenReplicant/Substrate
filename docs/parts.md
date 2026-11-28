@@ -40,7 +40,8 @@ service in the default collection. The environment, the channel and the router a
 ## Built on it
 
 The assistant, MetaSoar's experiments, the games and embodied environments: each a distribution (`distributions/`)
-or a module on top of the default one.
+or a module on top of the default one. The manager agent (S-223, proposed; `docs/manager-agent.md`) is one: a session on the
+channel and the router, the portfolio's tables in the environment module, a supervisor service and a view module.
 
 ## Order
 

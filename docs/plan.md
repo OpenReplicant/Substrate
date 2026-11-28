@@ -40,6 +40,10 @@ product cut and "Next, in order", which are now Substrate's running system, buil
 The business itself (offer, pricing, prospect lists) is worked in a session of its own (S-188 c), once step 3 has a
 report to show.
 
+**Proposed 2026-11-27 (S-223): the manager agent,** a lean session that knows every project and hands work to
+workers, built on the parts of `docs/parts.md`'s step 2. The design, its build order and the owner's questions are
+`docs/manager-agent.md`; nothing is built until the owner answers them.
+
 **Amended by S-211 (2026-11-24):** Substrate is a default configuration, not a product: a harness set up to use the
 kernel and Morphogen. Work goes to Morphogen (step 1 above) and the kernel first: its parts become kernel modules or
 standard module types (`docs/parts.md`, whose order replaces steps 2 and 5 above; S-212: the optional modules stay in this repository, written to the kernel's module contract, and make up the default distribution with the kernel's core); the test of the bet is step

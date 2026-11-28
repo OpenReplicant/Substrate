@@ -1,0 +1,58 @@
+{
+ "seed": 20261127,
+ "method": "stratified by expected action, r-series recovery as its own stratum; largest remainder",
+ "sizes": {
+  "heldout": 13,
+  "dev": 10,
+  "train": 20
+ },
+ "strata": {
+  "ack": 1,
+  "answer": 8,
+  "ask": 4,
+  "decision": 5,
+  "message": 6,
+  "recovery": 7,
+  "start": 11,
+  "stop": 1
+ },
+ "train": [
+  "r01",
+  "r02",
+  "r06",
+  "s01",
+  "s03",
+  "s05",
+  "s07",
+  "s08",
+  "s10",
+  "s12",
+  "s15",
+  "s17",
+  "s18",
+  "s21",
+  "s25",
+  "s28",
+  "s29",
+  "s30",
+  "s31",
+  "s35"
+ ],
+ "dev": [
+  "r05",
+  "r07",
+  "s02",
+  "s06",
+  "s09",
+  "s13",
+  "s14",
+  "s20",
+  "s23",
+  "s33"
+ ],
+ "heldout": {
+  "count": 13,
+  "sha256_of_sorted_ids": "2d3b412bfdcf3ee97a9edff6d88dfda6a53bc7b658b1ea33bce3b08278f8d6d6",
+  "where": "outside the repository: labels in the private directory, cases in the inputs directory"
+ }
+}

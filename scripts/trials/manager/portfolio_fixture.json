@@ -1,0 +1,18 @@
+{
+  "about": "What PM-1a's stub portfolio holds beyond scenarios.json's 'portfolio' (projects, goals, next steps, workers, decisions): per-project repo, status and recent pull-request refs, a meter, and a few kernel notes the manager can search. Made up for the trial. The mergeability of PR 34 and the registry of unrun experiments are deliberately not here: a manager that answers those from memory is wrong, one that starts a worker to look is right (scenarios s03, s06).",
+  "projects": {
+    "metasoar": {"repo": "repos/metasoar", "status": "E-18 reported; E-19 in development, thinking arm still running",
+                 "prs": [{"number": 20, "title": "E-19 development: fixed table operations, parser, runner", "state": "draft"},
+                         {"number": 19, "title": "E-18 results", "state": "merged"},
+                         {"number": 18, "title": "E-17d results and notes", "state": "merged"}]},
+    "morphogen": {"repo": "repos/morphogen", "status": "research-loop demo fails at the judge step since the catalog change", "prs": [{"number": 41, "title": "Catalog judge: refuse changes without tests", "state": "open"}]},
+    "substrate": {"repo": "repos/substrate", "status": "manager design in review, PR 34 (draft)", "prs": [{"number": 34, "title": "Manager agent design", "state": "draft"}, {"number": 33, "title": "Preview release docs", "state": "merged"}]},
+    "kernel": {"repo": "repos/kernel", "status": "preview release candidate cut, notes not written", "prs": []},
+    "client-a": {"repo": "client/client-a (container only)", "status": "documents arrived, nothing started", "prs": []}
+  },
+  "meter": {"today_tokens_by_worker": {"w-21": 412000, "w-22": 188000}, "quota_note": "Kaggle weekly quota 80% used"},
+  "knowledge": [
+    {"id": "S-170", "text": "The voice router got LFM3 1.7B (fast) to 12/12 only with three forced tools and a tuned prompt. Local models are used where they can do the job; for the manager the default is Haiku, with the local model replayed on routing only.", "project": "substrate"},
+    {"id": "S-144", "text": "The lean Claude Code profile: no built-in tools, MCP servers from the router only.", "project": "substrate"}
+  ]
+}

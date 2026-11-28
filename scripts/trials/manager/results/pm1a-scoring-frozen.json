@@ -1,0 +1,11 @@
+{
+ "version": "pm1a-score-2026-11-27",
+ "sha256": {
+  "score.py": "a5ef56f1e4fa0851f3aaa2b4e14cbacb41cee6f5dc5fef5bfbf86db81de1737a",
+  "stub_pm.py": "6bbf89e30fb5bf486b809ef700f0b7d8b388bc83055e5b6d884d529f23069d68",
+  "portfolio_fixture.json": "537f50c0c216d3ab499f3dda90a412b46f967ac040769074ec12d593e799dc52",
+  "scenarios.json": "b23512209f8bea36f7e4ca41a3e0ef80e3600e27d5ea0bbd070fd182f756c7a7",
+  "split.json": "141069b377b56b2be979c8ea1903e8517d2c4fd62621bbf1a7beae125bf70f13",
+  "scenarios-search.json": "9b2e817d8f80de753615fcc3e89ffbc54b85c40b824f642ad5363d2fc15389e7"
+ }
+}
